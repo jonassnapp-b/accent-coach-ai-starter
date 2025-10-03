@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 
+const API_BASE = "https://accent-coach-ai-starter.onrender.com";
+
 export default function App() {
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -40,6 +42,7 @@ export default function App() {
     mediaRecorderRef.current?.stream.getTracks().forEach((t) => t.stop());
     setRecording(false);
   }
+const API_BASE = import.meta.env.VITE_API_BASE;
 
   async function scorePronunciation() {
     if (!audioURL) return;
@@ -54,8 +57,11 @@ export default function App() {
       form.append("targetPhrase", targetPhrase);
       form.append("targetAccent", targetAccent);
 
-      const apiBase = import.meta.env.VITE_API_BASE; // e.g., https://your-backend.onrender.com
-      const res = await fetch(`${apiBase}/api/score`, { method: "POST", body: form });
+      
+const res = await fetch(`${API_BASE}/api/score`, {
+  method: "POST",
+  body: form
+});
       if (!res.ok) throw new Error(`API fejl: ${res.status}`);
       const data = await res.json();
       setScore(data);
