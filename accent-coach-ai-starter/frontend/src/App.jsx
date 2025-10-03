@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 
-const API_BASE = "https://accent-coach-ai-starter.onrender.com";
+const API_BASE =
+  import.meta.env.VITE_API_BASE || "https://accent-coach-ai-starter.onrender.com";
 
 export default function App() {
   const mediaRecorderRef = useRef(null);
