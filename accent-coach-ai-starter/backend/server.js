@@ -5,11 +5,11 @@ import cors from 'cors';
 const app = express();
 const upload = multer();
 
-// --- CORS opsætning ---
-const ALLOWED_ORIGINS = [
-  'https://accent-coach-ai-starter.vercel.app', // dit Vercel site
-  'http://localhost:5173'                       // hvis du tester lokalt
-];
+// Allow all origins for now (to verify everything works)
+app.use(cors());
+app.options('*', cors()); // handle preflight for any route
+
+
 
 app.use(cors({
   origin: (origin, cb) => {
