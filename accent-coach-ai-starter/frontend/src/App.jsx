@@ -3,34 +3,51 @@ import React, { useEffect, useRef, useState } from "react";
 // Native sample audio (used for A/B comparison)
 const SAMPLE_URL = "/samples/en-US/quick_brown_fox.mp3";
 
-
+// Backend base URL
 const API_BASE =
   import.meta.env.VITE_API_BASE?.replace(/\/+$/, "") || window.location.origin;
 
 export default function App() {
+  // --- Audio recording state ---
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const [recording, setRecording] = useState(false);
   const [audioURL, setAudioURL] = useState(null);
 
+  // --- A/B comparison refs and states ---
+  const sampleAudioRef = useRef(null);
+  const userAudioRef = useRef(null);
+  const [mix, setMix] = useState(50); // 0 = native only, 100 = you only
+  const [comparing, setComparing] = useState(false);
+
+  // --- Input state ---
   const [targetPhrase, setTargetPhrase] = useState(
     "The quick brown fox jumps over the lazy dog."
   );
   const [targetAccent, setTargetAccent] = useState("American");
 
+  // --- API / UI state ---
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [score, setScore] = useState(null);
+  const [feedback, setFeedback] = useState(null);
 
-  // result payload from API
-  const [score, setScore] = useState(null);      // { overall, words: [{word,score}, ...] }
-  const [feedback, setFeedback] = useState(null); // { overall, focusAreas, wordTips, nextSteps }
+  // --- Apply mix between sample + user ---
+  const applyMix = (m) => {
+    const user = userAudioRef.current;
+    const sample = sampleAudioRef.current;
+    if (!user || !sample) return;
+
+    const u = Math.min(Math.max(m, 0), 100) / 100;
+    user.volume = u; // right = your recording
+    sample.volume = 1 - u; // left = native
+  };
 
   useEffect(() => {
-    return () => {
-      if (audioURL) URL.revokeObjectURL(audioURL);
-    };
-  }, [audioURL]);
+    applyMix(mix);
+  }, [mix, audioURL]);
 
+  // --- Recording functions ---
   async function startRecording() {
     try {
       setError(null);
@@ -38,355 +55,192 @@ export default function App() {
       const mr = new MediaRecorder(stream);
       chunksRef.current = [];
 
-      mr.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
-      };
+      mr.ondataavailable = (e) => chunksRef.current.push(e.data);
       mr.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const url = URL.createObjectURL(blob);
-        setAudioURL(url);
+        setAudioURL(URL.createObjectURL(blob));
       };
 
-      mediaRecorderRef.current = mr;
       mr.start();
+      mediaRecorderRef.current = mr;
       setRecording(true);
-    } catch (e) {
-      setError(e?.message || "Could not start recording");
+    } catch (err) {
+      setError("Microphone access failed");
     }
   }
 
   function stopRecording() {
-    try {
-      mediaRecorderRef.current?.stop();
-      mediaRecorderRef.current?.stream
-        ?.getTracks()
-        ?.forEach((t) => t.stop());
-    } catch {
-      // ignore
-    } finally {
-      setRecording(false);
-    }
+    const mr = mediaRecorderRef.current;
+    if (mr && mr.state !== "inactive") mr.stop();
+    setRecording(false);
   }
 
-  async function analyzePronunciation() {
-    if (!audioURL) {
-      setError("Please record first.");
-      return;
-    }
+  // --- Send audio to backend ---
+  async function analyzeAudio() {
+    if (!audioURL) return;
     setBusy(true);
     setError(null);
-    setScore(null);
-    setFeedback(null);
-
     try {
-      // turn the preview blob URL back into a Blob we can send
-      const resBlob = await fetch(audioURL).then((r) => r.blob());
-      const form = new FormData();
-      form.append("audio", resBlob, "sample.webm");
-      form.append("targetPhrase", targetPhrase);
-      form.append("targetAccent", targetAccent);
+      const blob = await fetch(audioURL).then((r) => r.blob());
+      const formData = new FormData();
+      formData.append("audio", blob, "recording.webm");
+      formData.append("targetPhrase", targetPhrase);
+      formData.append("targetAccent", targetAccent);
 
       const res = await fetch(`${API_BASE}/api/score`, {
         method: "POST",
-        body: form,
+        body: formData,
       });
 
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`API error: ${res.status} – ${txt}`);
-      }
-
+      if (!res.ok) throw new Error("Server error");
       const data = await res.json();
-      setScore(data || null);
-      setFeedback(data?.feedback || null);
-    } catch (e) {
-      setError(e?.message || "Failed to fetch");
+      setScore(data.overall);
+      setFeedback(data.feedback || null);
+    } catch (err) {
+      setError("Analysis failed: " + err.message);
     } finally {
       setBusy(false);
     }
   }
 
-  const ScoreBar = ({ value = 0 }) => (
-    <div style={{ width: "100%", background: "#eee", borderRadius: 6 }}>
-      <div
-        style={{
-          width: `${Math.max(0, Math.min(100, value))}%`,
-          background: value >= 80 ? "#22c55e" : value >= 60 ? "#f59e0b" : "#ef4444",
-          height: 8,
-          borderRadius: 6,
-          transition: "width .3s ease",
-        }}
-      />
-    </div>
-  );
+  // --- A/B Comparison playback ---
+  const playComparison = async () => {
+    const user = userAudioRef.current;
+    const sample = sampleAudioRef.current;
+    if (!sample) return;
 
+    // reset both
+    sample.currentTime = 0;
+    if (user) user.currentTime = 0;
+
+    applyMix(mix);
+
+    try {
+      setComparing(true);
+      const plays = [sample.play()];
+      if (user && audioURL) plays.push(user.play());
+      await Promise.allSettled(plays);
+    } catch (err) {
+      console.error("Play comparison error:", err);
+      setComparing(false);
+    }
+
+    sample.onended = () => stopComparison();
+  };
+
+  const stopComparison = () => {
+    const user = userAudioRef.current;
+    const sample = sampleAudioRef.current;
+
+    if (sample) {
+      sample.pause();
+      sample.currentTime = 0;
+    }
+    if (user) {
+      user.pause();
+      user.currentTime = 0;
+    }
+    setComparing(false);
+  };
+
+  // --- Cleanup old audio blob URLs ---
+  useEffect(() => {
+    return () => {
+      if (audioURL) URL.revokeObjectURL(audioURL);
+    };
+  }, [audioURL]);
+
+  // --- UI ---
   return (
-    <div style={{ maxWidth: 880, margin: "40px auto", padding: "0 16px" }}>
-      <h1 style={{ marginBottom: 8 }}>Accent Coach AI <span style={{ fontSize: 14, color: "#888" }}>MVP</span></h1>
-      <p style={{ color: "#555" }}>
-        Record your voice, compare it against a target phrase, and get a score + actionable tips.
-      </p>
+    <div style={{ maxWidth: 700, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
+      <h1>Accent Coach AI</h1>
 
-      {/* Controls */}
-      <div
-        style={{
-          marginTop: 24,
-          padding: 16,
-          border: "1px solid #e5e7eb",
-          borderRadius: 12,
-        }}
+      <label>Target phrase:</label>
+      <textarea
+        rows={2}
+        value={targetPhrase}
+        onChange={(e) => setTargetPhrase(e.target.value)}
+        style={{ width: "100%", marginBottom: 12 }}
+      />
+
+      <label>Target accent:</label>
+      <select
+        value={targetAccent}
+        onChange={(e) => setTargetAccent(e.target.value)}
+        style={{ marginBottom: 20 }}
       >
-        <label style={{ fontWeight: 600, display: "block", marginBottom: 8 }}>
-          Target phrase
-        </label>
-        <textarea
-          value={targetPhrase}
-          onChange={(e) => setTargetPhrase(e.target.value)}
-          rows={3}
-          style={{
-            width: "100%",
-            padding: 10,
-            borderRadius: 8,
-            border: "1px solid #e5e7eb",
-            resize: "vertical",
-          }}
-        />
+        <option>American</option>
+        <option>British</option>
+        <option>Australian</option>
+      </select>
 
-        <div style={{ height: 12 }} />
+      <div style={{ display: "flex", gap: 12 }}>
+        {!recording ? (
+          <button onClick={startRecording}>🎙 Start Recording</button>
+        ) : (
+          <button onClick={stopRecording}>⏹ Stop</button>
+        )}
+        <button onClick={analyzeAudio} disabled={!audioURL || busy}>
+          Analyze pronunciation
+        </button>
+      </div>
 
-        <label style={{ fontWeight: 600, display: "block", marginBottom: 8 }}>
-          Target accent
-        </label>
-        <select
-          value={targetAccent}
-          onChange={(e) => setTargetAccent(e.target.value)}
-          style={{
-            padding: 10,
-            border: "1px solid #e5e7eb",
-            borderRadius: 8,
-            minWidth: 220,
-          }}
-        >
-          <option>American</option>
-          <option>British</option>
-          <option>Australian</option>
-          <option>General English</option>
-        </select>
+      {audioURL && (
+        <div style={{ marginTop: 20 }}>
+          <h3>Your Recording:</h3>
+          <audio controls src={audioURL} />
+        </div>
+      )}
 
-        <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
-          {!recording ? (
-            <button
-              onClick={startRecording}
-              style={{
-                padding: "10px 14px",
-                background: "#111827",
-                color: "#fff",
-                borderRadius: 8,
-                border: "none",
-              }}
-            >
-              ● Start recording
-            </button>
-          ) : (
-            <button
-              onClick={stopRecording}
-              style={{
-                padding: "10px 14px",
-                background: "#ef4444",
-                color: "#fff",
-                borderRadius: 8,
-                border: "none",
-              }}
-            >
-              ■ Stop
-            </button>
-          )}
-
-          <button
-            onClick={analyzePronunciation}
-            disabled={!audioURL || busy}
-            style={{
-              padding: "10px 14px",
-              background: busy ? "#9ca3af" : "#7c3aed",
-              color: "#fff",
-              borderRadius: 8,
-              border: "none",
-              opacity: !audioURL ? 0.7 : 1,
-            }}
-          >
-            {busy ? "Analyzing…" : "Analyze"}
+      {/* A/B comparison */}
+      <div style={{ marginTop: 24, padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+        <h3>Pronunciation Comparison</h3>
+        <audio ref={sampleAudioRef} src={SAMPLE_URL} preload="auto" />
+        <audio ref={userAudioRef} src={audioURL || undefined} preload="auto" />
+        <p style={{ fontSize: 14 }}>
+          Blend between the native sample and your voice to compare them.
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span>Native</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={mix}
+            onChange={(e) => setMix(Number(e.target.value))}
+            style={{ flex: 1 }}
+          />
+          <span>You</span>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button onClick={playComparison} disabled={!audioURL || comparing}>
+            ▶ Play
+          </button>
+          <button onClick={stopComparison} disabled={!comparing}>
+            ⏹ Stop
           </button>
         </div>
-
-        {audioURL && (
-          <>
-            <div style={{ height: 12 }} />
-            <label style={{ fontWeight: 600, display: "block", marginBottom: 8 }}>
-              Preview of your recording
-            </label>
-            <audio src={audioURL} controls style={{ width: "100%" }} />
-          </>
-        )}
-
-        {error && (
-          <div
-            style={{
-              marginTop: 12,
-              padding: 12,
-              background: "#fee2e2",
-              color: "#991b1b",
-              borderRadius: 8,
-            }}
-          >
-            {error}
-          </div>
-        )}
       </div>
 
       {/* Results */}
-      {(score || feedback) && (
-        <div style={{ marginTop: 24, display: "grid", gap: 16 }}>
-          {/* Overall score & per-word scores */}
-          {score && (
-            <div
-              style={{
-                padding: 16,
-                border: "1px solid #e5e7eb",
-                borderRadius: 12,
-              }}
-            >
-              <h2 style={{ marginTop: 0 }}>Score</h2>
-              <div
-                style={{
-                  fontSize: 32,
-                  fontWeight: 800,
-                  marginBottom: 8,
-                }}
-              >
-                {score.overall ?? "–"}/100
-              </div>
+      {busy && <p>Analyzing...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
-              {Array.isArray(score.words) && score.words.length > 0 && (
-                <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
-                  {score.words.map((w, idx) => (
-                    <div key={idx}>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 12,
-                          marginBottom: 6,
-                        }}
-                      >
-                        <div style={{ fontWeight: 600 }}>{w.word}</div>
-                        <div style={{ minWidth: 52, textAlign: "right" }}>
-                          {w.score}/100
-                        </div>
-                      </div>
-                      <ScoreBar value={w.score} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Feedback block */}
+      {score && (
+        <div style={{ marginTop: 24 }}>
+          <h2>Score: {score}/100</h2>
           {feedback && (
-            <div
-              style={{
-                padding: 16,
-                border: "1px solid #e5e7eb",
-                borderRadius: 12,
-              }}
-            >
-              <h2 style={{ marginTop: 0 }}>How to improve</h2>
-
-              {feedback.overall && (
-                <p style={{ marginTop: 8 }}>{feedback.overall}</p>
-              )}
-
-              {Array.isArray(feedback.focusAreas) &&
-                feedback.focusAreas.length > 0 && (
-                  <>
-                    <h3 style={{ marginBottom: 6 }}>Focus areas</h3>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {feedback.focusAreas.map((f, i) => (
-                        <span
-                          key={i}
-                          style={{
-                            background: "#eef2ff",
-                            color: "#3730a3",
-                            border: "1px solid #c7d2fe",
-                            padding: "4px 8px",
-                            borderRadius: 999,
-                            fontSize: 12,
-                          }}
-                        >
-                          {f}
-                        </span>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-              {Array.isArray(feedback.wordTips) &&
-                feedback.wordTips.length > 0 && (
-                  <>
-                    <h3 style={{ marginBottom: 6, marginTop: 16 }}>
-                      Word-level tips
-                    </h3>
-                    <div style={{ display: "grid", gap: 10 }}>
-                      {feedback.wordTips.map((t, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            padding: 12,
-                            border: "1px solid #e5e7eb",
-                            borderRadius: 10,
-                          }}
-                        >
-                          <div style={{ fontWeight: 700 }}>{t.word}</div>
-                          {t.note && (
-                            <div style={{ color: "#374151", marginTop: 6 }}>
-                              {t.note}
-                            </div>
-                          )}
-                          {t.drill && (
-                            <div
-                              style={{
-                                marginTop: 8,
-                                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-                                background: "#f9fafb",
-                                border: "1px dashed #e5e7eb",
-                                padding: 8,
-                                borderRadius: 8,
-                              }}
-                            >
-                              {t.drill}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-              {Array.isArray(feedback.nextSteps) &&
-                feedback.nextSteps.length > 0 && (
-                  <>
-                    <h3 style={{ marginBottom: 6, marginTop: 16 }}>
-                      Next steps
-                    </h3>
-                    <ul style={{ marginTop: 6 }}>
-                      {feedback.nextSteps.map((n, i) => (
-                        <li key={i}>{n}</li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-            </div>
+            <>
+              <h3>Feedback</h3>
+              <p>{feedback.overall}</p>
+              <ul>
+                {feedback.wordTips?.map((t, i) => (
+                  <li key={i}>
+                    <b>{t.word}:</b> {t.note}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
       )}
