@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 
+// Native sample audio (used for A/B comparison)
+const SAMPLE_URL = "/samples/en-US/quick_brown_fox.mp3";
+
+
 const API_BASE =
   import.meta.env.VITE_API_BASE?.replace(/\/+$/, "") || window.location.origin;
 
