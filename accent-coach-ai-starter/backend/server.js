@@ -2,8 +2,11 @@ import express from 'express';
 import multer from 'multer';
 import cors from 'cors';
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 const app = express();
-const upload = multer();
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Allow all origins for now (to verify everything works)
 app.use(cors());
@@ -45,10 +48,16 @@ function mockScore(targetPhrase) {
 
 // --- API endpoint ---
 app.post('/api/score', upload.single('audio'), (req, res) => {
-  const { targetPhrase, targetAccent } = req.body;
-  const result = mockScore(targetPhrase || '');
-  res.json(result);
+  try {
+    const { targetPhrase = '', targetAccent = '' } = req.body || {};
+    const result = mockScore(targetPhrase || '');
+    return res.json(result);
+  } catch (e) {
+    console.error('API /api/score error:', e);
+    return res.status(500).json({ error: e?.message || 'Server error' });
+  }
 });
+
 
 // --- Start server ---
 const PORT = process.env.PORT || 3001;
