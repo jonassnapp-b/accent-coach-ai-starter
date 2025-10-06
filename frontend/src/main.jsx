@@ -1,20 +1,22 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { ClerkProvider } from "@clerk/clerk-react";
 import App from "./App.jsx";
 
-// Clerk
-import { ClerkProvider } from "@clerk/clerk-react";
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
-if (!clerkPubKey) {
-  console.error("Missing VITE_CLERK_PUBLISHABLE_KEY in Vercel env vars.");
+if (!PUBLISHABLE_KEY) {
+  // Hjælp i udvikling hvis env mangler
+  console.warn("VITE_CLERK_PUBLISHABLE_KEY mangler.");
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ClerkProvider publishableKey={clerkPubKey}>
-      <App />
+    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
     </ClerkProvider>
   </React.StrictMode>
 );
