@@ -2,36 +2,37 @@
 export default function PhonemeFeedback({ result }) {
   if (!result) return null;
 
-  const scoreColor = (s) => {
-    if (s >= 0.9) return "#14b8a6"; // teal
-    if (s >= 0.8) return "#22c55e"; // green
+  const color = (s) => {
+    if (s >= 0.9) return "#1fab6b"; // grøn
+    if (s >= 0.8) return "#22c55e"; // lys-grøn
     if (s >= 0.7) return "#f59e0b"; // amber
-    return "#ef4444"; // red
+    return "#ef4444";              // rød
   };
 
   return (
-    <section className="panel">
-      <h3>Transcript</h3>
-      <p style={{marginTop: 8}}>{result.transcript || "—"}</p>
+    <section className="panel" style={{ marginTop: 16 }}>
+      <h3>Transkript</h3>
+      <p style={{ marginTop: 8 }}>{result.transcript || "—"}</p>
 
-      <h3 style={{marginTop: 24}}>Phoneme feedback</h3>
-      {result.words?.map((w, i) => (
-        <div key={i} className="word-block">
-          <div className="word-head">
-            <strong>{w.word}</strong>
-            <span style={{color: scoreColor(w.score)}}>score: {(w.score*100).toFixed(0)}%</span>
+      <h3 style={{ marginTop: 24 }}>Phoneme feedback</h3>
+      <div className="phoneme-row" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {(result.phonemes || []).map((ph, i) => (
+          <div
+            key={i}
+            className="phoneme-chip"
+            style={{
+              border: "2px solid " + color(ph.score),
+              padding: "6px 10px",
+              borderRadius: 8,
+            }}
+          >
+            <strong>{ph.ph}</strong>{" "}
+            <span style={{ color: color(ph.score) }}>
+              {Math.round(ph.score * 100)}%
+            </span>
           </div>
-
-          <div className="phoneme-row">
-            {w.phonemes?.map((ph, j) => (
-              <div key={j} className="phoneme-chip" style={{borderColor: scoreColor(ph.score)}}>
-                <span>{ph.p}</span>
-                <small style={{color: scoreColor(ph.score)}}>{(ph.score*100).toFixed(0)}%</small>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </section>
   );
 }
