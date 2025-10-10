@@ -1,0 +1,26 @@
+/* simple styling */
+.app-shell { max-width: 820px; margin: 24px auto; padding: 0 16px; }
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.tab { padding: 8px 12px; border-radius: 8px; text-decoration: none; background: #f1f5f9; color: #0f172a; }
+.tab.active { background: #0ea5e9; color: white; }
+.content { }
+
+.panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+.field { display: grid; gap: 6px; margin: 12px 0; max-width: 360px; }
+.label { font-weight: 600; color: #0f172a; }
+
+.recorder { display: flex; gap: 8px; margin: 8px 0 12px; }
+.actions { margin: 12px 0; }
+
+.btn { padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f8fafc; cursor: pointer; }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn.primary { background: #0ea5e9; border-color: #0ea5e9; color: white; }
+.btn.success { background: #10b981; border-color: #10b981; color: white; }
+.btn.danger { background: #ef4444; border-color: #ef4444; color: white; }
+
+.error { margin-top: 8px; color: #b91c1c; }
+
+.word-block { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px; margin: 10px 0; }
+.word-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.phoneme-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.phoneme-chip { display: inline-flex; align-items: center; gap: 6px; border: 2px solid #e5e7eb; border-radius: 16px; padding: 6px 10px; }
