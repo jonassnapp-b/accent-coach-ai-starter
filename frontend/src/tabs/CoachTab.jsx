@@ -1,6 +1,5 @@
 // frontend/src/tabs/CoachTab.jsx
 import React, { useState } from "react";
-import { api } from "../lib/api";
 
 export default function CoachTab() {
   const [messages, setMessages] = useState([
