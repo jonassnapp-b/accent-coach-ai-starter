@@ -1,30 +1,43 @@
-// src/App.jsx
-import Settings from "./pages/Settings.jsx";
-import { useState } from "react";
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import Record from "./pages/Record.jsx";
-import "./styles.css";
+import Settings from "./pages/Settings.jsx";
+
+import CoachTab from "./tabs/CoachTab.jsx";
+import ProgressTab from "./tabs/ProgressTab.jsx";
+import SocialTab from "./tabs/SocialTab.jsx";
+
+const TABS = [
+  { path: "/record", label: "Record", element: <Record /> },
+  { path: "/coach", label: "Coach", element: <CoachTab /> },
+  { path: "/progress", label: "Progress", element: <ProgressTab /> },
+  { path: "/social", label: "Social", element: <SocialTab /> },
+  { path: "/settings", label: "Settings", element: <Settings /> },
+];
 
 export default function App() {
   return (
     <BrowserRouter>
       <div className="app-shell">
         <nav className="tabs">
-          <NavLink to="/record" className={({isActive}) => isActive ? "tab active" : "tab"}>
-            Record
-          </NavLink>
-          {/* Fjernet: Feedback-tab */}
-          <NavLink to="/settings" className={({isActive}) => isActive ? "tab active" : "tab"}>
-            Settings
-          </NavLink>
+          {TABS.map((t) => (
+            <NavLink
+              key={t.path}
+              to={t.path}
+              className={({ isActive }) => (isActive ? "tab active" : "tab")}
+            >
+              {t.label}
+            </NavLink>
+          ))}
         </nav>
 
         <main className="content">
           <Routes>
+            {/* Default → Record tab */}
             <Route path="/" element={<Navigate to="/record" replace />} />
-            <Route path="/record" element={<Record />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/settings" element={<Settings />} />
+            {TABS.map((t) => (
+              <Route key={t.path} path={t.path} element={t.element} />
+            ))}
+            {/* Catch-all → Record tab */}
             <Route path="*" element={<Navigate to="/record" replace />} />
           </Routes>
         </main>
