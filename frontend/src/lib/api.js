@@ -1,40 +1,39 @@
 // src/lib/api.js
-// Simpelt API-lag, som Record.jsx kalder: analyzeAudio({ blob, accent }).
 
-const USE_MOCK = true; // LAD DEN VÆRE true indtil vi laver en rigtig backend
+export const USE_MOCK = false; // <- slå mock fra nu, vi har backend
+
+const API_PATH = '/api/analyze-speech';
 
 export async function analyzeAudio({ blob, accent }) {
-  if (!blob) throw new Error("No audio blob provided");
+  // Blob -> base64 (dataURL)
+  const audioBase64 = await blobToDataURL(blob);
 
-  if (USE_MOCK) {
-    // Simuleret svar – så UI virker uden backend
-    await new Promise((r) => setTimeout(r, 600));
-    return {
-      transcript: "This is a mocked transcript.",
-      words: [
-        { w: "This", score: 0.95 },
-        { w: "is", score: 0.88 },
-        { w: "a", score: 0.8 },
-        { w: "mocked", score: 0.72 },
-        { w: "transcript.", score: 0.9 },
-      ],
-      phonemes: [
-        { ph: "TH", score: 0.91 },
-        { ph: "IH", score: 0.82 },
-        { ph: "S", score: 0.76 },
-      ],
-    };
-  }
+  const res = await fetch(API_PATH, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      audio: audioBase64,   // dataURL er ok; serveren stripper headeren
+      mime: blob.type || 'audio/webm',
+      accent: accent || 'us',
+    }),
+  });
 
-  // RIGTIG backend (når vi har en route):
-  const fd = new FormData();
-  fd.append("audio", blob, "recording.webm");
-  if (accent) fd.append("accent", accent);
-
-  const res = await fetch("/api/analyze-speech", { method: "POST", body: fd });
   if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`Analyze failed: ${res.status} ${text}`);
+    const err = await safeJson(res);
+    throw new Error(err?.error || `Server error (${res.status})`);
   }
-  return await res.json();
+  return res.json();
+}
+
+async function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = reject;
+    fr.onload = () => resolve(fr.result);
+    fr.readAsDataURL(blob);
+  });
+}
+
+async function safeJson(res) {
+  try { return await res.json(); } catch { return null; }
 }
