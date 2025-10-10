@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import Record from "./pages/Record.jsx";
-import Settings from "./pages/Settings.jsx"; // hvis du har den – ellers fjern ruten
 import "./styles.css";
 
 export default function App() {
