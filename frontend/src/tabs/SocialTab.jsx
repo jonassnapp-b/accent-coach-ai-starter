@@ -1,6 +1,5 @@
 // frontend/src/tabs/SocialTab.jsx
 import React, { useEffect, useState } from "react";
-import { api } from "../lib/api";
 
 export default function SocialTab() {
   const [board, setBoard] = useState([]);

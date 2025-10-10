@@ -1,6 +1,5 @@
 // frontend/src/tabs/ProgressTab.jsx
 import React, { useEffect, useState } from "react";
-import { api } from "../lib/api";
 
 export default function ProgressTab({ userId = "demo-user" }) {
   const [loading, setLoading] = useState(true);
