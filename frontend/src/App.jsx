@@ -1,4 +1,5 @@
 // src/App.jsx
+import Settings from "./pages/Settings.jsx";
 import { useState } from "react";
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import Record from "./pages/Record.jsx";
@@ -22,7 +23,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/record" replace />} />
             <Route path="/record" element={<Record />} />
-            {/* Fjernet: <Route path="/feedback" element={<Feedback />} /> */}
+            <Route path="/settings" element={<Settings />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/record" replace />} />
           </Routes>
