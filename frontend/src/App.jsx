@@ -3,7 +3,6 @@ import Record from "./pages/Record.jsx";
 import Settings from "./pages/Settings.jsx";
 import LeaderboardsTab from "./tabs/LeaderboardsTab.jsx";
 import "./styles.css";
-import LeaderboardsTab from "./tabs/LeaderboardsTab.jsx";
 
 import CoachTab from "./tabs/CoachTab.jsx";
 import ProgressTab from "./tabs/ProgressTab.jsx";
