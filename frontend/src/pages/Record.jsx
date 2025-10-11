@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { analyzeAudio } from "../lib/api.js";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
+import { awardPointsFromFeedback } from "../lib/leaderboard.js";
 
 const ACCENTS = [
   { id: "us", label: "American English" },
@@ -52,7 +53,7 @@ export default function Record() {
       mr.start();
       setRecording(true);
     } catch (e) {
-      setError("Kunne ikke få adgang til mikrofonen: " + (e?.message || e));
+      setError("Could not access microphone: " + (e?.message || e));
     }
   }
 
@@ -80,6 +81,9 @@ export default function Record() {
     try {
       const out = await analyzeAudio({ blob, accent });
       setResult(out);
+
+    // Give XP based on feedback result
+    awardPointsFromFeedback(out);
     } catch (e) {
       setError(e?.message || String(e));
     } finally {
