@@ -24,3 +24,10 @@
 .word-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .phoneme-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .phoneme-chip { display: inline-flex; align-items: center; gap: 6px; border: 2px solid #e5e7eb; border-radius: 16px; padding: 6px 10px; }
+
+/* --- MAKE TAB LABELS ALL CAPS --- */
+.tab {
+  text-transform: uppercase !important;
+  font-weight: 700; /* valgfrit — gør dem mere markante */
+  letter-spacing: 0.5px; /* valgfrit — gør det lidt Duolingo-agtigt */
+}
