@@ -40,7 +40,7 @@ export default function LeaderboardsTab() {
     setStats(myStats());
   }, [now, name]);
 
-+ const end = useMemo(() => seasonEndDateLocal(), []);
+  const end = useMemo(() => seasonEndDateLocal(), []);
   const timeLeft = fmtTimeLeft(end);
 
   const nextInfo = rankForPoints(stats.me?.xp || 0);
