@@ -1,12 +1,8 @@
-// src/lib/leaderboard.js
-// Lokal "Duolingo-style" leaderboard med ugentlig reset (søndag kl. 23:59 lokal tid)
-// og 6 ranks: Bronze, Silver, Gold, Emerald, Pearl, Diamond.
-
-const STORAGE_KEY_PREFIX = "ac-leaderboard:";
+// /frontend/src/lib/leaderboard.js
 const USER_ID_KEY = "ac-userId";
 const USER_NAME_KEY = "ac-userName";
+const API_BASE = "/api/leaderboard";
 
-// rank-grænser (XP total i indeværende uge)
 export const RANKS = [
   { id: "bronze",   name: "Bronze",   min: 0,     color: "#CD7F32" },
   { id: "silver",   name: "Silver",   min: 5000,  color: "#C0C0C0" },
@@ -16,39 +12,6 @@ export const RANKS = [
   { id: "diamond",  name: "Diamond",  min: 25000, color: "#7FDBFF" },
 ];
 
-// Finder indeværende sæsons id (en “uge”) der slutter søndag 23:59 lokal tid
-export function currentSeasonId(date = new Date()) {
-  // getDay(): 0=Sunday ... 6=Saturday
-  const d = new Date(date);
-  const day = d.getDay();
-  // hvor mange dage frem til søndag
-  const toSunday = (7 - day) % 7;
-  const end = new Date(d);
-  end.setHours(23, 59, 59, 999);
-  end.setDate(end.getDate() + toSunday);
-
-  // brug YYYY-W<weekOfYearBySundayEnd> som id – simpel men stabil
-  const year = end.getFullYear();
-  const yStart = new Date(year, 0, 1);
-  const days = Math.floor((end - yStart) / (24 * 3600 * 1000));
-  const week = Math.floor(days / 7) + 1;
-  return `${year}-W${week}`;
-}
-
-export function seasonEndDate(date = new Date()) {
-  const d = new Date(date);
-  const day = d.getDay();
-  const toSunday = (7 - day) % 7;
-  const end = new Date(d);
-  end.setHours(23, 59, 59, 999);
-  end.setDate(end.getDate() + toSunday);
-  return end;
-}
-
-function storageKeyForSeason(seasonId = currentSeasonId()) {
-  return STORAGE_KEY_PREFIX + seasonId;
-}
-
 function getOrCreateUserId() {
   let id = localStorage.getItem(USER_ID_KEY);
   if (!id) {
@@ -57,104 +20,86 @@ function getOrCreateUserId() {
   }
   return id;
 }
-
 export function getUserName() {
   return localStorage.getItem(USER_NAME_KEY) || "You";
 }
-
 export function setUserName(name) {
   localStorage.setItem(USER_NAME_KEY, name || "You");
+  try {
+    fetch(`${API_BASE}?action=setName`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: getOrCreateUserId(), name }),
+    });
+  } catch {}
 }
 
-function loadSeason(seasonId = currentSeasonId()) {
-  const raw = localStorage.getItem(storageKeyForSeason(seasonId));
-  if (raw) return JSON.parse(raw);
-
-  // seed med nogle “bots”, så listen ligner Duolingo lidt
-  const bots = [
-    { id: "b_jason",  name: "Jason",  xp: 597 },
-    { id: "b_cindy",  name: "Cindy",  xp: 252 },
-    { id: "b_ashley", name: "Ashley", xp: 224 },
-    { id: "b_sergio", name: "Sergio", xp: 156 },
-  ];
-  const data = { seasonId, players: bots };
-  saveSeason(data);
-  return data;
-}
-
-function saveSeason(data) {
-  localStorage.setItem(storageKeyForSeason(data.seasonId), JSON.stringify(data));
-}
-
-export function getLeaderboard(seasonId = currentSeasonId()) {
-  const data = loadSeason(seasonId);
-  // medtag "mig" hvis ikke findes
-  const myId = getOrCreateUserId();
-  const me = data.players.find(p => p.id === myId);
-  if (!me) {
-    data.players.push({ id: myId, name: getUserName(), xp: 0 });
-    saveSeason(data);
+export async function getLeaderboard() {
+  try {
+    const r = await fetch(`${API_BASE}`, { cache: "no-store" });
+    if (!r.ok) throw new Error("bad");
+    const out = await r.json();
+    const myId = getOrCreateUserId();
+    const me = out.players.find(p => p.id === myId) || { id: myId, name: getUserName(), xp: 0 };
+    if (!out.players.find(p => p.id === myId)) out.players.push(me);
+    out.players.sort((a,b) => b.xp - a.xp);
+    return out;
+  } catch {
+    const myId = getOrCreateUserId();
+    return { seasonId: "local", players: [{ id: myId, name: getUserName(), xp: 0 }] };
   }
-  // sortér desc
-  const sorted = [...data.players].sort((a, b) => b.xp - a.xp);
-  return { seasonId, players: sorted };
-}
-
-export function myStats() {
-  const { seasonId, players } = getLeaderboard();
-  const myId = getOrCreateUserId();
-  const idx = players.findIndex(p => p.id === myId);
-  const me = players[idx];
-  const rank = idx + 1;
-  const { rankName, nextMin } = rankForPoints(me.xp);
-  const toNext = nextMin != null ? Math.max(0, nextMin - me.xp) : 0;
-  return { seasonId, me, rank, rankName, toNext };
 }
 
 export function rankForPoints(xp) {
   let current = RANKS[0];
-  for (const r of RANKS) {
-    if (xp >= r.min) current = r;
-  }
-  const nextIdx = RANKS.findIndex(r => r.id === current.id) + 1;
-  const next = RANKS[nextIdx];
+  for (const r of RANKS) if (xp >= r.min) current = r;
+  const i = RANKS.findIndex(r => r.id === current.id);
+  const next = RANKS[i + 1];
   return { rankId: current.id, rankName: current.name, color: current.color, nextMin: next?.min ?? null };
 }
 
-// Tilføj XP – brug når man gennemfører “courses” eller får feedback-score
-export function awardPoints(amount, reason = "activity") {
-  const { seasonId } = getLeaderboard();
-  const data = loadSeason(seasonId);
+export async function myStats() {
+  const board = await getLeaderboard();
   const myId = getOrCreateUserId();
-  const me = data.players.find(p => p.id === myId) || { id: myId, name: getUserName(), xp: 0 };
-  me.xp = Math.max(0, Math.round(me.xp + Number(amount || 0)));
-  if (!data.players.find(p => p.id === myId)) data.players.push(me);
-  saveSeason(data);
-  return me.xp;
+  const players = board.players.sort((a,b)=>b.xp-a.xp);
+  const idx = players.findIndex(p => p.id === myId);
+  const me = idx >= 0 ? players[idx] : { id: myId, name: getUserName(), xp: 0 };
+  const { rankName, nextMin } = rankForPoints(me.xp);
+  const toNext = nextMin != null ? Math.max(0, nextMin - me.xp) : 0;
+  return { seasonId: board.seasonId, me, rank: idx + 1, rankName, toNext };
 }
 
-// Konverter resultat til points (fx fra Record/feedback)
-// Hvis dit result allerede har et "score" 0..1000, giver vi samme antal XP.
+export async function awardPoints(amount, reason = "activity") {
+  const userId = getOrCreateUserId();
+  const name = getUserName();
+  try {
+    const r = await fetch(`${API_BASE}?action=award`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, name, delta: Number(amount || 0), reason }),
+    });
+    if (!r.ok) throw new Error("bad");
+    const me = await r.json();
+    return me.xp;
+  } catch {
+    return 0;
+  }
+}
+
 export function awardPointsFromFeedback(result) {
   if (!result) return;
   let score = 0;
-
-  if (typeof result.score === "number") {
-    score = result.score;
-  } else if (Array.isArray(result.words)) {
-    // grov fallback: gennemsnit af phoneme-scores * 10 (max 1000)
-    let sum = 0, count = 0;
+  if (typeof result.score === "number") score = result.score;
+  else if (Array.isArray(result.words)) {
+    let sum = 0, c = 0;
     for (const w of result.words) {
-      if (Array.isArray(w.phonemes)) {
-        for (const ph of w.phonemes) {
-          if (typeof ph.score === "number") { sum += ph.score; count++; }
-        }
+      for (const ph of (w.phonemes || [])) {
+        if (typeof ph.score === "number") { sum += ph.score; c++; }
       }
     }
-    const avg = count ? (sum / count) : 0;
+    const avg = c ? (sum / c) : 0;
     score = Math.max(0, Math.min(1000, Math.round(avg * 10)));
   }
-
   score = Math.max(0, Math.min(1000, Math.round(score)));
   return awardPoints(score, "feedback");
 }
