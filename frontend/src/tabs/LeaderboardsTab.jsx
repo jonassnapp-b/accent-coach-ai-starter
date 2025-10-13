@@ -1,6 +1,18 @@
 // src/tabs/LeaderboardsTab.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { getLeaderboard, myStats, RANKS, rankForPoints, seasonEndDate, setUserName, getUserName } from "../lib/leaderboard";
+import { getLeaderboard, myStats, RANKS, rankForPoints, setUserName, getUserName } from "../lib/leaderboard";
+
+// End-of-week (søndag 23:59:59 lokal tid) – samme logik som før
+function seasonEndDateLocal(date = new Date()) {
+  const d = new Date(date);
+  const day = d.getDay();               // 0 = søndag ... 6 = lørdag
+  const toSunday = (7 - day) % 7;       // hvor mange dage til søndag
+  const end = new Date(d);
+  end.setHours(23, 59, 59, 999);        // 23:59:59.999
+  end.setDate(end.getDate() + toSunday);
+  return end;
+}
+
 
 function fmtTimeLeft(to) {
   const ms = to - Date.now();
@@ -28,7 +40,7 @@ export default function LeaderboardsTab() {
     setStats(myStats());
   }, [now, name]);
 
-  const end = useMemo(() => seasonEndDate(), []);
++ const end = useMemo(() => seasonEndDateLocal(), []);
   const timeLeft = fmtTimeLeft(end);
 
   const nextInfo = rankForPoints(stats.me?.xp || 0);
