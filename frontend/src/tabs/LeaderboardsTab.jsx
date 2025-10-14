@@ -1,34 +1,35 @@
+import * as React from "react";
+
 export default function LeaderboardsTab() {
   // safe fallbacks so first render never crashes
-  const [board, setBoard] = useState({ seasonId: "", players: [] });
-  const [stats, setStats] = useState({
-    seasonId: "",
-    me: { xp: 0, name: "You" },
-    rank: 0,
-    rankName: "Bronze",
-    toNext: 0,
-  });
-  const [now, setNow] = useState(Date.now());
-  const [name, setName] = useState(getUserName());
+const [board, setBoard] = React.useState({ seasonId: "", players: [] });
+const [stats, setStats] = React.useState({
+  seasonId: "",
+  me: { xp: 0, name: "You" },
+  rank: 0,
+  rankName: "Bronze",
+  toNext: 0,
+});
+const [now, setNow] = React.useState(Date.now());
+const [name, setName] = React.useState(getUserName());
 
-  // load real data after mount + every 30s (or when name changes)
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(t);
-  }, []);
+React.useEffect(() => {
+  const t = setInterval(() => setNow(Date.now()), 30_000);
+  return () => clearInterval(t);
+}, []);
 
-  useEffect(() => {
-    try {
-      setBoard(getLeaderboard());
-      setStats(myStats());
-    } catch (e) {
-      console.error("Failed to load leaderboard", e);
-      // keep fallbacks; no crash
-    }
-  }, [now, name]);
+React.useEffect(() => {
+  try {
+    setBoard(getLeaderboard());
+    setStats(myStats());
+  } catch (e) {
+    console.error("Failed to load leaderboard", e);
+  }
+}, [now, name]);
 
-  const end = useMemo(() => seasonEndDateLocal(), []);
-  const timeLeft = fmtTimeLeft(end);
+const end = React.useMemo(() => seasonEndDateLocal(), []);
+const timeLeft = fmtTimeLeft(end);
+
 
   const nextInfo = rankForPoints(stats?.me?.xp ?? 0);
 
