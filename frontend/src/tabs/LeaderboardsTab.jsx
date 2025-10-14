@@ -1,13 +1,7 @@
 // src/tabs/LeaderboardsTab.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  getLeaderboard,
-  myStats,
-  RANKS,
-  rankForPoints,
-  setUserName,
-  getUserName,
-} from "../lib/leaderboard";
+import { getLeaderboard, myStats, RANKS, rankForPoints, getUserName } from "../lib/leaderboard";
+
 
 // End-of-week (søndag 23:59:59 lokal tid)
 function seasonEndDateLocal(date = new Date()) {
@@ -42,7 +36,7 @@ export default function LeaderboardsTab() {
   });
 
   const [now, setNow] = useState(Date.now());
-  const [name, setName] = useState(getUserName());
+  const [name] = useState(getUserName());
 
   // tick hver 30s for at opdatere
   useEffect(() => {
@@ -83,14 +77,6 @@ export default function LeaderboardsTab() {
   const timeLeft = fmtTimeLeft(end);
 
   const nextInfo = rankForPoints(stats.me?.xp || 0);
-
-  function handleSaveName(e) {
-    e.preventDefault();
-    setUserName(name?.trim() || "You");
-    // sync state med storage
-    setBoard(getLeaderboard());
-    setStats(myStats());
-  }
 
   return (
     <div className="panel">
@@ -147,22 +133,11 @@ export default function LeaderboardsTab() {
           </div>
 
           {/* Midlertidig navnefelt (for demo uden login) */}
-          <form
-            onSubmit={handleSaveName}
-            style={{ display: "flex", gap: 8, alignItems: "center" }}
-          >
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Display name"
-              style={{
-                padding: "6px 10px",
-                border: "1px solid #ddd",
-                borderRadius: 8,
-              }}
-            />
-            <button className="btn">Save</button>
-          </form>
+        <div>
+  <div style={{fontSize:12, opacity:0.7}}>Name</div>
+  <div><b>{name}</b></div>
+</div>
+
         </div>
       </div>
 
