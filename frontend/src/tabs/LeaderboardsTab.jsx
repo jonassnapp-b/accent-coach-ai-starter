@@ -1,5 +1,5 @@
 // src/tabs/LeaderboardsTab.jsx
-import * as React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   getLeaderboard,
   myStats,
@@ -12,7 +12,7 @@ import {
 // End-of-week (søndag 23:59:59 lokal tid)
 function seasonEndDateLocal(date = new Date()) {
   const d = new Date(date);
-  const day = d.getDay();               // 0 = søndag ... 6 = lørdag
+  const day = d.getDay(); // 0 = søndag ... 6 = lørdag
   const toSunday = (7 - day) % 7;
   const end = new Date(d);
   end.setHours(23, 59, 59, 999);
@@ -32,49 +32,54 @@ function fmtTimeLeft(to) {
 
 export default function LeaderboardsTab() {
   // sikre defaults, så første render ikke crasher
-  const [board, setBoard] = React.useState({ seasonId: "", players: [] });
-  const [stats, setStats] = React.useState({
+  const [board, setBoard] = useState({ seasonId: "", players: [] });
+  const [stats, setStats] = useState({
     seasonId: "",
     me: { xp: 0, name: "You" },
     rank: 0,
     rankName: "Bronze",
     toNext: 0,
   });
-  const [now, setNow] = React.useState(Date.now());
-  const [name, setName] = React.useState(getUserName());
-  // Sikker players-liste (så .slice/.map aldrig crasher)
-  const players = React.useMemo(
-  () => (Array.isArray(board?.players) ? board.players : []),
-  [board]
-);
 
+  const [now, setNow] = useState(Date.now());
+  const [name, setName] = useState(getUserName());
 
-  // tick hver 30s (for timer) + ryd op
-  React.useEffect(() => {
+  // tick hver 30s for at opdatere
+  useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(t);
   }, []);
 
-  // hent rigtige data
-  React.useEffect(() => {
-  try {
-    const b = getLeaderboard();
-    setBoard(b && Array.isArray(b.players) ? b : { seasonId: "", players: [] });
+  // hent data – men fald tilbage hvis der sker fejl
+  useEffect(() => {
+    try {
+      const b = getLeaderboard();
+      setBoard(b && Array.isArray(b.players) ? b : { seasonId: "", players: [] });
 
-    const s = myStats();
-    setStats(
-      s && s.me
-        ? s
-        : { seasonId: "", me: { xp: 0, name: "You" }, rank: 0, rankName: "Bronze", toNext: 0 }
-    );
-  } catch (e) {
-    console.error("Failed to load leaderboard", e);
-    // behold fallback state – ingen crash
-  }
-}, [now, name]);
+      const s = myStats();
+      setStats(
+        s && s.me
+          ? s
+          : {
+              seasonId: "",
+              me: { xp: 0, name: name || "You" },
+              rank: 0,
+              rankName: "Bronze",
+              toNext: 0,
+            }
+      );
+    } catch (e) {
+      console.error("Failed to load leaderboard", e);
+      // behold fallback state
+    }
+  }, [now, name]);
 
+  const players = useMemo(
+    () => (Array.isArray(board.players) ? board.players : []),
+    [board]
+  );
 
-  const end = React.useMemo(() => seasonEndDateLocal(), []);
+  const end = useMemo(() => seasonEndDateLocal(), []);
   const timeLeft = fmtTimeLeft(end);
 
   const nextInfo = rankForPoints(stats.me?.xp || 0);
@@ -82,6 +87,7 @@ export default function LeaderboardsTab() {
   function handleSaveName(e) {
     e.preventDefault();
     setUserName(name?.trim() || "You");
+    // sync state med storage
     setBoard(getLeaderboard());
     setStats(myStats());
   }
@@ -91,7 +97,14 @@ export default function LeaderboardsTab() {
       <h2>Leaderboards</h2>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 16,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <div>
             <div style={{ fontSize: 12, opacity: 0.7 }}>Your rank</div>
             <div style={{ fontWeight: 700, fontSize: 18, color: nextInfo.color }}>
@@ -133,12 +146,20 @@ export default function LeaderboardsTab() {
             </div>
           </div>
 
-          <form onSubmit={handleSaveName} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {/* Midlertidig navnefelt (for demo uden login) */}
+          <form
+            onSubmit={handleSaveName}
+            style={{ display: "flex", gap: 8, alignItems: "center" }}
+          >
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Display name"
-              style={{ padding: "6px 10px", border: "1px solid #ddd", borderRadius: 8 }}
+              style={{
+                padding: "6px 10px",
+                border: "1px solid #ddd",
+                borderRadius: 8,
+              }}
             />
             <button className="btn">Save</button>
           </form>
@@ -146,15 +167,23 @@ export default function LeaderboardsTab() {
       </div>
 
       <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 8,
+          }}
+        >
           <div style={{ fontWeight: 700 }}>This week</div>
-          <div style={{ fontSize: 12, opacity: 0.7 }}>Top 10 reach the finals (example)</div>
+          <div style={{ fontSize: 12, opacity: 0.7 }}>
+            Top 10 reach the finals (example)
+          </div>
         </div>
 
         <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
           {players.slice(0, 20).map((p, i) => (
             <li
-              key={p.id}
+              key={p.id ?? `${i}`}
               style={{
                 display: "grid",
                 gridTemplateColumns: "40px 1fr 80px",
@@ -165,8 +194,8 @@ export default function LeaderboardsTab() {
                 borderBottom: "1px solid #eee",
                 background:
                   p.name === name ||
-                  (p.id.startsWith("u_") &&
-                    i === board.players.findIndex((x) => x.id === p.id))
+                  (String(p.id).startsWith("u_") &&
+                    i === players.findIndex((x) => x.id === p.id))
                     ? "rgba(0,0,0,0.02)"
                     : "transparent",
               }}
@@ -187,11 +216,15 @@ export default function LeaderboardsTab() {
                   {p.name?.slice(0, 1)?.toUpperCase() || "?"}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 600 }}>{p.name}</div>
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>{rankForPoints(p.xp).rankName}</div>
+                  <div style={{ fontWeight: 600 }}>{p.name || "Unknown"}</div>
+                  <div style={{ fontSize: 12, opacity: 0.7 }}>
+                    {rankForPoints(Number(p.xp) || 0).rankName}
+                  </div>
                 </div>
               </div>
-              <div style={{ textAlign: "right", fontWeight: 600 }}>{p.xp} XP</div>
+              <div style={{ textAlign: "right", fontWeight: 600 }}>
+                {(Number(p.xp) || 0) + " XP"}
+              </div>
             </li>
           ))}
         </ol>
