@@ -42,6 +42,12 @@ export default function LeaderboardsTab() {
   });
   const [now, setNow] = React.useState(Date.now());
   const [name, setName] = React.useState(getUserName());
+  // Sikker players-liste (så .slice/.map aldrig crasher)
+  const players = React.useMemo(
+  () => (Array.isArray(board?.players) ? board.players : []),
+  [board]
+);
+
 
   // tick hver 30s (for timer) + ryd op
   React.useEffect(() => {
@@ -51,14 +57,22 @@ export default function LeaderboardsTab() {
 
   // hent rigtige data
   React.useEffect(() => {
-    try {
-      setBoard(getLeaderboard());
-      setStats(myStats());
-    } catch (e) {
-      console.error("Failed to load leaderboard", e);
-      // behold fallback state – ingen crash
-    }
-  }, [now, name]);
+  try {
+    const b = getLeaderboard();
+    setBoard(b && Array.isArray(b.players) ? b : { seasonId: "", players: [] });
+
+    const s = myStats();
+    setStats(
+      s && s.me
+        ? s
+        : { seasonId: "", me: { xp: 0, name: "You" }, rank: 0, rankName: "Bronze", toNext: 0 }
+    );
+  } catch (e) {
+    console.error("Failed to load leaderboard", e);
+    // behold fallback state – ingen crash
+  }
+}, [now, name]);
+
 
   const end = React.useMemo(() => seasonEndDateLocal(), []);
   const timeLeft = fmtTimeLeft(end);
@@ -138,7 +152,7 @@ export default function LeaderboardsTab() {
         </div>
 
         <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          {board.players.slice(0, 20).map((p, i) => (
+          {players.slice(0, 20).map((p, i) => (
             <li
               key={p.id}
               style={{
