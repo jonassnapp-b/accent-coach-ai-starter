@@ -10,6 +10,15 @@ app.use(cors({ origin: FRONTEND_ORIGIN }));
 
 // Health
 app.get('/', (req, res) => res.send('Accent Coach AI backend running'));
+// Health endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 
 // MOCK scorer — erstattes med rigtig API-integration
 function mockScore(targetPhrase) {
