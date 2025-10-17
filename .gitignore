@@ -1,1 +1,17 @@
 .vercel
+# Dependencies
+**/node_modules/
+
+# Builds
+dist/
+build/
+.vercel/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# OS/Editor
+.DS_Store
+.vscode/
