@@ -1,7 +1,8 @@
 // /frontend/src/lib/leaderboard.js
 const USER_ID_KEY = "ac-userId";
 const USER_NAME_KEY = "ac-userName";
-const API_BASE = "/api/leaderboard";
+const API_BASE = "http://192.168.1.189:3000/api/leaderboard";
+
 
 export const RANKS = [
   { id: "bronze",   name: "Bronze",   min: 0,     color: "#CD7F32" },

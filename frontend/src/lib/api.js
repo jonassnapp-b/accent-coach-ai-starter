@@ -1,36 +1,55 @@
 // src/lib/api.js
+export const USE_MOCK = false;
 
-export const USE_MOCK = false; // vi bruger backend
-
-const API_PATH = "/api/analyze-speech";
-
-async function blobToDataURL(blob) {
-  const buf = await blob.arrayBuffer();
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-  return `data:${blob.type || "audio/webm"};base64,${base64}`;
-}
+// 👉 Sørg for at IP'en passer til din lokale backend
+const API_PATH = "http://192.168.1.189:3000/api/analyze-speech";
 
 async function safeJson(res) {
-  try { return await res.json(); } catch { return null; }
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
-export async function analyzeAudio({ blob, accent }) {
-  const dataURL = await blobToDataURL(blob);
+// SAFE base64 conversion (fallback hvis multipart fejler)
+async function blobToDataURL(blob) {
+  return await new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result);
+    fr.onerror = () => reject(fr.error || new Error("readAsDataURL failed"));
+    fr.readAsDataURL(blob);
+  });
+}
 
-  const res = await fetch(API_PATH, {
+// src/lib/api.js
+export async function analyzeAudio({ blob, accent }) {
+  // build a dataURL so the backend can decode cleanly
+  const dataURL = await new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result); // full data URL: data:<mime>;base64,....
+    fr.onerror = () => reject(fr.error || new Error("readAsDataURL failed"));
+    fr.readAsDataURL(blob);
+  });
+
+  // the scripted/target text (later: take from the exercise)
+  const refText = "one two three";
+
+  const res = await fetch("/api/analyze-speech", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      audio: dataURL,                 // base64 dataURL (matcher backend)
-      mime: blob.type || "audio/webm",
-      accent: accent || "us",
+      audio: dataURL,       // <-- backend expects "audio"
+      mime: blob.type || "", 
+      accent,               // pass the selected accent
+      refText,              // scripted target text
     }),
   });
 
   if (!res.ok) {
-    const err = await safeJson(res);
-    throw new Error(err?.error || `Server error (${res.status})`);
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error || `Analyze failed (${res.status})`);
   }
-
-  return res.json(); // { transcript, accent, words }
+  return await res.json();
 }
+
