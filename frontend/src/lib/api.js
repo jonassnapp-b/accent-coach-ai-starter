@@ -1,20 +1,12 @@
 // src/lib/api.js
 export const USE_MOCK = false;
-
-// 👉 Sørg for at IP'en passer til din lokale backend
-const API_PATH = "http://192.168.1.189:3000/api/analyze-speech";
+const API_PATH = "http://localhost:3000/api/analyze-speech"; // or your LAN IP
 
 async function safeJson(res) {
-  try {
-    return await res.json();
-  } catch {
-    return null;
-  }
+  try { return await res.json(); } catch { return null; }
 }
-
-// SAFE base64 conversion (fallback hvis multipart fejler)
 async function blobToDataURL(blob) {
-  return await new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(fr.result);
     fr.onerror = () => reject(fr.error || new Error("readAsDataURL failed"));
@@ -22,34 +14,46 @@ async function blobToDataURL(blob) {
   });
 }
 
-// src/lib/api.js
-export async function analyzeAudio({ blob, accent }) {
-  // build a dataURL so the backend can decode cleanly
-  const dataURL = await new Promise((resolve, reject) => {
-    const fr = new FileReader();
-    fr.onload = () => resolve(fr.result); // full data URL: data:<mime>;base64,....
-    fr.onerror = () => reject(fr.error || new Error("readAsDataURL failed"));
-    fr.readAsDataURL(blob);
-  });
+export async function analyzeAudio({ blob, accent, refText }) {
+  // Build a File (some environments are picky)
+  const filename =
+    blob.type?.includes("wav") ? "clip.wav" :
+    blob.type?.includes("aac") ? "clip.aac" :
+    blob.type?.includes("mp4") || blob.type?.includes("m4a") ? "clip.m4a" :
+    "clip.dat";
 
-  // the scripted/target text (later: take from the exercise)
-  const refText = "one two three";
+  const file = new File([blob], filename, { type: blob.type || "application/octet-stream" });
 
-  const res = await fetch("/api/analyze-speech", {
+  // Multipart (preferred)
+  let res = await fetch(API_PATH, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      audio: dataURL,       // <-- backend expects "audio"
-      mime: blob.type || "", 
-      accent,               // pass the selected accent
-      refText,              // scripted target text
-    }),
+    body: (() => {
+      const f = new FormData();
+      f.append("audio", file);               // Blob/File
+      if (accent) f.append("accent", accent);
+      if (refText) f.append("refText", refText); // target
+      return f;
+    })(),
   });
+
+  // Fallback to JSON if the server rejects multipart
+  if (!res.ok && res.status >= 400 && res.status < 500) {
+    const dataURL = await blobToDataURL(file);
+    res = await fetch(API_PATH, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        audio: dataURL,
+        mime: file.type || "application/octet-stream",
+        accent: accent || "en-US",
+        refText: refText || "",
+      }),
+    });
+  }
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error || `Analyze failed (${res.status})`);
+    const err = await safeJson(res);
+    throw new Error(err?.error || `Server error (${res.status})`);
   }
-  return await res.json();
+  return res.json();
 }
-

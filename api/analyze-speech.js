@@ -1,26 +1,27 @@
-// api/analyze-speech.js — Azure STT (fallback for transcript) + SpeechSuper (scripted, strict)
+// api/analyze-speech.js
 import express from "express";
 import multer from "multer";
 import ffmpeg from "fluent-ffmpeg";
-import { Readable } from "stream";
-import FormData from "form-data";
 import ffmpegPath from "ffmpeg-static";
+import { Readable } from "stream";
+import { createHash, randomUUID } from "crypto";
 
-if (ffmpegPath) { try { ffmpeg.setFfmpegPath(ffmpegPath); } catch {} }
+if (ffmpegPath) try { ffmpeg.setFfmpegPath(ffmpegPath); } catch {}
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 export const config = { api: { bodyParser: false } };
 
-/* -------- utils -------- */
-function dataURLtoBuffer(dataURL) {
-  const base64 = dataURL.includes(",") ? dataURL.split(",")[1] : dataURL;
-  return Buffer.from(base64, "base64");
+/* ----------------- audio helpers ----------------- */
+function dataURLtoBuffer(str = "") {
+  const base64 = str.includes(",") ? str.split(",")[1] : str;
+  return Buffer.from(base64 || "", "base64");
 }
 function bufferToStream(buf) {
   const s = new Readable();
   s._read = () => {};
-  s.push(buf); s.push(null);
+  s.push(buf);
+  s.push(null);
   return s;
 }
 async function toWavPcm16Mono16k(inputBuf, inputMimeHint = "") {
@@ -29,155 +30,279 @@ async function toWavPcm16Mono16k(inputBuf, inputMimeHint = "") {
     const chunks = [];
     const cmd = ffmpeg(inStream);
     if (/(aac|m4a|mp4)/i.test(inputMimeHint)) cmd.inputFormat("aac");
-    cmd.audioChannels(1).audioFrequency(16000).audioCodec("pcm_s16le").format("wav")
+    cmd
+      .audioChannels(1)
+      .audioFrequency(16000)
+      .audioCodec("pcm_s16le")
+      .format("wav")
       .on("error", (err) => reject(new Error(String(err))))
-      .on("end", () => { try { resolve(Buffer.concat(chunks)); } catch (e) { reject(e); } });
-    cmd.pipe().on("data", (c) => chunks.push(c)).on("error", (err) => reject(new Error(String(err))));
+      .on("end", () => resolve(Buffer.concat(chunks)));
+    cmd
+      .pipe()
+      .on("data", (c) => chunks.push(c))
+      .on("error", (err) => reject(new Error(String(err))));
   });
 }
 
-/* -------- Azure STT (for transcript fallback) -------- */
-const AZURE_CT = "audio/wav; codecs=audio/pcm; samplerate=16000; bitspersample=16; channels=1";
-async function azureSTT({ region, key, locale, wavBytes }) {
-  const url =
-    `https://${region}.stt.speech.microsoft.com/` +
-    `speech/recognition/conversation/cognitiveservices/v1?language=${encodeURIComponent(locale)}&format=detailed`;
+/* ----------------- SpeechSuper helpers ----------------- */
+const sha1 = (s) => createHash("sha1").update(s).digest("hex");
+const chooseCore = (refText) =>
+  /\s/.test((refText || "").trim()) ? "sent.eval.promax" : "word.eval.promax";
+
+function makeConnectStart({ appKey, secretKey, userId, coreType, refText }) {
+  const tsConnect = Date.now().toString();
+  const tsStart = Date.now().toString();
+  const tokenId = randomUUID().replace(/-/g, "").toUpperCase();
+
+  const connect = {
+    cmd: "connect",
+    param: {
+      sdk: { version: 16777472, source: 9, protocol: 2 },
+      app: {
+        applicationId: appKey,
+        sig: sha1(appKey + tsConnect + secretKey),
+        timestamp: tsConnect,
+      },
+    },
+  };
+
+  const start = {
+    cmd: "start",
+    param: {
+      app: {
+        applicationId: appKey,
+        sig: sha1(appKey + tsStart + userId + secretKey),
+        userId,
+        timestamp: tsStart,
+      },
+      audio: { audioType: "wav", sampleRate: 16000, channel: 1, sampleBytes: 2 },
+      request: {
+  coreType,
+  language: "en_us",
+  dict_dialect: accent, // use en_us or en_br
+  precision: 1,
+  getParam: 1,
+  phoneme_output: 1,
+  refText,
+  question_prompt: refText,
+  rank: 100,
+  tokenId,
+},
+
+    },
+  };
+
+  return { connect, start };
+}
+
+async function postSpeechSuperExact({
+  host,
+  coreType,
+  appKey,
+  secretKey,
+  userId,
+  refText,
+  wavBytes,
+}) {
+  const url = `${host.replace(/\/$/, "")}/${coreType}`;
+  const { connect, start } = makeConnectStart({
+    appKey,
+    secretKey,
+    userId,
+    coreType,
+    refText,
+  });
+
+  const fd = new FormData();
+  // Their HTTP sample posts ONE JSON object in "text"
+  fd.append("text", JSON.stringify({ connect, start }));
+  fd.append("audio", new Blob([wavBytes], { type: "audio/wav" }), "clip.wav");
+
   const r = await fetch(url, {
     method: "POST",
-    headers: { "Ocp-Apim-Subscription-Key": key, "Content-Type": AZURE_CT, Accept: "application/json" },
-    body: wavBytes,
+    headers: { "Request-Index": "0" },
+    body: fd,
   });
-  const json = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(json?.error?.message || json?.Message || `Azure STT ${r.status}`);
-  const nbest = Array.isArray(json?.NBest) ? json.NBest[0] : undefined;
-  const transcript = (nbest?.Display ?? json?.DisplayText ?? nbest?.Lexical ?? "").toString().trim();
-  return { transcript, raw: json };
+
+  const raw = await r.text();
+  let json = null;
+  try {
+    json = JSON.parse(raw);
+  } catch {}
+  if (!r.ok) {
+    const e = new Error(raw);
+    e.code = r.status;
+    e.raw = raw;
+    e.json = json;
+    throw e;
+  }
+  return json || {};
 }
 
-/* -------- SpeechSuper (scripted) -------- */
-async function speechsuperScripted({ appKey, coreType, refText, wavBytes }) {
-  const url = `https://api.speechsuper.com/${coreType}`;
-  const textPayload = {
-    appKey, coreType, refText,
-    rank: 100, audioFormat: "wav", sampleRate: 16000, userId: "fluentup-dev",
-  };
-  const fd = new FormData();
-  fd.append("text", JSON.stringify(textPayload));
-  fd.append("audio", Buffer.from(wavBytes), { filename: "clip.wav" });
+/* ----------------- map SS → UI ----------------- */
+/**
+ * Normalizes multiple SpeechSuper result variants to our UI shape:
+ * {
+ *   transcript, accent,
+ *   words: [{ w, score (0–1), phonemes: [{ ph, score }] }],
+ *   overall (0–1), overallAccuracy (0–100)
+ * }
+ */
+function mapSpeechsuperToUi(ss, refText, accent) {
+  const root = ss?.result || ss?.text_score || ss || {};
 
-  const r = await fetch(url, { method: "POST", headers: { "Request-Index": "0", ...fd.getHeaders?.() }, body: fd });
-  const json = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(json?.message || json?.error || `SpeechSuper HTTP ${r.status}`);
-  return json;
-}
+  // Overall: many variants use 0–100 integer
+  let overall100 =
+    Number(
+      root.overall ??
+        root.pronunciation ??
+        root.pronunciation_score ??
+        root.accuracy_score ??
+        root.overall_score ??
+        ss?.pronunciation_score ??
+        ss?.accuracy_score ??
+        0
+    ) || 0;
 
-/** Map SpeechSuper → your UI shape */
-function mapSpeechsuperToUi(sa, refText, accent) {
-  const root = sa?.result || sa?.text_score || sa || {};
-  const list = root.word_score_list || root.words || root.wordList || root.word_scores || [];
+  const wordsIn =
+    root.words || root.word_score_list || root.wordList || root.word_scores || [];
+
   const words = [];
+  for (const it of Array.isArray(wordsIn) ? wordsIn : []) {
+    // word text
+    const wText = (it.word ?? it.text ?? it.display ?? it.word_text ?? "").toString().trim();
 
-  for (const it of (Array.isArray(list) ? list : [])) {
-    const wText = (it.word ?? it.text ?? it.display ?? "").toString().trim();
-    if (!wText) continue;
-    let wScore = Number(it.accuracy_score ?? it.pronunciation_score ?? it.score ?? 0);
-    if (wScore > 1) wScore /= 100;
+    // word-level score: check typical places (scores.overall or accuracy/pronunciation)
+    let wScore100 =
+      Number(it?.scores?.overall ?? it?.overall ?? it?.pronunciation ?? it?.accuracy ?? 0) || 0;
 
-    const phSrc = it.phone_score_list || it.phones || it.phonemes || [];
+    // phonemes: look for array under common keys
+    const phSrc = it.phonemes || it.phone_score_list || it.phones || [];
     const phonemes = [];
-    for (const p of (Array.isArray(phSrc) ? phSrc : [])) {
-      const ph = (p.phone ?? p.phoneme ?? p.ph ?? "").toString().trim();
+    for (const p of Array.isArray(phSrc) ? phSrc : []) {
+      const ph =
+        (p.ph ??
+          p.phoneme ??
+          p.phone ??
+          p.sound_like ??
+          "").toString().trim();
       if (!ph) continue;
-      let s = Number(p.accuracy_score ?? p.pronunciation_score ?? p.score ?? 0);
-      if (s > 1) s /= 100;
-      phonemes.push({ ph, score: s, phoneme: ph, accuracy: s, accuracyScore: Math.round(s * 100) });
+
+      // SpeechSuper often returns "pronunciation" (0–100) per phoneme
+      let s100 =
+        Number(
+          p.pronunciation ??
+            p.accuracy_score ??
+            p.pronunciation_score ??
+            p.score ??
+            p.accuracy ??
+            0
+        ) || 0;
+
+      const s01 = Math.max(0, Math.min(1, s100 > 1 ? s100 / 100 : s100));
+      phonemes.push({
+        ph,
+        score: s01,
+        phoneme: ph,
+        accuracy: s01,
+        accuracyScore: Math.round(s01 * 100),
+      });
     }
 
-    words.push({ w: wText, score: wScore, phonemes, word: wText, accuracy: wScore, accuracyScore: Math.round(wScore * 100) });
+    const w01 = Math.max(0, Math.min(1, wScore100 > 1 ? wScore100 / 100 : wScore100));
+    words.push({
+      w: wText || refText,
+      score: w01,
+      phonemes,
+      word: wText || refText,
+      accuracy: w01,
+      accuracyScore: Math.round(w01 * 100),
+    });
   }
 
-  let overall100 =
-    Number(root.pronunciation_score ?? root.accuracy_score ?? root.overall_score ??
-           sa?.pronunciation_score ?? sa?.accuracy_score ?? 0) || 0;
-
+  // If no overall provided, derive from words
   if (!overall100 && words.length) {
-    overall100 = Math.round((words.reduce((a,b)=>a+(b.score||0),0) / words.length) * 100);
+    overall100 = Math.round(
+      (words.reduce((a, b) => a + (b.score || 0), 0) / words.length) * 100
+    );
   }
 
- function mapSpeechsuperToUi(sa, refText, accent) {
-  // ...
   return {
     transcript: refText,
-    accent, // ← brug det accent som brugeren faktisk valgte
+    accent,
     words,
-    overall: overall100/100,
-    overallAccuracy: overall100,
-    snr: null
+    overall: Math.max(0, Math.min(1, overall100 / 100)),
+    overallAccuracy: Math.round(overall100),
+    snr: null,
+    _debug: { resultKeys: Object.keys(root || {}) },
   };
 }
 
-}
-
-/* -------- Route -------- */
+/* ----------------- route ----------------- */
 router.post("/analyze-speech", upload.single("audio"), async (req, res) => {
   try {
-    // read audio
-    let rawBuf, mimeHint = "", accent = req.body?.accent;
-    if (req.file?.buffer) { rawBuf = req.file.buffer; mimeHint = req.file.mimetype || ""; }
-    else if (req.is("application/json")) {
-  // Accept both full dataURL in "audio" and raw base64 in "audioBase64"
-  const { audio, audioBase64, mime, accent: a2, refText: r2 } = req.body ?? {};
+    const appKey = process.env.SPEECHSUPER_APP_KEY || "";
+    const secretKey = process.env.SPEECHSUPER_SECRET_KEY || "";
+    const host = (process.env.SPEECHSUPER_HOST || "https://api.speechsuper.com").replace(
+      /\/$/,
+      ""
+    );
+    if (!appKey || !secretKey)
+      return res.status(500).json({ error: "SpeechSuper keys missing." });
 
-  let dataUrl = "";
-  if (audio && typeof audio === "string") {
-    dataUrl = audio; // already a data:...;base64,XXXX
-  } else if (audioBase64 && typeof audioBase64 === "string") {
-    const guessed = mime || "audio/wav";
-    dataUrl = `data:${guessed};base64,${audioBase64}`;
-  }
+    const refText = (req.body?.refText || "").trim();
+    if (!refText) return res.status(400).json({ error: "Missing refText." });
 
-  if (dataUrl) {
-    rawBuf = dataURLtoBuffer(dataUrl);
-    mimeHint = mime || "";
-  }
-  if (a2) accent = a2;
-  if (r2) refText = r2;
-}
+    let rawBuf,
+      mimeHint = "",
+      accent = req.body?.accent || "en-US";
+    if (req.file?.buffer) {
+      rawBuf = req.file.buffer;
+      mimeHint = req.file.mimetype || "";
+    } else if (req.is("application/json")) {
+      const { audio, audioBase64, mime } = req.body ?? {};
+      const b64 = audioBase64 || audio || "";
+      if (b64) {
+        rawBuf = dataURLtoBuffer(b64);
+        mimeHint = mime || "";
+      }
+    }
+    if (!rawBuf) return res.status(400).json({ error: "Missing audio." });
 
-    if (!rawBuf) return res.status(400).json({ error: "Missing audio" });
-
-    const short = { us: "en-US", uk: "en-GB", au: "en-AU", ca: "en-CA" };
-    const locale = (accent && (accent.includes("-") ? accent : short[accent])) || "en-US";
-
-    const AZ_REGION = process.env.AZURE_SPEECH_REGION;
-    const AZ_KEY    = process.env.AZURE_SPEECH_KEY;
-
-    // normalize audio
     const wavBytes = await toWavPcm16Mono16k(rawBuf, mimeHint);
-    if (!wavBytes?.length) return res.status(400).json({ error: "Audio conversion failed" });
+    if (!wavBytes?.length)
+      return res.status(400).json({ error: "Audio conversion failed." });
 
-    // target text (prefer provided refText; otherwise fall back to STT)
-    let refText = (req.body?.refText || "").toString().trim();
-    if (!refText) {
-      if (!AZ_REGION || !AZ_KEY) return res.status(500).json({ error: "Azure STT env vars missing (needed for transcript fallback)" });
-      const stt = await azureSTT({ region: AZ_REGION, key: AZ_KEY, locale, wavBytes });
-      if (!stt.transcript) return res.status(424).json({ error: "No transcript recognized; cannot score.", accent: locale });
-      refText = stt.transcript;
+    const coreType = chooseCore(refText);
+    const userId = "accent-coach";
+
+    console.log("[SS SEND sample]", {
+      coreType,
+      refText,
+      wavBytes: wavBytes.length,
+    });
+
+    const ss = await postSpeechSuperExact({
+      host,
+      coreType,
+      appKey,
+      secretKey,
+      userId,
+      refText,
+      wavBytes,
+    });
+
+    if (ss && (ss.errId || ss.error)) {
+      return res
+        .status(502)
+        .json({ error: ss.error || "SpeechSuper error", errId: ss.errId ?? null, raw: ss });
     }
 
-    // SpeechSuper scripted scoring
-    const appKey = process.env.SPEECHSUPER_APP_KEY;
-    if (!appKey) return res.status(500).json({ error: "SPEECHSUPER_APP_KEY missing" });
-
-    const ssJson = await speechsuperScripted({ appKey, coreType: "sent.eval.promax", refText, wavBytes });
-
-    // map → UI
-    const ui = mapSpeechsuperToUi(ssJson, refText, locale);
+    const ui = mapSpeechsuperToUi(ss, refText, accent);
     return res.status(200).json(ui);
-
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: String(err?.message || err) });
+    return res.status(500).json({ error: err?.message || String(err) });
   }
 });
 
