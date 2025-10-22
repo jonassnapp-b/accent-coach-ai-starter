@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 /* simple styling */
 .app-shell { max-width: 820px; margin: 24px auto; padding: 0 16px; }
 .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
