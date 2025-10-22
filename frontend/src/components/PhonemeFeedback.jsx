@@ -1,7 +1,9 @@
 // frontend/src/components/PhonemeFeedback.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Bookmark, BookmarkCheck } from "lucide-react";
+import { toggleBookmark, isBookmarked } from "../lib/bookmarks.js";
 
-console.log("PF LIVE v17", import.meta?.url);
+console.log("PF LIVE v18", import.meta?.url);
 
 /* ---------- helpers ---------- */
 function scoreToColor01(s) {
@@ -153,12 +155,22 @@ export default function PhonemeFeedback({ result }) {
 
   const recognition = result.recognition ?? result.transcript ?? "";
   const words = Array.isArray(result.words) ? result.words : [];
-  const targetSentence =
-    result.target || result.reference || result.text || result.refText || "";
+  // original target text fra backend (kan være tom)
+const targetSentenceRaw =
+  result.target || result.reference || result.text || result.refText || "";
 
-  const isSentence =
-    (Array.isArray(words) && words.length >= 2) ||
-    (typeof recognition === "string" && /\s/.test(recognition.trim()));
+// fallback: byg sætning af ord eller brug recognition
+const wordsJoined = Array.isArray(words) ? words.map(w => (w.word ?? w.w ?? "")).join(" ").trim() : "";
+const displaySentence = (targetSentenceRaw || "").trim() || (recognition || "").trim() || wordsJoined;
+
+// sætning/enkeltord?
+const isSentence =
+  (Array.isArray(words) && words.length >= 2) ||
+  (typeof displaySentence === "string" && /\s/.test(displaySentence));
+
+// dette bruger vi til UI'et
+const targetSentence = displaySentence;
+
 
   const overall01 = to01(result.overall ?? result.pronunciation ?? result.overallAccuracy);
   const countVal = useCountUp(overall01 != null ? overall01 * 100 : 0);
@@ -200,15 +212,66 @@ export default function PhonemeFeedback({ result }) {
     );
   });
 
-  const stressMarks = wordPhs.some(p => readPhoneme(p).stressMark)
-    ? "/" + wordPhs.map(p => (readPhoneme(p).stressMark ? "ˈ" : "")).join("") + "/"
+  // Build plain IPA strings for saving
+  function ipaOfWord(phs = []) {
+    const parts = (Array.isArray(phs) ? phs : [])
+      .map((p) => (p?.phoneme || p?.ph || p?.sound || p?.ipa || ""))
+      .filter(Boolean);
+    return parts.length ? `/${parts.join("")}/` : "";
+  }
+  const ipaWord = ipaOfWord(wordPhs);
+  const ipaSentence = `/${(Array.isArray(words) ? words : [])
+    .map((w) => ipaOfWord(w?.phonemes))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim()}/`.replace(/^\/\//, "/");
+
+const targetText = oneWord ? (wordText || "") : (targetSentence || "");
+  const targetIpa = oneWord ? ipaWord : ipaSentence;
+  const targetScorePct = overall01 != null ? Math.round(overall01 * 100) : null;
+
+  const [booked, setBooked] = useState(isBookmarked(targetText));
+  useEffect(() => { setBooked(isBookmarked(targetText)); }, [targetText]);
+
+  function onToggleBookmark() {
+    if (!targetText) return;
+    toggleBookmark({
+      text: targetText,
+      ipa: targetIpa,
+      score: targetScorePct,
+      type: oneWord ? "word" : "sentence",
+      createdAt: Date.now(),
+    });
+    setBooked(isBookmarked(targetText));
+  }
+
+  const stressMarks = wordPhs.some((p) => readPhoneme(p).stressMark)
+    ? "/" + wordPhs.map((p) => (readPhoneme(p).stressMark ? "ˈ" : "")).join("") + "/"
     : null;
 
   const wordStressMessage =
     result.word_stress_message ?? result.wordStressMessage ?? result.stress?.message ?? null;
 
   return (
-    <div className="panel mt-4">
+    <div className="panel mt-4 relative">
+      {/* Bookmark knap — bliver GUL når aktiv */}
+     { overall01 != null && targetText && (
+  <button
+    onClick={onToggleBookmark}
+    className={[
+      "absolute right-3 top-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border transition",
+      booked
+        ? "border-amber-300 bg-amber-100 text-amber-800"
+        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+    ].join(" ")}
+    title={booked ? "Remove bookmark" : "Bookmark"}
+  >
+    {booked ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+    <span className="text-sm">{booked ? "Bookmarked" : "Bookmark"}</span>
+  </button>
+)}
+
+
       <h3 className="mb-1">Feedback</h3>
 
       {/* Stor % (uden “Overall: …”) */}
@@ -262,62 +325,52 @@ export default function PhonemeFeedback({ result }) {
             <Meta label="Pauses" value={pauseCount ?? "–"} />
             <Meta label="Duration" value={durationStr ?? "–"} />
           </div>
+{/* Per-word breakdown: bar + phoneme chips */}
+<ul className="list-none p-0 m-0 mt-2">
+  {words.map((w, i) => {
+    const wText = w.word ?? w.w ?? "";
+    const w01 = to01(
+      w?.scores?.overall ?? w?.overall ?? w?.pronunciation ?? w?.accuracy ?? w?.accuracyScore
+    );
+    const phs = Array.isArray(w.phonemes) ? w.phonemes : [];
+    const color = scoreToColor01(w01 ?? 0);
 
-          {/* Enkel pr.-ord nedbrydning: BAR + fonemchips */}
-          <ul className="list-none p-0 m-0 mt-2">
-            {words.map((w, i) => {
-              const wText = w.word ?? w.w ?? "";
-              const w01 = to01(
-                w?.scores?.overall ?? w?.overall ?? w?.pronunciation ?? w?.accuracy ?? w?.accuracyScore
-              );
-              const phs = Array.isArray(w.phonemes) ? w.phonemes : [];
-              const color = scoreToColor01(w01 ?? 0);
+    return (
+      <li key={`${wText}-${i}`} className="mb-3">
+        <div className="font-bold mb-1">
+          {wText || <em>(empty word)</em>}{" "}
+          {w01 != null && <span className="font-medium text-slate-600">— {pct(w01)}</span>}
+        </div>
 
+        {w01 != null && (
+          <div className="h-2 bg-slate-100 rounded-md overflow-hidden mb-2">
+            <div className="h-full transition-[width] ease-out duration-500"
+                 style={{ width: `${Math.max(0, Math.min(1, w01)) * 100}%`, background: color }} />
+          </div>
+        )}
+
+        {phs.length ? (
+          <div className="flex flex-wrap gap-2">
+            {phs.map((p, j) => {
+              const { sym, s01 } = readPhoneme(p);
+              const c = scoreToColor01(s01 ?? 0);
               return (
-                <li key={`${wText}-${i}`} className="mb-3">
-                  <div className="font-bold mb-1">
-                    {wText || <em>(empty word)</em>}{" "}
-                    {w01 != null && <span className="font-medium text-slate-600">— {pct(w01)}</span>}
-                  </div>
-
-                  {w01 != null && (
-                    <div className="h-2 bg-slate-100 rounded-md overflow-hidden mb-2">
-                      <div
-                        className="h-full transition-[width] ease-out duration-500"
-                        style={{ width: `${Math.max(0, Math.min(1, w01)) * 100}%`, background: color }}
-                      />
-                    </div>
-                  )}
-
-                  {phs.length ? (
-                    <div className="flex flex-wrap gap-2">
-                      {phs.map((p, j) => {
-                        const { sym, s01 } = readPhoneme(p);
-                        const c = scoreToColor01(s01 ?? 0);
-                        return (
-                          <span
-                            key={`${sym}-${j}`}
-                            className="px-2 py-1 rounded-full border"
-                            style={{
-                              color: c,
-                              borderColor: `${c}66`,
-                              background: `${c}14`,
-                              fontWeight: 700,
-                              fontSize: 13,
-                            }}
-                          >
-                            /{sym}/ {s01 != null ? `${Math.round(s01 * 100)}%` : ""}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-slate-400 text-sm">(No phonemes for this word)</div>
-                  )}
-                </li>
+                <span key={`${sym}-${j}`} className="px-2 py-1 rounded-full border"
+                      style={{ color: c, borderColor: `${c}66`, background: `${c}14`,
+                               fontWeight: 700, fontSize: 13 }}>
+                  /{sym}/ {s01 != null ? `${Math.round(s01 * 100)}%` : ""}
+                </span>
               );
             })}
-          </ul>
+          </div>
+        ) : (
+          <div className="text-slate-400 text-sm">(No phonemes for this word)</div>
+        )}
+      </li>
+    );
+  })}
+</ul>
+
 
           {/* Tone nederst */}
           {rearTone ? (
