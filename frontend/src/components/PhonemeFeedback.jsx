@@ -6,6 +6,30 @@ import { toggleBookmark, isBookmarked } from "../lib/bookmarks.js";
 console.log("PF LIVE v18", import.meta?.url);
 
 /* ---------- helpers ---------- */
+// Parse "hh:mm:ss(.ms)" eller "mm:ss(.ms)" til sekunder
+function parseDurationToSeconds(val) {
+  if (val == null || val === "") return null;
+  const s = String(val).trim();
+  if (s.includes(":")) {
+    const parts = s.split(":").map(Number); // [hh?, mm, ss(.ms)]
+    if (parts.some(n => !isFinite(n))) return null;
+    let sec = 0;
+    if (parts.length === 3) {
+      const [hh, mm, ss] = parts;
+      sec = (hh || 0) * 3600 + (mm || 0) * 60 + (ss || 0);
+    } else if (parts.length === 2) {
+      const [mm, ss] = parts;
+      sec = (mm || 0) * 60 + (ss || 0);
+    } else {
+      sec = parts[0] || 0;
+    }
+    return sec;
+  }
+  const n = Number(s);
+  return isFinite(n) ? n : null; // antag sekunder hvis tal
+}
+
+
 function scoreToColor01(s) {
   const x = Math.max(0, Math.min(1, Number(s) || 0));
   return `hsl(${x * 120}deg 75% 45%)`;
@@ -180,9 +204,24 @@ const targetSentence = displaySentence;
   const rhythm = result.rhythm ?? null;
   const speed = result.speed ?? null;
   const pauseCount = result.pause_count ?? null;
-  const durationStr =
-    result.duration ??
-    (result.numeric_duration != null ? Number(result.numeric_duration).toFixed(3) : null);
+  // Duration -> sekunder
+const durationSec = (() => {
+  if (result.duration_ms != null && isFinite(Number(result.duration_ms))) {
+    return Number(result.duration_ms) / 1000;
+  }
+  if (result.numeric_duration != null && isFinite(Number(result.numeric_duration))) {
+    return Number(result.numeric_duration); // antag sekunder
+  }
+  if (result.duration != null) {
+    return parseDurationToSeconds(result.duration);
+  }
+  return null;
+})();
+
+const durationDisplay =
+  durationSec == null ? "–" :
+  (durationSec >= 10 ? durationSec.toFixed(1) : durationSec.toFixed(2)) + " s";
+
   const rearTone = result.rear_tone ?? null;
 
   // one word
@@ -323,7 +362,7 @@ const targetText = oneWord ? (wordText || "") : (targetSentence || "");
             <Meta label="Rhythm" value={rhythm != null ? Math.round(rhythm) : "–"} />
             <Meta label="Speed (wpm)" value={speed != null ? Math.round(speed) : "–"} />
             <Meta label="Pauses" value={pauseCount ?? "–"} />
-            <Meta label="Duration" value={durationStr ?? "–"} />
+<Meta label="Duration" value={durationDisplay} />
           </div>
 {/* Per-word breakdown: bar + phoneme chips */}
 <ul className="list-none p-0 m-0 mt-2">

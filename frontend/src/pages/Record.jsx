@@ -88,9 +88,18 @@ export default function Record() {
   const cardRef = useRef(null); // “click outside”
 
   // Focus textarea when expanded
-  useEffect(() => {
-    if (expanded && textAreaRef.current) textAreaRef.current.focus();
-  }, [expanded]);
+  const didMountRef = useRef(false);
+
+useEffect(() => {
+  // Skip auto-focus on first render so inputActive stays false
+  if (!didMountRef.current) {
+    didMountRef.current = true;
+    return;
+  }
+  if (expanded && textAreaRef.current) {
+    textAreaRef.current.focus();
+  }
+}, [expanded]);
 
   // Click-outside: skjul input-controls kun ved klik UDENFOR kortet
   useEffect(() => {
@@ -203,11 +212,10 @@ export default function Record() {
   }
 
   const hasText = refText.trim().length > 0;
-  const analyzed = !!result && !err;
+ const analyzed = !!result && !err;
   const taHeight = analyzed ? 100 : (expanded ? 150 : 90);
-
-  // Bookmarks-panel KUN på forsiden
-  const isFrontPage = !analyzed && !isRecording && !hasText && !inputActive;
+  // Vis bookmarks på forsiden (skjul kun når feedback er synlig)
+  const showBookmarks = !analyzed;
 
   return (
     <div className="w-full min-h-[calc(100vh-5rem)] bg-white px-4 py-6 flex flex-col items-center">
@@ -315,20 +323,23 @@ export default function Record() {
         {/* error */}
         {err && <div className="max-w-md mx-auto mt-3 text-[13px] text-red-500">{err}</div>}
 
-        {/* Bookmarks — kun på forsiden */}
-        {isFrontPage && (
-          <div className="w-full max-w-md">
-            <BookmarksPanel
-              onUse={(text) => {
-                setRefText(text || "");
-                setExpanded(true);
-                setResult(null);      // Skjul feedback → start-knap kommer igen
-                setInputActive(true); // Vis kontroller
-                setTimeout(() => textAreaRef.current?.focus(), 0);
-              }}
-            />
-          </div>
-        )}
+        {/* Bookmarks — only when not showing feedback */}
+{/* Bookmarks – vises på forsiden når der ikke er feedback */}
+ {showBookmarks && (
+  <div className="w-full max-w-md">
+    <BookmarksPanel
+      onUse={(text) => {
+        setRefText(text || "");
+        setExpanded(true);
+        setResult(null);      // ingen feedback
+        setInputActive(true); // vis kontroller
+        setTimeout(() => textAreaRef.current?.focus(), 0);
+      }}
+    />
+  </div>
+)}
+
+
 
         {/* Feedback */}
         {result && (
