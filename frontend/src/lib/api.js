@@ -1,10 +1,34 @@
 // src/lib/api.js
 export const USE_MOCK = false;
-const API_PATH = "http://localhost:3000/api/analyze-speech"; // or your LAN IP
 
-async function safeJson(res) {
-  try { return await res.json(); } catch { return null; }
+/* ---------- Base URL helper ---------- */
+export function getApiBase() {
+  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
+  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
+  const base = (ls || env || window.location.origin).replace(/\/+$/, "");
+  return base;
 }
+
+/* ---------- Generic JSON fetch ---------- */
+export async function fetchJSON(path, opts = {}) {
+  const base = getApiBase();
+  const res = await fetch(base + path, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      ...(opts.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    let errText;
+    try { errText = await res.text(); } catch {}
+    throw new Error(`${res.status} ${res.statusText}${errText ? " — " + errText.slice(0,160) : ""}`);
+  }
+  return res.json();
+}
+
+/* ---------- Blob utils (til fallback) ---------- */
+async function safeJson(res) { try { return await res.json(); } catch { return null; } }
 async function blobToDataURL(blob) {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
@@ -14,8 +38,11 @@ async function blobToDataURL(blob) {
   });
 }
 
+/* ---------- analyzeAudio (bruger fleksibel base) ---------- */
 export async function analyzeAudio({ blob, accent, refText }) {
-  // Build a File (some environments are picky)
+  const base = getApiBase();
+  const API_PATH = `${base}/api/analyze-speech`;
+
   const filename =
     blob.type?.includes("wav") ? "clip.wav" :
     blob.type?.includes("aac") ? "clip.aac" :
@@ -24,19 +51,19 @@ export async function analyzeAudio({ blob, accent, refText }) {
 
   const file = new File([blob], filename, { type: blob.type || "application/octet-stream" });
 
-  // Multipart (preferred)
+  // Multipart først (ingen Content-Type header -> browser sætter boundary)
   let res = await fetch(API_PATH, {
     method: "POST",
     body: (() => {
       const f = new FormData();
-      f.append("audio", file);               // Blob/File
-      if (accent) f.append("accent", accent);
-      if (refText) f.append("refText", refText); // target
+      f.append("audio", file);
+      if (accent)  f.append("accent",  accent);
+      if (refText) f.append("refText", refText);
       return f;
     })(),
   });
 
-  // Fallback to JSON if the server rejects multipart
+  // 4xx fallback: send som JSON (data URL)
   if (!res.ok && res.status >= 400 && res.status < 500) {
     const dataURL = await blobToDataURL(file);
     res = await fetch(API_PATH, {
@@ -56,4 +83,34 @@ export async function analyzeAudio({ blob, accent, refText }) {
     throw new Error(err?.error || `Server error (${res.status})`);
   }
   return res.json();
+}
+
+/* ---------- Week 3: Pro + Referral helpers ---------- */
+// Pro status
+export async function getProStatus(userId) {
+  if (!userId) throw new Error("userId required");
+  return fetchJSON(`/api/pro/status?userId=${encodeURIComponent(userId)}`);
+}
+export async function grantTrial(userId, days = 30) {
+  if (!userId) throw new Error("userId required");
+  return fetchJSON(`/api/pro/grant-trial`, {
+    method: "POST",
+    body: JSON.stringify({ userId, days }),
+  });
+}
+
+// Referral
+export async function getReferralCode(userId) {
+  if (!userId) throw new Error("userId required");
+  return fetchJSON(`/api/referral/code?userId=${encodeURIComponent(userId)}`);
+}
+export async function getReferralCount(userId) {
+  if (!userId) throw new Error("userId required");
+  return fetchJSON(`/api/referral/count?userId=${encodeURIComponent(userId)}`);
+}
+export async function submitReferralOpen({ code, newUserId }) {
+  return fetchJSON(`/api/referral/open`, {
+    method: "POST",
+    body: JSON.stringify({ code, newUserId }),
+  });
 }
