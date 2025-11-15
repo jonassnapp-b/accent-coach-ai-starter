@@ -34,6 +34,7 @@
   },
   "scripts": {
     "api": "node dev-server.js",
-    "dev": "node dev-server.js"
+    "dev": "node dev-server.js",
+    "start": "node dev-server.js"
   }
 }
