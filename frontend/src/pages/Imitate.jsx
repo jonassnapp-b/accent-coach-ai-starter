@@ -71,6 +71,9 @@ export default function Imitate() {
   const [userAudioUrl, setUserAudioUrl] = useState("");
   const userPlayRef = useRef(null);
 
+const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+
   // ---- one-at-a-time audio guard ----
   const playTokenRef = useRef(0);
   function stopAllAudio() {
@@ -226,34 +229,100 @@ export default function Imitate() {
   }
   useEffect(() => { loadSentence(level, accent); }, [level, accent]);
 
+async function sendToServer(audioBlob, localUrl) {
+  try {
+    const text = sampleRef.current?.text || "";
+    if (!text || text === "…") { setErr("Load a sentence first before recording."); setIsAnalyzing(false); return; }
+
+    const base = getApiBase();
+    const fd = new FormData();
+
+    // navngiv fornuftigt efter mimetype (hjælper server og ffmpeg)
+    const t = audioBlob.type || "";
+    const ext = t.includes("mp4") || t.includes("aac") || t.includes("m4a") ? "m4a" : "webm";
+    fd.append("audio", audioBlob, `clip.${ext}`);
+    fd.append("refText", text);
+    fd.append("accent", accent === "en_br" ? "en_br" : "en_us");
+
+    const r = await fetch(`${base}/api/analyze-speech`, { method: "POST", body: fd });
+    const json = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
+
+    setResult({ ...json, userAudioUrl: localUrl });
+
+    // streak/konfetti (simpelt)
+    try {
+      const s = updateStreak();
+      setStreak(s);
+      if ((Number(json?.overall ?? 0) >= 90)) { setCelebrate(true); burstConfetti(); }
+    } catch {}
+    setErr("");
+  } catch (e) {
+    setErr(e?.message || String(e));
+    setResult(null);
+  } finally {
+    setIsAnalyzing(false);
+  }
+}
+
+
   /* --------------- Recorder --------------- */
   function disposeRecorder() {
     try { mediaRecRef.current?.stream?.getTracks().forEach((t) => t.stop()); } catch {}
     mediaRecRef.current = null;
   }
   async function ensureMic() {
-    disposeRecorder();
-    const mime = (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/webm;codecs=opus"))
-      ? "audio/webm;codecs=opus" : "audio/webm";
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const rec    = new MediaRecorder(stream, { mimeType: mime });
-    chunksRef.current = [];
-    rec.ondataavailable = (e) => e?.data && e.data.size > 0 && chunksRef.current.push(e.data);
-    rec.onstop = handleStop;
-    mediaRecRef.current = rec;
+  disposeRecorder();
+
+  if (!navigator?.mediaDevices?.getUserMedia) {
+    throw new Error("Microphone not supported on this device.");
   }
+
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+  let opts = {};
+  if (typeof MediaRecorder !== "undefined" && typeof MediaRecorder.isTypeSupported === "function") {
+    if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+      opts.mimeType = "audio/webm;codecs=opus";
+    } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+      opts.mimeType = "audio/webm";
+    } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+      // iOS Safari
+      opts.mimeType = "audio/mp4";
+    }
+  }
+
+  let rec;
+  try { rec = new MediaRecorder(stream, opts); }
+  catch { rec = new MediaRecorder(stream); } // sidste fallback
+
+  chunksRef.current = [];
+  rec.ondataavailable = (e) => e?.data && e.data.size > 0 && chunksRef.current.push(e.data);
+  rec.onstop = handleStop;
+  mediaRecRef.current = rec;
+}
+
   function handleStop() {
-    setIsRecording(false);
-    const blob = new Blob(chunksRef.current.slice(), { type: "audio/webm" });
-    chunksRef.current = [];
-    disposeRecorder();
+  setIsRecording(false);
 
-    try { if (userAudioUrl && userAudioUrl.startsWith("blob:")) URL.revokeObjectURL(userAudioUrl); } catch {}
-    const url = URL.createObjectURL(blob);
-    setUserAudioUrl(url);
+  const chunks = chunksRef.current.slice();
+  chunksRef.current = [];
 
-    sendToServer(blob, url);
-  }
+  const rec = mediaRecRef.current;
+  disposeRecorder();
+
+  try { if (userAudioUrl && userAudioUrl.startsWith("blob:")) URL.revokeObjectURL(userAudioUrl); } catch {}
+
+  const type = chunks[0]?.type || rec?.mimeType || "audio/webm";
+  const blob = new Blob(chunks, { type });
+
+  const url = URL.createObjectURL(blob);
+  setUserAudioUrl(url);
+
+  setIsAnalyzing(true);
+  sendToServer(blob, url);
+}
+
   async function startRecord() {
     if (!hasValidSample || isLoadingSentence) { setErr("Load a sentence first before recording."); return; }
     try {
@@ -395,6 +464,13 @@ export default function Imitate() {
                     <span className="spinner" /> Loading sample…
                   </motion.div>
                 )}
+                {isAnalyzing && !isRecording && (
+  <motion.div key="an" initial={{opacity:0,y:4}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-4}}
+    className="text-sm" style={{color:'var(--muted)'}}>
+    <span className="spinner" /> Analyzing…
+  </motion.div>
+)}
+
               </AnimatePresence>
             </div>
           </motion.div>

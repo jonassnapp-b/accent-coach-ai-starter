@@ -3,20 +3,8 @@ export const USE_MOCK = false;
 
 /* ---------- Base URL helper ---------- */
 export function getApiBase() {
-  const isDev = import.meta?.env?.DEV;
-
-  // Kun brug localStorage + VITE_API_BASE i udvikling
-  const ls =
-    isDev && typeof localStorage !== "undefined"
-      ? localStorage.getItem("apiBase") || ""
-      : "";
-
-  const env =
-    isDev && import.meta?.env?.VITE_API_BASE
-      ? import.meta.env.VITE_API_BASE
-      : "";
-
-  // I production falder vi altid tilbage til window.location.origin
+  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
+  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
   const base = (ls || env || window.location.origin).replace(/\/+$/, "");
   return base;
 }
@@ -33,26 +21,14 @@ export async function fetchJSON(path, opts = {}) {
   });
   if (!res.ok) {
     let errText;
-    try {
-      errText = await res.text();
-    } catch {}
-    throw new Error(
-      `${res.status} ${res.statusText}${
-        errText ? " — " + errText.slice(0, 160) : ""
-      }`
-    );
+    try { errText = await res.text(); } catch {}
+    throw new Error(`${res.status} ${res.statusText}${errText ? " — " + errText.slice(0,160) : ""}`);
   }
   return res.json();
 }
 
 /* ---------- Blob utils (til fallback) ---------- */
-async function safeJson(res) {
-  try {
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
+async function safeJson(res) { try { return await res.json(); } catch { return null; } }
 async function blobToDataURL(blob) {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
@@ -68,17 +44,12 @@ export async function analyzeAudio({ blob, accent, refText }) {
   const API_PATH = `${base}/api/analyze-speech`;
 
   const filename =
-    blob.type?.includes("wav")
-      ? "clip.wav"
-      : blob.type?.includes("aac")
-      ? "clip.aac"
-      : blob.type?.includes("mp4") || blob.type?.includes("m4a")
-      ? "clip.m4a"
-      : "clip.dat";
+    blob.type?.includes("wav") ? "clip.wav" :
+    blob.type?.includes("aac") ? "clip.aac" :
+    blob.type?.includes("mp4") || blob.type?.includes("m4a") ? "clip.m4a" :
+    "clip.dat";
 
-  const file = new File([blob], filename, {
-    type: blob.type || "application/octet-stream",
-  });
+  const file = new File([blob], filename, { type: blob.type || "application/octet-stream" });
 
   // Multipart først (ingen Content-Type header -> browser sætter boundary)
   let res = await fetch(API_PATH, {
@@ -86,7 +57,7 @@ export async function analyzeAudio({ blob, accent, refText }) {
     body: (() => {
       const f = new FormData();
       f.append("audio", file);
-      if (accent) f.append("accent", accent);
+      if (accent)  f.append("accent",  accent);
       if (refText) f.append("refText", refText);
       return f;
     })(),

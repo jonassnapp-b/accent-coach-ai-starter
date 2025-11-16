@@ -5,6 +5,15 @@ import { Play, Mic, StopCircle, RefreshCw, ChevronRight, RotateCcw, ArrowRight }
 import { burstConfetti } from "../lib/celebrations.js";
 import { playAudio, stopAudio } from "../lib/audio-manager";
 
+function Stat({ label, value }) {
+  return (
+    <div className="flex items-baseline justify-between sm:justify-start gap-2">
+      <div className="text-sm" style={{ color: 'var(--muted)' }}>{label}</div>
+      <div className="font-semibold">{value}</div>
+    </div>
+  );
+}
+
 /* ---- API base helper ---- */
 function isNative() { return !!(window?.Capacitor && window.Capacitor.isNativePlatform); }
 function getApiBase() {
@@ -36,6 +45,43 @@ async function safeJSON(url, opts = {}, timeoutMs = 12000) {
     return res.json();
   } finally { clearTimeout(t); }
 }
+// ---- Timing scoring helper (realistic) ----
+function clamp01(x) {
+  return Math.max(0, Math.min(1, Number(x) || 0));
+}
+
+/**
+ * Returnerer 0–100 ud fra:
+ * - latencyMs  (ms, kan være negativ)
+ * - durationMatch01 (0–1)
+ */
+function computeTimingScore({ latencyMs, durationMatch01 }) {
+  const lat = Math.abs(Number(latencyMs) || 9999);
+
+  // under 250 ms = næsten perfekt
+  const PERFECT_MS = 250;
+  // over 1200 ms = stort mis-timing
+  const MAX_MS = 1200;
+
+  let latencyScore;
+  if (!Number.isFinite(lat)) {
+    latencyScore = 0;
+  } else if (lat <= PERFECT_MS) {
+    latencyScore = 1;
+  } else if (lat >= MAX_MS) {
+    latencyScore = 0;
+  } else {
+    // lineær fade mellem perfekt og max
+    latencyScore = 1 - (lat - PERFECT_MS) / (MAX_MS - PERFECT_MS);
+  }
+
+  const durScore = clamp01(durationMatch01); // 0–1
+
+  // vægt: timing vigtigere end længde
+  const combined = 0.75 * latencyScore + 0.25 * durScore;
+
+  return Math.round(clamp01(combined) * 100);
+}
 
 export default function SpeakAlong() {
   // basic state
@@ -59,6 +105,21 @@ export default function SpeakAlong() {
   const userEnvelope = useRef([]);
   const [score, setScore] = useState(null);
   const [celebrate, setCelebrate] = useState(false);
+// --- Countdown ---
+const [isCounting, setIsCounting] = useState(false);
+const [countdown, setCountdown] = useState(0);
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function runCountdown(n = 3) {
+  setIsCounting(true);
+  for (let i = n; i > 0; i--) {
+    setCountdown(i);
+    await sleep(1000);
+  }
+  setIsCounting(false);
+  setCountdown(0);
+}
 
   const requestSeqRef = useRef(0);
 
@@ -199,26 +260,29 @@ export default function SpeakAlong() {
     try { if (mediaRecRef.current && mediaRecRef.current.state !== "inactive") mediaRecRef.current.stop(); } catch {}
   }
   async function playAndShadow() {
-    if (!audioElRef.current || !text) return;
-    setScore(null); setCelebrate(false);
-    try {
-      await ensureMic();
-      chunksRef.current = [];
-      mediaRecRef.current.start();
-      setIsRecording(true);
+  if (!audioElRef.current || !text) return;
+  setScore(null); setCelebrate(false);
+  try {
+    // <<< TILFØJ DENNE LINJE
+    await runCountdown(3);
 
-      stopAudio();
-      setIsPlaying(true);
-      audioElRef.current.currentTime = 0;
-      audioElRef.current.play().catch(() => setIsPlaying(false));
+    await ensureMic();
+    chunksRef.current = [];
+    mediaRecRef.current.start();
+    setIsRecording(true);
 
-      const nativeMs = (nativeEnvelope.current?.length || 40) * 50;
-      setTimeout(() => stopRecord(), Math.max(1200, nativeMs + 300));
-    } catch (e) {
-      setErr("Microphone error: " + (e?.message || String(e)));
-      setIsRecording(false);
-    }
+    stopAudio();
+    setIsPlaying(true);
+    audioElRef.current.currentTime = 0;
+    audioElRef.current.play().catch(() => setIsPlaying(false));
+
+    const nativeMs = (nativeEnvelope.current?.length || 40) * 50;
+    setTimeout(() => stopRecord(), Math.max(1200, nativeMs + 300));
+  } catch (e) {
+    setErr("Microphone error: " + (e?.message || String(e)));
+    setIsRecording(false);
   }
+}
 
   function computeEnvelope(audioBuffer, frameMs = 50) {
     const sr = audioBuffer.sampleRate;
@@ -257,29 +321,50 @@ export default function SpeakAlong() {
     return { bestLag, bestCorr };
   }
   async function analyzeShadow(userBlob) {
-    try {
-      const ac = new (window.AudioContext || window.webkitAudioContext)();
-      const arr = await userBlob.arrayBuffer();
-      const ubuf = await ac.decodeAudioData(arr);
-      const userEnv = computeEnvelope(ubuf);
-      userEnvelope.current = userEnv;
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const arr = await userBlob.arrayBuffer();
+    const ubuf = await ac.decodeAudioData(arr);
+    const userEnv = computeEnvelope(ubuf);
+    userEnvelope.current = userEnv;
 
-      const { bestLag, bestCorr } = crossCorrelation(nativeEnvelope.current, userEnv, 30);
-      const nd = (nativeEnvelope.current.length * 50) / 1000;
-      const ud = ubuf.duration || 1;
-      const durMatch = Math.max(0, 1 - Math.abs(ud - nd) / Math.max(nd, ud));
-      const timing01 = Math.max(0, Math.min(1, 0.75 * bestCorr + 0.25 * durMatch));
-      const s = {
-        timing: Math.round(timing01 * 100),
-        latencyMs: bestLag * 50,
-        durationMatch: Math.round(durMatch * 100),
-        nativeDur: Math.round(nd * 100) / 100,
-        userDur: Math.round(ud * 100) / 100,
-      };
-      setScore(s); setErr("");
-      if (s.timing >= 90) { setCelebrate(true); burstConfetti(); } else { setCelebrate(false); }
-    } catch (e) { setErr(e?.message || String(e)); setScore(null); setCelebrate(false); }
+    const { bestLag, bestCorr } = crossCorrelation(nativeEnvelope.current, userEnv, 30);
+    const nd = (nativeEnvelope.current.length * 50) / 1000;   // native duration (sek)
+    const ud = ubuf.duration || 1;                            // user duration (sek)
+
+    // hvor tæt længden er på native (0–1)
+    const durMatch = Math.max(0, 1 - Math.abs(ud - nd) / Math.max(nd, ud));
+
+    // brug vores nye, mere realistiske scoring (0–100)
+    const latencyMs = bestLag * 50;
+    const timingPct = computeTimingScore({
+      latencyMs,
+      durationMatch01: durMatch,
+    });
+
+    const s = {
+      timing: timingPct,
+      latencyMs,
+      durationMatch: Math.round(durMatch * 100),
+      nativeDur: Math.round(nd * 100) / 100,
+      userDur: Math.round(ud * 100) / 100,
+    };
+
+    setScore(s);
+    setErr("");
+    if (s.timing >= 90) {
+      setCelebrate(true);
+      burstConfetti();
+    } else {
+      setCelebrate(false);
+    }
+  } catch (e) {
+    setErr(e?.message || String(e));
+    setScore(null);
+    setCelebrate(false);
   }
+}
+
 
   async function isMostlySilence(audioBlob) {
     const arrBuf = await audioBlob.arrayBuffer();
@@ -395,28 +480,79 @@ export default function SpeakAlong() {
 
           {/* Score (kun når den findes) */}
           {score && (
-            <div className="mt-4 card-quiet rounded-xl p-4">
-              <div className="text-xs uppercase mb-1" style={{ color: "var(--muted)" }}>Timing result</div>
-              <div className={`text-4xl font-extrabold ${celebrate ? "text-glow" : ""}`} style={{ color: "#93C5FD" }}>
-                {score.timing}%</div>
-              <div className="grid grid-cols-2 gap-2 mt-2" style={{ color: "var(--panel-text)" }}>
-                <div>Latency: <span className="font-semibold">{score.latencyMs} ms</span></div>
-                <div>Duration match: <span className="font-semibold">{score.durationMatch}%</span></div>
-                <div>Native: <span className="font-semibold">{score.nativeDur}s</span></div>
-                <div>You: <span className="font-semibold">{score.userDur}s</span></div>
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                <motion.button whileTap={{ scale: 0.98 }} className="btn btn-ghost btn-sm"
-                  onClick={() => { setScore(null); setCelebrate(false); playAndShadow(); }}>
-                  <RotateCcw className="h-4 w-4" /> Try again
-                </motion.button>
-                <motion.button whileTap={{ scale: 0.98 }} className="btn btn-primary btn-sm"
-                  onClick={() => { stopAudio(); stopNativeEl(); loadSentence(level, accent); }}>
-                  Next phrase <ArrowRight className="h-4 w-4" />
-                </motion.button>
-              </div>
-            </div>
-          )}
+  <div
+    className="rounded-2xl p-4 mt-3 card-quiet"
+    style={{ border: "1px solid var(--panel-border)" }}
+  >
+    <div
+      className="text-xs uppercase tracking-wide mb-2"
+      style={{ color: "var(--muted)" }}
+    >
+      Timing result
+    </div>
+
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+      {/* Stor procent til venstre */}
+      <div className="flex items-baseline gap-2 sm:col-span-1">
+        <div className="text-5xl sm:text-6xl font-extrabold leading-none">
+          {Math.round(score.timing ?? 0)}%
+        </div>
+        <div className="text-sm" style={{ color: "var(--muted)" }}>
+          overall
+        </div>
+      </div>
+
+      {/* Små tal til højre */}
+      <div
+        className="space-y-1 text-sm sm:col-span-2"
+        style={{ color: "var(--panel-text)" }}
+      >
+        <div className="flex justify-between">
+          <span>Latency</span>
+          <span className="font-semibold">{score.latencyMs} ms</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Duration match</span>
+          <span className="font-semibold">{score.durationMatch}%</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Native</span>
+          <span className="font-semibold">{score.nativeDur}s</span>
+        </div>
+        <div className="flex justify-between">
+          <span>You</span>
+          <span className="font-semibold">{score.userDur}s</span>
+        </div>
+      </div>
+    </div>
+
+    <div className="mt-3 flex items-center gap-2">
+      <motion.button
+        whileTap={{ scale: 0.98 }}
+        className="btn btn-ghost btn-sm"
+        onClick={() => {
+          setScore(null);
+          setCelebrate(false);
+          playAndShadow();
+        }}
+      >
+        <RotateCcw className="h-4 w-4" /> Try again
+      </motion.button>
+
+      <motion.button
+        whileTap={{ scale: 0.98 }}
+        className="btn btn-primary btn-sm"
+        onClick={() => {
+          stopAudio();
+          stopNativeEl();
+          loadSentence(level, accent);
+        }}
+      >
+        Next phrase <ArrowRight className="h-4 w-4" />
+      </motion.button>
+    </div>
+  </div>
+)}
 
           {err && <div className="mt-3 text-[13px]" style={{ color: "#e5484d" }}>{err}</div>}
         </div>
@@ -444,6 +580,28 @@ export default function SpeakAlong() {
             );
           })()}
         </svg>
+        <AnimatePresence>
+  {isCounting && (
+    <motion.div
+      key="countdown"
+      className="fixed inset-0 z-[60] grid place-items-center bg-black/60"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        initial={{ scale: 0.8 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.9 }}
+        className="w-40 h-40 rounded-2xl grid place-items-center text-6xl font-extrabold"
+        style={{ background: "rgba(255,255,255,0.08)", border: "1px solid var(--panel-border)", color: "white" }}
+      >
+        {countdown}
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
       </div>
     </div>
   );

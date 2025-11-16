@@ -1,6 +1,6 @@
 // src/pages/Record.jsx
 import React, { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, StopCircle, X, Bookmark as BookmarkIcon } from "lucide-react";
@@ -23,6 +23,7 @@ function getApiBase() {
   }
   return (ls || env || window.location.origin).replace(/\/+$/, "");
 }
+const STATE_KEY = "ac_record_state_v1";
 
 export default function Record() {
   const [lastUrl, setLastUrl] = useState(null);
@@ -93,18 +94,55 @@ export default function Record() {
   }
   const [inlineMsg, setInlineMsg] = useState("");
 
-  useEffect(() => {
+    useEffect(() => {
     setAccentUi(settings.accentDefault || "en_us");
+
+    // 1) hvis vi kommer fra Bookmarks med seed-tekst → den har prioritet
     const seed = sessionStorage.getItem("ac_bookmark_text");
     if (seed) {
       setRefText(seed);
       setExpanded(true);
       setInputActive(true);
+      setResult(null);
+      setInlineMsg("");
+      setErr("");
       setTimeout(() => textAreaRef.current?.focus(), 0);
       sessionStorage.removeItem("ac_bookmark_text");
+      return;
+    }
+
+    // 2) ellers prøv at gendanne tidligere state for Record-tab
+    try {
+      const raw = sessionStorage.getItem(STATE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (typeof saved.refText === "string") setRefText(saved.refText);
+        if (saved.result) setResult(saved.result);
+        if (typeof saved.inlineMsg === "string") setInlineMsg(saved.inlineMsg);
+        if (typeof saved.expanded === "boolean") setExpanded(saved.expanded);
+        if (typeof saved.inputActive === "boolean")
+          setInputActive(saved.inputActive);
+      }
+    } catch {
+      // ignore
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    try {
+      const payload = {
+        refText,
+        result,
+        inlineMsg,
+        expanded,
+        inputActive,
+      };
+      sessionStorage.setItem(STATE_KEY, JSON.stringify(payload));
+    } catch {
+      // ignore
+    }
+  }, [refText, result, inlineMsg, expanded, inputActive]);
+
 
   function disposeRecorder() {
     try { mediaRecRef.current?.stream?.getTracks().forEach(t => t.stop()); } catch {}
@@ -112,28 +150,65 @@ export default function Record() {
   }
 
   async function ensureMic() {
-    disposeRecorder();
-    const mime = (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/webm;codecs=opus"))
-      ? "audio/webm;codecs=opus" : "audio/webm";
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const rec = new MediaRecorder(stream, { mimeType: mime });
-    chunksRef.current = [];
-    rec.ondataavailable = (e) => e?.data && e.data.size > 0 && chunksRef.current.push(e.data);
-    rec.onstop = handleStop;
-    mediaRecRef.current = rec;
+  disposeRecorder();
+
+  if (!navigator?.mediaDevices?.getUserMedia) {
+    throw new Error("Microphone not supported on this device.");
   }
 
-  function handleStop() {
-    setIsRecording(false);
-    const blob = new Blob(chunksRef.current.slice(), { type: "audio/webm" });
-    chunksRef.current = [];
-    disposeRecorder();
-    try { if (lastUrl) URL.revokeObjectURL(lastUrl); } catch {}
-    const localUrl = URL.createObjectURL(blob);
-    setLastUrl(localUrl);
-    setIsAnalyzing(true);
-    sendToServer(blob, localUrl);
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+  // Vælg en mimetype som faktisk er supporteret – eller lad browseren vælge
+  let options = {};
+  if (typeof MediaRecorder !== "undefined" && typeof MediaRecorder.isTypeSupported === "function") {
+    if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+      options.mimeType = "audio/webm;codecs=opus";
+    } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+      options.mimeType = "audio/webm";
+    } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+      // typisk den der virker på iOS
+      options.mimeType = "audio/mp4";
+    } // ellers ingen mimeType → browseren vælger selv
   }
+
+  let rec;
+  try {
+    rec = new MediaRecorder(stream, options);
+  } catch (e) {
+    // sidste fallback: ingen options overhovedet
+    rec = new MediaRecorder(stream);
+  }
+
+  chunksRef.current = [];
+  rec.ondataavailable = (e) => {
+    if (e?.data && e.data.size > 0) chunksRef.current.push(e.data);
+  };
+  rec.onstop = handleStop;
+  mediaRecRef.current = rec;
+}
+
+
+  function handleStop() {
+  setIsRecording(false);
+
+  const chunks = chunksRef.current.slice();
+  chunksRef.current = [];
+
+  const rec = mediaRecRef.current;
+
+  disposeRecorder();
+  try { if (lastUrl) URL.revokeObjectURL(lastUrl); } catch {}
+
+  // Brug den type, optagelsen faktisk har
+  const type = chunks[0]?.type || rec?.mimeType || "audio/webm";
+  const blob = new Blob(chunks, { type });
+
+  const localUrl = URL.createObjectURL(blob);
+  setLastUrl(localUrl);
+  setIsAnalyzing(true);
+  sendToServer(blob, localUrl);
+}
+
 
   async function startRecord() {
     if (!refText.trim()) { setErr("Please type a target word or phrase."); return; }
@@ -206,7 +281,6 @@ export default function Record() {
       setInlineMsg(pickFeedback(json));
       setInputActive(false);
       setErr("");
-      setRefText("");
       setExpanded(false);
     } catch (e) {
       setErr(e?.message || String(e));
@@ -240,13 +314,46 @@ export default function Record() {
     return () => ro.disconnect();
   }, []);
 
+  function handleTitleClick(e) {
+    e.preventDefault();
+
+    // ryd gemt state for denne tab
+    try {
+      sessionStorage.removeItem(STATE_KEY);
+    } catch {}
+
+    // nulstil local state
+    setRefText("");
+    setResult(null);
+    setErr("");
+    setInlineMsg("");
+    setExpanded(true);
+    setInputActive(false);
+    setIsRecording(false);
+    setIsAnalyzing(false);
+
+    if (location.pathname === "/record") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      navigate("/record");
+    }
+  }
+
+
   return (
     <div className="page">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex-1 min-w-0">
           <h1 className="text-[24px] sm:text-[26px] font-extrabold tracking-tight">
-            <Link to="/record" className="page-title">Practice My Text</Link>
+            <Link
+  to="/record"
+  onClick={handleTitleClick}
+  className="page-title"
+>
+  Practice My Text
+</Link>
+
           </h1>
         </div>
         <div className="flex items-center gap-2">
