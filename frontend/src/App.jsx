@@ -11,18 +11,18 @@ import {
 import { SettingsProvider } from "./lib/settings-store.jsx";
 
 import Record from "./pages/Record.jsx";
+import Feedback from "./pages/Feedback.jsx";
+import { Mic, AudioWaveform, Target, Settings as SettingsIcon } from "lucide-react";
+
+
 
 // Lazy-load sider der er tungere
-const Imitate    = lazy(() => import("./pages/Imitate.jsx"));
-const SpeakAlong = lazy(() => import("./pages/SpeakAlong.jsx"));
+const ProgressiveSentenceMastery = lazy(() => import("./pages/ProgressiveSentenceMastery.jsx"));
+const WeaknessLab = lazy(() => import("./pages/WeaknessLab.jsx"));
 const Settings   = lazy(() => import("./pages/Settings.jsx"));
 const Bookmarks  = lazy(() => import("./pages/Bookmarks.jsx"));
 const Onboarding = lazy(() => import("./pages/Onboarding.jsx"));
 
-import iconRecord   from "./assets/tabs/record.png";
-import iconImitate  from "./assets/tabs/imitate.png";
-import iconSpeak    from "./assets/tabs/speak.png";
-import iconSettings from "./assets/tabs/settings.png";
 
 import { submitReferralOpen } from "./lib/api.js";
 
@@ -34,23 +34,55 @@ import "./styles.css";
 
 /* ---------------- Prefetch helpers (route-level) ---------------- */
 const routePrefetch = {
-  "/imitate":    () => import("./pages/Imitate.jsx"),
-  "/speak":      () => import("./pages/SpeakAlong.jsx"),
+  "/imitate":    () => import("./pages/ProgressiveSentenceMastery.jsx"),
+  "/weakness":   () => import("./pages/WeaknessLab.jsx"),
   "/settings":   () => import("./pages/Settings.jsx"),
   "/bookmarks":  () => import("./pages/Bookmarks.jsx"),
   "/onboarding": () => import("./pages/Onboarding.jsx"),
 };
+
 function prefetchRoute(path) {
   try { routePrefetch[path]?.(); } catch {}
 }
 
+/* ✅ Practice Gate (prevents flash by redirecting BEFORE Record renders) */
+const PRACTICE_LAST_ROUTE_KEY = "ac_practice_last_route_v1";
+const FEEDBACK_KEY = "ac_feedback_result_v1";
+const LAST_RESULT_KEY = "ac_last_result_v1";
+
+function PracticeGate() {
+  let shouldGoFeedback = false;
+
+  try {
+    const last = sessionStorage.getItem(PRACTICE_LAST_ROUTE_KEY);
+    const hasResult =
+      !!sessionStorage.getItem(FEEDBACK_KEY) ||
+      !!sessionStorage.getItem(LAST_RESULT_KEY);
+
+    shouldGoFeedback = last === "/feedback" && hasResult;
+  } catch {
+    shouldGoFeedback = false;
+  }
+
+  if (shouldGoFeedback) {
+    return <Navigate to="/feedback" replace />;
+  }
+
+  return <Record />;
+}
+
+/* ---------------- Tabs ---------------- */
 /* ---------------- Tabs ---------------- */
 const TABS = [
-  { path: "/record",   label: "Record",      icon: iconRecord,   element: <Record /> },
-  { path: "/imitate",  label: "Imitate",     icon: iconImitate,  element: <Imitate /> },
-  { path: "/speak",    label: "Speak Along", icon: iconSpeak,    element: <SpeakAlong /> },
-  { path: "/settings", label: "Settings",    icon: iconSettings, element: <Settings /> },
+  { path: "/record",   label: "Practice",  Icon: Mic,       element: <PracticeGate /> },
+  { path: "/imitate",  label: "Coach",     Icon: AudioWaveform,  element: <ProgressiveSentenceMastery /> },
+  { path: "/weakness", label: "Weakness",  Icon: Target,    element: <WeaknessLab /> },
+  { path: "/settings", label: "Settings",  Icon: SettingsIcon, element: <Settings /> },
 ];
+
+
+
+
 
 /* ---------------- Small helper to read onboarding flag ---------------- */
 function isOnboardingDone() {
@@ -103,9 +135,12 @@ function AppInner() {
     const idle = (cb) =>
       (window.requestIdleCallback ? window.requestIdleCallback(cb) : setTimeout(cb, 350));
     idle(() => {
-      prefetchRoute("/imitate");
-      prefetchRoute("/speak");
-    });
+  prefetchRoute("/imitate");
+  prefetchRoute("/weakness");
+  prefetchRoute("/bookmarks");
+  prefetchRoute("/settings");
+});
+
 
     return () => {
       if ("speechSynthesis" in window) {
@@ -166,11 +201,15 @@ function AppInner() {
             />
 
             {/* Tabs */}
-            {TABS.map((t) => (
-              <Route key={t.path} path={t.path} element={t.element} />
-            ))}
+{TABS.map((t) => (
+  <Route key={t.path} path={t.path} element={t.element} />
+))}
 
-            <Route path="/bookmarks" element={<Bookmarks />} />
+{/* Feedback (NOT a tab) */}
+<Route path="/feedback" element={<Feedback />} />
+
+<Route path="/bookmarks" element={<Bookmarks />} />
+
 
             {/* Catch-alls */}
             {!done && <Route path="*" element={<Navigate to="/onboarding" replace />} />}
@@ -196,7 +235,7 @@ function AppInner() {
               }}
               className={({ isActive }) => "tabbtn" + (isActive ? " active" : "")}
             >
-              <img src={t.icon} alt="" className="tabicon" />
+              <t.Icon className="tabicon" />
               {/* <span className="tablabel">{t.label}</span> */}
             </NavLink>
           ))}

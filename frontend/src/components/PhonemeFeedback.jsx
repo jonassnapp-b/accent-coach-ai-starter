@@ -1,464 +1,1273 @@
 // src/components/PhonemeFeedback.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Bookmark, BookmarkCheck } from "lucide-react";
+import { Bookmark, BookmarkCheck, Volume2, ChevronRight } from "lucide-react";
 import { toggleBookmark, isBookmarked } from "../lib/bookmarks.js";
 import { useSettings } from "../lib/settings-store.jsx";
-import ScoreRing from "./ScoreRing.jsx"; // ⬅️ NY
+import { playAudioSegment } from "../lib/audioClipper.js";
+import { getCoachFeedback } from "../lib/phonemeCoach";
+import { burstConfetti } from "../lib/celebrations.js";
 
-console.log("PF LIVE v24", import.meta?.url);
+
+console.log("PF LIVE v41 (LIGHT ONLY)", import.meta?.url);
+
+/* ------------ API base (web + native) ------------ */
+function isNative() {
+  return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
+}
+function getApiBase() {
+  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
+  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
+  if (isNative()) {
+    const base = (ls || env).replace(/\/+$/, "");
+    if (!base) throw new Error("VITE_API_BASE (eller localStorage.apiBase) er ikke sat – krævet på iOS.");
+    return base;
+  }
+  return (ls || env || window.location.origin).replace(/\/+$/, "");
+}
 
 /* ---------- helpers ---------- */
-function parseDurationToSeconds(val) {
-  if (val == null || val === "") return null;
-  const s = String(val).trim();
-  if (s.includes(":")) {
-    const parts = s.split(":").map(Number);
-    if (parts.some((n) => !isFinite(n))) return null;
-    let sec = 0;
-    if (parts.length === 3) { const [hh, mm, ss] = parts; sec = (hh||0)*3600 + (mm||0)*60 + (ss||0); }
-    else if (parts.length === 2) { const [mm, ss] = parts; sec = (mm||0)*60 + (ss||0); }
-    else { sec = parts[0] || 0; }
-    return sec;
+function to01(v) {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  if (!isFinite(n)) return null;
+  return n <= 1 ? Math.max(0, Math.min(1, n)) : Math.max(0, Math.min(1, n / 100));
+}
+
+function scoreToColor01(s) {
+  const x = Math.max(0, Math.min(1, Number(s) || 0));
+  return `hsl(${x * 120}deg 75% 45%)`;
+}
+
+function splitEvenly(text, n) {
+  const s = String(text || "");
+  if (!n || n <= 1) return [s];
+  const chars = Array.from(s);
+  const len = chars.length;
+  const base = Math.floor(len / n);
+  const rem = len % n;
+
+  const out = [];
+  let idx = 0;
+  for (let i = 0; i < n; i++) {
+    const take = base + (i < rem ? 1 : 0);
+    out.push(chars.slice(idx, idx + take).join(""));
+    idx += take;
   }
-  const n = Number(s);
-  return isFinite(n) ? n : null;
-}
-function scoreToColor01(s) { const x = Math.max(0, Math.min(1, Number(s) || 0)); return `hsl(${x*120}deg 75% 45%)`; }
-function to01(v) { if (v==null||v==="") return null; const n = Number(v); if(!isFinite(n)) return null; return n<=1 ? Math.max(0,Math.min(1,n)) : Math.max(0,Math.min(1,n/100)); }
-const pct = (x01) => (x01 == null ? "–" : `${Math.round(x01 * 100)}%`);
-
-/* --- stress helpers (IPA) --- */
-const IPA_VOWELS = /[aeiouyɑæɐɒɔɞɤəɚɝɜɪʊʌɛœø]/i;
-const isIpaVowel = (sym="") => IPA_VOWELS.test(sym.replace(/[ˈˌ.ː:‖]/g, ""));
-function stressedVowelIndexFromIpa(ipaWord = "") {
-  if (!ipaWord) return null;
-  const core = String(ipaWord).replace(/^\/|\/$/g, "");
-  const pos = core.indexOf("ˈ");
-  if (pos < 0) return null;
-  const before = core.slice(0, pos);
-  return (before.match(IPA_VOWELS) || []).length; // 0-based
+  return out;
 }
 
-/* --- mapping --- */
+/* ====== SpeechSuper -> CMU mapping (only used if input is NOT already CMU) ====== */
+const KK_TO_CMU = {
+  // vowels
+  "ɔ": "AO",
+  "ɔː": "AO",
+  "ɒ": "OH",
+  "ɑ": "AA",
+  "ɑː": "AA",
+  a: "AA",
+  i: "IX",
+  "ɪ": "IH",
+  "iː": "IY",
+  u: "UX",
+  "ʊ": "UH",
+  "uː": "UW",
+  "ɛ": "EH",
+  e: "EY",
+  "eɪ": "EY",
+  ei: "EY",
+  "ə": "AX",
+  "ʌ": "AH",
+  "æ": "AE",
+  "aɪ": "AY",
+  ai: "AY",
+  "oʊ": "OW",
+  "əʊ": "OW",
+  ou: "OW",
+  o: "OW",
+  "aʊ": "AW",
+  au: "AW",
+  "ɔɪ": "OY",
+  "ɔi": "OY",
+  "ɚ": "AXR",
+  "ɝ": "AXR",
+  "ɜr": "AXR",
+  "ɜːr": "AXR",
+  "ɜːɹ": "AXR",
+  ər: "AXR",
+
+  // consonants
+  p: "P",
+  b: "B",
+  t: "T",
+  d: "D",
+  k: "K",
+  g: "G",
+  "tʃ": "CH",
+  "dʒ": "JH",
+  f: "F",
+  v: "V",
+  θ: "TH",
+  ð: "DH",
+  s: "S",
+  z: "Z",
+  ʃ: "SH",
+  "ʒ": "ZH",
+  h: "HH",
+  m: "M",
+  n: "N",
+  ŋ: "NG",
+  l: "L",
+  r: "R",
+  ɹ: "R",
+  w: "W",
+  j: "Y",
+};
+
+const CMU_VOWELS = new Set([
+  "AA",
+  "AE",
+  "AH",
+  "AO",
+  "AW",
+  "AY",
+  "EH",
+  "ER",
+  "EY",
+  "IH",
+  "IY",
+  "OW",
+  "OY",
+  "UH",
+  "UW",
+  "AX",
+  "IX",
+  "UX",
+  "AXR",
+  "OH",
+]);
+
+const CMU_DISPLAY = {
+  AX: "uh",
+  AH: "uh",
+  IX: "ih",
+  IH: "ih",
+  IY: "EE",
+  EH: "EH",
+  AE: "AE",
+  AA: "AA",
+  AO: "AO",
+  OH: "OH",
+  UH: "UH",
+  UW: "oo",
+  UX: "oo",
+  AXR: "er",
+  ER: "er",
+  EY: "EY",
+  AY: "AY",
+  OW: "OW",
+  OY: "OY",
+  AW: "AW",
+};
+
+const CMU_HELP = {
+  TH: "th",
+  DH: "th",
+
+  IX: "ih",
+  IH: "ih",
+  IY: "ee",
+
+  AX: "uh",
+  AH: "uh",
+  ER: "er",
+  AXR: "er",
+
+  UW: "oo",
+  UX: "oo",
+  UH: "oo",
+
+  SH: "sh",
+  ZH: "zh",
+  CH: "ch",
+  JH: "j",
+
+  NG: "ng",
+};
+
+
+
+function isProbablyCMU(sym) {
+  return /^[A-Z]{1,3}$/.test(String(sym || "").trim());
+}
+
+function normalizePhonemeSym(sym) {
+  if (!sym) return "";
+  let s = String(sym).trim();
+  s = s.replace(/^\/+|\/+$/g, "");
+  s = s.replace(/[ˈˌ.]/g, "");
+  s = s.replace(/:/g, "ː");
+  s = s.replace(/\s+/g, "");
+  return s;
+}
+
+function toCMU(symRaw) {
+  const raw = String(symRaw || "").trim();
+  if (!raw) return "";
+  if (isProbablyCMU(raw)) return raw;
+  const s = normalizePhonemeSym(raw);
+  if (KK_TO_CMU[s]) return KK_TO_CMU[s];
+  return s.toUpperCase();
+}
+
+function isVowelCMU(t) {
+  return CMU_VOWELS.has(String(t || "").trim());
+}
+
+function cmuPrettyToken(cmu) {
+  const t = String(cmu || "").trim();
+  if (!t) return "";
+  if (isVowelCMU(t)) return CMU_DISPLAY[t] ?? t;
+  return t.toLowerCase();
+}
+
+function cmuChipLabel(cmu) {
+  const t = String(cmu || "").trim();
+  if (!t) return "";
+
+  // If we have a friendly help label, use it.
+  const help = CMU_HELP[t];
+  if (help) return help;
+
+  // Otherwise: keep existing behavior (vowels mapped, consonants lowercase)
+  return cmuPrettyToken(t);
+}
+
+
+function range(a, b) {
+  const out = [];
+  for (let i = a; i <= b; i++) out.push(i);
+  return out;
+}
+
+/**
+ * ✅ Chunking logic
+ */
+function chunkCmuIndexesSmart(cmuTokens) {
+  const cmu = (Array.isArray(cmuTokens) ? cmuTokens : [])
+    .map((x) => String(x || "").trim())
+    .filter(Boolean);
+
+  const vowelIdxs = [];
+  for (let i = 0; i < cmu.length; i++) if (isVowelCMU(cmu[i])) vowelIdxs.push(i);
+
+  if (!vowelIdxs.length) return cmu.length ? [cmu.map((_, i) => i)] : [];
+
+  const chunks = [];
+  let start = 0;
+
+  for (let v = 0; v < vowelIdxs.length; v++) {
+    const vIdx = vowelIdxs[v];
+    const nextVIdx = v + 1 < vowelIdxs.length ? vowelIdxs[v + 1] : null;
+
+    if (nextVIdx == null) {
+      chunks.push(range(start, cmu.length - 1));
+      break;
+    }
+
+    const consRunStart = vIdx + 1;
+    const consRunEnd = nextVIdx - 1;
+    const consLen = consRunEnd >= consRunStart ? consRunEnd - consRunStart + 1 : 0;
+
+    if (consLen <= 0) {
+      chunks.push(range(start, nextVIdx - 1));
+      start = nextVIdx;
+      continue;
+    }
+
+    if (consLen === 1) {
+      chunks.push(range(start, consRunEnd));
+      start = nextVIdx;
+      continue;
+    }
+
+    chunks.push(range(start, consRunEnd - 1));
+    start = consRunEnd;
+  }
+
+  return chunks.filter((c) => c.length);
+}
+
+/* --- mapping from API phoneme object --- */
 function readPhoneme(o = {}) {
   const letters = o.spelling ?? o.letters ?? o.grapheme ?? o.text ?? "";
   const sym = o.phoneme ?? o.ph ?? o.phone ?? o.sound ?? o.ipa ?? o.symbol ?? "";
-  const like =
-    o.sound_like ?? o.soundLike ?? o.like ?? o.detected ?? o.detected_phoneme ??
-    o.recognized ?? o.recognized_phoneme ?? null;
-  const s01 = to01(o.pronunciation ?? o.accuracy_score ?? o.pronunciation_score ?? o.score ?? o.accuracy);
-  const stressMark = !!(o.stress_mark ?? o.primary_stress ?? o.stress);
-  return { letters, sym, like, s01, stressMark };
+  const s01 = to01(o.pronunciation ?? o.accuracy_score ?? o.pronunciation_score ?? o.score ?? o.accuracy ?? o.accuracyScore);
+
+  // SpeechSuper spans are typically in 10ms units.
+  const spanObj = o.span || o.time || null;
+  const start10 = spanObj?.start ?? spanObj?.s ?? null;
+  const end10 = spanObj?.end ?? spanObj?.e ?? null;
+
+  // keep both raw + seconds
+  const startSec = typeof start10 === "number" ? start10 * 0.01 : null;
+  const endSec = typeof end10 === "number" ? end10 * 0.01 : null;
+  const dur = startSec != null && endSec != null && endSec > startSec ? endSec - startSec : null;
+
+  return { letters, sym, s01, dur, startSec, endSec };
 }
 
-/* ui helpers */
-function Meta({ label, value }) {
+/**
+ * Build letters-per-phoneme index using SpeechSuper `phonics[]`
+ */
+function buildLettersByIdxFromPhonics(phonicsArr, cmuTokens) {
+  const phonics = Array.isArray(phonicsArr) ? phonicsArr : [];
+  const cmu = Array.isArray(cmuTokens) ? cmuTokens : [];
+
+  const expanded = [];
+  for (const item of phonics) {
+    const spell = String(item?.spell ?? item?.spelling ?? item?.letters ?? item?.text ?? "");
+    const phArr = item?.phoneme ?? item?.phonemes ?? item?.phones ?? item?.ph ?? [];
+    const phones = Array.isArray(phArr) ? phArr.map((x) => String(x || "").trim()).filter(Boolean) : [];
+    if (!phones.length) continue;
+
+    const pieces = splitEvenly(spell, phones.length);
+    for (let i = 0; i < phones.length; i++) {
+      expanded.push({
+        phone: toCMU(phones[i]),
+        letters: pieces[i] ?? "",
+      });
+    }
+  }
+
+  if (expanded.length === cmu.length && cmu.length) return expanded.map((x) => x.letters);
+
+  const out = Array(cmu.length).fill("");
+  let j = 0;
+  for (let i = 0; i < cmu.length; i++) {
+    if (j < expanded.length) {
+      out[i] = expanded[j].letters;
+      j++;
+    }
+  }
+  return out;
+}
+
+/* colorized helpers for sentence view */
+function coloredGraphemesOfWord(w) {
+  const phs = Array.isArray(w?.phonemes) ? w.phonemes : [];
+  const wordText = w?.word ?? w?.w ?? "";
+  if (!phs.length) return <span>{wordText}</span>;
+
+  const phonics = Array.isArray(w?.phonics) ? w.phonics : [];
+  if (phonics.length) {
+    const segs = phonics.map((p, i) => {
+      const spell = String(p?.spell ?? "");
+      const ov = to01(p?.overall ?? p?.score ?? p?.accuracy ?? p?.accuracyScore) ?? null;
+      return { key: `phx-${i}`, text: spell, s01: ov };
+    });
+    return segs.map((s) => (
+      <span key={s.key} style={{ color: scoreToColor01(s.s01 ?? 0) }}>
+        {s.text}
+      </span>
+    ));
+  }
+
+  // Fallback: split the word into N parts (N = phoneme count) and color each part by phoneme score
+const meta = phs.map((p) => readPhoneme(p));
+const pieces = splitEvenly(wordText, meta.length || 1);
+
+return (
+  <span>
+    {pieces.map((txt, i) => (
+      <span key={`phseg-${i}`} style={{ color: scoreToColor01(meta[i]?.s01 ?? 0) }}>
+        {txt}
+      </span>
+    ))}
+  </span>
+);
+
+}
+
+function SentenceHeroWord({ words, ui }) {
+  if (!Array.isArray(words) || !words.length) return null;
+
   return (
-    <div className="rounded-xl" style={{border:'1px solid var(--panel-border)', background:'var(--panel-bg)'}}>
-      <div className="px-3 pt-2 text-[11px]" style={{color:'var(--muted)'}}>{label}</div>
-      <div className="px-3 pb-2 font-bold" style={{color:'var(--panel-text)'}}>{value ?? "–"}</div>
+    <div className="pf-hero-word" style={{ color: ui.textStrong }}>
+      {words.map((w, wi) => (
+        <span key={`sw-${wi}`} className="mr-2">
+          {coloredGraphemesOfWord(w)}
+        </span>
+      ))}
     </div>
   );
 }
 
-/** grapheme helpers */
-function splitGraphemes(word = "") {
-  const w = (word || "").toLowerCase(); if (!w) return [];
-  const patterns = ["tch","dge","tion","sion","sch","scr","shr","spl","spr","str","thr","qu","kn","wr","gh","ph","wh","ch","sh","th","ng","ck","ee","oo","ai","ay","au","aw","ou","ow","oi","oy","ea","ie","ei"].sort((a,b)=>b.length-a.length);
-  const chunks = [];
-  for (let i=0;i<w.length;){ let m=null; for (const p of patterns){ if(w.startsWith(p,i)){m=p;break;} }
-    if (m){ chunks.push(word.slice(i,i+m.length)); i+=m.length; } else { chunks.push(word[i]); i+=1; } }
-  return chunks;
+
+function ProgressRing({ pct = 0 }) {
+  const p = Math.max(0, Math.min(100, Number(pct) || 0));
+const r = 20; // +2 px → mere luft, stadig elegant
+  const c = 2 * Math.PI * r;
+  const dash = (p / 100) * c;
+
+  return (
+    <div className="pf-ring" aria-label={`Progress ${p}%`}>
+      <svg width="46" height="46" viewBox="0 0 46 46">
+        <circle cx="23" cy="23" r={r} stroke="rgba(0,0,0,0.10)" strokeWidth="4" fill="none" />
+        <circle
+          cx="23"
+          cy="23"
+          r={r}
+          stroke="rgba(33,150,243,0.95)"
+          strokeWidth="4"
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${c - dash}`}
+          transform="rotate(-90 23 23)"
+        />
+      </svg>
+      <span>{p}%</span>
+    </div>
+  );
 }
-function alignToPhonemes(word = "", phCount = 0) {
-  let chunks = splitGraphemes(word); if (phCount <= 0) return chunks;
-  while (chunks.length > phCount) { if (chunks.length <= 1) break; if (chunks.length % 2 === 0) chunks.splice(0,2,chunks[0]+chunks[1]); else { const n=chunks.length; chunks.splice(n-2,2,chunks[n-2]+chunks[n-1]); } }
-  while (chunks.length < phCount && chunks.length > 0) {
-    const last = chunks.pop(); if (!last || last.length <= 1) { chunks.push(last || ""); break; }
-    const letters = last.split(""); for (let i=0;i<letters.length-1;i++) chunks.push(letters[i]); chunks.push(letters[letters.length-1]);
+function buildChunkRowsFromWord(wordObj, fallbackWordText = "") {
+  const wordText = String(wordObj?.word ?? wordObj?.w ?? fallbackWordText ?? "").trim();
+  const phs = Array.isArray(wordObj?.phonemes) ? wordObj.phonemes : [];
+  const phonics = Array.isArray(wordObj?.phonics) ? wordObj.phonics : [];
+
+  if (!phs.length) return [];
+
+  const meta = phs.map((p) => readPhoneme(p));
+  const cmuTokens = meta.map((m) => toCMU(m.sym)).filter(Boolean);
+  if (!cmuTokens.length) return [];
+
+  const scoresByIdx = meta.map((m) => (typeof m.s01 === "number" ? m.s01 : 0));
+  const weightsByIdx = meta.map((m) => (typeof m.dur === "number" ? m.dur : 1));
+  const spansByIdx = meta.map((m) => ({ startSec: m.startSec, endSec: m.endSec }));
+
+  const lettersByIdx = buildLettersByIdxFromPhonics(phonics, cmuTokens);
+  const chunks = chunkCmuIndexesSmart(cmuTokens);
+
+  const chunkScores = chunks.map((idxs) => {
+    let num = 0;
+    let den = 0;
+    for (const ix of idxs) {
+      const s = typeof scoresByIdx[ix] === "number" ? scoresByIdx[ix] : 0;
+      const w = typeof weightsByIdx[ix] === "number" ? weightsByIdx[ix] : 1;
+      num += s * w;
+      den += w;
+    }
+    return den > 0 ? num / den : 0;
+  });
+
+  let rows = chunks.map((idxs, i) => {
+    const letters = idxs.map((ix) => String(lettersByIdx[ix] || "")).join("");
+    const pct = Math.round((chunkScores?.[i] ?? 0) * 100);
+
+    // USER chunk span
+    let minS = null;
+    let maxE = null;
+    for (const ix of idxs) {
+      const s = spansByIdx[ix]?.startSec;
+      const e = spansByIdx[ix]?.endSec;
+      if (typeof s === "number" && typeof e === "number" && e > s) {
+        if (minS == null || s < minS) minS = s;
+        if (maxE == null || e > maxE) maxE = e;
+      }
+    }
+
+    const phonemes = idxs.map((ix) => {
+      const s01 = scoresByIdx[ix] ?? 0;
+      const span = spansByIdx[ix] || {};
+      return {
+        ix,
+        cmu: cmuTokens[ix],
+        pretty: cmuPrettyToken(cmuTokens[ix]),
+        pct: Math.round((s01 ?? 0) * 100),
+        s01,
+        startSec: span.startSec ?? null,
+        endSec: span.endSec ?? null,
+      };
+    });
+
+    return { i, idxs, letters, pct, phonemes, startSec: minS, endSec: maxE };
+  });
+
+  // merge empty-letter rows into previous
+  for (let i = 0; i < rows.length; i++) {
+    const letters = String(rows[i]?.letters || "").trim();
+    if (letters) continue;
+
+    let j = i - 1;
+    while (j >= 0 && !String(rows[j]?.letters || "").trim()) j--;
+
+    if (j >= 0) {
+      const a = rows[j];
+      const b = rows[i];
+
+      rows[j] = {
+        ...a,
+        idxs: [...(a.idxs || []), ...(b.idxs || [])],
+        phonemes: [...(a.phonemes || []), ...(b.phonemes || [])],
+        startSec: a.startSec != null ? a.startSec : b.startSec,
+        endSec:
+          Math.max(a.endSec ?? -Infinity, b.endSec ?? -Infinity) > -Infinity
+            ? Math.max(a.endSec ?? -Infinity, b.endSec ?? -Infinity)
+            : null,
+        pct: Math.round(
+          ((a.pct ?? 0) * ((a.phonemes || []).length || 1) + (b.pct ?? 0) * ((b.phonemes || []).length || 1)) /
+            (((a.phonemes || []).length || 1) + ((b.phonemes || []).length || 1))
+        ),
+      };
+
+      rows[i] = null;
+    }
   }
-  return chunks;
+
+  rows = rows.filter(Boolean);
+
+  // fallback letters if all empty
+  const allEmpty = rows.every((r) => !String(r.letters || "").trim());
+  if (allEmpty && wordText) {
+    const fb = splitEvenly(wordText, rows.length || 1);
+    rows = rows.map((r, idx) => ({ ...r, letters: fb[idx] || "" }));
+  }
+
+  // preserve capitalization
+  if (wordText && wordText[0] === wordText[0].toUpperCase() && rows.length && rows[0].letters) {
+    rows[0] = { ...rows[0], letters: rows[0].letters[0].toUpperCase() + rows[0].letters.slice(1) };
+  }
+
+  return rows;
 }
 
-/* colorized word/IPA */
-function coloredGraphemesOfWord(w) {
-  const phs = Array.isArray(w?.phonemes) ? w.phonemes : [];
-  const wordText = w?.word ?? w?.w ?? "";
-  if (!phs.length) return <span style={{ color: "var(--panel-text)" }}>{wordText}</span>;
-  const everyMissing = phs.every((p) => !readPhoneme(p).letters);
-  if (everyMissing) {
-    const avg = phs.reduce((s, p) => s + (readPhoneme(p).s01 ?? 0), 0) / phs.length || 0;
-    return <span style={{ color: scoreToColor01(avg) }}>{wordText}</span>;
-  }
-  return phs.map((p, i) => {
-    const { letters, s01 } = readPhoneme(p);
-    return (
-      <span key={`gw-${i}`} style={{ color: scoreToColor01(s01 ?? 0) }}>
-        {letters || ""}
-      </span>
-    );
-  });
-}
-function coloredIPAOfWord(w) {
-  const phs = Array.isArray(w?.phonemes) ? w.phonemes : [];
-  return phs.map((p, i) => {
-    const { sym, s01 } = readPhoneme(p);
-    return (
-      <span key={`gi-${i}`} style={{ color: scoreToColor01(s01 ?? 0), marginRight: 2 }}>
-        {sym || ""}
-      </span>
-    );
-  });
-}
 
-/* ---------- component ---------- */
-export default function PhonemeFeedback({ result }) {
+export default function PhonemeFeedback({ result, embed = false, hideBookmark = false, onRetry }) {
   const { settings } = useSettings();
+    // --- Global volume (0..1) ---
+  const effectiveVolume = useMemo(() => {
+    // hvis du stadig bruger soundEnabled som master mute:
+    if (settings?.soundEnabled === false) return 0;
+
+    const v =
+      settings?.volume != null
+        ? Number(settings.volume)
+        : settings?.soundVolume != null
+        ? Number(settings.soundVolume)
+        : 0.6;
+
+    if (!Number.isFinite(v)) return 0.6;
+    return Math.max(0, Math.min(1, v));
+  }, [settings?.volume, settings?.soundVolume, settings?.soundEnabled]);
+
+
+  // ✅ Dark mode removed (always light)
+  const isDark = false;
+
+  // ✅ Light-only iOS-ish palette
+  const ui = {
+    cardBg: "#FFFFFF",
+    cardBorder: "rgba(0,0,0,0.08)",
+    cardShadow: "0 10px 30px rgba(0,0,0,0.08)",
+
+    panelBg: "#F2F2F7",
+    panelBorder: "rgba(0,0,0,0.08)",
+
+    divider: "rgba(0,0,0,0.08)",
+
+    textStrong: "rgba(17,24,39,0.95)",
+    text: "rgba(17,24,39,0.80)",
+    textMuted: "rgba(17,24,39,0.55)",
+    iconMuted: "rgba(17,24,39,0.28)",
+    iconMuted2: "rgba(17,24,39,0.22)",
+
+    btnBg: "#F2F2F7",
+    btnBg2: "#F2F2F7",
+    btnBorder: "rgba(0,0,0,0.10)",
+  };
+
+  // ✅ Hooks MUST be before any early return
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachErr, setCoachErr] = useState("");
+  const [coachAudioUrl, setCoachAudioUrl] = useState(null);
+  const [coachMap, setCoachMap] = useState(null);
+
+  // ✅ Azure TTS tempo (changes Azure speed, NOT playback speed)
+  const COACH_TTS_RATES = [1.0, 0.65, 0.5];
+  const [coachTtsIdx, setCoachTtsIdx] = useState(0);
+  const coachTtsRate = COACH_TTS_RATES[coachTtsIdx] ?? 1.0;
+
+  function cycleCoachTtsRate() {
+    setCoachTtsIdx((i) => (i + 1) % COACH_TTS_RATES.length);
+  }
+
+  const [booked, setBooked] = useState(false);
+  const [openChunk, setOpenChunk] = useState(null);
+  const [selectedPhKey, setSelectedPhKey] = useState(null);
+  const [tipByKey, setTipByKey] = useState(() => ({}));
+  const [tipLoadingByKey, setTipLoadingByKey] = useState(() => ({}));
+  const [tipErrByKey, setTipErrByKey] = useState(() => ({}));
+
+  async function loadCoachTipForKey(rowKey, payload) {
+    if (tipByKey?.[rowKey]) return;
+
+    setTipErrByKey((p) => ({ ...(p || {}), [rowKey]: "" }));
+    setTipLoadingByKey((p) => ({ ...(p || {}), [rowKey]: true }));
+
+    try {
+      const tip = await getCoachFeedback(payload);
+      const tipText = typeof tip === "string" ? tip : (tip?.tip || tip?.text || tip?.message || "").toString();
+      setTipByKey((p) => ({ ...(p || {}), [rowKey]: tipText || "No tip available." }));
+    } catch (e) {
+      setTipErrByKey((p) => ({ ...(p || {}), [rowKey]: e?.message || String(e) }));
+    } finally {
+      setTipLoadingByKey((p) => ({ ...(p || {}), [rowKey]: false }));
+    }
+  }
+
+  // ===== Per-row Native speed (NOT global) =====
+  const SPEEDS = [1.0, 0.65, 0.5];
+  const [rateIdxByKey, setRateIdxByKey] = useState(() => ({}));
+
+  function getRateForKey(key) {
+    const idx = rateIdxByKey?.[key];
+    return SPEEDS[Number.isFinite(idx) ? idx : 0] ?? 1.0;
+  }
+
+  function cycleRateForKey(key) {
+    setRateIdxByKey((prev) => {
+      const cur = prev?.[key];
+      const curIdx = Number.isFinite(cur) ? cur : 0;
+      const nextIdx = (curIdx + 1) % SPEEDS.length;
+      return { ...(prev || {}), [key]: nextIdx };
+    });
+  }
+
   if (!result) return null;
+  window.__lastResult = result;
+
+  function getUseGB() {
+    const accentRaw = String(result.accent || result.accent_code || result.accentCode || settings.accentDefault || "").toLowerCase();
+    return settings.accentDefault === "en_br" || accentRaw.includes("uk") || accentRaw.includes("brit") || accentRaw === "en_br";
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCoach() {
+      const text = String((result?.target || result?.reference || result?.text || result?.refText || result?.transcript || "") || "").trim();
+      if (!text) return;
+
+      setCoachErr("");
+      setCoachLoading(true);
+
+      try {
+        const accent = getUseGB() ? "en_br" : "en_us";
+        const base = getApiBase();
+
+        const res = await fetch(`${base}/api/align-tts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            refText: text,
+            accent,
+            ttsRate: coachTtsRate,
+          }),
+        });
+
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || "align-tts failed");
+
+        const mime = json?.mime || "audio/mpeg";
+        const b64 = json?.audioBase64 || "";
+        const tokens = Array.isArray(json?.tokens) ? json.tokens : [];
+
+        if (!b64 || !tokens.length) throw new Error("No coach audio/tokens returned");
+
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const blob = new Blob([bytes], { type: mime });
+        const url = URL.createObjectURL(blob);
+
+        if (cancelled) return;
+
+        setCoachAudioUrl((prev) => {
+          try {
+            if (prev) URL.revokeObjectURL(prev);
+          } catch {}
+          return url;
+        });
+
+        setCoachMap({ tokens });
+      } catch (e) {
+        console.log("align-tts error:", e);
+        if (!cancelled) {
+          setCoachErr(e?.message || String(e));
+          setCoachAudioUrl(null);
+          setCoachMap(null);
+        }
+      } finally {
+        if (!cancelled) setCoachLoading(false);
+      }
+    }
+
+    loadCoach();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, coachTtsRate]);
 
   const apiErr = result.error || result.errId || (result._debug && (result._debug.error || result._debug.errId));
   if (apiErr) {
     return (
-      <div className="rounded-[24px] p-5 sm:p-6 mt-4" style={{background:'var(--panel-bg)', color:'var(--panel-text)'}}>
-        <h3 className="mb-1 font-semibold">Feedback</h3>
-        <div style={{color:'#e5484d'}}>{String(apiErr)}</div>
+      <div
+        className={embed ? "" : "rounded-[22px] p-5"}
+        style={{
+          background: ui.cardBg,
+          border: embed ? "none" : `1px solid ${ui.cardBorder}`,
+          boxShadow: embed ? "none" : ui.cardShadow,
+        }}
+      >
+        <div className="text-[17px] font-semibold" style={{ color: ui.text }}>
+          Error
+        </div>
+        <div className="mt-2" style={{ color: "#e5484d" }}>
+          {String(apiErr)}
+        </div>
       </div>
     );
   }
 
-  const recognition = result.recognition ?? result.transcript ?? "";
   const words = Array.isArray(result.words) ? result.words : [];
-  const targetSentenceRaw = result.target || result.reference || result.text || result.refText || "";
-  const wordsJoined = Array.isArray(words) ? words.map(w => (w.word ?? w.w ?? "")).join(" ").trim() : "";
-  const displaySentence = (targetSentenceRaw || "").trim() || (recognition || "").trim() || wordsJoined;
+  const targetSentenceRaw = (result.target || result.reference || result.text || result.refText || "").trim();
+  const recognition = (result.recognition ?? result.transcript ?? "").trim();
+  const wordsJoined = Array.isArray(words) ? words.map((w) => (w.word ?? w.w ?? "")).join(" ").trim() : "";
+  const displaySentence = targetSentenceRaw || recognition || wordsJoined;
 
-  const isSentence = (Array.isArray(words) && words.length >= 2) || (typeof displaySentence === "string" && /\s/.test(displaySentence));
-  const targetSentence = displaySentence;
+  const isSentence = false;
 
-  const overall01 = to01(result.overall ?? result.pronunciation ?? result.overallAccuracy);
+  const overall01 = to01(result.overall ?? result.pronunciation ?? result.overallAccuracy ?? result.score);
 
-  const integrity = result.integrity ?? null;
-  const fluency    = result.fluency ?? null;
-  const rhythm     = result.rhythm ?? null;
-  const speed      = result.speed ?? null;
-  const pauseCount = result.pause_count ?? null;
+  const oneWord = !isSentence && words.length === 1 ? words[0] : null;
+  const apiWordText = (oneWord?.word ?? oneWord?.w ?? "").trim();
+  const wordPhs = oneWord ? (Array.isArray(oneWord.phonemes) ? oneWord.phonemes : []) : [];
+  const wordPhonics = oneWord ? (Array.isArray(oneWord.phonics) ? oneWord.phonics : []) : [];
 
-  const durationSec = (() => {
-    if (result.duration_ms != null && isFinite(Number(result.duration_ms))) return Number(result.duration_ms) / 1000;
-    if (result.numeric_duration != null && isFinite(Number(result.numeric_duration))) return Number(result.numeric_duration);
-    if (result.duration != null) return parseDurationToSeconds(result.duration);
-    return null;
-  })();
-  const durationDisplay = durationSec == null ? "–" : (durationSec >= 10 ? durationSec.toFixed(1) : durationSec.toFixed(2)) + " s";
+  const targetSingleWord = !isSentence && targetSentenceRaw && !/\s/.test(targetSentenceRaw) ? targetSentenceRaw : "";
+  const wordText = targetSingleWord || apiWordText;
 
-  const rearTone = result.rear_tone ?? null;
-
-  // one word
-  const oneWord   = !isSentence && words.length === 1 ? words[0] : null;
-  const wordText  = oneWord?.word ?? oneWord?.w ?? "";
-  const wordPhs   = oneWord ? (Array.isArray(oneWord.phonemes) ? oneWord.phonemes : []) : [];
-  const spellingArr = useMemo(() => alignToPhonemes(wordText, wordPhs.length), [wordText, wordPhs.length]);
-
-  const coloredLetters = wordPhs.map((p, i) => {
-    const { letters, s01 } = readPhoneme(p);
-    const text = (letters && String(letters)) || spellingArr[i] || "";
-    return <span key={`L${i}`} style={{ color: scoreToColor01(s01 ?? 0), marginRight: 4 }}>{text}</span>;
-  });
-  const coloredIPA = wordPhs.map((p, i) => {
-    const { sym, s01 } = readPhoneme(p);
-    return <span key={`I${i}`} style={{ color: scoreToColor01(s01 ?? 0), marginRight: 2 }}>{sym || ""}</span>;
-  });
-
-  function ipaOfWord(phs = []) {
-    const parts = (Array.isArray(phs) ? phs : []).map((p) => (p?.phoneme || p?.ph || p?.sound || p?.ipa || "")).filter(Boolean);
-    return parts.length ? `/${parts.join("")}/` : "";
-  }
-  const ipaWord = ipaOfWord(wordPhs);
-  const ipaSentence = `/${(Array.isArray(words) ? words : []).map((w) => ipaOfWord(w?.phonemes)).join(" ").replace(/\s+/g, " ").trim()}/`.replace(/^\/\//, "/");
-
-  const targetText = oneWord ? (wordText || "") : (targetSentence || "");
-  const targetIpa  = oneWord ? ipaWord : ipaSentence;
+  const targetText = oneWord ? wordText || "" : displaySentence || "";
   const targetScorePct = overall01 != null ? Math.round(overall01 * 100) : null;
 
-  const [booked, setBooked] = useState(isBookmarked(targetText));
-  useEffect(() => { setBooked(isBookmarked(targetText)); }, [targetText]);
+  const lastCelebratedRef = useRef(null);
+const [shineKey, setShineKey] = useState(0);
+
+useEffect(() => {
+  if (!result) return;
+  if (lastCelebratedRef.current === result) return;
+
+  lastCelebratedRef.current = result;
+
+  if ((targetScorePct ?? 0) >= 85) {
+    setShineKey((k) => k + 1); // keeps shine replay, no confetti
+  }
+}, [result, targetScorePct]);
+
+
 
   function onToggleBookmark() {
     if (!targetText) return;
-    toggleBookmark({ text: targetText, ipa: targetIpa, score: targetScorePct, type: oneWord ? "word" : "sentence", createdAt: Date.now() });
+    toggleBookmark({
+      text: targetText,
+      ipa: "",
+      score: targetScorePct,
+      type: oneWord ? "word" : "sentence",
+      createdAt: Date.now(),
+    });
     setBooked(isBookmarked(targetText));
   }
 
-  /* audio buttons */
+  /* audio */
   const userAudioUrl =
     result.userAudioUrl || result.audioUrl || result.recordingUrl || result?.audio?.url || result?.userAudio?.url || null;
 
-  function playRecording() {
-    if (!userAudioUrl) return;
-    try { new Audio(userAudioUrl).play(); } catch {}
-  }
-  function playTTS() {
-    const text = targetText?.trim(); if (!text) return;
+  const userAudioRef = useRef(null);
+  useEffect(() => {
     try {
-      const accentRaw = String(result.accent || result.accent_code || result.accentCode || settings.accentDefault || "").toLowerCase();
-      const useGB = settings.accentDefault === "en_br" || accentRaw.includes("uk") || accentRaw.includes("brit") || accentRaw === "en_br";
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = useGB ? "en-GB" : "en-US";
-      u.rate = settings.ttsRate ?? 1.0;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(u);
+      if (userAudioRef.current) userAudioRef.current.volume = effectiveVolume;
+    } catch {}
+  }, [effectiveVolume]);
+
+   async function playRecording() {
+    if (!userAudioUrl) return;
+    try {
+      if (userAudioRef.current) {
+        if (userAudioRef.current.src !== userAudioUrl) userAudioRef.current.src = userAudioUrl;
+        userAudioRef.current.volume = effectiveVolume; // ✅ ADD
+        userAudioRef.current.currentTime = 0;
+        const p = userAudioRef.current.play();
+        if (p?.catch) p.catch(() => {});
+      } else {
+        const a = new Audio(userAudioUrl);
+        a.volume = effectiveVolume; // ✅ ADD
+        const p = a.play();
+        if (p?.catch) p.catch(() => {});
+      }
     } catch {}
   }
 
-  // stress
-  const stressedVowelIdx = oneWord ? stressedVowelIndexFromIpa(ipaWord) : null;
-  const hasStress = oneWord
-    ? wordPhs.some((p) => {
-        const base = readPhoneme(p);
-        if (base.stressMark) return true;
-        if (!isIpaVowel(base.sym) || stressedVowelIdx == null) return false;
-        let seen = -1, my = -1;
-        for (let k = 0; k < wordPhs.length; k++) {
-          const symK = readPhoneme(wordPhs[k]).sym;
-          if (isIpaVowel(symK)) { seen++; if (k === wordPhs.indexOf(p)) my = seen; }
+
+  // ✅ Plays a segment of YOUR recording, using spans (if available).
+  async function playUserSpan(startSec, endSec) {
+    if (!userAudioUrl) return;
+    if (typeof startSec !== "number" || typeof endSec !== "number" || !(endSec > startSec)) {
+      playRecording();
+      return;
+    }
+    try {
+            await playAudioSegment(userAudioUrl, startSec, endSec, { volume: effectiveVolume });
+    } catch (e1) {
+      try {
+                await playAudioSegment(userAudioUrl, Math.round(startSec * 1000), Math.round(endSec * 1000), { volume: effectiveVolume });
+
+      } catch {
+        playRecording();
+      }
+    }
+  }
+
+  async function playCoachSpan(startSec, endSec, rate = 1.0) {
+    if (!coachAudioUrl || !coachMap?.tokens?.length) return;
+    if (typeof startSec !== "number" || typeof endSec !== "number" || !(endSec > startSec)) return;
+
+    try {
+            await playAudioSegment(coachAudioUrl, startSec, endSec, { rate, volume: effectiveVolume });
+
+    } catch (e1) {
+      try {
+                await playAudioSegment(coachAudioUrl, Math.round(startSec * 1000), Math.round(endSec * 1000), { rate, volume: effectiveVolume });
+
+      } catch {}
+    }
+  }
+
+    async function playCoachFull(rate = 1.0) {
+    if (!coachAudioUrl) return;
+    try {
+      await playAudioSegment(coachAudioUrl, 0, 60 * 60, { rate, volume: effectiveVolume });
+    } catch {
+      try {
+        const a = new Audio(coachAudioUrl);
+        a.volume = effectiveVolume; // ✅ ADD
+        a.playbackRate = rate;
+        const p = a.play();
+        if (p?.catch) p.catch(() => {});
+      } catch {}
+    }
+  }
+
+
+  const nativeReady = !!coachAudioUrl && !!coachMap?.tokens?.length && !coachLoading;
+
+  // ✅ Build CMU tokens + scores + chunks + lettersByIdx + chunkScores (+ spans)
+  const cmuData = useMemo(() => {
+    if (!oneWord || !wordPhs.length) {
+      return { chunks: [], lettersByIdx: [], scoresByIdx: [], cmuTokens: [], chunkScores: [], spansByIdx: [] };
+    }
+
+    const meta = wordPhs.map((p) => readPhoneme(p));
+    const cmuTokens = meta.map((m) => toCMU(m.sym)).filter(Boolean);
+    const scoresByIdx = meta.map((m) => (typeof m.s01 === "number" ? m.s01 : 0));
+    const weightsByIdx = meta.map((m) => (typeof m.dur === "number" ? m.dur : 1));
+    const spansByIdx = meta.map((m) => ({ startSec: m.startSec, endSec: m.endSec }));
+
+    const lettersByIdx = buildLettersByIdxFromPhonics(wordPhonics, cmuTokens);
+    const chunks = chunkCmuIndexesSmart(cmuTokens);
+
+    const chunkScores = chunks.map((idxs) => {
+      let num = 0;
+      let den = 0;
+      for (const ix of idxs) {
+        const s = typeof scoresByIdx[ix] === "number" ? scoresByIdx[ix] : 0;
+        const w = typeof weightsByIdx[ix] === "number" ? weightsByIdx[ix] : 1;
+        num += s * w;
+        den += w;
+      }
+      return den > 0 ? num / den : 0;
+    });
+
+    // coach spans by index (best effort 1:1)
+    const coachTokens = Array.isArray(coachMap?.tokens) ? coachMap.tokens : [];
+    const coachSpansByIdx = cmuTokens.map((_, i) => {
+      const t = coachTokens[i];
+      const s = typeof t?.start === "number" ? t.start : null;
+      const e = typeof t?.end === "number" ? t.end : null;
+      return { startSec: s, endSec: e };
+    });
+
+    return { chunks, lettersByIdx, scoresByIdx, cmuTokens, chunkScores, spansByIdx, coachSpansByIdx };
+  }, [oneWord, wordPhs, wordPhonics, coachMap]);
+
+  const chunkRows = useMemo(() => {
+    if (!oneWord) return [];
+
+    const chunks = cmuData.chunks || [];
+    const lettersByIdx = cmuData.lettersByIdx || [];
+    const scoresByIdx = cmuData.scoresByIdx || [];
+    const cmuTokens = cmuData.cmuTokens || [];
+
+    const spansByIdx = cmuData.spansByIdx || []; // USER spans
+    const coachSpansByIdx = cmuData.coachSpansByIdx || []; // COACH spans
+
+    // 1) build rows
+    let rows = chunks.map((idxs, i) => {
+      const letters = idxs.map((ix) => String(lettersByIdx[ix] || "")).join("");
+      const pct = Math.round((cmuData.chunkScores?.[i] ?? 0) * 100);
+
+      // USER chunk span
+      let minS = null;
+      let maxE = null;
+      for (const ix of idxs) {
+        const s = spansByIdx[ix]?.startSec;
+        const e = spansByIdx[ix]?.endSec;
+        if (typeof s === "number" && typeof e === "number" && e > s) {
+          if (minS == null || s < minS) minS = s;
+          if (maxE == null || e > maxE) maxE = e;
         }
-        return my === stressedVowelIdx;
-      })
-    : false;
+      }
 
-  const showIPA           = !!settings?.showIPA;
-  const showPhonemeTable  = !!settings?.showPhonemeTable;
-  const showStressTips    = !!settings?.showStressTips && hasStress;
+      // COACH chunk span
+      let cMinS = null;
+      let cMaxE = null;
+      for (const ix of idxs) {
+        const s = coachSpansByIdx[ix]?.startSec;
+        const e = coachSpansByIdx[ix]?.endSec;
+        if (typeof s === "number" && typeof e === "number" && e > s) {
+          if (cMinS == null || s < cMinS) cMinS = s;
+          if (cMaxE == null || e > cMaxE) cMaxE = e;
+        }
+      }
 
+      const phonemes = idxs.map((ix) => {
+        const s01 = scoresByIdx[ix] ?? 0;
+        const span = spansByIdx[ix] || {};
+        const cspan = coachSpansByIdx[ix] || {};
+
+        return {
+          ix,
+          cmu: cmuTokens[ix],
+          pretty: cmuPrettyToken(cmuTokens[ix]),
+          pct: Math.round((s01 ?? 0) * 100),
+          s01,
+
+          // user spans
+          startSec: span.startSec ?? null,
+          endSec: span.endSec ?? null,
+
+          // coach spans
+          coachStartSec: cspan.startSec ?? null,
+          coachEndSec: cspan.endSec ?? null,
+        };
+      });
+
+      return {
+        i,
+        idxs,
+        letters,
+        pct,
+        phonemes,
+
+        // user
+        startSec: minS,
+        endSec: maxE,
+
+        // coach
+        coachStartSec: cMinS,
+        coachEndSec: cMaxE,
+      };
+    });
+
+    // 2) merge: if a row has empty letters, move its phonemes into previous row with letters
+    for (let i = 0; i < rows.length; i++) {
+      const letters = String(rows[i]?.letters || "").trim();
+      if (letters) continue;
+
+      let j = i - 1;
+      while (j >= 0 && !String(rows[j]?.letters || "").trim()) j--;
+
+      if (j >= 0) {
+        const a = rows[j];
+        const b = rows[i];
+
+        rows[j] = {
+          ...a,
+          idxs: [...(a.idxs || []), ...(b.idxs || [])],
+          phonemes: [...(a.phonemes || []), ...(b.phonemes || [])],
+
+          // merge spans (user)
+          startSec: a.startSec != null ? a.startSec : b.startSec,
+          endSec:
+            Math.max(a.endSec ?? -Infinity, b.endSec ?? -Infinity) > -Infinity
+              ? Math.max(a.endSec ?? -Infinity, b.endSec ?? -Infinity)
+              : null,
+
+          // merge spans (coach)
+          coachStartSec: a.coachStartSec != null ? a.coachStartSec : b.coachStartSec,
+          coachEndSec:
+            Math.max(a.coachEndSec ?? -Infinity, b.coachEndSec ?? -Infinity) > -Infinity
+              ? Math.max(a.coachEndSec ?? -Infinity, b.coachEndSec ?? -Infinity)
+              : null,
+
+          // simple weighted score by phoneme count
+          pct: Math.round(
+            ((a.pct ?? 0) * ((a.phonemes || []).length || 1) + (b.pct ?? 0) * ((b.phonemes || []).length || 1)) /
+              (((a.phonemes || []).length || 1) + ((b.phonemes || []).length || 1))
+          ),
+        };
+
+        rows[i] = null;
+      }
+    }
+
+    // 3) remove null rows
+    rows = rows.filter(Boolean);
+
+    // 4) fallback letters if all empty
+    const allEmpty = rows.every((r) => !String(r.letters || "").trim());
+    if (allEmpty && wordText) {
+      const fb = splitEvenly(wordText, rows.length || 1);
+      rows = rows.map((r, idx) => ({ ...r, letters: fb[idx] || "" }));
+    }
+
+    // 5) preserve capitalization
+    if (wordText && wordText[0] === wordText[0].toUpperCase() && rows.length && rows[0].letters) {
+      rows[0] = { ...rows[0], letters: rows[0].letters[0].toUpperCase() + rows[0].letters.slice(1) };
+    }
+
+    return rows;
+  }, [oneWord, cmuData, wordText]);
+
+
+  
   return (
-    <div className="rounded-[24px] p-5 sm:p-6 mt-4 relative shadow-xl"
-         style={{ background: "var(--panel-bg)", color: "var(--panel-text)", border: "1px solid var(--panel-border)" }}>
-      {overall01 != null && targetText && (
-        <button
-          onClick={onToggleBookmark}
-          className={["absolute right-3 top-3 p-2 rounded-xl transition",
-            booked ? "bg-amber-300/20 text-amber-300" : "bg-white/10 hover:bg-white/20"].join(" ")}
-          title={booked ? "Remove bookmark" : "Bookmark"}
-        >
-          {booked ? <BookmarkCheck className="h-5 w-5" /> : <Bookmark className="h-5 w-5" />}
-        </button>
-      )}
+    <div
+  className={embed ? "" : "rounded-[22px] relative"}
+  style={{
+    background: embed ? "transparent" : ui.cardBg,
+    border: embed ? "none" : `1px solid ${ui.cardBorder}`,
+    boxShadow: embed ? "none" : ui.cardShadow,
 
-      <h3 className="mb-1 font-semibold">Feedback</h3>
+    
+  }}
+>
+      <audio ref={userAudioRef} />
 
-      {overall01 != null && (
-        <>
-          {/* NEW: Medalized score ring header */}
-          <div className="flex items-center justify-between mb-3">
-            <ScoreRing score={Math.round(overall01 * 100)} size={72} />
-          </div>
-
-          {/* Progress rows */}
-          <div>
-            {[
-              ["Pronunciation", to01(result?.pronunciation ?? result?.overall) ?? overall01],
-              ["Fluency",       to01(result?.fluency)],
-              ["Intonation",    to01(result?.intonation ?? result?.rhythm)],
-            ].filter(([,v]) => v != null).map(([label, v]) => {
-              const p = Math.round(v*100);
-              const cls = p >= 90 ? "fill-good" : p >= 70 ? "fill-okay" : "fill-bad";
-              return (
-                <div className="progress-row" key={label}>
-                  <div className="progress-label">{label}</div>
-                  <div className="progress-track">
-                    <div className={`progress-fill ${cls}`} style={{width: `${Math.max(0, Math.min(100, p))}%`}} />
-                  </div>
-                  <div style={{width:36, textAlign:"right"}}>{p}%</div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      <div className="flex items-center gap-3 mt-2 mb-4">
-        <button
-          onClick={playRecording}
-          disabled={!userAudioUrl}
-          className={["inline-flex items-center gap-2 px-3 py-2 rounded-lg",
-            userAudioUrl ? "bg-white/10 hover:bg-white/20" : "bg-white/5 opacity-60 cursor-not-allowed"].join(" ")}
-          title={userAudioUrl ? "Play your recording" : "No recording available"}
-        >
-          <span role="img" aria-label="microphone">🎙️</span>
-          <span className="text-sm font-medium">Your recording</span>
-        </button>
-        <button onClick={playTTS} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20">
-          <span role="img" aria-label="speaker">🔊</span>
-          <span className="text-sm font-medium">Native</span>
-        </button>
-      </div>
-
-      {/* ===== SENTENCE ===== */}
-      {isSentence && (
-        <>
-          {targetSentence && <div className="mb-1 font-semibold" style={{color:'var(--panel-text)'}}>{targetSentence}</div>}
-
-          <div className="mt-1 mb-2 text-[26px] leading-[1.25] font-extrabold">
-            {words.map((w, wi) => <span key={`w-${wi}`} className="mr-2">{coloredGraphemesOfWord(w)}</span>)}
-          </div>
-
-          {showIPA && (
-            <div className="mt-1 mb-3 text-[22px] font-semibold" style={{color:'var(--panel-text)'}}>
-              <span style={{color:'var(--muted)'}}>/</span>
-              {words.map((w, wi) => <span key={`ipa-${wi}`} className="mr-2">{coloredIPAOfWord(w)}</span>)}
-              <span style={{color:'var(--muted)'}}>/</span>
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2 my-3">
-            <Meta label="Integrity" value={integrity != null ? Math.round(integrity) : "–"} />
-            <Meta label="Fluency"   value={fluency   != null ? Math.round(fluency)   : "–"} />
-            <Meta label="Rhythm"    value={rhythm    != null ? Math.round(rhythm)    : "–"} />
-            <Meta label="Speed (wpm)" value={speed  != null ? Math.round(speed)     : "–"} />
-            <Meta label="Pauses"    value={pauseCount ?? "–"} />
-            <Meta label="Duration"  value={durationDisplay} />
-          </div>
-
-          <ul className="list-none p-0 m-0 mt-2">
-            {words.map((w, i) => {
-              const wText = w.word ?? w.w ?? "";
-              const w01 = to01(w?.scores?.overall ?? w?.overall ?? w?.pronunciation ?? w?.accuracy ?? w?.accuracyScore);
-              const phs = Array.isArray(w.phonemes) ? w.phonemes : [];
-              const color = scoreToColor01(w01 ?? 0);
-              return (
-                <li key={`${wText}-${i}`} className="mb-3">
-                  <div className="font-bold mb-1">
-                    {wText || <em>(empty word)</em>}{" "}
-                    {w01 != null && <span style={{color:'var(--muted)'}}>— {pct(w01)}</span>}
-                  </div>
-
-                  {w01 != null && (
-                    <div className="h-2 rounded-md overflow-hidden mb-2" style={{background:'rgba(255,255,255,0.1)'}}>
-                      <div className="h-full transition-[width] ease-out duration-500" style={{ width: `${Math.max(0, Math.min(1, w01)) * 100}%`, background: color }} />
-                    </div>
-                  )}
-
-                  {phs.length ? (
-                    <div className="flex flex-wrap gap-2">
-                      {phs.map((p, j) => {
-                        const { sym, s01 } = readPhoneme(p);
-                        const c = scoreToColor01(s01 ?? 0);
-                        return (
-                          <span key={`${sym}-${j}`} className="px-2 py-1 rounded-full border"
-                                style={{ color: c, borderColor: `${c}66`, background: `${c}14`, fontWeight: 700, fontSize: 13 }}>
-                            /{sym}/ {s01 != null ? `${Math.round(s01 * 100)}%` : ""}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  ) : <div className="text-sm" style={{color:'var(--muted)'}}>(No phonemes for this word)</div>}
-                </li>
-              );
-            })}
-          </ul>
-
-          {rearTone ? (
-            <div className="rounded-2xl px-4 py-3 mt-4"
-                 style={{border:'1px solid rgba(56,189,248,.3)', background:'rgba(56,189,248,.1)'}}>
-              <div className="font-medium">Tone: You used <strong>{rearTone}</strong> tone at the end of the sentence.</div>
-            </div>
-          ) : null}
-        </>
-      )}
-
-      {/* ===== ONE WORD ===== */}
-      {oneWord && (
-        <>
-          <div className="mt-1 mb-0.5">
-            <div className="text-[40px] font-extrabold leading-none tracking-wide">{coloredLetters}</div>
-            {showIPA && wordPhs.length > 0 && (
-              <div className="mt-1 text-[28px] font-semibold">
-                <span style={{color:'var(--muted)'}}>/</span>
-                {coloredIPA}
-                <span style={{color:'var(--muted)'}}>/</span>
-              </div>
+      {!hideBookmark && (
+        <div className={embed ? "" : "px-5 pt-5"}>
+          <div className="flex items-start justify-end">
+            {overall01 != null && targetText && (
+              <button
+                type="button"
+                onClick={onToggleBookmark}
+                className="grid place-items-center"
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  background: ui.btnBg,
+                  border: `1px solid ${ui.btnBorder}`,
+                  color: ui.text,
+                }}
+                title={booked ? "Remove bookmark" : "Bookmark"}
+              >
+                {booked ? <BookmarkCheck className="h-5 w-5" /> : <Bookmark className="h-5 w-5" />}
+              </button>
             )}
           </div>
-
-          {/* Word stress ONLY if we found any */}
-          {showStressTips && (
-            <div className="rounded-2xl px-4 py-3 mt-3 mb-2"
-                 style={{border:'1px solid rgba(56,189,248,.3)', background:'rgba(56,189,248,.1)'}}>
-              <div className="font-semibold mb-1 text-lg">Word stress</div>
-              <p className="text-sm" style={{color:'var(--muted)'}}>
-                The highlighted sounds are the most emphasized when this word is spoken correctly.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {wordPhs.map((p, i) => {
-                  const base = readPhoneme(p);
-                  let isStressed = !!base.stressMark;
-                  if (!isStressed && isIpaVowel(base.sym) && stressedVowelIdx != null) {
-                    let seen = -1, myVowelOrder = -1;
-                    for (let k=0;k<wordPhs.length;k++){
-                      const symK = readPhoneme(wordPhs[k]).sym;
-                      if (isIpaVowel(symK)) { seen++; if (k===i) myVowelOrder = seen; }
-                    }
-                    if (myVowelOrder === stressedVowelIdx) isStressed = true;
-                  }
-                  const display = base.sym || "·";
-                  return (
-                    <span key={i}
-                      className={"px-3 py-1 rounded-full text-sm font-semibold " +
-                        (isStressed ? "bg-amber-400/20 text-amber-300 border border-amber-300/40"
-                                    : "bg-white/10 text-white/70 border border-white/10")}>
-                      {isStressed ? `🔸 ${display}` : display}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {showPhonemeTable && (
-            <div className="rounded-2xl overflow-hidden mt-3" style={{border:'1px solid var(--panel-border)'}}>
-              <div className="px-4 py-3" style={{borderBottom:'1px solid var(--panel-border)', background:'rgba(255,255,255,0.05)'}}>
-                Word-level Evaluation Result
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left">
-                  <thead className="text-sm" style={{color:'var(--muted)'}}>
-                    <tr style={{borderBottom:'1px solid var(--panel-border)'}}>
-                      <th className="px-4 py-2">Spelling</th>
-                      <th className="px-4 py-2">Sound</th>
-                      <th className="px-4 py-2">Quality</th>
-                      <th className="px-4 py-2">Sound like</th>
-                      <th className="px-4 py-2">Feedback</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-[15px]">
-                    {wordPhs.map((p, i) => {
-                      const { letters, sym, like, s01 } = readPhoneme(p);
-                      const spellingFallback = alignToPhonemes(wordText, wordPhs.length)[i] || "—";
-                      const displayGrapheme = (letters && String(letters)) || spellingFallback;
-                      const qualityBadge = (
-                        <span className="inline-block rounded-full"
-                              style={{border:'1px solid rgba(74,222,128,.4)', background:'rgba(74,222,128,.1)', color:'#86efac', padding:'4px 10px', fontWeight:600, fontSize:13}}>
-                          {pct(s01)}
-                        </span>
-                      );
-                      const feedbackText = p.feedback ?? p.result ?? (like && sym ? (like === sym ? "Sound match" : "Different") : "—");
-                      return (
-                        <tr key={i} style={{borderBottom:'1px solid var(--panel-border)'}}>
-                          <td className="px-4 py-3 font-semibold">{displayGrapheme}</td>
-                          <td className="px-4 py-3">{sym ? `/${sym}/` : "—"}</td>
-                          <td className="px-4 py-3">{qualityBadge}</td>
-                          <td className="px-4 py-3" style={{color:'var(--muted)'}}>{like ? `/${like}/` : "—"}</td>
-                          <td className="px-4 py-3" style={{color:'var(--muted)'}}>{feedbackText}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </>
+        </div>
       )}
+
+            <div className={embed ? "" : "px-5 pb-6"}>
+        {oneWord && (
+          <div className="mt-0">
+            {/* ONE shared width wrapper for BOTH cards */}
+            <div style={{ width: "100%", maxWidth: 420, margin: "0 auto" }}>
+              {/* HERO CARD */}
+              <div
+                key={shineKey}
+                className={`pf-surface pf-hero-card ${(targetScorePct ?? 0) >= 85 ? "pf-hero-shine" : ""}`}
+                style={{ width: "100%" }}
+              >
+                <div className="pf-hero-word" style={{ color: ui.textStrong }}>
+                  {chunkRows?.length
+                    ? chunkRows.map((row) => (
+                        <span key={`wseg-${row.i}`} style={{ color: scoreToColor01((row.pct ?? 0) / 100) }}>
+                          {row.letters}
+                        </span>
+                      ))
+                    : wordText}
+                </div>
+
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    className="pf-pill"
+                    onClick={() => {
+                      if (!nativeReady) return;
+                      playCoachFull(1.0);
+                    }}
+                    disabled={!nativeReady}
+                    title={nativeReady ? "Play coach" : "Coach not ready yet"}
+                  >
+                    <Volume2 className="h-4 w-4" />
+                    Coach
+                  </button>
+
+                  <button
+                    type="button"
+                    className="pf-pill"
+                    onClick={playRecording}
+                    disabled={!userAudioUrl}
+                    title={userAudioUrl ? "Play your recording" : "No recording available"}
+                  >
+                    <Volume2 className="h-4 w-4" />
+                    You
+                  </button>
+                </div>
+
+                {!!coachErr && (
+                  <div className="mt-3" style={{ color: "#e5484d", fontSize: 13 }}>
+                    Coach: {coachErr}
+                  </div>
+                )}
+              </div>
+
+              {/* CHUNK LIST (same width as hero) */}
+              {chunkRows.length > 0 && (
+                <div className="pf-list" style={{ width: "100%" }}>
+                  {chunkRows.map((row) => {
+                    const isOpen = openChunk === row.i;
+                    const badgePct = Math.max(0, Math.min(100, Number(row.pct) || 0));
+
+                    return (
+                      <div
+                        key={`chunkcard-${row.i}`}
+                        className="pf-row-card"
+                        style={{ width: "100%" }}
+                        onClick={() => setOpenChunk((v) => (v === row.i ? null : row.i))}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setOpenChunk((v) => (v === row.i ? null : row.i));
+                          }
+                        }}
+                      >
+                        <div className="pf-row-top">
+                          <div className="pf-row-title">{row.letters || "—"}</div>
+                        </div>
+
+                        <div className="pf-row-sub">
+                          <div className="pf-seg">
+                            <button
+                              type="button"
+                              className="pf-seg-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cycleCoachTtsRate();
+                              }}
+                              title="Change Native tempo (Azure TTS)"
+                            >
+                              {coachTtsRate.toFixed(2)}
+                            </button>
+
+                            <button
+                              type="button"
+                              className="pf-seg-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!nativeReady) return;
+                                playCoachSpan(row.coachStartSec, row.coachEndSec, 1.0);
+                              }}
+                              disabled={!nativeReady}
+                              title={nativeReady ? "Play native (this part)" : "Native not ready yet"}
+                            >
+                              <Volume2 className="h-4 w-4" />
+                              Native
+                            </button>
+                          </div>
+
+                          <div className="pf-row-right">
+                            <button
+                              type="button"
+                              className="pf-pill"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playUserSpan(row.startSec, row.endSec);
+                              }}
+                              title="Play your recording (this part)"
+                            >
+                              <Volume2 className="h-4 w-4" />
+                              You
+                            </button>
+
+                            <div className="pf-row-actions">
+                              <ProgressRing pct={badgePct} />
+
+                              <button
+                                type="button"
+                                className="pf-chevron"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenChunk((v) => (v === row.i ? null : row.i));
+                                }}
+                                aria-label="Toggle details"
+                              >
+                                <ChevronRight
+                                  className="h-5 w-5"
+                                  style={{ transform: isOpen ? "rotate(90deg)" : "rotate(0deg)" }}
+                                />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {isOpen && (
+                          <div style={{ marginTop: 10 }}>
+                            <div className="phoneme-row">
+                              {row.phonemes.map((ph) => (
+                                <button
+                                  key={`${row.i}-ph-${ph.ix}`}
+                                  type="button"
+                                  className="phoneme-chip"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    playUserSpan(ph.startSec, ph.endSec);
+                                  }}
+                                  title={`${ph.cmu} • ${ph.pct}%`}
+                                  style={{
+                                    borderColor: "rgba(0,0,0,0.12)",
+                                    color: scoreToColor01((ph.pct ?? 0) / 100),
+                                  }}
+                                >
+                                  <span style={{ fontWeight: 900 }}>{cmuChipLabel(ph.cmu)}</span>
+                                  <span style={{ opacity: 0.75, fontWeight: 800 }}>{ph.pct}%</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

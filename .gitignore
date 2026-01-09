@@ -15,3 +15,4 @@ build/
 # OS/Editor
 .DS_Store
 .vscode/
+.env*.local
