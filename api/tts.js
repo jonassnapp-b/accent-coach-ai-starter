@@ -8,9 +8,19 @@ import { getTtsAudio } from "./_lib/tts.js";
 export default async function handler(req, res) {
     console.log("[api/tts] HIT", req.method, req.query);
   try {
-    if (req.method !== "GET") {
-      return res.status(405).json({ error: "Method not allowed" });
-    }
+    const method = (req.method || "GET").toUpperCase();
+if (method !== "GET" && method !== "POST") {
+  return res.status(405).json({ error: "Method not allowed" });
+}
+
+// Hvis POST: læs fra body, ellers query
+const body = req.body || {};
+const q = req.query || {};
+const text = (method === "POST" ? body.text : q.text);
+const accent = (method === "POST" ? body.accent : q.accent);
+
+// og brug text + accent som resten af filen allerede gør
+
 
     const text = String(req.query?.text || "").trim();
     if (!text) return res.status(400).json({ error: "Missing text" });
