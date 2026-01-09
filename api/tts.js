@@ -3,27 +3,32 @@ import { getTtsAudio } from "./_lib/tts.js";
 /**
  * GET /api/tts?text=Hello&accent=en_us&rate=1
  * POST /api/tts  { text, accent, rate }
- * Returns audio bytes
+ * Returns audio bytes (mp3 by default)
  */
 export default async function handler(req, res) {
   console.log("[api/tts] HIT", req.method);
 
   try {
     const method = (req.method || "GET").toUpperCase();
+
     if (method !== "GET" && method !== "POST") {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const body = req.body || {};
     const q = req.query || {};
+    const b = req.body || {};
 
-    const text = String((method === "POST" ? body.text : q.text) || "").trim();
+    const textRaw = method === "POST" ? b.text : q.text;
+    const accentRaw = method === "POST" ? b.accent : q.accent;
+    const rateRaw = method === "POST" ? b.rate : q.rate;
+
+    const text = String(textRaw || "").trim();
     if (!text) return res.status(400).json({ error: "Missing text" });
 
-    const accentRaw = String((method === "POST" ? body.accent : q.accent) || "en_us").toLowerCase();
-    const accent = accentRaw === "en_br" ? "en_br" : "en_us";
+    const accentNorm = String(accentRaw || "en_us").toLowerCase();
+    const accent = accentNorm === "en_br" ? "en_br" : "en_us";
 
-    const rate = Number((method === "POST" ? body.rate : q.rate) ?? 1.0) || 1.0;
+    const rate = Number(rateRaw ?? 1.0) || 1.0;
 
     const { audioBuffer, mime } = await getTtsAudio({ text, accent, rate });
 
