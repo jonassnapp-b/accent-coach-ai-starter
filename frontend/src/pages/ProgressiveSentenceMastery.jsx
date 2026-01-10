@@ -1232,41 +1232,37 @@ function goPrevManual() {
 }
 
 
-async function onCardPointerDown(e) {
+function onCardPointerDown(e) {
+  // mark user gesture immediately
   userInteractedRef.current = true;
-  await unlockAudioOnce();
+
+  // fire-and-forget (DO NOT await — iOS pointer events are fast)
+  unlockAudioOnce().catch(() => {});
   setInteractionTick((t) => t + 1);
 
-
-
-  console.log("CARD POINTER DOWN", e.target, e.currentTarget);
-const el = document.elementFromPoint(e.clientX, e.clientY);
-console.log("TOP ELEMENT AT POINT:", el);
-console.log("pointerdown OK");
-
-  // venstre klik only
+  // venstre klik only (ignore right click)
   if (e.button != null && e.button !== 0) return;
 
+  // ✅ IMPORTANT: set active BEFORE anything else
+  swipeRef.current.active = true;
+  swipeRef.current.x0 = e.clientX;
+  swipeRef.current.y0 = e.clientY;
+  swipeRef.current.xLast = e.clientX;
+  swipeRef.current.yLast = e.clientY;
 
-  // ✅ iOS/WKWebView: ensure we keep receiving move/up events
+  // iOS/WKWebView: keep receiving move/up
   try {
     swipeRef.current.pointerId = e.pointerId;
     swipeRef.current.el = e.currentTarget;
     e.currentTarget.setPointerCapture?.(e.pointerId);
   } catch {}
 
-
-  swipeRef.current.active = true;
-  swipeRef.current.x0 = e.clientX;
-  swipeRef.current.y0 = e.clientY;
-  swipeRef.current.xLast = e.clientX;
-swipeRef.current.yLast = e.clientY;
-
   // stop text-selection drag
   try {
     e.preventDefault();
   } catch {}
 }
+
 
 function onCardPointerMove(e) {
   console.log("pointermove", swipeRef.current.active);
@@ -1323,53 +1319,6 @@ if (Math.abs(dx) <= Math.abs(dy) + 5) return;
 function onCardPointerCancel() {
   swipeRef.current.active = false;
   cleanupCardPointerListeners();
-}
-
-function onCardTouchStart(e) {
-  console.log("touchstart OK", e.target);
-  // Hvis man trykker på knapper/inputs osv, så ikke swipe
-
-
-  const t = e.touches?.[0];
-  if (!t) return;
-
-  swipeRef.current.active = true;
-  swipeRef.current.x0 = t.clientX;
-  swipeRef.current.y0 = t.clientY;
-  swipeRef.current.xLast = t.clientX;
-  swipeRef.current.yLast = t.clientY;
-}
-
-function onCardTouchMove(e) {
-  if (!swipeRef.current.active) return;
-  const t = e.touches?.[0];
-  if (!t) return;
-
-  swipeRef.current.xLast = t.clientX;
-  swipeRef.current.yLast = t.clientY;
-}
-
-function onCardTouchEnd(e) {
-  console.log("touchend", { active: swipeRef.current.active });
-
-  if (!swipeRef.current.active) return;
-  swipeRef.current.active = false;
-
-  const x1 = swipeRef.current.xLast ?? swipeRef.current.x0;
-  const y1 = swipeRef.current.yLast ?? swipeRef.current.y0;
-
-  const dx = x1 - swipeRef.current.x0;
-  const dy = y1 - swipeRef.current.y0;
-
-  // kun horisontal swipe
-  if (Math.abs(dx) < 35) return;
-  if (Math.abs(dx) <= Math.abs(dy) + 5) return;
-
-  if (dx > 0) {
-    goNextManual();
-  } else {
-    if (historyRef.current.length) goPrevManual();
-  }
 }
 
 
@@ -1532,10 +1481,6 @@ onPointerDown={onCardPointerDown}
   onPointerUp={onCardPointerUp}
   onPointerCancel={onCardPointerCancel}
 
-onTouchStart={onCardTouchStart}
-onTouchMove={onCardTouchMove}
-onTouchEnd={onCardTouchEnd}
-
 
 
         style={{
@@ -1589,7 +1534,6 @@ WebkitUserDrag: "none",
               <button
                 key={w.key}
                   onPointerDown={(e) => e.stopPropagation()}   // ✅ IMPORTANT
-onTouchStart={(e) => e.stopPropagation()}
 
                onClick={() => {
   // If we don't have a result yet, clicking selects which word to score (Record-style)
@@ -1625,8 +1569,7 @@ onTouchStart={(e) => e.stopPropagation()}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <button
             onPointerDown={(e) => e.stopPropagation()}   // ✅ IMPORTANT
-           onTouchStart={(e) => e.stopPropagation()}
-            onClick={playSentenceTTS}
+                       onClick={playSentenceTTS}
             disabled={ttsLoading}
             style={{
               width: 44,
