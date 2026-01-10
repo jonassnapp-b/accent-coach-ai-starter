@@ -1288,32 +1288,36 @@ swipeRef.current.yLast = null;
 }
 
 function onCardPointerUp(e) {
-  console.log("pointerup", { active: swipeRef.current.active });
+  // hvis vi ikke er i swipe-mode, så ryd op og stop
   if (!swipeRef.current.active) {
     cleanupCardPointerListeners();
     return;
   }
 
+  // ✅ LÆS xLast/yLast FØR cleanup (du nulstiller dem inde i cleanup)
+  const x1 = swipeRef.current.xLast ?? e.clientX;
+  const y1 = swipeRef.current.yLast ?? e.clientY;
+
+  const dx = x1 - swipeRef.current.x0;
+  const dy = y1 - swipeRef.current.y0;
+
   swipeRef.current.active = false;
   cleanupCardPointerListeners();
 
- const x1 = swipeRef.current.xLast ?? e.clientX;
-const y1 = swipeRef.current.yLast ?? e.clientY;
-
-const dx = x1 - swipeRef.current.x0;
-const dy = y1 - swipeRef.current.y0;
-
-
   // kun horisontal swipe
- if (Math.abs(dx) < 35) return;
-if (Math.abs(dx) <= Math.abs(dy) + 5) return;
+  if (Math.abs(dx) < 35) return;
+  if (Math.abs(dx) <= Math.abs(dy) + 5) return;
 
+  // ✅ STANDARD UX:
+  // swipe LEFT (dx < 0) = NEXT
+  // swipe RIGHT (dx > 0) = PREVIOUS
+ // ✅ STANDARD UX:
+if (dx < 0) {
+  goNextManual();
+} else {
+  if (historyRef.current.length) goPrevManual();
+}
 
-  if (dx > 0) {
-    goNextManual();
-  } else {
-    if (historyRef.current.length) goPrevManual();
-  }
 }
 
 function onCardPointerCancel() {
@@ -1612,7 +1616,7 @@ WebkitUserDrag: "none",
 
         {/* hint row */}
         <div style={{ marginTop: 14, fontSize: 12, fontWeight: 900, color: "rgba(0,0,0,0.35)" }}>
-          Swipe right for next • Swipe left for previous
+          Swipe left for next • Swipe right for previous
         </div>
       </div>
     </div>
