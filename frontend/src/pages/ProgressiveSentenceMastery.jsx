@@ -1240,6 +1240,12 @@ console.log("TOP ELEMENT AT POINT:", el);
   // don't start swipe (otherwise we kill the click)
   const interactive = e.target?.closest?.("button, a, input, textarea, select, [role='button']");
   if (interactive) return;
+  // ✅ iOS/WKWebView: ensure we keep receiving move/up events
+  try {
+    swipeRef.current.pointerId = e.pointerId;
+    swipeRef.current.el = e.currentTarget;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  } catch {}
 
 
   swipeRef.current.active = true;
@@ -1247,15 +1253,6 @@ console.log("TOP ELEMENT AT POINT:", el);
   swipeRef.current.y0 = e.clientY;
   swipeRef.current.xLast = e.clientX;
 swipeRef.current.yLast = e.clientY;
-try {
-  e.currentTarget?.setPointerCapture?.(e.pointerId);
-} catch {}
-
-
-  // få events selv hvis du slipper udenfor kortet
-  window.addEventListener("pointermove", onCardPointerMove, true);
-  window.addEventListener("pointerup", onCardPointerUp, true);
-  window.addEventListener("pointercancel", onCardPointerCancel, true);
 
   // stop text-selection drag
   try {
@@ -1271,9 +1268,15 @@ function onCardPointerMove(e) {
 
 
 function cleanupCardPointerListeners() {
-  window.removeEventListener("pointermove", onCardPointerMove, true);
-  window.removeEventListener("pointerup", onCardPointerUp, true);
-  window.removeEventListener("pointercancel", onCardPointerCancel, true);
+    // ✅ release pointer capture
+  try {
+    const el = swipeRef.current.el;
+    const pid = swipeRef.current.pointerId;
+    if (el && pid != null) el.releasePointerCapture?.(pid);
+  } catch {}
+  swipeRef.current.el = null;
+  swipeRef.current.pointerId = null;
+
   swipeRef.current.xLast = null;
 swipeRef.current.yLast = null;
 
@@ -1513,6 +1516,10 @@ setCardIndex(1);
       <div
       
 onPointerDown={onCardPointerDown}
+  onPointerMove={onCardPointerMove}
+  onPointerUp={onCardPointerUp}
+  onPointerCancel={onCardPointerCancel}
+
 onTouchStart={onCardTouchStart}
 onTouchMove={onCardTouchMove}
 onTouchEnd={onCardTouchEnd}
