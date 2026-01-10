@@ -210,6 +210,16 @@ const [nextSentence, setNextSentence] = useState(null);
 // keep a lightweight history so we can go back visually without breaking the level system too much
 const historyRef = useRef([]); // sentences you've visited (strings)
 const isRestoringRef = useRef(false);
+const swipeRef = useRef({
+  active: false,
+  x0: 0,
+  y0: 0,
+  xLast: 0,
+  yLast: 0,
+  el: null,
+  pointerId: null,
+});
+
 const [interactionTick, setInteractionTick] = useState(0);
 
 // ✅ Audio unlock (required for autoplay in browsers)
@@ -1232,14 +1242,12 @@ async function onCardPointerDown(e) {
   console.log("CARD POINTER DOWN", e.target, e.currentTarget);
 const el = document.elementFromPoint(e.clientX, e.clientY);
 console.log("TOP ELEMENT AT POINT:", el);
+console.log("pointerdown OK");
 
   // venstre klik only
   if (e.button != null && e.button !== 0) return;
 
-  // ✅ If user clicked an interactive element (Play button / word buttons etc),
-  // don't start swipe (otherwise we kill the click)
-  const interactive = e.target?.closest?.("button, a, input, textarea, select, [role='button']");
-  if (interactive) return;
+
   // ✅ iOS/WKWebView: ensure we keep receiving move/up events
   try {
     swipeRef.current.pointerId = e.pointerId;
@@ -1261,6 +1269,7 @@ swipeRef.current.yLast = e.clientY;
 }
 
 function onCardPointerMove(e) {
+  console.log("pointermove", swipeRef.current.active);
   if (!swipeRef.current.active) return;
   swipeRef.current.xLast = e.clientX;
   swipeRef.current.yLast = e.clientY;
@@ -1283,6 +1292,7 @@ swipeRef.current.yLast = null;
 }
 
 function onCardPointerUp(e) {
+  console.log("pointerup", { active: swipeRef.current.active });
   if (!swipeRef.current.active) {
     cleanupCardPointerListeners();
     return;
@@ -1316,9 +1326,9 @@ function onCardPointerCancel() {
 }
 
 function onCardTouchStart(e) {
+  console.log("touchstart OK", e.target);
   // Hvis man trykker på knapper/inputs osv, så ikke swipe
-  const interactive = e.target?.closest?.("button, a, input, textarea, select, [role='button']");
-  if (interactive) return;
+
 
   const t = e.touches?.[0];
   if (!t) return;
@@ -1340,6 +1350,8 @@ function onCardTouchMove(e) {
 }
 
 function onCardTouchEnd(e) {
+  console.log("touchend", { active: swipeRef.current.active });
+
   if (!swipeRef.current.active) return;
   swipeRef.current.active = false;
 
@@ -1539,7 +1551,7 @@ justifyContent: "center",
           cursor: "grab",
 userSelect: "none",
 WebkitUserSelect: "none",
-touchAction: "pan-y",
+touchAction: "none",
 overscrollBehaviorX: "contain",
 WebkitTouchCallout: "none",
 pointerEvents: "auto",
