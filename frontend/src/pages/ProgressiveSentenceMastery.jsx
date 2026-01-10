@@ -1247,6 +1247,9 @@ console.log("TOP ELEMENT AT POINT:", el);
   swipeRef.current.y0 = e.clientY;
   swipeRef.current.xLast = e.clientX;
 swipeRef.current.yLast = e.clientY;
+try {
+  e.currentTarget?.setPointerCapture?.(e.pointerId);
+} catch {}
 
 
   // få events selv hvis du slipper udenfor kortet
@@ -1307,6 +1310,51 @@ if (Math.abs(dx) <= Math.abs(dy) + 5) return;
 function onCardPointerCancel() {
   swipeRef.current.active = false;
   cleanupCardPointerListeners();
+}
+
+function onCardTouchStart(e) {
+  // Hvis man trykker på knapper/inputs osv, så ikke swipe
+  const interactive = e.target?.closest?.("button, a, input, textarea, select, [role='button']");
+  if (interactive) return;
+
+  const t = e.touches?.[0];
+  if (!t) return;
+
+  swipeRef.current.active = true;
+  swipeRef.current.x0 = t.clientX;
+  swipeRef.current.y0 = t.clientY;
+  swipeRef.current.xLast = t.clientX;
+  swipeRef.current.yLast = t.clientY;
+}
+
+function onCardTouchMove(e) {
+  if (!swipeRef.current.active) return;
+  const t = e.touches?.[0];
+  if (!t) return;
+
+  swipeRef.current.xLast = t.clientX;
+  swipeRef.current.yLast = t.clientY;
+}
+
+function onCardTouchEnd(e) {
+  if (!swipeRef.current.active) return;
+  swipeRef.current.active = false;
+
+  const x1 = swipeRef.current.xLast ?? swipeRef.current.x0;
+  const y1 = swipeRef.current.yLast ?? swipeRef.current.y0;
+
+  const dx = x1 - swipeRef.current.x0;
+  const dy = y1 - swipeRef.current.y0;
+
+  // kun horisontal swipe
+  if (Math.abs(dx) < 35) return;
+  if (Math.abs(dx) <= Math.abs(dy) + 5) return;
+
+  if (dx > 0) {
+    goNextManual();
+  } else {
+    if (historyRef.current.length) goPrevManual();
+  }
 }
 
 
@@ -1465,6 +1513,9 @@ setCardIndex(1);
       <div
       
 onPointerDown={onCardPointerDown}
+onTouchStart={onCardTouchStart}
+onTouchMove={onCardTouchMove}
+onTouchEnd={onCardTouchEnd}
 
 
 
@@ -1481,7 +1532,9 @@ justifyContent: "center",
           cursor: "grab",
 userSelect: "none",
 WebkitUserSelect: "none",
-touchAction: "none",
+touchAction: "pan-y",
+overscrollBehaviorX: "contain",
+WebkitTouchCallout: "none",
 pointerEvents: "auto",
 WebkitUserDrag: "none",
 
@@ -1517,6 +1570,7 @@ WebkitUserDrag: "none",
               <button
                 key={w.key}
                   onPointerDown={(e) => e.stopPropagation()}   // ✅ IMPORTANT
+onTouchStart={(e) => e.stopPropagation()}
 
                onClick={() => {
   // If we don't have a result yet, clicking selects which word to score (Record-style)
@@ -1552,6 +1606,7 @@ WebkitUserDrag: "none",
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <button
             onPointerDown={(e) => e.stopPropagation()}   // ✅ IMPORTANT
+           onTouchStart={(e) => e.stopPropagation()}
             onClick={playSentenceTTS}
             disabled={ttsLoading}
             style={{
