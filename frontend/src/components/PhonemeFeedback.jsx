@@ -51,18 +51,30 @@ function getWordSpanSec(apiWord) {
   return { startSec, endSec };
 }
 
-async function playTrimmedUserWord(result, wordIndex = 0) {
-  const blob = result?.userAudioBlob;
+async function playTrimmedUserWord(result, wordIndex = 0, { volume = 1 } = {}) {
   const words = Array.isArray(result?.words) ? result.words : [];
   const apiWord = words[wordIndex];
-
-  if (!blob || !apiWord) return false;
+  if (!apiWord) return false;
 
   const span = getWordSpanSec(apiWord);
   if (!span) return false;
 
-  await playAudioSegment(blob, span.startSec, span.endSec);
-  return true;
+  const url =
+    result?.userAudioUrl ||
+    result?.audioUrl ||
+    result?.recordingUrl ||
+    result?.audio?.url ||
+    result?.userAudio?.url ||
+    null;
+
+  const blob = result?.userAudioBlob || null;
+
+  try {
+    await playAudioSegment(blob || url, span.startSec, span.endSec, { volume });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 
@@ -799,6 +811,39 @@ export default function PhonemeFeedback({ result, embed = false, hideBookmark = 
 
   const targetText = oneWord ? wordText || "" : displaySentence || "";
   const targetScorePct = overall01 != null ? Math.round(overall01 * 100) : null;
+// --- MAIN overall score bar (XP-style fill + smooth color fade) ---
+const [animatedOverallPct, setAnimatedOverallPct] = useState(0);
+
+useEffect(() => {
+  if (targetScorePct == null) return;
+
+  const target = Math.max(0, Math.min(100, Number(targetScorePct) || 0));
+  const durationMs = 900;
+
+  let raf = null;
+  const t0 = performance.now();
+
+  const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+  // always start from 0 like a videogame bar
+  setAnimatedOverallPct(0);
+
+  const tick = (now) => {
+    const p = Math.min(1, (now - t0) / durationMs);
+    const eased = easeOutCubic(p);
+    const v = 0 + (target - 0) * eased;
+
+    setAnimatedOverallPct(Math.round(v));
+
+    if (p < 1) raf = requestAnimationFrame(tick);
+  };
+
+  raf = requestAnimationFrame(tick);
+
+  return () => {
+    if (raf) cancelAnimationFrame(raf);
+  };
+}, [targetScorePct]);
 
   const lastCelebratedRef = useRef(null);
 const [shineKey, setShineKey] = useState(0);
@@ -828,34 +873,59 @@ useEffect(() => {
     setBooked(isBookmarked(targetText));
   }
 
-  /* audio */
-  const userAudioUrl =
-    result.userAudioUrl || result.audioUrl || result.recordingUrl || result?.audio?.url || result?.userAudio?.url || null;
+/* audio */
+const userAudioUrl =
+  result?.userAudioUrl ||
+  result?.audioUrl ||
+  result?.recordingUrl ||
+  result?.audio?.url ||
+  result?.userAudio?.url ||
+  null;
 
-  const userAudioRef = useRef(null);
-  useEffect(() => {
-    try {
-      if (userAudioRef.current) userAudioRef.current.volume = effectiveVolume;
-    } catch {}
-  }, [effectiveVolume]);
+// Debug (safe)
+console.log("PF userAudioUrl:", userAudioUrl, "effectiveVolume:", effectiveVolume);
 
-   async function playRecording() {
-    if (!userAudioUrl) return;
-    try {
-      if (userAudioRef.current) {
-        if (userAudioRef.current.src !== userAudioUrl) userAudioRef.current.src = userAudioUrl;
-        userAudioRef.current.volume = effectiveVolume; // ✅ ADD
-        userAudioRef.current.currentTime = 0;
-        const p = userAudioRef.current.play();
-        if (p?.catch) p.catch(() => {});
-      } else {
-        const a = new Audio(userAudioUrl);
-        a.volume = effectiveVolume; // ✅ ADD
-        const p = a.play();
-        if (p?.catch) p.catch(() => {});
+const userAudioRef = useRef(null);
+
+useEffect(() => {
+  try {
+    if (userAudioRef.current) userAudioRef.current.volume = effectiveVolume;
+  } catch {}
+}, [effectiveVolume]);
+
+async function playRecording() {
+  if (!userAudioUrl) return;
+
+  try {
+    const el = userAudioRef.current;
+
+    // Prefer <audio> element for stable playback
+    if (el) {
+      if (el.src !== userAudioUrl) {
+        el.src = userAudioUrl;
+        el.load();
       }
-    } catch {}
+
+      el.volume = effectiveVolume;
+      el.currentTime = 0;
+
+      const p = el.play();
+      if (p?.catch) p.catch(() => {});
+      return;
+    }
+
+    // Fallback
+    const a = new Audio(userAudioUrl);
+    a.volume = effectiveVolume;
+    a.currentTime = 0;
+    window.__pf_last_user_audio = a;
+
+    const p = a.play();
+    if (p?.catch) p.catch(() => {});
+  } catch (e) {
+    console.log("playRecording failed:", e);
   }
+}
 
 
   // ✅ Plays a segment of YOUR recording, using spans (if available).
@@ -1087,6 +1157,22 @@ useEffect(() => {
 
     return rows;
   }, [oneWord, cmuData, wordText]);
+const heroWordSpan = useMemo(() => {
+  if (!chunkRows?.length) return null;
+
+  let start = null;
+  let end = null;
+
+  for (const r of chunkRows) {
+    if (typeof r?.startSec === "number" && typeof r?.endSec === "number" && r.endSec > r.startSec) {
+      start = start == null ? r.startSec : Math.min(start, r.startSec);
+      end = end == null ? r.endSec : Math.max(end, r.endSec);
+    }
+  }
+
+  if (start == null || end == null || !(end > start)) return null;
+  return { startSec: start, endSec: end };
+}, [chunkRows]);
 
 
   
@@ -1101,7 +1187,7 @@ useEffect(() => {
     
   }}
 >
-      <audio ref={userAudioRef} />
+      <audio ref={userAudioRef} playsInline preload="auto" />
 
       {!hideBookmark && (
         <div className={embed ? "" : "px-5 pt-5"}>
@@ -1168,13 +1254,23 @@ useEffect(() => {
                     type="button"
                     className="pf-pill"
 onClick={async () => {
-  // 1) prøv at spille KUN ordet (trim)
-  const ok = await playTrimmedUserWord(result, 0);
+  if (!userAudioUrl) return;
+
+  // 1) cut via chunkRows span (samme spans som virker for chunks)
+  if (heroWordSpan) {
+    await playUserSpan(heroWordSpan.startSec, heroWordSpan.endSec);
+    return;
+  }
+
+  // 2) fallback: prøv SpeechSuper word span helper
+  const ok = await playTrimmedUserWord(result, 0, { volume: effectiveVolume });
   if (ok) return;
 
-  // 2) fallback: play hele optagelsen
+  // 3) fallback: full
   playRecording();
 }}
+
+
                     disabled={!userAudioUrl}
                     title={userAudioUrl ? "Play your recording" : "No recording available"}
                   >
@@ -1182,6 +1278,39 @@ onClick={async () => {
                     You
                   </button>
                 </div>
+{/* Main overall score bar (under Coach/You) */}
+{targetScorePct != null && (
+  <div style={{ marginTop: 12 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+      <div style={{ fontSize: 12, fontWeight: 900, color: ui.textMuted }}>
+        Overall score
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 900, color: ui.text }}>
+        {animatedOverallPct}%
+      </div>
+    </div>
+
+    <div
+      style={{
+        marginTop: 8,
+        height: 12,
+        borderRadius: 999,
+        background: "rgba(0,0,0,0.10)",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          height: "100%",
+          width: `${animatedOverallPct}%`,
+          borderRadius: 999,
+          background: scoreToColor01(animatedOverallPct / 100), // ✅ smooth fade (78% ~ greenish)
+          transition: "width 60ms linear",
+        }}
+      />
+    </div>
+  </div>
+)}
 
                 {!!coachErr && (
                   <div className="mt-3" style={{ color: "#e5484d", fontSize: 13 }}>

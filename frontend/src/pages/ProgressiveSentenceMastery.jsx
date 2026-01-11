@@ -198,8 +198,53 @@ const CARD_H = 280; // fast height so all cards match exactly
 const [sentence, setSentence] = useState(() => getNextSentence(getLevel()));
 const [result, setResult] = useState(null);
 const [selectedWordIdx, setSelectedWordIdx] = useState(null);
+
 const [wordScores, setWordScores] = useState([]); // score100 per word index (null if not scored yet)
-const [targetWordIdx, setTargetWordIdx] = useState(0); // which word we are currently scoring
+
+// ✅ Sentence-level score computed from wordScores (ignore nulls/punctuation)
+const sentenceScorePct = useMemo(() => {
+  const arr = Array.isArray(wordScores) ? wordScores : [];
+  const vals = arr.filter((v) => Number.isFinite(v));
+  if (!vals.length) return null;
+  const avg = vals.reduce((sum, v) => sum + v, 0) / vals.length;
+  return Math.round(avg);
+}, [wordScores]);
+// ✅ Animated "XP bar" fill (0 -> sentenceScorePct)
+const [animatedSentencePct, setAnimatedSentencePct] = useState(0);
+
+useEffect(() => {
+  // only animate when we have a result + a valid score
+  if (!result || sentenceScorePct == null) return;
+
+  const target = Math.max(0, Math.min(100, Number(sentenceScorePct) || 0));
+  const from = 0; // always start from 0 like a videogame XP bar
+  const durationMs = 900; // tweak: 700-1200 feels good
+
+  let raf = null;
+  const t0 = performance.now();
+
+  const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+  const tick = (now) => {
+    const p = Math.min(1, (now - t0) / durationMs);
+    const eased = easeOutCubic(p);
+    const v = from + (target - from) * eased;
+
+    setAnimatedSentencePct(Math.round(v));
+
+    if (p < 1) raf = requestAnimationFrame(tick);
+  };
+
+  // reset to 0 then animate up
+  setAnimatedSentencePct(0);
+  raf = requestAnimationFrame(tick);
+
+  return () => {
+    if (raf) cancelAnimationFrame(raf);
+  };
+}, [result, sentenceScorePct]);
+
+const [targetWordIdx, setTargetWordIdx] = useState(0);
 
 
 // --- Swipe carousel (prev/current/next) ---
@@ -1325,6 +1370,31 @@ function onCardPointerCancel() {
   cleanupCardPointerListeners();
 }
 
+function scoreTier(pct) {
+  const s = Number(pct);
+  if (!isFinite(s)) return "none";
+  if (s < 50) return "low";      // rød
+  if (s < 80) return "mid";      // gul
+  return "high";                // grøn
+}
+
+function tierColor(tier) {
+  // “video game” klassik: rød/gul/grøn
+  if (tier === "low") return "#ef4444";  // red
+  if (tier === "mid") return "#f59e0b";  // amber
+  if (tier === "high") return "#22c55e"; // green
+  return "rgba(0,0,0,0.20)";
+}
+function scoreToHealthColor(pct) {
+  const s = Number(pct);
+  if (!isFinite(s)) return "rgba(0,0,0,0.20)";
+
+  // 0% = red (0deg), 50% = yellow (60deg), 100% = green (120deg)
+  const p = Math.max(0, Math.min(100, s)) / 100;
+  const hue = p * 120;
+
+  return `hsl(${hue}deg 80% 45%)`;
+}
 
   return (
     <div className="page" style={{ textAlign: "center" }}>
@@ -1614,6 +1684,71 @@ WebkitUserDrag: "none",
           </div>
         </div>
 
+{/* ✅ “Health bar” sentence score (only when we have a result) */}
+{result && sentenceScorePct != null && (() => {
+const tier = scoreTier(animatedSentencePct);
+const fill = Math.max(0, Math.min(100, animatedSentencePct));
+const barColor = scoreToHealthColor(animatedSentencePct);
+
+  const pulse = tier === "low";
+  const shine = tier === "high";
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <div style={{ fontSize: 12, fontWeight: 900, color: "rgba(0,0,0,0.35)" }}>
+          Sentence score
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 900, color: "rgba(0,0,0,0.55)" }}>
+          {animatedSentencePct}%
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: 8,
+          height: 12,
+          borderRadius: 999,
+          background: "rgba(0,0,0,0.10)",
+          overflow: "hidden",
+          position: "relative",
+          boxShadow: pulse ? "0 0 0 rgba(239,68,68,0)" : "none",
+          animation: pulse ? "acPulseRed 1.15s ease-in-out infinite" : "none",
+        }}
+      >
+        {/* fill */}
+        <div
+          style={{
+            height: "100%",
+            width: `${fill}%`,
+            borderRadius: 999,
+            background: barColor,
+            transition: "width 220ms ease, background 220ms ease",
+            position: "relative",
+          }}
+        >
+          {/* shine overlay (only if high score) */}
+          {shine ? (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                transform: "translateX(-60%)",
+                background:
+                  "linear-gradient(110deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0) 100%)",
+                animation: "acShine 1.6s ease-in-out infinite",
+                pointerEvents: "none",
+              }}
+            />
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+})()}
+
+
+
         {/* hint row */}
         <div style={{ marginTop: 14, fontSize: 12, fontWeight: 900, color: "rgba(0,0,0,0.35)" }}>
           Swipe left for next • Swipe right for previous
@@ -1902,8 +2037,24 @@ WebkitUserDrag: "none",
 
       {/* local keyframes (so we don’t rely on global) */}
       <style>{`
-        @keyframes acSpin { to { transform: rotate(360deg); } }
-      `}</style>
+  @keyframes acSpin { to { transform: rotate(360deg); } }
+
+  /* low score: subtle red pulse */
+  @keyframes acPulseRed {
+    0%   { box-shadow: 0 0 0 rgba(239,68,68,0.00); }
+    50%  { box-shadow: 0 0 18px rgba(239,68,68,0.35); }
+    100% { box-shadow: 0 0 0 rgba(239,68,68,0.00); }
+  }
+
+  /* high score: “loot/XP shine” sweep */
+  @keyframes acShine {
+    0%   { transform: translateX(-70%); opacity: 0.0; }
+    15%  { opacity: 0.9; }
+    60%  { opacity: 0.6; }
+    100% { transform: translateX(120%); opacity: 0.0; }
+  }
+`}</style>
+
     </div>
   );
 }
