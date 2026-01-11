@@ -9,8 +9,8 @@
 	</dict>
 	<key>CFBundleGetInfoString</key>
 	<string></string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>We need access to your microphone to analyze your pronunciation.</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>We use your microphone to record your speech and analyze pronunciation to provide feedback.</string>
 	<key>LSApplicationCategoryType</key>
 	<string></string>
 	<key>CFBundleDevelopmentRegion</key>

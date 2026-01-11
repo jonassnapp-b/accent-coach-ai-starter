@@ -7,8 +7,9 @@ import { playAudioSegment } from "../lib/audioClipper.js";
 import { getCoachFeedback } from "../lib/phonemeCoach";
 import { burstConfetti } from "../lib/celebrations.js";
 
+const IS_PROD = !!import.meta?.env?.PROD;
 
-console.log("PF LIVE v41 (LIGHT ONLY)", import.meta?.url);
+if (!IS_PROD) console.log("PF LIVE v41 (LIGHT ONLY)", import.meta?.url);
 
 /* ------------ API base (web + native) ------------ */
 function isNative() {
@@ -752,7 +753,7 @@ export default function PhonemeFeedback({ result, embed = false, hideBookmark = 
 
         setCoachMap({ tokens });
       } catch (e) {
-        console.log("align-tts error:", e);
+        if (!IS_PROD) console.log("align-tts error:", e);
         if (!cancelled) {
           setCoachErr(e?.message || String(e));
           setCoachAudioUrl(null);
@@ -883,7 +884,7 @@ const userAudioUrl =
   null;
 
 // Debug (safe)
-console.log("PF userAudioUrl:", userAudioUrl, "effectiveVolume:", effectiveVolume);
+if (!IS_PROD) console.log("PF userAudioUrl:", userAudioUrl, "effectiveVolume:", effectiveVolume);
 
 const userAudioRef = useRef(null);
 
@@ -1312,11 +1313,12 @@ onClick={async () => {
   </div>
 )}
 
-                {!!coachErr && (
-                  <div className="mt-3" style={{ color: "#e5484d", fontSize: 13 }}>
-                    Coach: {coachErr}
-                  </div>
-                )}
+                {!!coachErr && !IS_PROD && (
+  <div className="mt-3" style={{ color: "#e5484d", fontSize: 13 }}>
+    Coach: {coachErr}
+  </div>
+)}
+
               </div>
 
               {/* CHUNK LIST (same width as hero) */}

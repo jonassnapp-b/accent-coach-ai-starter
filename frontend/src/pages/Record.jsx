@@ -7,6 +7,7 @@ import { useSettings } from "../lib/settings-store.jsx";
 import { updateStreak, readStreak } from "../lib/streak.js";
 import * as sfx from "../lib/sfx.js";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
+const IS_PROD = !!import.meta?.env?.PROD;
 
 /* ------------ API base (web + native) ------------ */
 function isNative() {
@@ -26,6 +27,7 @@ function getApiBase() {
 const STATE_KEY = "ac_record_state_chat_v2";
 const LAST_RESULT_KEY = "ac_last_result_v1";
 const FEEDBACK_KEY = "ac_feedback_result_v1";
+const INTRO_KEY = "ac_record_intro_v1";
 
 /* ---------------- small helpers ---------------- */
 function pickFeedback(json) {
@@ -60,6 +62,13 @@ export default function Record() {
   const [accentUi, setAccentUi] = useState(settings.accentDefault || "en_us");
   const [refText, setRefText] = useState("");
   const [err, setErr] = useState("");
+const [showIntro, setShowIntro] = useState(() => {
+  try {
+    return localStorage.getItem(INTRO_KEY) !== "1";
+  } catch {
+    return true;
+  }
+});
 
   // pronunciation recording / analyzing
   const [isRecording, setIsRecording] = useState(false);
@@ -83,6 +92,12 @@ export default function Record() {
     // take only the first token (no spaces)
     return s.split(/\s+/)[0] || "";
   }
+function closeIntro() {
+  setShowIntro(false);
+  try {
+    localStorage.setItem(INTRO_KEY, "1");
+  } catch {}
+}
 
 
   // suggestions above input
@@ -128,31 +143,34 @@ function refreshSuggestions() {
     
 
     // seedText via route state (bookmarks handoff)
-    const seedFromState = String(location?.state?.seedText || "").trim();
-    if (seedFromState) {
-      setRefText(sanitizeWord(seedFromState));
-      setErr("");
-          // ✅ Always start fresh when entering Record tab
-    setResult(null);
+const seedFromState = String(location?.state?.seedText || "").trim();
 
-    // also kill last audio url
-    try {
-      if (lastUrl) URL.revokeObjectURL(lastUrl);
-    } catch {}
-    setLastUrl(null);
+// ✅ Always start fresh when entering Record tab (ALWAYS)
+setResult(null);
 
-    // stop recorder if it somehow exists
-    disposeRecorder();
-    setIsRecording(false);
-    setIsAnalyzing(false);
+// also kill last audio url
+try {
+  if (lastUrl) URL.revokeObjectURL(lastUrl);
+} catch {}
+setLastUrl(null);
 
-    // optional: clear any cached "last result"
-    try {
-      sessionStorage.removeItem(LAST_RESULT_KEY);
-      sessionStorage.removeItem(FEEDBACK_KEY);
-    } catch {}
+// stop recorder if it somehow exists
+disposeRecorder();
+setIsRecording(false);
+setIsAnalyzing(false);
 
-    }
+// optional: clear any cached "last result"
+try {
+  sessionStorage.removeItem(LAST_RESULT_KEY);
+  sessionStorage.removeItem(FEEDBACK_KEY);
+} catch {}
+
+// seedText via route state (bookmarks handoff)
+if (seedFromState) {
+  setRefText(sanitizeWord(seedFromState));
+  setErr("");
+}
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]);
 
@@ -231,7 +249,8 @@ function refreshSuggestions() {
             if (canPlaySfx) sfx.warm();
 
     } catch (e) {
-      setErr("Microphone error: " + (e?.message || String(e)));
+      if (!IS_PROD) setErr("Microphone error: " + (e?.message || String(e)));
+else setErr("Microphone access is blocked. Please allow it and try again.");
       setIsRecording(false);
       if (canPlaySfx) sfx.softFail();
     }
@@ -303,11 +322,19 @@ refreshSuggestions();
       } catch {}
 
     } catch (e) {
-      setErr(e?.message || String(e));
-      if (canPlaySfx) sfx.softFail();
-    } finally {
-      setIsAnalyzing(false);
-    }
+  // DEV: show real error
+  if (!IS_PROD) {
+    setErr(e?.message || String(e));
+  } else {
+    // PROD: silent mode / user-friendly
+    setErr("Something went wrong. Try again.");
+  }
+
+  if (canPlaySfx) sfx.softFail();
+} finally {
+  setIsAnalyzing(false);
+}
+
   }
 
   /* ---------------- Dictation (mic inside input) ---------------- */
@@ -344,7 +371,8 @@ refreshSuggestions();
 
     rec.onerror = (e) => {
       setDictationMode("idle");
-      setErr(e?.error ? `Dictation error: ${e.error}` : "Dictation error");
+     if (!IS_PROD) setErr(e?.error ? `Dictation error: ${e.error}` : "Dictation error");
+else setErr("Dictation failed. Try again.");
       try {
         rec.stop();
       } catch {}
@@ -358,12 +386,19 @@ refreshSuggestions();
     recogRef.current = rec;
 
     try {
-      rec.start();
-    } catch (e) {
-      setDictationMode("idle");
-      setErr(e?.message || "Could not start dictation.");
-      recogRef.current = null;
-    }
+  rec.start();
+} catch (e) {
+  setDictationMode("idle");
+
+  if (!IS_PROD) {
+    setErr(e?.message || "Could not start dictation.");
+  } else {
+    setErr("Could not start dictation. Try again.");
+  }
+
+  recogRef.current = null;
+}
+
   }
 
   function cancelDictation() {
@@ -688,31 +723,83 @@ refreshSuggestions();
                 <Mic className="h-5 w-5" />
               </button>
 
-              {/* Record button */}
-              <button
-                onClick={togglePronunciationRecord}
-                disabled={!refText.trim() || isAnalyzing}
-                aria-label={isRecording ? "Stop recording" : "Start recording"}
-                title={isRecording ? "Stop" : "Record"}
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 999,
-                  border: "none",
-                  background: SEND_PURPLE,
-                  display: "grid",
-                  placeItems: "center",
-                  cursor: !refText.trim() || isAnalyzing ? "not-allowed" : "pointer",
-                  opacity: !refText.trim() || isAnalyzing ? 0.6 : 1,
-                }}
-              >
-                {isRecording ? (
-                  <StopCircle className="h-5 w-5" style={{ color: "white" }} />
-                ) : (
-                  <ArrowUp className="h-5 w-5" style={{ color: "white" }} />
-                )}
-              </button>
-            </div>
+             {/* Record button + Intro tooltip */}
+<div style={{ position: "relative" }}>
+  <AnimatePresence>
+    {showIntro && !isBusy && (
+      <motion.div
+        initial={{ opacity: 0, y: 6, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 6, scale: 0.98 }}
+        transition={{ duration: 0.18 }}
+        onClick={closeIntro}
+        style={{
+          position: "absolute",
+          right: 0,
+          bottom: 46,
+          zIndex: 60,
+          width: 220,
+          background: "rgba(17,24,39,0.92)",
+          color: "white",
+          borderRadius: 14,
+          padding: "10px 12px",
+          boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
+          cursor: "pointer",
+          userSelect: "none",
+        }}
+      >
+        <div style={{ fontWeight: 900, fontSize: 13, lineHeight: 1.25 }}>
+          Tap the mic to start
+        </div>
+        <div style={{ marginTop: 6, fontWeight: 800, fontSize: 12, color: "rgba(255,255,255,0.78)" }}>
+          Listen → Record → Improve
+        </div>
+
+        <div
+          style={{
+            position: "absolute",
+            right: 14,
+            bottom: -6,
+            width: 12,
+            height: 12,
+            background: "rgba(17,24,39,0.92)",
+            transform: "rotate(45deg)",
+            borderRadius: 2,
+          }}
+        />
+      </motion.div>
+    )}
+  </AnimatePresence>
+
+  <button
+    onClick={() => {
+      if (showIntro) closeIntro();
+      togglePronunciationRecord();
+    }}
+    disabled={!refText.trim() || isAnalyzing}
+    aria-label={isRecording ? "Stop recording" : "Start recording"}
+    title={isRecording ? "Stop" : "Record"}
+    style={{
+      width: 34,
+      height: 34,
+      borderRadius: 999,
+      border: "none",
+      background: SEND_PURPLE,
+      display: "grid",
+      placeItems: "center",
+      cursor: !refText.trim() || isAnalyzing ? "not-allowed" : "pointer",
+      opacity: !refText.trim() || isAnalyzing ? 0.6 : 1,
+    }}
+  >
+    {isRecording ? (
+      <StopCircle className="h-5 w-5" style={{ color: "white" }} />
+    ) : (
+      <ArrowUp className="h-5 w-5" style={{ color: "white" }} />
+    )}
+  </button>
+</div>
+</div>
+
 
             {/* Accent */}
             <div style={{ position: "relative" }}>
