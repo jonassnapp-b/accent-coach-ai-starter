@@ -26,6 +26,46 @@ function getApiBase() {
 }
 
 /* ---------- helpers ---------- */
+function getWordSpanSec(apiWord) {
+  const phs = Array.isArray(apiWord?.phonemes) ? apiWord.phonemes : [];
+  if (!phs.length) return null;
+
+  let start10 = null;
+  let end10 = null;
+
+  for (const ph of phs) {
+    const span = ph.span || ph.time || null;
+    const s = span?.start ?? span?.s ?? null;
+    const e = span?.end ?? span?.e ?? null;
+
+    if (typeof s === "number") start10 = start10 == null ? s : Math.min(start10, s);
+    if (typeof e === "number") end10 = end10 == null ? e : Math.max(end10, e);
+  }
+
+  if (start10 == null || end10 == null || end10 <= start10) return null;
+
+  // 10ms -> seconds + a little padding
+  const startSec = Math.max(0, start10 * 0.01 - 0.08);
+  const endSec = end10 * 0.01 + 0.10;
+
+  return { startSec, endSec };
+}
+
+async function playTrimmedUserWord(result, wordIndex = 0) {
+  const blob = result?.userAudioBlob;
+  const words = Array.isArray(result?.words) ? result.words : [];
+  const apiWord = words[wordIndex];
+
+  if (!blob || !apiWord) return false;
+
+  const span = getWordSpanSec(apiWord);
+  if (!span) return false;
+
+  await playAudioSegment(blob, span.startSec, span.endSec);
+  return true;
+}
+
+
 function to01(v) {
   if (v == null || v === "") return null;
   const n = Number(v);
@@ -1127,7 +1167,14 @@ useEffect(() => {
                   <button
                     type="button"
                     className="pf-pill"
-                    onClick={playRecording}
+onClick={async () => {
+  // 1) prøv at spille KUN ordet (trim)
+  const ok = await playTrimmedUserWord(result, 0);
+  if (ok) return;
+
+  // 2) fallback: play hele optagelsen
+  playRecording();
+}}
                     disabled={!userAudioUrl}
                     title={userAudioUrl ? "Play your recording" : "No recording available"}
                   >

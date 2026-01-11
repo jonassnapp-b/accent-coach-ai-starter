@@ -281,14 +281,16 @@ function refreshSuggestions() {
 
       } catch {}
 
-      const payload = {
-        ...json,
-        userAudioUrl: localUrl,
-        refText: text,
-        accent: accentUi,
-        inlineMsg: pickFeedback(json),
-        createdAt: Date.now(),
-      };
+     const payload = {
+  ...json,
+  userAudioUrl: localUrl,
+  userAudioBlob: audioBlob, // ✅ add this
+  refText: text,
+  accent: accentUi,
+  inlineMsg: pickFeedback(json),
+  createdAt: Date.now(),
+};
+
 
       setResult(payload);
 
