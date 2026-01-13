@@ -27,10 +27,10 @@ function setCors(req, res) {
   }
 
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, Request-Index"
-  );
+res.setHeader(
+  "Access-Control-Allow-Headers",
+  "Content-Type, Authorization, Request-Index, X-Requested-With"
+);
 }
 
 if (ffmpegPath) {
@@ -48,10 +48,7 @@ router.use((req, res, next) => {
   next();
 });
 
-router.options("/analyze-speech", (req, res) => {
-  setCors(req, res);
-  return res.status(204).end();
-});
+
 
 const upload = multer({ storage: multer.memoryStorage() });
 export const config = { api: { bodyParser: false } };
@@ -338,7 +335,6 @@ function mapSpeechsuperToUi(ss, refText, accent) {
 
 // ---------- route ----------
 router.post("/analyze-speech", upload.single("audio"), async (req, res) => {
-    setCors(req, res); 
   try {
     const appKey = process.env.SPEECHSUPER_APP_KEY || "";
     const secretKey = process.env.SPEECHSUPER_SECRET_KEY || "";
@@ -546,4 +542,7 @@ try {
   }
 });
 
-export default router;
+const app = express();
+app.use(router);
+
+export default app;
