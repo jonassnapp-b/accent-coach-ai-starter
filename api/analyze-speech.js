@@ -10,6 +10,28 @@ import os from "os";
 import path from "path";
 import { recordSessionResult } from "../backend/lib/weaknessAggregator.js";
 
+function setCors(req, res) {
+  const origin = req.headers.origin;
+
+  const allowed = new Set([
+    "capacitor://localhost",
+    "ionic://localhost",
+    "http://localhost",
+    "http://localhost:5173",
+    "https://accent-coach-ai-starter.vercel.app",
+  ]);
+
+  if (origin && allowed.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
+
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, Request-Index"
+  );
+}
 
 if (ffmpegPath) {
   try {
@@ -20,6 +42,17 @@ if (ffmpegPath) {
 }
 
 const router = express.Router();
+router.use((req, res, next) => {
+  setCors(req, res);
+  if (req.method === "OPTIONS") return res.status(204).end();
+  next();
+});
+
+router.options("/analyze-speech", (req, res) => {
+  setCors(req, res);
+  return res.status(204).end();
+});
+
 const upload = multer({ storage: multer.memoryStorage() });
 export const config = { api: { bodyParser: false } };
 
@@ -305,6 +338,7 @@ function mapSpeechsuperToUi(ss, refText, accent) {
 
 // ---------- route ----------
 router.post("/analyze-speech", upload.single("audio"), async (req, res) => {
+    setCors(req, res); 
   try {
     const appKey = process.env.SPEECHSUPER_APP_KEY || "";
     const secretKey = process.env.SPEECHSUPER_SECRET_KEY || "";
