@@ -4,9 +4,38 @@ import { useNavigate } from "react-router-dom";
 import { Trash2, Check, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
-import { getApiBase } from "../lib/api.js";
 
+/* ------------ API base (web + native) ------------ */
+function isNative() {
+  try {
+    if (window?.Capacitor?.isNativePlatform) return Boolean(window.Capacitor.isNativePlatform());
+  } catch {}
+  return false;
+}
 
+function getApiBase() {
+  try {
+    const isViteLocal =
+      typeof window !== "undefined" &&
+      window.location.hostname === "localhost" &&
+      String(window.location.port) === "5173";
+    if (!isNative() && isViteLocal) return "http://localhost:3000";
+  } catch {}
+
+  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
+  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
+
+  let base = (ls || env || (typeof window !== "undefined" ? window.location.origin : "")).replace(/\/+$/, "");
+  base = base.replace(/\/api\/?$/i, "");
+
+  if (isNative()) {
+    const nativeBase = (ls || env).replace(/\/+$/, "").replace(/\/api\/?$/i, "");
+    if (!nativeBase) throw new Error("VITE_API_BASE (or localStorage.apiBase) is not set — required on iOS.");
+    return nativeBase;
+  }
+
+  return base;
+}
 
 /* ------------ helpers ------------ */
 function clamp(n, a, b) {

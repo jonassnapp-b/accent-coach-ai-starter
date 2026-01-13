@@ -8,10 +8,21 @@ import { updateStreak, readStreak } from "../lib/streak.js";
 import * as sfx from "../lib/sfx.js";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 const IS_PROD = !!import.meta?.env?.PROD;
-import { getApiBase } from "../lib/api.js";
 
 /* ------------ API base (web + native) ------------ */
-
+function isNative() {
+  return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
+}
+function getApiBase() {
+  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
+  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
+  if (isNative()) {
+    const base = (ls || env).replace(/\/+$/, "");
+    if (!base) throw new Error("VITE_API_BASE (or localStorage.apiBase) is not set — required on iOS.");
+    return base;
+  }
+  return (ls || env || window.location.origin).replace(/\/+$/, "");
+}
 
 const STATE_KEY = "ac_record_state_chat_v2";
 const LAST_RESULT_KEY = "ac_last_result_v1";

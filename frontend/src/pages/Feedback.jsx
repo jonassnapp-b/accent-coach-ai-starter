@@ -7,12 +7,24 @@ import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 import { toggleBookmark, isBookmarked } from "../lib/bookmarks.js";
 import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
-import { getApiBase } from "../lib/api.js";
-
 
 const LAST_RESULT_KEY = "ac_last_result_v1";
 const PRACTICE_LAST_ROUTE_KEY = "ac_practice_last_route_v1";
 
+/* ------------ API base (web + native) ------------ */
+function isNative() {
+  return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
+}
+function getApiBase() {
+  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
+  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
+  if (isNative()) {
+    const base = (ls || env).replace(/\/+$/, "");
+    if (!base) throw new Error("VITE_API_BASE (eller localStorage.apiBase) er ikke sat – krævet på iOS.");
+    return base;
+  }
+  return (ls || env || window.location.origin).replace(/\/+$/, "");
+}
 
 function to01(v) {
   if (v == null || v === "") return null;

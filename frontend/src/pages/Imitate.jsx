@@ -6,10 +6,19 @@ import { Play, Mic, StopCircle, RefreshCw, ChevronRight, RotateCcw, ArrowRight }
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 import { burstConfetti } from "../lib/celebrations.js";
 import { updateStreak, readStreak } from "../lib/streak.js";
-import { getApiBase } from "../lib/api.js";
 
-
-
+/* ---------------- Platform + API base ---------------- */
+function isNative() { return !!(window?.Capacitor && window.Capacitor.isNativePlatform); }
+function getApiBase() {
+  const ls  = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
+  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
+  if (isNative()) {
+    const base = (ls || env).replace(/\/+$/, "");
+    if (!base) throw new Error("VITE_API_BASE (eller localStorage.apiBase) er ikke sat – krævet på iOS.");
+    return base;
+  }
+  return (ls || env || window.location.origin).replace(/\/+$/, "");
+}
 
 /* ---------------- Tiny in-memory cache for sentences ---------------- */
 const SENTENCE_CACHE = new Map();
