@@ -3,6 +3,14 @@ import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import "./styles.css";
 
+if (!import.meta.env.DEV) {
+  console.log = () => {};
+  console.debug = () => {};
+  console.info = () => {};
+  // behold warnings/errors (vil du også fjerne dem, så sig til)
+}
+
+
 function ErrorBoundary({ children }) {
   try {
     return children;
