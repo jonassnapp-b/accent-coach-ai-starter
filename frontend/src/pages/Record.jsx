@@ -327,7 +327,7 @@ refreshSuggestions();
     setErr(e?.message || String(e));
   } else {
     // PROD: silent mode / user-friendly
-    setErr("Network error. Check your connection and try again.");
+    setErr("Something went wrong. Try again.");
   }
 
   if (canPlaySfx) sfx.softFail();
@@ -723,83 +723,34 @@ else setErr("Dictation failed. Try again.");
                 <Mic className="h-5 w-5" />
               </button>
 
-             {/* Record button + Intro tooltip */}
-<div style={{ position: "relative" }}>
-  <AnimatePresence>
-    {showIntro && !isBusy && (
-      <motion.div
-        initial={{ opacity: 0, y: 6, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 6, scale: 0.98 }}
-        transition={{ duration: 0.18 }}
-        onClick={closeIntro}
-        style={{
-          position: "absolute",
-          right: 0,
-          bottom: 46,
-          zIndex: 60,
-          width: 220,
-          background: "rgba(17,24,39,0.92)",
-          color: "white",
-          borderRadius: 14,
-          padding: "10px 12px",
-          boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
-          cursor: "pointer",
-          userSelect: "none",
-        }}
-      >
-        <div style={{ fontWeight: 900, fontSize: 13, lineHeight: 1.25 }}>
-          Tap the mic to start
-        </div>
-        <div style={{ marginTop: 6, fontWeight: 800, fontSize: 12, color: "rgba(255,255,255,0.78)" }}>
-        Speak the word → Get feedback
-        </div>
-
-        <div
-          style={{
-            position: "absolute",
-            right: 14,
-            bottom: -6,
-            width: 12,
-            height: 12,
-            background: "rgba(17,24,39,0.92)",
-            transform: "rotate(45deg)",
-            borderRadius: 2,
-          }}
-        />
-      </motion.div>
-    )}
-  </AnimatePresence>
-
-  <button
-    onClick={() => {
-      if (showIntro) closeIntro();
-      togglePronunciationRecord();
-    }}
-    disabled={!refText.trim() || isBusy}
-        aria-label={isRecording ? "Stop recording" : "Start recording"}
-    title={isRecording ? "Stop" : "Record"}
-    style={{
-      width: 34,
-      height: 34,
-      borderRadius: 999,
-      border: "none",
-      background: SEND_PURPLE,
-      display: "grid",
-      placeItems: "center",
-      cursor: !refText.trim() || isAnalyzing ? "not-allowed" : "pointer",
-      opacity: !refText.trim() || isAnalyzing ? 0.6 : 1,
-    }}
-  >
-    {isRecording ? (
-      <StopCircle className="h-5 w-5" style={{ color: "white" }} />
-    ) : (
-      <ArrowUp className="h-5 w-5" style={{ color: "white" }} />
-    )}
-  </button>
-</div>
-</div>
-
+              {/* Record button */}
+              <button
+              onClick={() => {
+  if (showIntro) closeIntro();
+  togglePronunciationRecord();
+}}
+                disabled={!refText.trim() || isAnalyzing}
+                aria-label={isRecording ? "Stop recording" : "Start recording"}
+                title={isRecording ? "Stop" : "Record"}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 999,
+                  border: "none",
+                  background: SEND_PURPLE,
+                  display: "grid",
+                  placeItems: "center",
+                  cursor: !refText.trim() || isAnalyzing ? "not-allowed" : "pointer",
+                  opacity: !refText.trim() || isAnalyzing ? 0.6 : 1,
+                }}
+              >
+                {isRecording ? (
+                  <StopCircle className="h-5 w-5" style={{ color: "white" }} />
+                ) : (
+                  <ArrowUp className="h-5 w-5" style={{ color: "white" }} />
+                )}
+              </button>
+            </div>
 
             {/* Accent */}
             <div style={{ position: "relative" }}>
@@ -855,7 +806,7 @@ else setErr("Dictation failed. Try again.");
               fontSize: 12,
             }}
           >
-            {isRecording ? "Recording…" : isAnalyzing ? "Analyzing pronunciation…" : " "}
+            {isRecording ? "Recording…" : isAnalyzing ? "Analyzing…" : " "}
           </div>
         </div>
       </div>
