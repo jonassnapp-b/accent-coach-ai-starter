@@ -3,11 +3,21 @@ export const USE_MOCK = false;
 
 /* ---------- Base URL helper ---------- */
 export function getApiBase() {
-  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
+  const ls =
+    (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
   const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
-  const base = (ls || env || window.location.origin).replace(/\/+$/, "");
-  return base;
+
+  const isNative = !!(window?.Capacitor && window.Capacitor.isNativePlatform);
+
+  const fallback = "https://accent-coach-ai-starter.vercel.app";
+
+if (isNative) {
+  return (ls || env || fallback).replace(/\/+$/, "");
 }
+
+return (ls || env || fallback).replace(/\/+$/, "");
+}
+
 
 /* ---------- Generic JSON fetch ---------- */
 export async function fetchJSON(path, opts = {}) {

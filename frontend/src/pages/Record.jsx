@@ -8,21 +8,10 @@ import { updateStreak, readStreak } from "../lib/streak.js";
 import * as sfx from "../lib/sfx.js";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 const IS_PROD = !!import.meta?.env?.PROD;
+import { getApiBase } from "../lib/api.js";
 
 /* ------------ API base (web + native) ------------ */
-function isNative() {
-  return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
-}
-function getApiBase() {
-  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
-  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
-  if (isNative()) {
-    const base = (ls || env).replace(/\/+$/, "");
-    if (!base) throw new Error("VITE_API_BASE (or localStorage.apiBase) is not set — required on iOS.");
-    return base;
-  }
-  return (ls || env || window.location.origin).replace(/\/+$/, "");
-}
+
 
 const STATE_KEY = "ac_record_state_chat_v2";
 const LAST_RESULT_KEY = "ac_last_result_v1";
@@ -327,7 +316,7 @@ refreshSuggestions();
     setErr(e?.message || String(e));
   } else {
     // PROD: silent mode / user-friendly
-    setErr("Something went wrong. Try again.");
+    setErr("Network error. Check your connection and try again.");
   }
 
   if (canPlaySfx) sfx.softFail();
@@ -752,7 +741,7 @@ else setErr("Dictation failed. Try again.");
           Tap the mic to start
         </div>
         <div style={{ marginTop: 6, fontWeight: 800, fontSize: 12, color: "rgba(255,255,255,0.78)" }}>
-          Listen → Record → Improve
+        Speak the word → Get feedback
         </div>
 
         <div
@@ -776,8 +765,8 @@ else setErr("Dictation failed. Try again.");
       if (showIntro) closeIntro();
       togglePronunciationRecord();
     }}
-    disabled={!refText.trim() || isAnalyzing}
-    aria-label={isRecording ? "Stop recording" : "Start recording"}
+    disabled={!refText.trim() || isBusy}
+        aria-label={isRecording ? "Stop recording" : "Start recording"}
     title={isRecording ? "Stop" : "Record"}
     style={{
       width: 34,
@@ -855,7 +844,7 @@ else setErr("Dictation failed. Try again.");
               fontSize: 12,
             }}
           >
-            {isRecording ? "Recording…" : isAnalyzing ? "Analyzing…" : " "}
+            {isRecording ? "Recording…" : isAnalyzing ? "Analyzing pronunciation…" : " "}
           </div>
         </div>
       </div>

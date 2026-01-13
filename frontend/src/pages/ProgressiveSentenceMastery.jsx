@@ -11,24 +11,12 @@ import {
   getLevel,
   setLevel,
 } from "../lib/sentenceBank.js";
+import { getApiBase } from "../lib/api.js";
 
 
 /* ---------------- helpers ---------------- */
 
-function isNative() {
-  return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
-}
 
-function getApiBase() {
-  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
-  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
-  if (isNative()) {
-    const base = (ls || env).replace(/\/+$/, "");
-    if (!base) throw new Error("VITE_API_BASE (or localStorage.apiBase) is missing — required on iOS.");
-    return base;
-  }
-  return (ls || env || window.location.origin).replace(/\/+$/, "");
-}
 
 function clamp01(v) {
   const n = Number(v);

@@ -6,25 +6,12 @@ import { useSettings } from "../lib/settings-store.jsx";
 import { playAudioSegment } from "../lib/audioClipper.js";
 import { getCoachFeedback } from "../lib/phonemeCoach";
 import { burstConfetti } from "../lib/celebrations.js";
+import { getApiBase } from "../lib/api.js";
+
 
 const IS_PROD = !!import.meta?.env?.PROD;
 
 if (!IS_PROD) console.log("PF LIVE v41 (LIGHT ONLY)", import.meta?.url);
-
-/* ------------ API base (web + native) ------------ */
-function isNative() {
-  return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
-}
-function getApiBase() {
-  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
-  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
-  if (isNative()) {
-    const base = (ls || env).replace(/\/+$/, "");
-    if (!base) throw new Error("VITE_API_BASE (eller localStorage.apiBase) er ikke sat – krævet på iOS.");
-    return base;
-  }
-  return (ls || env || window.location.origin).replace(/\/+$/, "");
-}
 
 /* ---------- helpers ---------- */
 function getWordSpanSec(apiWord) {
