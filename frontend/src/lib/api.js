@@ -3,11 +3,9 @@ export const USE_MOCK = false;
 
 /* ---------- Base URL helper ---------- */
 export function getApiBase() {
-  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
-  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
-  const base = (ls || env || window.location.origin).replace(/\/+$/, "");
-  return base;
+  return "https://accent-coach-ai-starter.onrender.com";
 }
+
 
 /* ---------- Generic JSON fetch ---------- */
 export async function fetchJSON(path, opts = {}) {
