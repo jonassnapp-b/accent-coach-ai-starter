@@ -140,10 +140,10 @@ function refreshSuggestions() {
     try {
       const raw = sessionStorage.getItem(STATE_KEY);
       if (raw) {
-        const saved = JSON.parse(raw);
-        if (typeof saved.refText === "string") setRefText(sanitizeWord(saved.refText));
-        if (typeof saved.accentUi === "string") setAccentUi(saved.accentUi);
-      }
+  const saved = JSON.parse(raw);
+  if (typeof saved.refText === "string") setRefText(sanitizeWord(saved.refText));
+  // ❌ do NOT restore accentUi (must follow settings)
+}
     } catch {}
 
     
@@ -181,11 +181,12 @@ if (seedFromState) {
   }, [location.key]);
 
   // persist state
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(STATE_KEY, JSON.stringify({ refText, accentUi }));
-    } catch {}
-  }, [refText, accentUi]);
+useEffect(() => {
+  try {
+    sessionStorage.setItem(STATE_KEY, JSON.stringify({ refText }));
+  } catch {}
+}, [refText]);
+
 
   function disposeRecorder() {
     try {
