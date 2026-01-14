@@ -60,6 +60,11 @@ export default function Record() {
 
   // ---- state ----
   const [accentUi, setAccentUi] = useState(settings.accentDefault || "en_us");
+  useEffect(() => {
+  if (isBusy) return;
+  setAccentUi(settings.accentDefault || "en_us");
+}, [settings.accentDefault, isBusy]);
+
   const [refText, setRefText] = useState("");
   const [err, setErr] = useState("");
 const [showIntro, setShowIntro] = useState(() => {
