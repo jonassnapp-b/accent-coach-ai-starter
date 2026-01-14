@@ -117,27 +117,37 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // ✅ CORS: dev-friendly, but safe-ish
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true); // non-browser / native
+const corsOptions = {
+  origin: (origin, cb) => {
+    // DEBUG (kan fjernes senere)
+    console.log("[CORS origin]", origin);
 
-      const o = String(origin).replace(/\/+$/, "");
-      if (o === "http://localhost:5173" || o === "http://127.0.0.1:5173") return cb(null, true);
-      if (/^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(o)) return cb(null, true);
-      // ✅ Capacitor / iOS simulator origin
-      if (o === "capacitor://localhost" || o === "ionic://localhost") return cb(null, true);
+    if (!origin) return cb(null, true); // non-browser / native
 
-      // allow configured origins too
-      const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || "").split(",").map(s => s.trim().replace(/\/+$/, "")).filter(Boolean);
-      if (FRONTEND_ORIGIN.includes(o)) return cb(null, true);
+    const o = String(origin).replace(/\/+$/, "");
 
-      return cb(new Error(`CORS blocked for origin: ${origin}`));
-    },
-    credentials: false,
-  })
-);
-app.options("*", cors());
+    if (o === "http://localhost:5173" || o === "http://127.0.0.1:5173") return cb(null, true);
+    if (/^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(o)) return cb(null, true);
+
+    // ✅ Capacitor / iOS simulator origin
+    if (o === "capacitor://localhost" || o === "ionic://localhost") return cb(null, true);
+
+    const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || "")
+      .split(",")
+      .map(s => s.trim().replace(/\/+$/, ""))
+      .filter(Boolean);
+
+    if (FRONTEND_ORIGIN.includes(o)) return cb(null, true);
+
+    return cb(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: false,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
 
 // Logger
 app.use((req, _res, next) => {
