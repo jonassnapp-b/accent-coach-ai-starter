@@ -546,7 +546,4 @@ try {
   }
 });
 
-const app = express();
-app.use(router);
-
-export default app;
+export default router;
