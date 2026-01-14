@@ -125,6 +125,8 @@ app.use(
       const o = String(origin).replace(/\/+$/, "");
       if (o === "http://localhost:5173" || o === "http://127.0.0.1:5173") return cb(null, true);
       if (/^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(o)) return cb(null, true);
+      // ✅ Capacitor / iOS simulator origin
+      if (o === "capacitor://localhost" || o === "ionic://localhost") return cb(null, true);
 
       // allow configured origins too
       const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || "").split(",").map(s => s.trim().replace(/\/+$/, "")).filter(Boolean);

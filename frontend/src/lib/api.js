@@ -4,21 +4,24 @@ export const USE_MOCK = false;
 /* ---------- Base URL helper ---------- */
 /* ---------- Base URL helper ---------- */
 function isNative() {
-  return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
+  // Works even when window.Capacitor isn't injected yet
+  return (
+    typeof window !== "undefined" &&
+    (window.location?.protocol === "capacitor:" ||
+      window.location?.origin?.startsWith("capacitor://") ||
+      !!(window?.Capacitor && window.Capacitor.isNativePlatform))
+  );
 }
 
 export function getApiBase() {
-  // Always prefer env if set
-  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
-  const base = env.replace(/\/+$/, "");
-
-  // ✅ If env is set, use it for BOTH web + native
-  if (base) return base;
-
-  // Fallbacks (only if you forgot env)
+  // ✅ Native (Xcode/Capacitor): ALWAYS use Render backend
   if (isNative()) return "https://accent-coach-ai-starter.onrender.com";
-  return window.location.origin.replace(/\/+$/, "");
+
+  // Web: use env if present, else same origin
+  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
+  return (env || window.location.origin).replace(/\/+$/, "");
 }
+
 
 
 
