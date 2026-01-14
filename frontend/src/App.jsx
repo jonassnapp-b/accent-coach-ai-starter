@@ -21,7 +21,7 @@ const ProgressiveSentenceMastery = lazy(() => import("./pages/ProgressiveSentenc
 const WeaknessLab = lazy(() => import("./pages/WeaknessLab.jsx"));
 const Settings   = lazy(() => import("./pages/Settings.jsx"));
 const Bookmarks  = lazy(() => import("./pages/Bookmarks.jsx"));
-const Onboarding = lazy(() => import("./pages/Onboarding.jsx"));
+
 
 
 import { submitReferralOpen } from "./lib/api.js";
@@ -38,8 +38,7 @@ const routePrefetch = {
   "/weakness":   () => import("./pages/WeaknessLab.jsx"),
   "/settings":   () => import("./pages/Settings.jsx"),
   "/bookmarks":  () => import("./pages/Bookmarks.jsx"),
-  "/onboarding": () => import("./pages/Onboarding.jsx"),
-};
+  };
 
 function prefetchRoute(path) {
   try { routePrefetch[path]?.(); } catch {}
@@ -93,7 +92,7 @@ function isOnboardingDone() {
 /* ---------------- App ---------------- */
 function AppInner() {
   const location = useLocation();
-  const showTabs = location.pathname !== "/onboarding";
+  const showTabs = true;
   const done = isOnboardingDone();
 
   // Capture referral code (?ref=XYZ) once
@@ -192,13 +191,10 @@ function AppInner() {
         <Suspense fallback={<div style={{padding:16, color:"var(--muted)"}}>Loading…</div>}>
           <Routes>
             {/* Onboarding always reachable */}
-            <Route path="/onboarding" element={<Onboarding />} />
-
+            
             {/* Default route */}
-            <Route
-              path="/"
-              element={<Navigate to={done ? "/record" : "/onboarding"} replace />}
-            />
+           <Route path="/" element={<Navigate to="/record" replace />} />
+
 
             {/* Tabs */}
 {TABS.map((t) => (
@@ -212,8 +208,7 @@ function AppInner() {
 
 
             {/* Catch-alls */}
-            {!done && <Route path="*" element={<Navigate to="/onboarding" replace />} />}
-            {done && <Route path="*" element={<Navigate to="/record" replace />} />}
+            <Route path="*" element={<Navigate to="/record" replace />} />
           </Routes>
         </Suspense>
       </main>
