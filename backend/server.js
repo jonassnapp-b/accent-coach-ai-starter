@@ -155,7 +155,7 @@ app.all("/api/align-tts", alignTts);
 app.all("/api/tts", tts);
 
 // ✅ analyze-speech is an Express Router -> mount at /api
-app.use("/api", analyzeSpeechRouter);
+app.use("/api/analyze-speech", analyzeSpeechRouter);
 
 /**
  * ✅ Weakness Router mounting (robust)
