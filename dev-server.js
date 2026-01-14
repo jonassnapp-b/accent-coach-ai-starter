@@ -447,7 +447,7 @@ Reply with ONE new partner turn the learner should answer. ${constraints}`
 const analyzeSpeech = (await import("./api/analyze-speech.js")).default;
 const leaderboard = (await import("./api/leaderboard.js")).default;
 
-app.use("/api", analyzeSpeech);
+app.use("/api/analyze-speech", analyzeSpeech);
 app.get("/api/leaderboard", leaderboard);
 app.post("/api/leaderboard", leaderboard);
 
