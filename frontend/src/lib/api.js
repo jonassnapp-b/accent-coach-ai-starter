@@ -69,30 +69,59 @@ export async function analyzeAudio({ blob, accent, refText }) {
   const file = new File([blob], filename, { type: blob.type || "application/octet-stream" });
 
   // Multipart først (ingen Content-Type header -> browser sætter boundary)
-  let res = await fetch(API_PATH, {
-    method: "POST",
-    body: (() => {
-      const f = new FormData();
-      f.append("audio", file);
-      if (accent)  f.append("accent",  accent);
-      if (refText) f.append("refText", refText);
-      return f;
-    })(),
-  });
+   const controller = new AbortController();
+  const timeoutMs = 30000; // 30s client hard timeout
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res;
+  try {
+    res = await fetch(API_PATH, {
+      method: "POST",
+      signal: controller.signal,
+      body: (() => {
+        const f = new FormData();
+        f.append("audio", file);
+        if (accent)  f.append("accent",  accent);
+        if (refText) f.append("refText", refText);
+        return f;
+      })(),
+    });
+  } catch (e) {
+    if (e?.name === "AbortError") {
+      throw new Error("Timed out (30s). Please try again.");
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+
 
   // 4xx fallback: send som JSON (data URL)
   if (!res.ok && res.status >= 400 && res.status < 500) {
     const dataURL = await blobToDataURL(file);
-    res = await fetch(API_PATH, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        audio: dataURL,
-        mime: file.type || "application/octet-stream",
-        accent: accent || "en-US",
-        refText: refText || "",
-      }),
-    });
+        const controller2 = new AbortController();
+    const timer2 = setTimeout(() => controller2.abort(), timeoutMs);
+
+    try {
+      res = await fetch(API_PATH, {
+        method: "POST",
+        signal: controller2.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audio: dataURL,
+          mime: file.type || "application/octet-stream",
+          accent: accent || "en-US",
+          refText: refText || "",
+        }),
+      });
+    } catch (e) {
+      if (e?.name === "AbortError") {
+        throw new Error("Timed out (30s). Please try again.");
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer2);
+    }
   }
 
   if (!res.ok) {

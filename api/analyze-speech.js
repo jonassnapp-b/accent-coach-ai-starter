@@ -3,12 +3,24 @@ import express from "express";
 import multer from "multer";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
-import { Readable } from "stream";
 import { createHash, randomUUID } from "crypto";
 import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
 import { recordSessionResult } from "../backend/lib/weaknessAggregator.js";
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+
 
 function setCors(req, res) {
   const origin = req.headers.origin;
@@ -61,14 +73,6 @@ export const config = { api: { bodyParser: false } };
 function dataURLtoBuffer(str = "") {
   const base64 = str.includes(",") ? str.split(",")[1] : str;
   return Buffer.from(base64 || "", "base64");
-}
-
-function bufferToStream(buf) {
-  const s = new Readable();
-  s._read = () => {};
-  s.push(buf);
-  s.push(null);
-  return s;
 }
 
 // VIGTIGT: brug midlertidige filer i stedet for pipes
@@ -197,11 +201,16 @@ async function postSpeechSuperExact({
   fd.append("text", JSON.stringify({ connect, start }));
   fd.append("audio", new Blob([wavBytes], { type: "audio/wav" }), "clip.wav");
 
-  const r = await fetch(url, {
+  const r = await fetchWithTimeout(
+  url,
+  {
     method: "POST",
     headers: { "Request-Index": "0" },
     body: fd,
-  });
+  },
+  25000
+);
+
   const raw = await r.text();
   let json = null;
   try {
@@ -435,34 +444,14 @@ try {
 
     const uiAccent = dictDialect === "en_br" ? "en-GB" : "en-US";
     const ui = mapSpeechsuperToUi(ss, refText, uiAccent);
-    // ---- save to WeaknessLab (local file) ----
-try {
-  const phonemes = [];
-  for (const w of ui.words || []) {
-    for (const p of w.phonemes || []) {
-      const label = String(p.phoneme || p.ph || "").trim();
-      const score = Number(p.accuracyScore ?? 0); // 0-100
-      if (!label) continue;
-      if (!Number.isFinite(score)) continue;
-      phonemes.push({ label, score });
-    }
-  }
-
-  // IMPORTANT: send as { words: [{ phonemes: [...] }] }
-  await recordSessionResult("accent-coach", { words: [{ phonemes }] });
-} catch (e) {
-  console.warn("[WeaknessLab] save failed:", e?.message || e);
-}
-
-    // -------- Weakness Lab aggregation (ONE place only) --------
+// -------- WeaknessLab save (ONLY ONCE per request) --------
 try {
   const phonemes = [];
 
   for (const w of ui.words || []) {
     for (const p of w.phonemes || []) {
       const label = String(p.phoneme || p.ph || "").trim();
-      const score = Number(p.accuracyScore ?? 0); // 0-100
-
+      const score = Number(p.accuracyScore ?? 0); // 0–100
       if (!label) continue;
       if (!Number.isFinite(score)) continue;
 
@@ -471,79 +460,27 @@ try {
   }
 
   if (phonemes.length) {
-    await recordSessionResult("accent-coach", { words: [{ phonemes }] });
+    await recordSessionResult(userId, { phonemes });
     console.log("[WeaknessLab] saved phonemes:", phonemes.length);
+  } else {
+    console.log("[WeaknessLab] no phonemes to save");
   }
 } catch (e) {
   console.warn("[WeaknessLab] save failed:", e?.message || e);
 }
 
-    const phonemes = [];
-for (const w of ui.words || []) {
-  for (const p of w.phonemes || []) {
-    const label = String(p.phoneme || p.ph || "").trim();
-    const score = Number(p.accuracyScore ?? 0);
-    if (label && Number.isFinite(score)) phonemes.push({ label, score });
-  }
-}
-console.log("[WeaknessLab] phonemes extracted:", phonemes.length);
-
-await recordSessionResult("accent-coach", { phonemes });
-
-    // -------- Weakness Lab aggregation --------
-try {
-  const phonemes = [];
-
-  for (const w of ui.words || []) {
-    for (const p of w.phonemes || []) {
-      if (!p.phoneme || typeof p.accuracyScore !== "number") continue;
-
-      phonemes.push({
-        label: p.phoneme.toUpperCase(), // fx "TH"
-        score: p.accuracyScore,         // 0–100
-      });
-    }
-  }
-
-  if (phonemes.length) {
-    await recordSessionResult(userId, {
-      phonemes,
-    });
-    console.log("[WeaknessLab] phonemes recorded:", phonemes.length, "sample:", phonemes[0]);
-  }
-} catch (e) {
-  console.warn("[WeaknessLab] aggregation failed:", e?.message || e);
-}
-try {
-  const phonemes = [];
-
-  for (const w of ui.words || []) {
-    for (const p of w.phonemes || []) {
-      const label = String(p.phoneme || p.ph || "").trim();
-      const score = Number(p.accuracyScore ?? p.score ?? 0);
-
-      if (!label) continue;
-      if (!Number.isFinite(score)) continue;
-
-      // aggregator expects: [{ label: "TH", score: 62 }, ...]
-      phonemes.push({ label: label.toUpperCase(), score });
-    }
-  }
-
-  console.log("[WeaknessLab] phonemes to save:", phonemes.length, phonemes[0]);
-
-  if (phonemes.length > 0) {
-    await recordSessionResult("accent-coach", { phonemes });
-  }
-} catch (e) {
-  console.warn("[WeaknessLab] save failed:", e?.message || e);
-}
 
     return res.status(200).json(ui);
-  } catch (err) {
-    console.error("[analyze-speech] top-level error", err);
-    res.status(500).json({ error: err.message || String(err) });
+} catch (err) {
+  const msg = String(err?.message || "");
+  if (err?.name === "AbortError" || /aborted|timeout/i.test(msg)) {
+    return res.status(504).json({ error: "Speech analysis timed out. Please try again." });
   }
+  console.error("[analyze-speech] top-level error", err);
+  return res.status(500).json({ error: err?.message || String(err) });
+}
+
+
 });
 
 export default router;
