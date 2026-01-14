@@ -58,6 +58,11 @@ export default function Record() {
   // streak (kept, but no daily goal UI)
   const [streak, setStreak] = useState(() => readStreak());
 
+  // pronunciation recording / analyzing
+  const [isRecording, setIsRecording] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const isBusy = isRecording || isAnalyzing;
+
   // ---- state ----
   const [accentUi, setAccentUi] = useState(settings.accentDefault || "en_us");
   useEffect(() => {
@@ -75,10 +80,6 @@ const [showIntro, setShowIntro] = useState(() => {
   }
 });
 
-  // pronunciation recording / analyzing
-  const [isRecording, setIsRecording] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const isBusy = isRecording || isAnalyzing;
 
   const mediaRecRef = useRef(null);
   const chunksRef = useRef([]);
