@@ -479,7 +479,7 @@ else setErr("Dictation failed. Try again.");
   title="Bookmarks"
   style={{
     justifySelf: "end",
-    marginRight: -6,      // ✅ ryk lidt mere mod højre
+    marginRight: 0,      // ✅ ryk lidt mere mod højre
   }}
 >
   <BookmarkIcon className="pw-bookmarksIcon" />
@@ -491,7 +491,15 @@ else setErr("Dictation failed. Try again.");
       </div>
 
       {/* Main content area */}
-      <div className="mx-auto w-full" style={{ maxWidth: 720, padding: "18px 16px", paddingBottom: `calc(${TABBAR_OFFSET}px + 170px)` }}>
+      <div
+  className="mx-auto w-full"
+  style={{
+    maxWidth: 720,
+    padding: "18px 16px",
+    paddingBottom: `calc(${TABBAR_OFFSET}px + 170px)`,
+    overflowX: "hidden",  // ✅ extra safety for this page
+  }}
+>
         <div style={{ minHeight: "52vh", display: "grid", placeItems: "center" }}>
          {!result ? (
   <div style={{ display: "grid", gap: 8, justifyItems: "center", textAlign: "center" }}>
@@ -501,14 +509,13 @@ else setErr("Dictation failed. Try again.");
   </div>
 ) : (
 
-            <div style={{ width: "min(720px, 92vw)" }}>
-              <PhonemeFeedback
-  result={result}
-  embed={true}
-  hideBookmark={true}
-/>
-
-            </div>
+          <div className="pf-embed-wrap">
+  <PhonemeFeedback
+    result={result}
+    embed={true}
+    hideBookmark={true}
+  />
+</div>
           )}
         </div>
 
@@ -643,7 +650,7 @@ else setErr("Dictation failed. Try again.");
       >
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
           {/* Suggestion chips */}
-          <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "6px 2px 10px", WebkitOverflowScrolling: "touch" }}>
+          <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "6px 0px 10px", WebkitOverflowScrolling: "touch", maxWidth: "100%" }}>
             {suggestions.map((s) => (
   <button
     key={s}
@@ -658,6 +665,7 @@ else setErr("Dictation failed. Try again.");
       border: `1px solid ${LIGHT_BORDER}`,
       boxShadow: "0 6px 16px rgba(0,0,0,0.06)",
       color: LIGHT_TEXT,
+      maxWidth: "100%",
     }}
     title="Use suggestion"
   >
@@ -668,11 +676,12 @@ else setErr("Dictation failed. Try again.");
           </div>
 
           {/* Input row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             {/* Input */}
             <div
               style={{
                 flex: 1,
+                  minWidth: 0,              // ✅ VIGTIG
                 background: LIGHT_SURFACE,
                 border: `1px solid ${LIGHT_BORDER}`,
                 boxShadow: LIGHT_SHADOW,
@@ -698,6 +707,7 @@ else setErr("Dictation failed. Try again.");
                 placeholder="Type a word…"
                 style={{
                   flex: 1,
+                    minWidth: 0,
                   background: "transparent",
                   border: "none",
                   outline: "none",
@@ -760,7 +770,7 @@ else setErr("Dictation failed. Try again.");
             </div>
 
             {/* Accent */}
-            <div style={{ position: "relative" }}>
+            <div style={{ position: "relative", flex: "0 0 auto" }}>
               <select
                 aria-label="Accent"
                 value={accentUi}

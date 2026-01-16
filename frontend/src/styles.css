@@ -70,7 +70,11 @@ html, body, #root {
   height: 100%;
   background: var(--bg) !important;
   color: var(--text) !important;
+
+  width: 100%;
+  overflow-x: hidden; /* ✅ kill horizontal pan */
 }
+
 
 /* ✅ Kill any “dark bottom gradient” coming from pages/components */
 body::before,
@@ -252,14 +256,22 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .page {
   width: 100%;
   min-height: calc(100vh - 4.5rem);
-  padding-left: var(--page-gutter-x);
-  padding-right: var(--page-gutter-x);
+
+  /* ⛔️ må IKKE styre horisontal layout */
+  padding-left: 0;
+  padding-right: 0;
+
+  /* ✅ må gerne styre vertikal spacing */
   padding-top: calc(var(--page-gutter-top) + var(--safe-top));
   padding-bottom: 12px;
 
   background: var(--bg) !important;
   color: var(--text) !important;
+
+  /* ✅ sikkerhed */
+  overflow-x: hidden;
 }
+
 
 /* Settings layout */
 .settings-page {
@@ -384,18 +396,22 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 
 /* hero */
 .pf-hero-card{
-  width: min(560px, 92vw);
+  width: 100%;
+  max-width: 560px;
   margin: 0 auto;
   padding: 22px 18px 18px;
   text-align: center;
 }
 
+
 .pf-hero-word{
   font-family: inherit;
   font-weight: 800;
   font-size: 56px;
+    font-size: clamp(40px, 9vw, 56px); /* ✅ auto-scaler på små skærme */
   line-height: 1.0;
   margin: 6px 0 22px;
+    overflow-wrap: anywhere; /* ✅ så lange ord ikke klippes */
 }
 /* Hero feedback PNG icon (bad/medium/good/great) */
 /* Hero feedback PNG icon (bad / medium / good / great) */
@@ -459,11 +475,14 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 
 /* list wrapper */
 .pf-list{
-  width: min(760px, 94vw);
+  width: 100%;
+  max-width: 560px;
   margin: 18px auto 0;
   display:grid;
   gap:12px;
 }
+
+
 
 
 
@@ -579,7 +598,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   display:grid;
   place-items:center;
   border-radius:999px;
-  margin-left: -13px
+  margin-left: 0px
 }
 .pf-chevron:hover{ background: rgba(0,0,0,0.04); }
 .pf-chevron:active{ transform: scale(0.98); }
@@ -674,29 +693,26 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 }
 
 /* Keep ring+chevron on SAME line as the buttons (no absolute positioning) */.pf-row-sub{
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;  /* så vi styrer spacing med margin-left:auto */
-  gap: 6px !important;
-  position: relative;
-  z-index: 2;
+  margin-top: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
 }
+
 
 .pf-row-right{
-  display: flex;
-  align-items: center;
-  margin-left: auto !important; /* mod højre */
+  display: flex !important;
+  align-items: center !important;
+  margin-left: auto !important;  /* skubber til højre uden at overskride */
   gap: 10px !important;
-  margin-right: 12px !important;         /* You -> ring/pil */
+  min-width: 0 !important;
 }
 
-.pf-row-actions{
-  position: absolute !important;
-  right: -16px !important;      /* <-- øg for at flytte mere mod venstre, sænk/negativ for mere mod højre */
-  top: 50% !important;
-  transform: translateY(-50%) !important;
 
+.pf-row-actions{
+  position: static !important;
+  transform: none !important;
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
@@ -782,4 +798,5 @@ html {
 input, textarea, select {
   font-size: 16px !important;
 }
+
 
