@@ -6,6 +6,8 @@ import { useSettings } from "../lib/settings-store.jsx";
 import { playAudioSegment } from "../lib/audioClipper.js";
 import { getCoachFeedback } from "../lib/phonemeCoach";
 import { burstConfetti } from "../lib/celebrations.js";
+import { calculateOverallScoreModelB } from "../lib/scoring/calculateOverallScoreModelB";
+
 
 const IS_PROD = !!import.meta?.env?.PROD;
 
@@ -810,8 +812,28 @@ export default function PhonemeFeedback({ result, embed = false, hideBookmark = 
   const targetSingleWord = !isSentence && targetSentenceRaw && !/\s/.test(targetSentenceRaw) ? targetSentenceRaw : "";
   const wordText = targetSingleWord || apiWordText;
 
+
+  // --- Overall score (Model B) for single-word results ---
+const modelBOverall = useMemo(() => {
+  // Fallback to API overall if not a single word with phonemes
+  if (!oneWord || !wordPhs?.length) {
+    const overall01 = to01(result.overall ?? result.pronunciation ?? result.overallAccuracy ?? result.score);
+    const pct = overall01 != null ? Math.round(overall01 * 100) : null;
+    return { pct, missingCount: 0, total: 0 };
+  }
+
+  const phonemeScores = wordPhs.map((p) => {
+    const s01 = readPhoneme(p)?.s01;
+    const pct = typeof s01 === "number" ? Math.round(s01 * 100) : 0;
+    return { score: pct };
+  });
+
+  const { overall, missingCount, total } = calculateOverallScoreModelB(phonemeScores);
+  return { pct: overall, missingCount, total };
+}, [result, oneWord, wordPhs]);
+
   const targetText = oneWord ? wordText || "" : displaySentence || "";
-  const targetScorePct = overall01 != null ? Math.round(overall01 * 100) : null;
+const targetScorePct = modelBOverall.pct;
 // --- MAIN overall score bar (XP-style fill + smooth color fade) ---
 const [animatedOverallPct, setAnimatedOverallPct] = useState(0);
 
@@ -1193,7 +1215,7 @@ const heroWordSpan = useMemo(() => {
       {!hideBookmark && (
         <div className={embed ? "" : "px-5 pt-5"}>
           <div className="flex items-start justify-end">
-            {overall01 != null && targetText && (
+            {targetScorePct != null && targetText && (
               <button
                 type="button"
                 onClick={onToggleBookmark}
