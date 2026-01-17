@@ -500,7 +500,7 @@ else setErr("Dictation failed. Try again.");
     overflowX: "hidden",  // ✅ extra safety for this page
   }}
 >
-        <div style={{ minHeight: "52vh", display: "grid", placeItems: "center" }}>
+        <div style={{ minHeight: "52vh", display: "grid", placeItems: "center", width: "100%", minWidth: 0 }}>
          {!result ? (
   <div style={{ display: "grid", gap: 8, justifyItems: "center", textAlign: "center" }}>
     <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>
@@ -509,13 +509,12 @@ else setErr("Dictation failed. Try again.");
   </div>
 ) : (
 
-          <div className="pf-embed-wrap">
-  <PhonemeFeedback
-    result={result}
-    embed={true}
-    hideBookmark={true}
-  />
+     <div className="pf-embed-wrap" style={{ width: "100%", minWidth: 0 }}>
+  <div className="pf-embed-inner">
+    <PhonemeFeedback result={result} embed={true} hideBookmark={true} />
+  </div>
 </div>
+
           )}
         </div>
 

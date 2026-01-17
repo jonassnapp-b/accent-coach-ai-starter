@@ -192,7 +192,7 @@ export default function ProgressiveSentenceMastery() {
 
   const level = useMemo(() => getLevelConfig(levelId), [levelId]);
   const passPct = level.passAllGreenPct ?? 80;
-const CARD_H = 280; // fast height so all cards match exactly
+const CARD_H = 320; // fast height so all cards match exactly
 
 
 const [sentence, setSentence] = useState(() => getNextSentence(getLevel()));
@@ -1418,6 +1418,7 @@ function scoreToHealthColor(pct) {
               gap: 14,
               flexWrap: "wrap",
               alignItems: "center",
+              marginBottom: 28,
             }}
           >
             <select
@@ -1562,7 +1563,8 @@ onPointerDown={onCardPointerDown}
           borderRadius: 24,
           boxShadow: "0 20px 40px rgba(0,0,0,0.08)",
           padding: "28px 24px",
-          height: CARD_H,
+          minHeight: CARD_H,
+height: "auto",
 display: "flex",
 flexDirection: "column",
 justifyContent: "center",
@@ -1872,7 +1874,7 @@ const barColor = scoreToHealthColor(animatedSentencePct);
      position: "relative",
      display: "grid",
      placeItems: "center",
-     marginTop: 40,      // <-- pushes mic + bubble down
+     marginTop: 0,      // <-- pushes mic + bubble down
      paddingBottom: 10,  // optional
    }}
  >  {!result && (

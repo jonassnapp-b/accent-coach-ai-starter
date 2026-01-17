@@ -460,24 +460,24 @@ function SentenceHeroWord({ words, ui }) {
 
 function ProgressRing({ pct = 0 }) {
   const p = Math.max(0, Math.min(100, Number(pct) || 0));
-const r = 20; // +2 px → mere luft, stadig elegant
+const r = 16; // +2 px → mere luft, stadig elegant
   const c = 2 * Math.PI * r;
   const dash = (p / 100) * c;
 
   return (
     <div className="pf-ring" aria-label={`Progress ${p}%`}>
-      <svg width="46" height="46" viewBox="0 0 46 46">
-        <circle cx="23" cy="23" r={r} stroke="rgba(0,0,0,0.10)" strokeWidth="4" fill="none" />
+      <svg width="38" height="38" viewBox="0 0 38 38">
+        <circle cx="19" cy="19" r={r} stroke="rgba(0,0,0,0.10)" strokeWidth="4" fill="none" />
         <circle
-          cx="23"
-          cy="23"
+          cx="19"
+          cy="19"
           r={r}
           stroke="rgba(33,150,243,0.95)"
           strokeWidth="4"
           fill="none"
           strokeLinecap="round"
           strokeDasharray={`${dash} ${c - dash}`}
-          transform="rotate(-90 23 23)"
+          transform="rotate(-90 19 19)"
         />
       </svg>
       <span>{p}%</span>
@@ -1402,7 +1402,7 @@ onClick={async () => {
                           <div className="pf-row-right">
                             <button
                               type="button"
-                              className="pf-pill"
+                            className="pf-pill pf-you-btn"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 playUserSpan(row.startSec, row.endSec);

@@ -434,13 +434,14 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   align-items:center;
   justify-content:center;
   gap:8px;
-  height:42px;
-  padding:0 16px;
+  height:36px;
+  padding:0 12px;
   border-radius:999px;
   background:#fff;
   border:1px solid rgba(0,0,0,0.12);
   color: rgba(17,24,39,0.92);
   box-shadow:0 6px 14px rgba(0,0,0,0.08);
+  font-size:14px;
   font-weight:800;
   cursor:pointer;
 }
@@ -452,15 +453,17 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   align-items:center;
   border:1px solid rgba(0,0,0,0.12);
   border-radius:999px;
+    height:36px;
   overflow:hidden;
   background:#fff;
   box-shadow:0 6px 14px rgba(0,0,0,0.08);
 }
 .pf-seg-btn{
-  height:42px;
-  padding:0 14px;
+  height:36px;
+  padding:0 12px;
   border:none;
   background:transparent;
+  font-size:14px;
   font-weight:800;
   color: rgba(17,24,39,0.92);
   cursor:pointer;
@@ -468,6 +471,8 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   align-items:center;
   gap:8px;
 }
+/* Ryk kun "You"-knappen lidt mod højre */
+
 .pf-seg-btn + .pf-seg-btn{
   border-left:1px solid rgba(0,0,0,0.10);
 }
@@ -566,20 +571,24 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 
 /* progress ring */
 .pf-ring{
-  width:46px;
-  height:46px;
+  width:38px;
+  height:38px;
   position:relative;
   display:grid;
   place-items:center;
-  flex: 0 0 46px;
+  flex: 0 0 38px;
 }
-.pf-ring svg{ display:block; }
+.pf-ring svg{
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
 .pf-ring > span{
   position:absolute;
   inset:0;
   display:grid;
   place-items:center;
-  font-size:12px;
+  font-size:11px;
   font-weight:900;
   line-height:1;
   color: rgba(17,24,39,0.82);
@@ -598,16 +607,12 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   display:grid;
   place-items:center;
   border-radius:999px;
-  margin-left: 0px
+  margin-left: 0px;
+  transform: translateX(-12px);
 }
 .pf-chevron:hover{ background: rgba(0,0,0,0.04); }
 .pf-chevron:active{ transform: scale(0.98); }
 
-/* tiny screens: allow You to drop under */
-@media (max-width: 420px){
-  .pf-row-sub{ grid-template-columns: 1fr; }
-  .pf-row-sub .pf-pill{ justify-self:start; }
-}
 
 /* =========================================================
    PF OVERRIDES (paste at VERY bottom)
@@ -662,61 +667,38 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 /* CONTROLS ROW: Native + You right next to each other (NOT spaced to edges) */
 .pf-row-sub{
   position: relative !important;
-  padding-right: 110px !important;  /* plads så knapperne ikke rammer ring+pil */
 }
 
 
 .pf-row-right{
   display:flex;
   align-items:center;
-  gap:19px;
+  gap:8px;
 }
 
 /* Make sure buttons don't stretch weirdly */
 .pf-row-sub .pf-seg{ flex: 0 0 auto !important; }
 .pf-row-sub .pf-pill{ flex: 0 0 auto !important; }
 
-/* ACTIONS: pin progress + chevron to bottom-right */
-.pf-row-actions{
-  position: absolute !important;
-  right: 34px !important;
-  bottom: 14px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  z-index: 3 !important;
-}
-
-/* Give space so controls don't collide with bottom-right actions */
-.pf-row-card{
-  padding-bottom: 20px !important; /* room for ring+chevron */
-}
-
-/* Keep ring+chevron on SAME line as the buttons (no absolute positioning) */.pf-row-sub{
-  margin-top: 10px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  min-width: 0 !important;
-}
-
-
-.pf-row-right{
-  display: flex !important;
-  align-items: center !important;
-  margin-left: auto !important;  /* skubber til højre uden at overskride */
-  gap: 10px !important;
-  min-width: 0 !important;
-}
-
-
+/* ACTIONS: keep in normal flow (like the good version) */
 .pf-row-actions{
   position: static !important;
-  transform: none !important;
   display: flex !important;
   align-items: center !important;
-  gap: 8px !important;
+  gap: 4px !important;
+  margin-right: -33px;
 }
+
+/* remove the reserved space hack (was causing cut/shift) */
+.pf-row-sub{
+  padding-right: 0 !important;
+}
+
+
+.pf-row-card{
+  padding-bottom: 20px !important;  /* reserve plads i bunden */
+}
+
 
 /* Hero "shine sweep" – only when pf-hero-shine class is present */
 .pf-hero-shine{
@@ -773,7 +755,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   height: 18px;
 }
 
-@media (max-width: 430px){
+@media (max-width: 520px){
   .pw-bookmarksBtn{
     width: 42px;
     height: 42px;
@@ -800,3 +782,55 @@ input, textarea, select {
 }
 
 
+
+
+/* ✅ PF embed: must be shrinkable on small screens */
+.pf-embed-wrap{
+  width: 100%;
+  min-width: 0;          /* IMPORTANT: allow shrink */
+  padding: 0 16px;       /* so cards never touch edges */
+  box-sizing: border-box;
+}
+
+.pf-embed-inner{
+  width: 100%;
+  max-width: 560px;      /* keep your nice centered layout on bigger screens */
+  margin: 0 auto;
+  min-width: 0;          /* IMPORTANT: allow shrink */
+}
+
+/* === PF row: compact on iPhone so everything fits on ONE line === */
+@media (max-width: 520px){
+  .pf-row-card .pf-pill{
+    height: 36px;
+    padding: 0 12px;
+    font-size: 14px;
+  }
+
+  .pf-row-card .pf-seg-btn{
+    height: 36px;
+    padding: 0 10px;
+    font-size: 14px;
+  }
+
+  .pf-ring{
+    width: 38px;
+    height: 38px;
+  }
+  .pf-ring > span{
+    font-size: 11px;
+  }
+
+  .pf-chevron{
+    width: 36px;
+    height: 36px;
+  }
+}
+
+.pf-row-right > .pf-you-btn{
+  transform: translateX(0px);
+}
+
+@media (max-width: 520px){
+  .pf-embed-wrap{ padding: 0 10px; }  /* prøv 10px */
+}
