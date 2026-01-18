@@ -315,6 +315,8 @@ async function unlockAudioOnce() {
 const seenSentenceRef = useRef(new Set()); // session-only: sentences already shown (no autoplay on revisit)
 const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [fatal, setFatal] = useState("");
+
 const [hydrated, setHydrated] = useState(false);
 
 useEffect(() => {
@@ -329,6 +331,24 @@ useEffect(() => {
     setInteractionTick((t) => t + 1);
   }
 };
+useEffect(() => {
+  const onError = (e) => {
+    const msg = e?.error?.stack || e?.error?.message || e?.message || String(e);
+    setFatal(msg);
+  };
+  const onRejection = (e) => {
+    const msg = e?.reason?.stack || e?.reason?.message || String(e?.reason || e);
+    setFatal(msg);
+  };
+
+  window.addEventListener("error", onError);
+  window.addEventListener("unhandledrejection", onRejection);
+
+  return () => {
+    window.removeEventListener("error", onError);
+    window.removeEventListener("unhandledrejection", onRejection);
+  };
+}, []);
 
 
   window.addEventListener("pointerdown", mark, { passive: true });
@@ -1461,6 +1481,26 @@ function scoreToHealthColor(pct) {
 
   return (
     <div className="page" style={{ textAlign: "center" }}>
+      {fatal ? (
+  <div
+    style={{
+      margin: "18px auto",
+      width: "min(980px, 92vw)",
+      background: "#fff1f2",
+      border: "1px solid rgba(239,68,68,0.35)",
+      color: "rgba(153,27,27,0.95)",
+      padding: 14,
+      borderRadius: 14,
+      fontWeight: 800,
+      textAlign: "left",
+      whiteSpace: "pre-wrap",
+      wordBreak: "break-word",
+    }}
+  >
+    {fatal}
+  </div>
+) : null}
+
       <div className="mx-auto w-full max-w-[980px]">
         <audio ref={ttsAudioRef} preload="auto" />
 
@@ -2050,7 +2090,7 @@ const barColor = scoreToHealthColor(animatedSentencePct);
         const label = cmuChipLabel(phSym);
         const s100 = getPhScore100(p);
 const safe100 = s100 == null ? 0 : s100;
-        const color = scoreToColor(s100);
+const color = scoreToColor(safe100);
 
         return (
           <div
