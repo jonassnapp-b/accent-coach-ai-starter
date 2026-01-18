@@ -2343,12 +2343,20 @@ WebkitUserDrag: "none",
   </div>
 
   <button
-    onClick={() => setSelectedWordIdx(null)}
-    className="btn btn-ghost btn-sm"
-    style={{ alignSelf: "flex-start" }}
-  >
-    Close
-  </button>
+  onClick={() => setSelectedWordIdx(null)}
+  className="btn btn-ghost btn-sm"
+  style={{
+    alignSelf: "flex-start",
+    padding: "6px 10px",
+    fontSize: 12,
+    lineHeight: 1,
+    borderRadius: 12,
+    minHeight: 0,
+    height: 32,
+  }}
+>
+  Close
+</button>
 </div>
 
     {/* Phoneme insight rows (Duolingo-like) */}
