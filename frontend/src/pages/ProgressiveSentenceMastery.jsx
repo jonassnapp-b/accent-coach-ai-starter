@@ -1130,28 +1130,313 @@ const selectedApiWord = useMemo(() => {
 }, [result, selectedWordIdx, displayWords]);
 
 
-function phonemeTip(ph) {
-  const p = String(ph || "").toUpperCase();
+function scoreBand(score100) {
+  const s = Number(score100);
+  if (!isFinite(s)) return "mid";
+  if (s < 50) return "low";
+  if (s < 80) return "mid";
+  return "high";
+}
 
-  // ARPAbet-ish quick tips (extend over time)
-  const tips = {
-    S: "Make the /s/ crisp: steady airflow, no voicing.",
-    Z: "Add voicing for /z/: it’s like /s/ but with vibration.",
-    N: "Nasal /n/: tongue touches the ridge behind upper teeth, air through nose.",
-    D: "Light /d/: quick tongue tap behind upper teeth (don’t over-release).",
-    T: "Crisp /t/: quick tongue contact, minimal extra air (unless aspirated).",
-    R: "American /r/: tongue pulled back slightly, lips relaxed (no trilling).",
-    L: "Clear /l/: tongue up behind teeth; don’t swallow the vowel after it.",
-    AW: "For /aw/: start with 'a' then round lips into 'oo' (smooth glide).",
-    OW: "For /ow/: start neutral then round lips (don’t make it too flat).",
-    AE: "For /æ/: open mouth more (like 'cat'), keep it short.",
-    AH: "For /ʌ/ /ah/: relaxed jaw, central vowel (not too rounded).",
-    IH: "For /ɪ/: short, relaxed vowel (like 'sit'), not 'ee'.",
-    IY: "For /i:/: smile slightly, long 'ee' vowel (like 'see').",
+function phonemeIssueTitle(ph, score100) {
+  const p = String(ph || "").toUpperCase();
+  const band = scoreBand(score100);
+
+  // Headline = DIAGNOSIS (no commands)
+  const ISSUE = {
+    // Stops
+    T: {
+      low: "/t/ clarity is off (timing + release)",
+      mid: "/t/ is inconsistent",
+      high: "/t/ is solid",
+    },
+    D: {
+      low: "/d/ sounds too heavy or unclear",
+      mid: "/d/ is inconsistent",
+      high: "/d/ is solid",
+    },
+    P: {
+      low: "/p/ timing is off (too weak/too strong)",
+      mid: "/p/ is inconsistent",
+      high: "/p/ is solid",
+    },
+    B: {
+      low: "/b/ voicing is unclear",
+      mid: "/b/ is inconsistent",
+      high: "/b/ is solid",
+    },
+    K: {
+      low: "/k/ is not clean (back tongue contact)",
+      mid: "/k/ is inconsistent",
+      high: "/k/ is solid",
+    },
+    G: {
+      low: "/g/ is not clean (voiced /k/)",
+      mid: "/g/ is inconsistent",
+      high: "/g/ is solid",
+    },
+
+    // Fricatives / affricates
+    S: {
+      low: "/s/ airflow is wrong (too soft or voiced)",
+      mid: "/s/ is inconsistent",
+      high: "/s/ is solid",
+    },
+    Z: {
+      low: "/z/ voicing is missing or unstable",
+      mid: "/z/ is inconsistent",
+      high: "/z/ is solid",
+    },
+    SH: {
+      low: "/sh/ shape is off (lips + tongue)",
+      mid: "/sh/ is inconsistent",
+      high: "/sh/ is solid",
+    },
+    CH: {
+      low: "/ch/ is not crisp (stop + burst)",
+      mid: "/ch/ is inconsistent",
+      high: "/ch/ is solid",
+    },
+    JH: {
+      low: "/j/ is not clean (voiced /ch/)",
+      mid: "/j/ is inconsistent",
+      high: "/j/ is solid",
+    },
+    TH: {
+      low: "Unvoiced “th” (/th/) is off",
+      mid: "Unvoiced “th” is inconsistent",
+      high: "Unvoiced “th” is solid",
+    },
+    DH: {
+      low: "Voiced “th” (/th/ as in “this”) is off",
+      mid: "Voiced “th” is inconsistent",
+      high: "Voiced “th” is solid",
+    },
+
+    // Nasals / liquids
+    N: {
+      low: "/n/ placement is off (tongue + nasal airflow)",
+      mid: "/n/ is inconsistent",
+      high: "/n/ is solid",
+    },
+    M: {
+      low: "/m/ nasal closure is off (lips)",
+      mid: "/m/ is inconsistent",
+      high: "/m/ is solid",
+    },
+    NG: {
+      low: "/ng/ ending is off (back tongue + nasal)",
+      mid: "/ng/ is inconsistent",
+      high: "/ng/ is solid",
+    },
+    R: {
+      low: "American /r/ shape is off",
+      mid: "/r/ is inconsistent",
+      high: "/r/ is solid",
+    },
+    L: {
+      low: "/l/ placement is off (tongue too low/back)",
+      mid: "/l/ is inconsistent",
+      high: "/l/ is solid",
+    },
+
+    // Common vowels (ARPAbet-ish)
+    IH: {
+      low: "/ih/ vowel quality is off",
+      mid: "/ih/ is inconsistent",
+      high: "/ih/ is solid",
+    },
+    IY: {
+      low: "/ee/ vowel quality is off",
+      mid: "/ee/ is inconsistent",
+      high: "/ee/ is solid",
+    },
+    AE: {
+      low: "/ae/ (“cat”) vowel quality is off",
+      mid: "/ae/ is inconsistent",
+      high: "/ae/ is solid",
+    },
+    AH: {
+      low: "/uh/ vowel quality is off",
+      mid: "/uh/ is inconsistent",
+      high: "/uh/ is solid",
+    },
+   AX: {
+  low: '"uh" vowel is off (too tense/too strong)',
+  mid: '"uh" vowel is inconsistent',
+  high: '"uh" vowel is solid',
+},
+    ER: {
+      low: "/er/ (“bird”) is off (r-colored vowel)",
+      mid: "/er/ is inconsistent",
+      high: "/er/ is solid",
+    },
+    OW: {
+      low: "/ow/ glide is off (start → round)",
+      mid: "/ow/ is inconsistent",
+      high: "/ow/ is solid",
+    },
+    AW: {
+      low: "/aw/ glide is off (open → round)",
+      mid: "/aw/ is inconsistent",
+      high: "/aw/ is solid",
+    },
   };
 
-  return tips[p] || `Focus on the "${ph}" sound: slow down and exaggerate it slightly.`;
+  const entry = ISSUE[p];
+  if (entry) return entry[band] || entry.mid;
+
+  // fallback (still diagnostic, no “exaggerate” spam)
+  if (band === "low") return `"${p}" needs adjustment`;
+  if (band === "high") return `"${p}" looks good`;
+  return `"${p}" is inconsistent`;
 }
+
+function phonemeHowTo(ph, score100) {
+  const p = String(ph || "").toUpperCase();
+  const band = scoreBand(score100);
+
+  // Subline = HOW TO FIX (actionable steps, can be commands)
+  // Make “low” more detailed, “mid” lighter, “high” = keep doing it.
+  const HOW = {
+    // Stops
+    T: {
+      low: "Tap tongue just behind upper teeth, then release quickly. Avoid adding extra “h” air unless the word needs it.",
+      mid: "Keep /t/ short and clean. Quick contact, quick release.",
+      high: "Keep the /t/ tight and short.",
+    },
+    D: {
+      low: "Use a lighter tongue tap behind the upper teeth. Keep voicing on, don’t over-release.",
+      mid: "Keep /d/ quick and light, with voicing.",
+      high: "Good /d/ — keep it light.",
+    },
+    K: {
+      low: "Lift the back of your tongue to the soft palate. Release cleanly (no extra vowel after).",
+      mid: "Make a cleaner back-tongue contact for /k/.",
+      high: "Good /k/ — keep the release clean.",
+    },
+    G: {
+      low: "Same place as /k/, but keep your voice on (vibration). Don’t add an extra vowel after.",
+      mid: "Keep /g/ voiced and clean (no extra sound).",
+      high: "Good /g/ — keep it voiced.",
+    },
+
+    // Fricatives / affricates
+    S: {
+      low: "Push steady air through a small gap. No voice/vibration. Keep the sound thin and continuous.",
+      mid: "Steady airflow, no voicing. Keep it crisp.",
+      high: "Nice /s/ — keep it crisp.",
+    },
+    Z: {
+      low: "Same as /s/ but add voicing (feel vibration in throat). Keep airflow steady.",
+      mid: "Keep /z/ voiced and steady.",
+      high: "Nice /z/ — keep the buzz.",
+    },
+    SH: {
+      low: "Round lips slightly and pull tongue back a bit. Smooth airflow (not a hissy /s/).",
+      mid: "Slight lip rounding + smoother airflow for /sh/.",
+      high: "Good /sh/ — keep it smooth.",
+    },
+    CH: {
+      low: "Start with a brief stop, then a sharp burst (like /t/ + /sh/ together). Don’t drag it out.",
+      mid: "Keep /ch/ tight then release cleanly.",
+      high: "Good /ch/ — keep it crisp.",
+    },
+    JH: {
+      low: "Like /ch/ but voiced. Keep it clean and don’t over-lengthen.",
+      mid: "Keep /j/ voiced and clean.",
+      high: "Good /j/ — keep it voiced.",
+    },
+    TH: {
+      low: "Put tongue slightly between teeth and blow air gently. No voicing (no vibration).",
+      mid: "Show a little tongue and keep airflow gentle.",
+      high: "Good /th/ — keep it light.",
+    },
+    DH: {
+      low: "Same tongue position as /th/ but add voicing (vibration). Keep it smooth, not forced.",
+      mid: "Voicing on + smooth airflow for “this”-/th/.",
+      high: "Good voiced /th/ — keep it smooth.",
+    },
+
+    // Nasals / liquids
+    N: {
+      low: "Touch the ridge behind upper teeth with your tongue and let air go through your nose. Don’t release into a vowel too early.",
+      mid: "Tongue up behind teeth + nasal airflow.",
+      high: "Good /n/ — keep it nasal.",
+    },
+    M: {
+      low: "Close lips fully and send air through the nose. Keep it steady and don’t leak air from the mouth.",
+      mid: "Full lip closure + nasal airflow.",
+      high: "Good /m/ — keep it clean.",
+    },
+    NG: {
+      low: "Back of tongue up (like /k/) but nasal airflow. Don’t add a hard /g/ at the end unless the word has it.",
+      mid: "End with /ng/ (no extra /g/).",
+      high: "Good /ng/ — keep it nasal.",
+    },
+    R: {
+      low: "Pull tongue slightly back (no trill). Keep lips relaxed, not rounded too much.",
+      mid: "Hold tongue back and keep it relaxed.",
+      high: "Good /r/ — keep it relaxed.",
+    },
+    L: {
+      low: "Tongue tip up behind the teeth. Keep the vowel flowing after (don’t swallow the sound).",
+      mid: "Tongue up + clear /l/ release.",
+      high: "Good /l/ — keep it clear.",
+    },
+
+    // Vowels
+    IH: {
+      low: "Make it short and relaxed (like “sit”), not a long “ee”. Avoid smiling too much.",
+      mid: "Short, relaxed /ih/ (don’t drift into /ee/).",
+      high: "Good /ih/ — keep it short.",
+    },
+    IY: {
+      low: "Slight smile, higher tongue, and hold it a bit longer (like “see”).",
+      mid: "Keep /ee/ bright and a touch longer.",
+      high: "Good /ee/ — keep it bright.",
+    },
+    AE: {
+      low: "Open mouth more and keep it short (like “cat”). Don’t turn it into /eh/.",
+      mid: "More open mouth for /ae/.",
+      high: "Good /ae/ — keep it open.",
+    },
+    AH: {
+      low: "Relax jaw and keep the vowel central (not rounded). Don’t make it “oh”.",
+      mid: "Relaxed, central /uh/.",
+      high: "Good /uh/ — keep it relaxed.",
+    },
+    AX: {
+  low: 'Make it weaker and more relaxed (a quick "uh"). Don’t stress it.',
+  mid: 'Keep "uh" quick and unstressed.',
+  high: 'Good "uh" — keep it light.',
+},
+    ER: {
+      low: "Slight tongue pull-back to add the “r-color”. Keep lips relaxed and don’t over-round.",
+      mid: "Maintain the r-colored shape consistently.",
+      high: "Good /er/ — keep the r-color.",
+    },
+    OW: {
+      low: "Start neutral then round lips into “oo”. Smooth glide, don’t flatten it.",
+      mid: "Smooth glide into rounding for /ow/.",
+      high: "Good /ow/ — keep the glide.",
+    },
+    AW: {
+      low: "Start open (“a”) then round to “oo”. Make the transition smooth and clear.",
+      mid: "Smooth open → round glide.",
+      high: "Good /aw/ — keep it smooth.",
+    },
+  };
+
+  const entry = HOW[p];
+  if (entry) return entry[band] || entry.mid;
+
+  // fallback (actionable but not “exaggerate everything”)
+  if (band === "high") return "Keep this sound consistent.";
+  if (band === "low") return `Slow down and focus on clean articulation for "${p}".`;
+  return `Try a slightly clearer "${p}" and keep it consistent.`;
+}
+
 
 function phonemeActionHeadline(ph, score100) {
   const p = String(ph || "").toUpperCase();
@@ -2171,28 +2456,28 @@ const color = scoreToColor(safe100);
 
             {/* Middle: heading + short explanation */}
 <div style={{ minWidth: 0, textAlign: "left" }}>
-  <div
-    style={{
-      fontWeight: 900,
-      color: "rgba(0,0,0,0.78)",
-      fontSize: 14,
-      lineHeight: 1.15,
-    }}
-  >
-    {phonemeActionHeadline(phSym, safe100)}
-  </div>
+ <div
+  style={{
+    fontWeight: 900,
+    color: "rgba(0,0,0,0.78)",
+    fontSize: 14,
+    lineHeight: 1.15,
+  }}
+>
+  {phonemeIssueTitle(phSym, safe100)}
+</div>
 
-  <div
-    style={{
-      marginTop: 2,
-      fontWeight: 800,
-      color: "rgba(0,0,0,0.45)",
-      fontSize: 12,
-      lineHeight: 1.25,
-    }}
-  >
-    {phonemeTip(phSym)}
-  </div>
+<div
+  style={{
+    marginTop: 2,
+    fontWeight: 800,
+    color: "rgba(0,0,0,0.45)",
+    fontSize: 12,
+    lineHeight: 1.25,
+  }}
+>
+  {phonemeHowTo(phSym, safe100)}
+</div>
 </div>
 
             {/* Right: percent ring */}
