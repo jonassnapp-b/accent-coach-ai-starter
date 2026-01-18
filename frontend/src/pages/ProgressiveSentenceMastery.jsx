@@ -2444,8 +2444,7 @@ const color = scoreToColor(safe100);
               alignItems: "center",
               padding: "10px 12px",
               borderRadius: 16,
-              border: "1px solid var(--panel-border)",
-              background: "rgba(255,255,255,0.55)",
+                            background: "rgba(255,255,255,0.55)",
             }}
           >
             {/* Left: colored circle with phoneme label */}
