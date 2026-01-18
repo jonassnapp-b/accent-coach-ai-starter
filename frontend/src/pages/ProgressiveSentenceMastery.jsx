@@ -2119,69 +2119,6 @@ WebkitUserDrag: "none",
           </div>
         </div>
 
-{/* ✅ “Health bar” sentence score (only when we have a result) */}
-{result && sentenceScorePct != null && (() => {
-const tier = scoreTier(animatedSentencePct);
-const fill = Math.max(0, Math.min(100, animatedSentencePct));
-const barColor = scoreToHealthColor(animatedSentencePct);
-
-  const pulse = tier === "low";
-  const shine = tier === "high";
-
-  return (
-    <div style={{ marginTop: 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <div style={{ fontSize: 12, fontWeight: 900, color: "rgba(0,0,0,0.35)" }}>
-          Sentence score
-        </div>
-        <div style={{ fontSize: 12, fontWeight: 900, color: "rgba(0,0,0,0.55)" }}>
-          {animatedSentencePct}%
-        </div>
-      </div>
-
-      <div
-        style={{
-          marginTop: 8,
-          height: 12,
-          borderRadius: 999,
-          background: "rgba(0,0,0,0.10)",
-          overflow: "hidden",
-          position: "relative",
-          boxShadow: pulse ? "0 0 0 rgba(239,68,68,0)" : "none",
-          animation: pulse ? "acPulseRed 1.15s ease-in-out infinite" : "none",
-        }}
-      >
-        {/* fill */}
-        <div
-          style={{
-            height: "100%",
-            width: `${fill}%`,
-            borderRadius: 999,
-            background: barColor,
-            transition: "width 220ms ease, background 220ms ease",
-            position: "relative",
-          }}
-        >
-          {/* shine overlay (only if high score) */}
-          {shine ? (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                transform: "translateX(-60%)",
-                background:
-                  "linear-gradient(110deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0) 100%)",
-                animation: "acShine 1.6s ease-in-out infinite",
-                pointerEvents: "none",
-              }}
-            />
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-})()}
-
 
 
         {/* hint row */}
@@ -2395,17 +2332,6 @@ const barColor = scoreToHealthColor(animatedSentencePct);
              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
   <div style={{ flex: 1, minWidth: 0 }}>
     {/* Title row + Close (better placement) */}
-   {/* Score line (TOP) */}
-<div
-  style={{
-    fontSize: 13,
-    fontWeight: 900,
-    marginBottom: 6,
-    color: scoreToColor(selectedWord.score100 ?? 0),
-  }}
->
-  Score: {selectedWord.score100 != null ? `${selectedWord.score100}%` : "—"}
-</div>
 
 {/* Title row + Close */}
 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
@@ -2501,9 +2427,17 @@ const color = scoreToColor(safe100);
     </div>
 
     {/* Keep overall word score line if you still want it */}
-    <div style={{ marginTop: 10, fontSize: 13, fontWeight: 800, color: "var(--muted)" }}>
-      Score: {selectedWord.score100 != null ? `${selectedWord.score100}%` : "—"}
-    </div>
+    <div
+  style={{
+    marginTop: 10,
+    fontSize: 13,
+    fontWeight: 900,
+    color: selectedWord?.score100 == null ? "rgba(0,0,0,0.35)" : scoreToColor(selectedWord.score100),
+  }}
+>
+  Score: {selectedWord?.score100 != null ? `${selectedWord.score100}%` : "—"}
+</div>
+
   </div>
 </div>
 
