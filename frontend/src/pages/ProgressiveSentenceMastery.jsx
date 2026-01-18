@@ -1576,8 +1576,8 @@ function getPhScore100(ph) {
 
 function ProgressRingMini({ pct, color }) {
   const p = Math.max(0, Math.min(100, Number(pct) || 0));
-  const size = 28;
-  const stroke = 3;
+  const size = 44;
+  const stroke = 4;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const offset = c * (1 - p / 100);
@@ -1616,7 +1616,7 @@ function ProgressRingMini({ pct, color }) {
           display: "grid",
           placeItems: "center",
           fontWeight: 900,
-          fontSize: 11,
+          fontSize: 13,
           color: "rgba(0,0,0,0.62)",
         }}
       >
@@ -2395,23 +2395,35 @@ const barColor = scoreToHealthColor(animatedSentencePct);
              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
   <div style={{ flex: 1, minWidth: 0 }}>
     {/* Title row + Close (better placement) */}
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-      <div style={{ fontSize: 18, fontWeight: 900, color: "var(--panel-text)" }}>
-        Word:{" "}
-        <span style={{ color: scoreToColor(selectedWord.score100 ?? 0) }}>
-          {selectedWord.text}
-        </span>
-      </div>
+   {/* Score line (TOP) */}
+<div
+  style={{
+    fontSize: 13,
+    fontWeight: 900,
+    marginBottom: 6,
+    color: scoreToColor(selectedWord.score100 ?? 0),
+  }}
+>
+  Score: {selectedWord.score100 != null ? `${selectedWord.score100}%` : "—"}
+</div>
 
-      {/* Close: subtle, top-right */}
-      <button
-        onClick={() => setSelectedWordIdx(null)}
-        className="btn btn-ghost btn-sm"
-        style={{ alignSelf: "flex-start" }}
-      >
-        Close
-      </button>
-    </div>
+{/* Title row + Close */}
+<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+  <div style={{ fontSize: 18, fontWeight: 900, color: "var(--panel-text)" }}>
+    Word:{" "}
+    <span style={{ color: scoreToColor(selectedWord.score100 ?? 0) }}>
+      {selectedWord.text}
+    </span>
+  </div>
+
+  <button
+    onClick={() => setSelectedWordIdx(null)}
+    className="btn btn-ghost btn-sm"
+    style={{ alignSelf: "flex-start" }}
+  >
+    Close
+  </button>
+</div>
 
     {/* Phoneme insight rows (Duolingo-like) */}
     <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
@@ -2427,7 +2439,7 @@ const color = scoreToColor(safe100);
             key={`insight-${selectedWordIdx}-${i}`}
             style={{
               display: "grid",
-              gridTemplateColumns: "40px 1fr 52px",
+              gridTemplateColumns: "44px 1fr 86px",
               gap: 12,
               alignItems: "center",
               padding: "10px 12px",
