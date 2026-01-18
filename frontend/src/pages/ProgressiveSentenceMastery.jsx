@@ -2225,23 +2225,12 @@ const color = scoreToColor(safe100);
                   const s100 = s01 == null ? null : Math.round(s01 * 100);
                   const c = s100 == null ? "var(--panel-text)" : scoreToColor(s100);
 
-                  return (
-                    <div
-                      key={`apiw-${selectedWordIdx}-ph-${i}`}
-                      style={{
-                        border: "1px solid var(--panel-border)",
-                        borderRadius: 999,
-                        padding: "6px 10px",
-                        fontWeight: 900,
-                        color: c,
-                        background: "rgba(255,255,255,0.04)",
-                      }}
-                      title={s100 != null ? `${s100}%` : ""}
-                    >
-                    {cmuChipLabel(p.ph || p.phoneme)}
-{s100 != null ? ` · ${s100}%` : ""}
-                    </div>
-                  );
+                 return (
+  <div style={{ padding: 24, fontWeight: 900, color: "#111" }}>
+    PSM ROUTE IS RENDERING ✅
+  </div>
+);
+
                 })}
               </div>
 
