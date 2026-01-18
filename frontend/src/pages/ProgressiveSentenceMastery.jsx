@@ -2179,7 +2179,7 @@ const color = scoreToColor(safe100);
       lineHeight: 1.15,
     }}
   >
-    {phonemeActionHeadline(phSym, s100)}
+    {phonemeActionHeadline(phSym, safe100)}
   </div>
 
   <div
@@ -2197,7 +2197,7 @@ const color = scoreToColor(safe100);
 
             {/* Right: percent ring */}
             <div style={{ justifySelf: "end" }}>
-              <ProgressRingMini pct={s100} color={color} />
+              <ProgressRingMini pct={safe100} color={color} />
             </div>
           </div>
         );
@@ -2212,27 +2212,39 @@ const color = scoreToColor(safe100);
 </div>
 
 
-              <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                {(selectedApiWord.phonemes || []).slice(0, 24).map((p, i) => {
-                  const s01 = clamp01(
-                    p.pronunciation ??
-                      p.accuracy_score ??
-                      p.pronunciation_score ??
-                      p.score ??
-                      p.accuracy ??
-                      p.accuracyScore
-                  );
-                  const s100 = s01 == null ? null : Math.round(s01 * 100);
-                  const c = s100 == null ? "var(--panel-text)" : scoreToColor(s100);
+             <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+  {(selectedApiWord.phonemes || []).slice(0, 24).map((p, i) => {
+    const s01 = clamp01(
+      p.pronunciation ??
+        p.accuracy_score ??
+        p.pronunciation_score ??
+        p.score ??
+        p.accuracy ??
+        p.accuracyScore
+    );
+    const s100 = s01 == null ? null : Math.round(s01 * 100);
+    const safe100 = s100 == null ? 0 : s100;
+    const c = scoreToColor(safe100);
 
-                 return (
-  <div style={{ padding: 24, fontWeight: 900, color: "#111" }}>
-    PSM ROUTE IS RENDERING ✅
-  </div>
-);
+    return (
+      <div
+        key={`apiw-${selectedWordIdx}-ph-${i}`}
+        style={{
+          border: "1px solid var(--panel-border)",
+          borderRadius: 999,
+          padding: "6px 10px",
+          fontWeight: 900,
+          color: c,
+          background: "rgba(255,255,255,0.04)",
+        }}
+        title={`${safe100}%`}
+      >
+        {cmuChipLabel(p.ph || p.phoneme)} · {safe100}%
+      </div>
+    );
+  })}
+</div>
 
-                })}
-              </div>
 
               <div style={{ marginTop: 10, fontSize: 13, fontWeight: 800, color: "var(--muted)" }}>
                 If a phoneme is red, try again and click the word to see changes.
