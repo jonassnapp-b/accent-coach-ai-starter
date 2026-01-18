@@ -1959,42 +1959,93 @@ const barColor = scoreToHealthColor(animatedSentencePct);
           {/* Word details (single panel when opened) */}
           {result && selectedWord && selectedApiWord ? (
             <div className="panel" style={{ width: "min(860px, 92vw)", textAlign: "left", marginTop: 6 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 900, color: "var(--panel-text)" }}>
-                    Word: <span style={{ color: "var(--primary)" }}>{selectedWord.text}</span>
-                  </div>
-                  <div style={{ marginTop: 4, fontSize: 13, fontWeight: 800, color: "var(--muted)" }}>
-                    Score: {selectedWord.score100 != null ? `${selectedWord.score100}%` : "—"}
-                  {(() => {
-  const lines = buildWrittenFeedbackForWord(selectedApiWord);
-  if (!lines.length) return null;
-
-  return (
-    <div style={{ marginTop: 10 }}>
-      <div style={{ fontSize: 13, fontWeight: 900, color: "var(--muted)", marginBottom: 6 }}>
-        Written feedback (all issues)
+             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+  <div style={{ flex: 1, minWidth: 0 }}>
+    {/* Title row + Close (better placement) */}
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+      <div style={{ fontSize: 18, fontWeight: 900, color: "var(--panel-text)" }}>
+        Word:{" "}
+        <span style={{ color: scoreToColor(selectedWord.score100 ?? 0) }}>
+          {selectedWord.text}
+        </span>
       </div>
-      <ul style={{ margin: 0, paddingLeft: 18, textAlign: "left" }}>
-        {lines.map((t, i) => (
-          <li key={i} style={{ fontSize: 13, fontWeight: 800, color: "var(--panel-text)", marginBottom: 4 }}>
-            {t}
-          </li>
-        ))}
-      </ul>
+
+      {/* Close: subtle, top-right */}
+      <button
+        onClick={() => setSelectedWordIdx(null)}
+        className="btn btn-ghost btn-sm"
+        style={{ alignSelf: "flex-start" }}
+      >
+        Close
+      </button>
     </div>
-  );
-})()}
 
-                  </div>
-                  
+    {/* Phoneme insight rows (Duolingo-like) */}
+    <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+      {(selectedApiWord.phonemes || []).slice(0, 3).map((p, i) => {
+        const phSym = String(p.ph || p.phoneme || "").toUpperCase();
+        const label = cmuChipLabel(phSym);
+        const s100 = getPhScore100(p) ?? 0;
+        const color = scoreToColor(s100);
 
-                </div>
+        return (
+          <div
+            key={`insight-${selectedWordIdx}-${i}`}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "40px 1fr 52px",
+              gap: 12,
+              alignItems: "center",
+              padding: "10px 12px",
+              borderRadius: 16,
+              border: "1px solid var(--panel-border)",
+              background: "rgba(255,255,255,0.55)",
+            }}
+          >
+            {/* Left: colored circle with phoneme label */}
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 999,
+                display: "grid",
+                placeItems: "center",
+                background: color,
+                color: "white",
+                fontWeight: 900,
+                fontSize: 12,
+              }}
+              title={label}
+            >
+              {label}
+            </div>
 
-                <button onClick={() => setSelectedWordIdx(null)} className="btn btn-ghost btn-sm">
-                  Close
-                </button>
+            {/* Middle: heading + short explanation */}
+            <div style={{ minWidth: 0, textAlign: "left" }}>
+              <div style={{ fontWeight: 900, color: "rgba(0,0,0,0.78)", fontSize: 14, lineHeight: 1.15 }}>
+                {label}
               </div>
+              <div style={{ marginTop: 2, fontWeight: 800, color: "rgba(0,0,0,0.45)", fontSize: 12, lineHeight: 1.25 }}>
+                {phonemeTip(phSym)}
+              </div>
+            </div>
+
+            {/* Right: percent ring */}
+            <div style={{ justifySelf: "end" }}>
+              <ProgressRingMini pct={s100} color={color} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    {/* Keep overall word score line if you still want it */}
+    <div style={{ marginTop: 10, fontSize: 13, fontWeight: 800, color: "var(--muted)" }}>
+      Score: {selectedWord.score100 != null ? `${selectedWord.score100}%` : "—"}
+    </div>
+  </div>
+</div>
+
 
               <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
                 {(selectedApiWord.phonemes || []).slice(0, 24).map((p, i) => {
