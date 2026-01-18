@@ -1155,6 +1155,53 @@ function phonemeTip(ph) {
   return tips[p] || `Focus on the "${ph}" sound: slow down and exaggerate it slightly.`;
 }
 
+function phonemeActionHeadline(ph, score100) {
+  const p = String(ph || "").toUpperCase();
+  const s = Number(score100);
+  const band = !isFinite(s) ? "mid" : s < 50 ? "low" : s < 80 ? "mid" : "high";
+
+  // Keep these SHORT + action-oriented (headline style)
+  const map = {
+    S: { low: "Push more airflow on /s/", mid: "Keep /s/ crisp and steady", high: "Nice /s/ — keep it sharp" },
+    Z: { low: "Add voicing on /z/", mid: "Vibrate your voice on /z/", high: "Good /z/ — keep the buzz" },
+
+    T: { low: "Make /t/ cleaner and shorter", mid: "Tap /t/ lightly (no extra air)", high: "Nice /t/ — keep it tight" },
+    D: { low: "Lighten the /d/ (quick tap)", mid: "Use a quicker /d/ release", high: "Good /d/ — keep it light" },
+
+    N: { low: "Send air through the nose on /n/", mid: "Keep /n/ nasal and steady", high: "Good /n/ — keep the nasal" },
+
+    R: { low: "Pull tongue back for /r/", mid: "Hold tongue back on /r/", high: "Nice /r/ — keep it relaxed" },
+    L: { low: "Touch ridge for clear /l/", mid: "Keep /l/ clear (tongue up)", high: "Good /l/ — keep it clean" },
+
+    IH: { low: "Make /ih/ shorter and looser", mid: "Relax /ih/ (don’t make it /ee/)", high: "Good /ih/ — keep it short" },
+    IY: { low: "Smile more for /ee/", mid: "Hold /ee/ a bit longer", high: "Good /ee/ — keep it bright" },
+
+    AE: { low: "Open more for /æ/", mid: "Keep /æ/ open and short", high: "Nice /æ/ — keep it open" },
+    AH: { low: "Relax jaw for /uh/", mid: "Keep /uh/ centered (not rounded)", high: "Good /uh/ — keep it relaxed" },
+
+    OW: { low: "Round lips more on /ow/", mid: "Glide into rounded /ow/", high: "Good /ow/ — keep the glide" },
+    AW: { low: "Glide /a/ → /oo/ more clearly", mid: "Make the /aw/ glide smoother", high: "Nice /aw/ — keep it smooth" },
+
+    TH: { low: "Let tongue out slightly for /th/", mid: "Show a bit more tongue on /th/", high: "Good /th/ — keep it light" },
+    DH: { low: "Add voicing on /th/ (this)", mid: "Vibrate your voice on /th/", high: "Good voiced /th/ — keep it smooth" },
+
+    SH: { low: "Round lips more for /sh/", mid: "Push air smoothly for /sh/", high: "Nice /sh/ — keep it smooth" },
+    CH: { low: "Make /ch/ a cleaner pop", mid: "Keep /ch/ tight then release", high: "Good /ch/ — keep it crisp" },
+    JH: { low: "Add more voicing on /j/", mid: "Keep /j/ voiced and clean", high: "Nice /j/ — keep it voiced" },
+
+    NG: { low: "Lift back tongue for /ng/", mid: "End with /ng/ (no hard /g/)", high: "Good /ng/ — keep it nasal" },
+  };
+
+  const entry = map[p];
+  if (entry) return entry[band] || entry.mid;
+
+  // fallback (still action-y)
+  if (band === "low") return `Slow down and exaggerate "${p}"`;
+  if (band === "high") return `Nice "${p}" — keep it consistent`;
+  return `Refine the "${p}" sound`;
+}
+
+
 const CMU_HELP = {
   TH: "th",
   DH: "th",
@@ -2125,14 +2172,30 @@ const color = scoreToColor(safe100);
             </div>
 
             {/* Middle: heading + short explanation */}
-            <div style={{ minWidth: 0, textAlign: "left" }}>
-              <div style={{ fontWeight: 900, color: "rgba(0,0,0,0.78)", fontSize: 14, lineHeight: 1.15 }}>
-                {label}
-              </div>
-              <div style={{ marginTop: 2, fontWeight: 800, color: "rgba(0,0,0,0.45)", fontSize: 12, lineHeight: 1.25 }}>
-                {phonemeTip(phSym)}
-              </div>
-            </div>
+<div style={{ minWidth: 0, textAlign: "left" }}>
+  <div
+    style={{
+      fontWeight: 900,
+      color: "rgba(0,0,0,0.78)",
+      fontSize: 14,
+      lineHeight: 1.15,
+    }}
+  >
+    {phonemeActionHeadline(phSym, s100)}
+  </div>
+
+  <div
+    style={{
+      marginTop: 2,
+      fontWeight: 800,
+      color: "rgba(0,0,0,0.45)",
+      fontSize: 12,
+      lineHeight: 1.25,
+    }}
+  >
+    {phonemeTip(phSym)}
+  </div>
+</div>
 
             {/* Right: percent ring */}
             <div style={{ justifySelf: "end" }}>
