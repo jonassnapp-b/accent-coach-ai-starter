@@ -1212,6 +1212,69 @@ return `${label} (${w.s100}%): ${phonemeTip(raw)}`;
   const x = Math.max(0, Math.min(1, s / 100));
   return `hsl(${x * 120}deg 75% 45%)`;
 }
+function getPhScore100(ph) {
+  const s01 = clamp01(
+    ph?.pronunciation ??
+      ph?.accuracy_score ??
+      ph?.pronunciation_score ??
+      ph?.score ??
+      ph?.accuracy ??
+      ph?.accuracyScore
+  );
+  return s01 == null ? null : Math.round(s01 * 100);
+}
+
+function ProgressRingMini({ pct, color }) {
+  const p = Math.max(0, Math.min(100, Number(pct) || 0));
+  const size = 28;
+  const stroke = 3;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c * (1 - p / 100);
+
+  return (
+    <div style={{ width: size, height: size, position: "relative" }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {/* track */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="rgba(0,0,0,0.12)"
+          strokeWidth={stroke}
+        />
+        {/* progress */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={color || "rgba(0,0,0,0.6)"}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </svg>
+
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "grid",
+          placeItems: "center",
+          fontWeight: 900,
+          fontSize: 11,
+          color: "rgba(0,0,0,0.62)",
+        }}
+      >
+        {p}%
+      </div>
+    </div>
+  );
+}
 
 
   const MicIcon = (
@@ -1985,7 +2048,8 @@ const barColor = scoreToHealthColor(animatedSentencePct);
       {(selectedApiWord.phonemes || []).slice(0, 3).map((p, i) => {
         const phSym = String(p.ph || p.phoneme || "").toUpperCase();
         const label = cmuChipLabel(phSym);
-        const s100 = getPhScore100(p) ?? 0;
+        const s100 = getPhScore100(p);
+const safe100 = s100 == null ? 0 : s100;
         const color = scoreToColor(s100);
 
         return (
