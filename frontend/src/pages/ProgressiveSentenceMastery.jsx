@@ -319,18 +319,7 @@ const [loading, setLoading] = useState(false);
 
 const [hydrated, setHydrated] = useState(false);
 
-useEffect(() => {
-  const mark = async () => {
-  if (!userInteractedRef.current) {
-    userInteractedRef.current = true;
-
-    // ✅ unlock audio once on first real user gesture
-    await unlockAudioOnce();
-
-    // ✅ trigger rerender so autoplay effect can run
-    setInteractionTick((t) => t + 1);
-  }
-};
+// ✅ Global error capture (so fatal shows instead of white screen)
 useEffect(() => {
   const onError = (e) => {
     const msg = e?.error?.stack || e?.error?.message || e?.message || String(e);
@@ -350,6 +339,15 @@ useEffect(() => {
   };
 }, []);
 
+// ✅ First user gesture → unlock audio once
+useEffect(() => {
+  const mark = async () => {
+    if (userInteractedRef.current) return;
+    userInteractedRef.current = true;
+
+    await unlockAudioOnce();
+    setInteractionTick((t) => t + 1);
+  };
 
   window.addEventListener("pointerdown", mark, { passive: true });
   window.addEventListener("keydown", mark);
