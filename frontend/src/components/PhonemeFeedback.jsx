@@ -797,6 +797,17 @@ export default function PhonemeFeedback({ result, embed = false, hideBookmark = 
   const words = Array.isArray(result.words) ? result.words : [];
   const targetSentenceRaw = (result.target || result.reference || result.text || result.refText || "").trim();
   const recognition = (result.recognition ?? result.transcript ?? "").trim();
+  const metaRecognition = (result.recognition ?? "").trim();
+const metaConfidence = result.confidence ?? null;
+const metaWarning = result.warning ?? null;
+const metaIntegrity = result.integrity ?? null;
+const metaPauseCount = result.pause_count ?? null;
+const metaSpeed = result.speed ?? null;
+const metaDuration = result.numeric_duration ?? result.duration ?? null;
+const metaFiller = result.pause_filler ?? null;
+const metaLiaison = result.liaison ?? null;
+const metaPlosion = result.plosion ?? null;
+
   const wordsJoined = Array.isArray(words) ? words.map((w) => (w.word ?? w.w ?? "")).join(" ").trim() : "";
   const displaySentence = targetSentenceRaw || recognition || wordsJoined;
 
@@ -1448,31 +1459,106 @@ onClick={async () => {
                           </div>
                         </div>
 
-                        {isOpen && (
-                          <div style={{ marginTop: 10 }}>
-                            <div className="phoneme-row">
-                              {row.phonemes.map((ph) => (
-                                <button
-                                  key={`${row.i}-ph-${ph.ix}`}
-                                  type="button"
-                                  className="phoneme-chip"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    playUserSpan(ph.startSec, ph.endSec);
-                                  }}
-                                  title={`${ph.cmu} • ${ph.pct}%`}
-                                  style={{
-                                    borderColor: "rgba(0,0,0,0.12)",
-                                    color: scoreToColor01((ph.pct ?? 0) / 100),
-                                  }}
-                                >
-                                  <span style={{ fontWeight: 900 }}>{cmuChipLabel(ph.cmu)}</span>
-                                  <span style={{ opacity: 0.75, fontWeight: 800 }}>{ph.pct}%</span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                      {isOpen && (
+  <div style={{ marginTop: 10 }}>
+    {/* META pills */}
+    <div className="phoneme-row" style={{ marginBottom: 10 }}>
+      {metaRecognition && metaRecognition !== targetText && (
+        <div className="phoneme-chip" style={{ cursor: "default" }}>
+          <span style={{ fontWeight: 900 }}>Heard</span>
+          <span style={{ opacity: 0.75, fontWeight: 800 }}>{metaRecognition}</span>
+        </div>
+      )}
+
+      {metaIntegrity != null && (
+        <div className="phoneme-chip" style={{ cursor: "default" }}>
+          <span style={{ fontWeight: 900 }}>Integrity</span>
+          <span style={{ opacity: 0.75, fontWeight: 800 }}>{Math.round(Number(metaIntegrity) || 0)}%</span>
+        </div>
+      )}
+
+      {metaPauseCount != null && (
+        <div className="phoneme-chip" style={{ cursor: "default" }}>
+          <span style={{ fontWeight: 900 }}>Pauses</span>
+          <span style={{ opacity: 0.75, fontWeight: 800 }}>{metaPauseCount}</span>
+        </div>
+      )}
+
+      {metaSpeed != null && (
+        <div className="phoneme-chip" style={{ cursor: "default" }}>
+          <span style={{ fontWeight: 900 }}>Speed</span>
+          <span style={{ opacity: 0.75, fontWeight: 800 }}>{metaSpeed} wpm</span>
+        </div>
+      )}
+
+      {metaDuration != null && (
+        <div className="phoneme-chip" style={{ cursor: "default" }}>
+          <span style={{ fontWeight: 900 }}>Duration</span>
+          <span style={{ opacity: 0.75, fontWeight: 800 }}>{String(metaDuration)}</span>
+        </div>
+      )}
+
+      {metaConfidence != null && (
+        <div className="phoneme-chip" style={{ cursor: "default" }}>
+          <span style={{ fontWeight: 900 }}>Conf</span>
+          <span style={{ opacity: 0.75, fontWeight: 800 }}>{Math.round(Number(metaConfidence) || 0)}%</span>
+        </div>
+      )}
+
+      {metaWarning && (
+        <div className="phoneme-chip" style={{ cursor: "default" }}>
+          <span style={{ fontWeight: 900 }}>Warn</span>
+          <span style={{ opacity: 0.75, fontWeight: 800 }}>⚠</span>
+        </div>
+      )}
+
+      {metaFiller && (
+        <div className="phoneme-chip" style={{ cursor: "default" }}>
+          <span style={{ fontWeight: 900 }}>Fillers</span>
+          <span style={{ opacity: 0.75, fontWeight: 800 }}>✓</span>
+        </div>
+      )}
+
+      {metaLiaison && (
+        <div className="phoneme-chip" style={{ cursor: "default" }}>
+          <span style={{ fontWeight: 900 }}>Linking</span>
+          <span style={{ opacity: 0.75, fontWeight: 800 }}>✓</span>
+        </div>
+      )}
+
+      {metaPlosion && (
+        <div className="phoneme-chip" style={{ cursor: "default" }}>
+          <span style={{ fontWeight: 900 }}>Plosion</span>
+          <span style={{ opacity: 0.75, fontWeight: 800 }}>✓</span>
+        </div>
+      )}
+    </div>
+
+    {/* PHONEMES (existing) */}
+    <div className="phoneme-row">
+      {row.phonemes.map((ph) => (
+        <button
+          key={`${row.i}-ph-${ph.ix}`}
+          type="button"
+          className="phoneme-chip"
+          onClick={(e) => {
+            e.stopPropagation();
+            playUserSpan(ph.startSec, ph.endSec);
+          }}
+          title={`${ph.cmu} • ${ph.pct}%`}
+          style={{
+            borderColor: "rgba(0,0,0,0.12)",
+            color: scoreToColor01((ph.pct ?? 0) / 100),
+          }}
+        >
+          <span style={{ fontWeight: 900 }}>{cmuChipLabel(ph.cmu)}</span>
+          <span style={{ opacity: 0.75, fontWeight: 800 }}>{ph.pct}%</span>
+        </button>
+      ))}
+    </div>
+  </div>
+)}
+
                       </div>
                     );
                   })}

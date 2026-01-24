@@ -223,6 +223,22 @@ async function postSpeechSuperExact({
 // ---------- normalize all official fields ----------
 function mapSpeechsuperToUi(ss, refText, accent) {
   const root = ss?.result || ss?.text_score || ss || {};
+  // --- extra “meta” fields SpeechSuper may return (varies by coreType) ---
+  const recognitionText =
+    (root.recognition ?? root.transcription ?? root.asr ?? "").toString().trim() || null;
+
+  const warning = root.warning ?? ss?.warning ?? null;
+
+  const confidence =
+    (typeof root.confidence === "number" ? root.confidence : null) ??
+    (typeof ss?.confidence === "number" ? ss.confidence : null);
+
+  const pause_filler = root.pause_filler ?? null;
+
+  const liaison = root.liaison ?? null;
+  const plosion = root.plosion ?? null;
+
+  const sentences = root.sentences ?? null;
 
   let overall100 =
     Number(
@@ -305,7 +321,7 @@ function mapSpeechsuperToUi(ss, refText, accent) {
 
     const w01 = Math.max(0, Math.min(1, wScore100 > 1 ? wScore100 / 100 : wScore100));
 
-    words.push({
+      words.push({
       w: wText || refText,
       word: wText || refText,
       score: w01,
@@ -315,9 +331,19 @@ function mapSpeechsuperToUi(ss, refText, accent) {
       phonics,
       pause: it.pause ?? null,
 
+      // ✅ extras (only present in some SS cores)
+      stress: typeof it.stress === "number" ? it.stress : null, // 0/100 (if provided)
+      phonemewise_read:
+        typeof it.phonemewise_read === "number"
+          ? it.phonemewise_read
+          : typeof it.detect_phonemewise_read === "number"
+          ? it.detect_phonemewise_read
+          : null,
+
       // ✅ NEW: word span passed through
       span: wordSpan, // { start, end } in 10ms units (if provided)
     });
+
   }
 
   if (!overall100 && words.length) {
@@ -326,6 +352,13 @@ function mapSpeechsuperToUi(ss, refText, accent) {
 
   return {
     transcript: refText,
+        recognition: recognitionText, // what SpeechSuper thinks you said (if provided)
+    confidence,                   // STT confidence (if provided)
+    warning,                      // warning codes/messages (if provided)
+    pause_filler,                 // filler words stats (if provided)
+    liaison,                      // linking (if provided)
+    plosion,                      // loss of plosion (if provided)
+    sentences,                    // sentence-level array (if provided)
     accent,
     words,
     overall: Math.max(0, Math.min(1, overall100 / 100)),
