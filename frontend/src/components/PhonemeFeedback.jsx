@@ -657,6 +657,8 @@ export default function PhonemeFeedback({ result, embed = false, hideBookmark = 
 
   const [booked, setBooked] = useState(false);
   const [openChunk, setOpenChunk] = useState(null);
+  const [openDetail, setOpenDetail] = useState(null); // key = `${row.i}:${id}`
+
   const [selectedPhKey, setSelectedPhKey] = useState(null);
   const [tipByKey, setTipByKey] = useState(() => ({}));
   const [tipLoadingByKey, setTipLoadingByKey] = useState(() => ({}));
@@ -1462,77 +1464,115 @@ onClick={async () => {
                       {isOpen && (
   <div style={{ marginTop: 10 }}>
     {/* META pills */}
-    <div className="phoneme-row" style={{ marginBottom: 10 }}>
-      {metaRecognition && metaRecognition !== targetText && (
-        <div className="phoneme-chip" style={{ cursor: "default" }}>
-          <span style={{ fontWeight: 900 }}>Heard</span>
-          <span style={{ opacity: 0.75, fontWeight: 800 }}>{metaRecognition}</span>
-        </div>
-      )}
+    {/* META ACCORDION PILLS (full width) */}
+<div style={{ display: "grid", gap: 10, marginBottom: 10 }}>
+  {[
+    {
+      id: "pauses",
+      title: "Pauses",
+      value: metaPauseCount ?? "—",
+      desc: "How many pauses the system detected. More pauses can make speech sound hesitant or choppy.",
+    },
+    {
+      id: "duration",
+      title: "Duration",
+      value: metaDuration ?? "—",
+      desc: "Total spoken time (seconds). Useful for speed/tempo context.",
+    },
+    {
+      id: "speed",
+      title: "Speed",
+      value: metaSpeed ?? "—",
+      desc: "Speaking rate estimate. Too fast can reduce clarity; too slow can sound unnatural.",
+    },
+    {
+      id: "integrity",
+      title: "Integrity",
+      value: metaIntegrity != null ? `${Math.round(Number(metaIntegrity) || 0)}%` : "—",
+      desc: "How complete/valid the spoken attempt was (missing/partial speech can lower this).",
+    },
+    {
+      id: "confidence",
+      title: "Confidence",
+      value: metaConfidence != null ? `${Math.round(Number(metaConfidence) || 0)}%` : "—",
+      desc: "Model confidence in the evaluation. Low confidence can mean noisy audio or unclear speech.",
+    },
+    {
+      id: "warning",
+      title: "Warning",
+      value: metaWarning ? "⚠" : "—",
+      desc: "Warning flags returned by the engine (if supported).",
+    },
+    {
+      id: "heard",
+      title: "Heard",
+      value: metaRecognition && metaRecognition !== targetText ? metaRecognition : "—",
+      desc: "What the engine thinks you said (only shown if it differs from the target).",
+    },
+  ].map((d) => {
+    const k = `${row.i}:${d.id}`;
+    const isDOpen = openDetail === k;
 
-      {metaIntegrity != null && (
-        <div className="phoneme-chip" style={{ cursor: "default" }}>
-          <span style={{ fontWeight: 900 }}>Integrity</span>
-          <span style={{ opacity: 0.75, fontWeight: 800 }}>{Math.round(Number(metaIntegrity) || 0)}%</span>
-        </div>
-      )}
+    return (
+      <div
+        key={k}
+        style={{
+          border: "1px solid rgba(0,0,0,0.10)",
+          background: "#F2F2F7",
+          borderRadius: 16,
+          overflow: "hidden",
+        }}
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpenDetail((v) => (v === k ? null : k));
+          }}
+          style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            padding: "12px 12px",
+            fontWeight: 900,
+            color: "rgba(17,24,39,0.92)",
+          }}
+        >
+          <span>{d.title}</span>
 
-      {metaPauseCount != null && (
-        <div className="phoneme-chip" style={{ cursor: "default" }}>
-          <span style={{ fontWeight: 900 }}>Pauses</span>
-          <span style={{ opacity: 0.75, fontWeight: 800 }}>{metaPauseCount}</span>
-        </div>
-      )}
+          <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ opacity: 0.75, fontWeight: 900 }}>{String(d.value)}</span>
+            <ChevronRight
+              className="h-5 w-5"
+              style={{
+                transform: isDOpen ? "rotate(90deg)" : "rotate(0deg)",
+                transition: "transform 160ms ease",
+                opacity: 0.6,
+              }}
+            />
+          </span>
+        </button>
 
-      {metaSpeed != null && (
-        <div className="phoneme-chip" style={{ cursor: "default" }}>
-          <span style={{ fontWeight: 900 }}>Speed</span>
-          <span style={{ opacity: 0.75, fontWeight: 800 }}>{metaSpeed} wpm</span>
-        </div>
-      )}
+        {isDOpen && (
+          <div
+            style={{
+              padding: "0 12px 12px",
+              color: "rgba(17,24,39,0.70)",
+              fontWeight: 700,
+              fontSize: 13,
+              lineHeight: 1.35,
+            }}
+          >
+            {d.desc}
+          </div>
+        )}
+      </div>
+    );
+  })}
+</div>
 
-      {metaDuration != null && (
-        <div className="phoneme-chip" style={{ cursor: "default" }}>
-          <span style={{ fontWeight: 900 }}>Duration</span>
-          <span style={{ opacity: 0.75, fontWeight: 800 }}>{String(metaDuration)}</span>
-        </div>
-      )}
-
-      {metaConfidence != null && (
-        <div className="phoneme-chip" style={{ cursor: "default" }}>
-          <span style={{ fontWeight: 900 }}>Conf</span>
-          <span style={{ opacity: 0.75, fontWeight: 800 }}>{Math.round(Number(metaConfidence) || 0)}%</span>
-        </div>
-      )}
-
-      {metaWarning && (
-        <div className="phoneme-chip" style={{ cursor: "default" }}>
-          <span style={{ fontWeight: 900 }}>Warn</span>
-          <span style={{ opacity: 0.75, fontWeight: 800 }}>⚠</span>
-        </div>
-      )}
-
-      {metaFiller && (
-        <div className="phoneme-chip" style={{ cursor: "default" }}>
-          <span style={{ fontWeight: 900 }}>Fillers</span>
-          <span style={{ opacity: 0.75, fontWeight: 800 }}>✓</span>
-        </div>
-      )}
-
-      {metaLiaison && (
-        <div className="phoneme-chip" style={{ cursor: "default" }}>
-          <span style={{ fontWeight: 900 }}>Linking</span>
-          <span style={{ opacity: 0.75, fontWeight: 800 }}>✓</span>
-        </div>
-      )}
-
-      {metaPlosion && (
-        <div className="phoneme-chip" style={{ cursor: "default" }}>
-          <span style={{ fontWeight: 900 }}>Plosion</span>
-          <span style={{ opacity: 0.75, fontWeight: 800 }}>✓</span>
-        </div>
-      )}
-    </div>
 
     {/* PHONEMES (existing) */}
     <div className="phoneme-row">

@@ -371,6 +371,12 @@ function mapSpeechsuperToUi(ss, refText, accent) {
     duration: root.duration ?? null,
     numeric_duration: root.numeric_duration ?? null,
     rear_tone: root.rear_tone ?? null,
+    warning: root.warning ?? root.warn ?? null,
+confidence: root.confidence ?? root.conf ?? root.confidence_score ?? null,
+pause_filler: root.pause_filler ?? root.filler ?? null,
+liaison: root.liaison ?? null,
+plosion: root.plosion ?? null,
+
     _debug: {
       resultKeys: Object.keys(root || {}),
       hasWordSpanCount: debug_hasWordSpan,
