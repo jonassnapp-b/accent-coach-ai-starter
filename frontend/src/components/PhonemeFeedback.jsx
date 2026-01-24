@@ -847,8 +847,6 @@ const modelBOverall = useMemo(() => {
 
   const targetText = oneWord ? wordText || "" : displaySentence || "";
 const targetScorePct = modelBOverall.pct;
-const didSpeak = (Number(targetScorePct) || 0) > 0;
-if (!didSpeak) return null;
 
 // --- MAIN overall score bar (XP-style fill + smooth color fade) ---
 const [animatedOverallPct, setAnimatedOverallPct] = useState(0);
