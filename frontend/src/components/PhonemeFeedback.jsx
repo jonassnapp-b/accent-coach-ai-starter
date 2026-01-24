@@ -1466,50 +1466,86 @@ onClick={async () => {
     {/* META pills */}
     {/* META ACCORDION PILLS (full width) */}
 <div style={{ display: "grid", gap: 10, marginBottom: 10 }}>
-  {[
-    {
-      id: "pauses",
-      title: "Pauses",
-      value: metaPauseCount ?? "—",
-      desc: "How many pauses the system detected. More pauses can make speech sound hesitant or choppy.",
-    },
-    {
-      id: "duration",
-      title: "Duration",
-      value: metaDuration ?? "—",
-      desc: "Total spoken time (seconds). Useful for speed/tempo context.",
-    },
-    {
-      id: "speed",
-      title: "Speed",
-      value: metaSpeed ?? "—",
-      desc: "Speaking rate estimate. Too fast can reduce clarity; too slow can sound unnatural.",
-    },
-    {
-      id: "integrity",
-      title: "Integrity",
-      value: metaIntegrity != null ? `${Math.round(Number(metaIntegrity) || 0)}%` : "—",
-      desc: "How complete/valid the spoken attempt was (missing/partial speech can lower this).",
-    },
-    {
-      id: "confidence",
-      title: "Confidence",
-      value: metaConfidence != null ? `${Math.round(Number(metaConfidence) || 0)}%` : "—",
-      desc: "Model confidence in the evaluation. Low confidence can mean noisy audio or unclear speech.",
-    },
-    {
-      id: "warning",
-      title: "Warning",
-      value: metaWarning ? "⚠" : "—",
-      desc: "Warning flags returned by the engine (if supported).",
-    },
-    {
-      id: "heard",
-      title: "Heard",
-      value: metaRecognition && metaRecognition !== targetText ? metaRecognition : "—",
-      desc: "What the engine thinks you said (only shown if it differs from the target).",
-    },
-  ].map((d) => {
+ {[
+  {
+    id: "pauses",
+    title: "Pauses",
+    value: metaPauseCount ?? "—",
+    desc:
+      metaPauseCount == null
+        ? "In this attempt, pause detection wasn’t available."
+        : Number(metaPauseCount) === 0
+        ? "In this attempt, you spoke continuously with no pauses."
+        : Number(metaPauseCount) === 1
+        ? "In this attempt, there was 1 pause, which slightly breaks the flow."
+        : `In this attempt, there were ${metaPauseCount} pauses, which makes it sound more hesitant/choppy.`,
+  },
+  {
+    id: "duration",
+    title: "Duration",
+    value: metaDuration == null ? "—" : `${Number(metaDuration).toFixed(3)}s`,
+    desc:
+      metaDuration == null
+        ? "In this attempt, the total spoken time couldn’t be measured."
+        : Number(metaDuration) < 0.8
+        ? `In this attempt, you finished very quickly (${Number(metaDuration).toFixed(2)}s). That can sound rushed.`
+        : Number(metaDuration) > 2.0
+        ? `In this attempt, you took quite long (${Number(metaDuration).toFixed(2)}s). That can indicate hesitation or slow pacing.`
+        : `In this attempt, your total spoken time was ${Number(metaDuration).toFixed(2)}s, which is a natural length.`,
+  },
+  {
+    id: "speed",
+    title: "Speed",
+    value: metaSpeed ?? "—",
+    desc:
+      metaSpeed == null
+        ? "In this attempt, speaking rate couldn’t be estimated."
+        : Number(metaSpeed) < 90
+        ? `In this attempt, your pace was slow (${metaSpeed}). It may sound less natural.`
+        : Number(metaSpeed) > 160
+        ? `In this attempt, your pace was fast (${metaSpeed}). That can reduce clarity.`
+        : `In this attempt, your pace (${metaSpeed}) looks balanced.`,
+  },
+  {
+    id: "integrity",
+    title: "Integrity",
+    value: metaIntegrity != null ? `${Math.round(Number(metaIntegrity) || 0)}%` : "—",
+    desc:
+      metaIntegrity == null
+        ? "In this attempt, integrity couldn’t be determined."
+        : Number(metaIntegrity) < 70
+        ? "In this attempt, parts of the speech were missing/unclear, so the attempt looks incomplete."
+        : Number(metaIntegrity) < 90
+        ? "In this attempt, most of the speech is present, but some parts are less solid/clear."
+        : "In this attempt, the speech looks complete and valid end-to-end.",
+  },
+  {
+    id: "confidence",
+    title: "Confidence",
+    value: metaConfidence != null ? `${Math.round(Number(metaConfidence) || 0)}%` : "—",
+    desc:
+      metaConfidence == null
+        ? "In this attempt, scoring confidence wasn’t provided."
+        : Number(metaConfidence) < 60
+        ? "In this attempt, the system was not very confident in the score (often caused by noise or unclear pronunciation)."
+        : Number(metaConfidence) < 85
+        ? "In this attempt, the system had moderate confidence in the score."
+        : "In this attempt, the system had high confidence in the score.",
+  },
+
+  // only show "Heard" if it differs from target
+  ...(metaRecognition && metaRecognition !== targetText
+    ? [
+        {
+          id: "heard",
+          title: "Heard",
+          value: metaRecognition,
+          desc: `In this attempt, it sounded like “${metaRecognition}”, which differs from the target.`,
+        },
+      ]
+    : []),
+].map((d) => {
+
     const k = `${row.i}:${d.id}`;
     const isDOpen = openDetail === k;
 
