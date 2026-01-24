@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bookmark as BookmarkIcon, Mic, StopCircle, X, Check, ChevronDown, ArrowUp } from "lucide-react";
+import { Bookmark as BookmarkIcon, StopCircle, ChevronDown, ArrowUp } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import { updateStreak, readStreak } from "../lib/streak.js";
 import * as sfx from "../lib/sfx.js";
@@ -87,11 +87,6 @@ const [showIntro, setShowIntro] = useState(() => {
 
   // ✅ full feedback shown on SAME page
   const [result, setResult] = useState(null);
-
-  // dictation UI (mic inside input)
-  const [dictationMode, setDictationMode] = useState("idle"); // idle | listening | transcribing
-  const [dictationText, setDictationText] = useState("");
-  const recogRef = useRef(null);
 
   function sanitizeWord(raw) {
     const s = String(raw || "").trim();
@@ -341,101 +336,7 @@ refreshSuggestions();
 } finally {
   setIsAnalyzing(false);
 }
-
-  }
-
-  /* ---------------- Dictation (mic inside input) ---------------- */
-  function getSpeechRecognition() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    return SR ? new SR() : null;
-  }
-
-  function startDictation() {
-    setErr("");
-    const rec = getSpeechRecognition();
-    if (!rec) {
-      setErr("Dictation is not supported in this browser.");
-      return;
-    }
-    if (dictationMode !== "idle") return;
-
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = accentUi === "en_br" ? "en-GB" : "en-US";
-
-    setDictationText("");
-    setDictationMode("listening");
-
-    rec.onresult = (event) => {
-      let full = "";
-      for (let i = 0; i < event.results.length; i++) {
-        const r = event.results[i];
-        const t = r?.[0]?.transcript || "";
-        full += t;
-      }
-      setDictationText(full.trim());
-    };
-
-    rec.onerror = (e) => {
-      setDictationMode("idle");
-     if (!IS_PROD) setErr(e?.error ? `Dictation error: ${e.error}` : "Dictation error");
-else setErr("Dictation failed. Try again.");
-      try {
-        rec.stop();
-      } catch {}
-      recogRef.current = null;
-    };
-
-    rec.onend = () => {
-      if (dictationMode !== "transcribing") setDictationMode("idle");
-    };
-
-    recogRef.current = rec;
-
-    try {
-  rec.start();
-} catch (e) {
-  setDictationMode("idle");
-
-  if (!IS_PROD) {
-    setErr(e?.message || "Could not start dictation.");
-  } else {
-    setErr("Could not start dictation. Try again.");
-  }
-
-  recogRef.current = null;
 }
-
-  }
-
-  function cancelDictation() {
-    try {
-      recogRef.current?.stop?.();
-    } catch {}
-    recogRef.current = null;
-    setDictationMode("idle");
-    setDictationText("");
-  }
-
-  function acceptDictation() {
-    try {
-      recogRef.current?.stop?.();
-    } catch {}
-    recogRef.current = null;
-
-    setDictationMode("transcribing");
-
-    setTimeout(() => {
-      const t = String(dictationText || "").trim();
-      if (t) {
-        setRefText(sanitizeWord(t));
-
-      }
-      setDictationText("");
-      setDictationMode("idle");
-    }, 700);
-  }
-
   /* ---------------- Layout constants ---------------- */
   const TABBAR_OFFSET = 64;
   const SEND_PURPLE = "#8B5CF6";
@@ -523,115 +424,7 @@ else setErr("Dictation failed. Try again.");
             {err}
           </div>
         ) : null}
-      </div>
-
-      {/* Dictation bar (keep dark overlay – OK) */}
-      <AnimatePresence>
-        {dictationMode !== "idle" && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 16 }}
-            style={{
-              position: "fixed",
-              left: "50%",
-              transform: "translateX(-50%)",
-              bottom: `calc(${TABBAR_OFFSET}px + 92px)`,
-              width: "min(720px, calc(100vw - 24px))",
-              zIndex: 50,
-            }}
-          >
-            <div
-              style={{
-                background: "rgba(0,0,0,0.78)",
-                border: "1px solid rgba(255,255,255,0.14)",
-                borderRadius: 18,
-                padding: "12px 12px",
-                display: "grid",
-                gridTemplateColumns: "44px 1fr 44px",
-                alignItems: "center",
-                gap: 10,
-                boxShadow: "0 18px 40px rgba(0,0,0,0.35)",
-              }}
-            >
-              <button
-                onClick={cancelDictation}
-                className="grid place-items-center"
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 999,
-                  border: "none",
-                  background: "rgba(255,255,255,0.10)",
-                  color: "white",
-                  cursor: "pointer",
-                }}
-                aria-label="Cancel dictation"
-                title="Cancel"
-              >
-                <X className="h-5 w-5" />
-              </button>
-
-              <div style={{ textAlign: "center", color: "white", fontWeight: 900 }}>
-                {dictationMode === "listening" ? (
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ width: 26, height: 10, borderRadius: 999, background: "rgba(255,255,255,0.20)", position: "relative", overflow: "hidden" }}>
-                      <motion.div
-                        initial={{ x: -18 }}
-                        animate={{ x: 34 }}
-                        transition={{ repeat: Infinity, duration: 0.9, ease: "linear" }}
-                        style={{ width: 18, height: "100%", borderRadius: 999, background: "rgba(255,255,255,0.75)" }}
-                      />
-                    </div>
-                    Listening…
-                  </div>
-                ) : (
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ repeat: Infinity, duration: 0.9, ease: "linear" }}
-                      style={{
-                        width: 18,
-                        height: 18,
-                        borderRadius: 999,
-                        border: "3px solid rgba(255,255,255,0.22)",
-                        borderTopColor: "rgba(255,255,255,0.80)",
-                      }}
-                    />
-                    Transcribing…
-                  </div>
-                )}
-
-                {dictationMode === "listening" && dictationText ? (
-                  <div style={{ marginTop: 6, fontSize: 12, fontWeight: 800, color: "rgba(255,255,255,0.70)" }}>
-                    {dictationText}
-                  </div>
-                ) : null}
-              </div>
-
-              <button
-                onClick={acceptDictation}
-                disabled={dictationMode !== "listening"}
-                className="grid place-items-center"
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 999,
-                  border: "none",
-                  background: dictationMode === "listening" ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.08)",
-                  color: "white",
-                  cursor: dictationMode === "listening" ? "pointer" : "not-allowed",
-                  opacity: dictationMode === "listening" ? 1 : 0.6,
-                }}
-                aria-label="Done dictation"
-                title="Done"
-              >
-                <Check className="h-5 w-5" />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </div>    
 
       {/* Bottom composer */}
       <div
@@ -718,26 +511,6 @@ else setErr("Dictation failed. Try again.");
                 disabled={isBusy}
               />
 
-
-              {/* Dictation mic */}
-              <button
-                onClick={startDictation}
-                disabled={dictationMode !== "idle" || isBusy}
-                title="Dictate"
-                aria-label="Dictate"
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  color: LIGHT_MUTED,
-                  display: "grid",
-                  placeItems: "center",
-                  cursor: dictationMode === "idle" && !isBusy ? "pointer" : "not-allowed",
-                  opacity: dictationMode === "idle" && !isBusy ? 1 : 0.5,
-                  padding: 0,
-                }}
-              >
-                <Mic className="h-5 w-5" />
-              </button>
 
               {/* Record button */}
               <button

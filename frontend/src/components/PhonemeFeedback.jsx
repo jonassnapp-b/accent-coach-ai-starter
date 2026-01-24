@@ -1416,20 +1416,34 @@ onClick={async () => {
                             <div className="pf-row-actions">
                               <ProgressRing pct={badgePct} />
 
-                              <button
-                                type="button"
-                                className="pf-chevron"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenChunk((v) => (v === row.i ? null : row.i));
-                                }}
-                                aria-label="Toggle details"
-                              >
-                                <ChevronRight
-                                  className="h-5 w-5"
-                                  style={{ transform: isOpen ? "rotate(90deg)" : "rotate(0deg)" }}
-                                />
-                              </button>
+                             <button
+  type="button"
+  className="pf-chevron"
+  onClick={(e) => {
+    e.stopPropagation();
+    setOpenChunk((v) => (v === row.i ? null : row.i));
+  }}
+  aria-label="Toggle details"
+  style={{
+    width: 36,
+    height: 36,
+    flex: "0 0 36px",
+    display: "grid",
+    placeItems: "center",
+    padding: 0,
+  }}
+>
+  <ChevronRight
+    className="h-5 w-5"
+    style={{
+      transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+      transformOrigin: "50% 50%",
+      transition: "transform 160ms ease",
+      display: "block",
+    }}
+  />
+</button>
+
                             </div>
                           </div>
                         </div>

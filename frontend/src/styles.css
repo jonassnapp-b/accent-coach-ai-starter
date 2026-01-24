@@ -611,7 +611,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   transform: translateX(-12px);
 }
 .pf-chevron:hover{ background: rgba(0,0,0,0.04); }
-.pf-chevron:active{ transform: scale(0.98); }
+.pf-chevron:active{ transform: translateX(-12px) scale(0.98); }
 
 
 /* =========================================================
@@ -668,6 +668,7 @@ input, textarea { -webkit-user-select: text; user-select: text; }
 .pf-row-sub{
   position: relative !important;
 }
+
 
 
 .pf-row-right{
