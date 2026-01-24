@@ -807,8 +807,9 @@ const metaPauseCount = result.pause_count ?? null;
 const metaSpeed = result.speed ?? null;
 const metaDuration = result.numeric_duration ?? result.duration ?? null;
 const hasSpoken =
-  Number(metaDuration) > 0 ||
-  (Array.isArray(words) && words.length > 0 && words.some(w => (w.phonemes || []).length > 0));
+  targetScorePct > 0 &&
+  Array.isArray(wordPhs) &&
+  wordPhs.some(p => (readPhoneme(p)?.s01 ?? 0) > 0);
 
 const metaFiller = result.pause_filler ?? null;
 const metaLiaison = result.liaison ?? null;
