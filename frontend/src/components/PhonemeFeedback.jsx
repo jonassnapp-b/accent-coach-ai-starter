@@ -806,10 +806,6 @@ const metaIntegrity = result.integrity ?? null;
 const metaPauseCount = result.pause_count ?? null;
 const metaSpeed = result.speed ?? null;
 const metaDuration = result.numeric_duration ?? result.duration ?? null;
-const hasSpoken =
-  targetScorePct > 0 &&
-  Array.isArray(wordPhs) &&
-  wordPhs.some(p => (readPhoneme(p)?.s01 ?? 0) > 0);
 
 const metaFiller = result.pause_filler ?? null;
 const metaLiaison = result.liaison ?? null;
@@ -852,6 +848,11 @@ const modelBOverall = useMemo(() => {
 
   const targetText = oneWord ? wordText || "" : displaySentence || "";
 const targetScorePct = modelBOverall.pct;
+const hasSpoken =
+  Number(targetScorePct) > 0 &&
+  Array.isArray(wordPhs) &&
+  wordPhs.some(p => (readPhoneme(p)?.s01 ?? 0) > 0);
+
 
 // --- MAIN overall score bar (XP-style fill + smooth color fade) ---
 const [animatedOverallPct, setAnimatedOverallPct] = useState(0);
