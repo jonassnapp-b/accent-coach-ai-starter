@@ -847,20 +847,8 @@ const modelBOverall = useMemo(() => {
 
   const targetText = oneWord ? wordText || "" : displaySentence || "";
 const targetScorePct = modelBOverall.pct;
-
-// ✅ "Did user speak?" guard (hide UI if nothing was said)
-const didSpeak = useMemo(() => {
-  const dur = Number(metaDuration);
-  if (Number.isFinite(dur) && dur > 0.15) return true; // 150ms+ = basically speech
-
-  const heard = String(metaRecognition || "").trim();
-  if (heard.length > 0) return true;
-
-  const wj = String(wordsJoined || "").trim();
-  if (wj.length > 0) return true;
-
-  return false;
-}, [metaDuration, metaRecognition, wordsJoined]);
+const didSpeak = (Number(targetScorePct) || 0) > 0;
+if (!didSpeak) return null;
 
 // --- MAIN overall score bar (XP-style fill + smooth color fade) ---
 const [animatedOverallPct, setAnimatedOverallPct] = useState(0);
@@ -1208,7 +1196,6 @@ async function playRecording() {
 
     return rows;
   }, [oneWord, cmuData, wordText]);
-  if (!didSpeak) return null;
 const heroWordSpan = useMemo(() => {
   if (!chunkRows?.length) return null;
 
