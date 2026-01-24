@@ -806,6 +806,10 @@ const metaIntegrity = result.integrity ?? null;
 const metaPauseCount = result.pause_count ?? null;
 const metaSpeed = result.speed ?? null;
 const metaDuration = result.numeric_duration ?? result.duration ?? null;
+const hasSpoken =
+  Number(metaDuration) > 0 ||
+  (Array.isArray(words) && words.length > 0 && words.some(w => (w.phonemes || []).length > 0));
+
 const metaFiller = result.pause_filler ?? null;
 const metaLiaison = result.liaison ?? null;
 const metaPlosion = result.plosion ?? null;
@@ -1462,12 +1466,11 @@ onClick={async () => {
                           </div>
                         </div>
 
-                      {isOpen && (
+                      {isOpen && hasSpoken && (
   <div style={{ marginTop: 10 }}>
     {/* META pills */}
-    {/* META ACCORDION PILLS (full width) */}
-<div style={{ display: "grid", gap: 10, marginBottom: 10 }}>
- {[
+    <div style={{ display: "grid", gap: 10, marginBottom: 10 }}>
+      {[
   {
     id: "pauses",
     title: "Pauses",
