@@ -1468,7 +1468,7 @@ onClick={async () => {
                           </div>
                         </div>
 
-                      {isOpen && hasSpoken && (
+                      {isOpen && (
   <div style={{ marginTop: 10 }}>
     {/* META pills */}
     <div style={{ display: "grid", gap: 10, marginBottom: 10 }}>
