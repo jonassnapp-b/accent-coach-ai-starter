@@ -266,6 +266,31 @@ if (myId !== ttsPlayIdRef.current) return;
   });
 }
 
+async function fetchTtsUrl(text, rate = 1.0) {
+  const t = String(text || "").trim();
+  if (!t) return null;
+
+  const base = getApiBase();
+  const controller = new AbortController();
+
+  // hvis du vil kunne abort'e den her også, kan du gemme controller i en ref,
+  // men jeg holder det MINIMALT her (du har allerede stopTtsNow til playTts flow)
+
+  const r = await fetch(`${base}/api/tts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: t, accent: accentUi, rate }),
+    signal: controller.signal,
+  });
+
+  if (!r.ok) return null;
+
+  const buf = await r.arrayBuffer();
+  const blob = new Blob([buf], { type: "audio/wav" });
+  return URL.createObjectURL(blob);
+}
+
+
 async function playPrewarmedUrl(url) {
   const myId = ++ttsPlayIdRef.current;
 
@@ -331,7 +356,7 @@ async function speakSequence(t) {
 
 
   // pause before the target
-  await sleep(150);
+  await sleep(100);
 
   setIsSpeakingTarget(true);
   try {
@@ -343,51 +368,56 @@ async function speakSequence(t) {
   }
 }
 
-  async function beginIntroThenFlow() {
-    const t = buildNewTarget(mode, difficulty);
-    setTarget(t);
-    setResult(null);
-    setStatus("");
+async function beginIntroThenFlow() {
+  const t = buildNewTarget(mode, difficulty);
+  setTarget(t);
+  setResult(null);
+  setStatus("");
 
-    // speak while showing "speaking" visuals
-// 1) intro: sig kun “Repeat after me.”
-setIsSpeaking(true);
-try {
-  if (prewarmUrlRef.current) {
-    await playPrewarmedUrl(prewarmUrlRef.current); // ✅ instant (ingen fetch)
-  } else {
-    await playTts("Repeat after me.", 1.0);         // fallback hvis ikke prewarmed endnu
+  // ✅ start target fetch NU (imens repeat spiller)
+  const targetUrlPromise = fetchTtsUrl(t, 0.98);
+
+  // 1) intro: “Repeat after me.”
+  setIsSpeaking(true);
+  try {
+    if (prewarmUrlRef.current) {
+      await playPrewarmedUrl(prewarmUrlRef.current);
+    } else {
+      await playTts("Repeat after me.", 1.0);
+    }
+  } catch (e) {
+    if (!IS_PROD) console.warn("[TTS intro]", e);
+  } finally {
+    setIsSpeaking(false);
   }
-} catch (e) {
-  if (!IS_PROD) console.warn("[TTS intro]", e);
-} finally {
-  setIsSpeaking(false);
+
+  // 2) transition til flow NU
+  setStage("flow");
+
+  // 3) sig target så snart repeat er færdig (uden ekstra sleep)
+  setIsSpeakingTarget(true);
+  try {
+    const targetUrl = await targetUrlPromise;
+
+    if (targetUrl) {
+      await playPrewarmedUrl(targetUrl);
+      try { URL.revokeObjectURL(targetUrl); } catch {}
+    } else {
+      await playTts(t, 0.98);
+    }
+  } catch (e) {
+    if (!IS_PROD) console.warn("[TTS target]", e);
+  } finally {
+    setIsSpeakingTarget(false);
+  }
 }
 
-
-// 2) transition til flow NU
-setStage("flow");
-
-// 3) vent en smule så animationen når at lande
-await sleep(220); // juster 160–260 hvis du vil
-
-// 4) sig target mens flow er på skærmen + pop
-setIsSpeakingTarget(true);
-try {
-  await playTts(t, 0.98);
-} catch (e) {
-  if (!IS_PROD) console.warn("[TTS target]", e);
-} finally {
-  setIsSpeakingTarget(false);
-}
-
-  }
 
 async function onStart() {
   if (isBusy) return;
 
   setStage("intro");
-  
+
   if (!prewarmUrlRef.current) {
   await prewarmRepeat();
 }
