@@ -105,6 +105,8 @@ useEffect(() => {
   // ✅ TTS audio (Azure via /api/tts)
 const ttsAudioRef = useRef(null);
 const ttsUrlRef = useRef(null);
+const ttsAbortRef = useRef(null);
+const ttsPlayIdRef = useRef(0);
 const prewarmUrlRef = useRef(null);
 const [prewarmReady, setPrewarmReady] = useState(false);
 
@@ -118,7 +120,7 @@ function sleep(ms) {
 async function warmupTts() {
   try {
     // ultra kort request bare for at varme function + azure forbindelsen
-    await playTts(" ", 1.0);
+    await playTts("ok", 1.0);
   } catch {}
 }
 
@@ -162,7 +164,38 @@ async function warmupTts() {
     const pool = nextMode === "sentences" ? (SENTENCES[nextDiff] || []) : (WORDS[nextDiff] || []);
     return pickRandom(pool);
   }
-async function playTts(text, rate = 1.0) {
+
+function stopTtsNow() {
+  // 1) invalidate any pending async that would continue
+  ttsPlayIdRef.current += 1;
+
+  // 2) abort in-flight fetch
+  try {
+    ttsAbortRef.current?.abort?.();
+  } catch {}
+  ttsAbortRef.current = null;
+
+  // 3) stop audio immediately
+  try {
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current.currentTime = 0;
+      ttsAudioRef.current.src = "";
+      ttsAudioRef.current.load?.();
+    }
+  } catch {}
+
+  // 4) revoke blob url
+  try {
+    if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current);
+  } catch {}
+  ttsUrlRef.current = null;
+
+  setIsSpeaking(false);
+  setIsSpeakingTarget(false);
+}
+
+  async function playTts(text, rate = 1.0) {
   const t = String(text || "").trim();
   if (!t) return;
 
@@ -180,8 +213,18 @@ async function playTts(text, rate = 1.0) {
   } catch {}
   ttsUrlRef.current = null;
 
-  const base = getApiBase();
-  const r = await fetch(`${base}/api/tts`, {
+const base = getApiBase();
+const myId = ++ttsPlayIdRef.current;
+
+try {
+  ttsAbortRef.current?.abort?.();
+} catch {}
+const controller = new AbortController();
+ttsAbortRef.current = controller;
+
+let r;
+try {
+  r = await fetch(`${base}/api/tts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -189,14 +232,33 @@ async function playTts(text, rate = 1.0) {
       accent: accentUi, // en_us or en_br
       rate,
     }),
+    signal: controller.signal, // ✅ rigtigt sted
   });
+} catch (e) {
+  if (e?.name === "AbortError") return; // ✅ back clicked -> ignore
+  throw e;
+}
+
+if (myId !== ttsPlayIdRef.current) return;
+
+if (myId !== ttsPlayIdRef.current) return;
 
   if (!r.ok) {
     const j = await r.json().catch(() => ({}));
     throw new Error(j?.detail || j?.error || `TTS failed (${r.status})`);
   }
 
-  const buf = await r.arrayBuffer();
+  let buf;
+try {
+  buf = await r.arrayBuffer();
+} catch (e) {
+  if (e?.name === "AbortError") return;
+  throw e;
+}
+if (myId !== ttsPlayIdRef.current) return;
+
+
+
   const blob = new Blob([buf], { type: "audio/wav" }); // your endpoint returns wav
   const url = URL.createObjectURL(blob);
   ttsUrlRef.current = url;
@@ -206,6 +268,8 @@ async function playTts(text, rate = 1.0) {
 
   a.src = url;
   a.volume = settings?.soundEnabled === false ? 0 : 1;
+
+if (myId !== ttsPlayIdRef.current) return;
 
   await a.play();
   await new Promise((resolve) => {
@@ -311,6 +375,8 @@ async function onStart() {
 
   function onBack() {
     if (isBusy) return;
+    stopTtsNow();
+
     // stop any TTS audio
 try {
   if (ttsAudioRef.current) {
