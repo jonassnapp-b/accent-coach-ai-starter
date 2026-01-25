@@ -23,18 +23,38 @@ function escSSML(s = "") {
 
 function pickAzureVoice(accent) {
   const a = (accent || "en_us").toLowerCase();
-  return a === "en_br" ? "en-GB-RyanNeural" : "en-US-JennyNeural";
+
+  // Prøv disse først (typisk mindre robot end Ryan/Jenny for mange)
+  if (a === "en_br") return "en-GB-SoniaNeural";   // eller: en-GB-LibbyNeural / en-GB-RyanNeural
+  return "en-US-AriaNeural";                       // eller: en-US-JennyNeural / en-US-GuyNeural
 }
 
-async function fetchAzureMp3({ text, accent, rate }) {
+
+async function fetchAzureMp3({ text, accent, rate, voice: voiceOverride }) {
   const key = process.env.AZURE_SPEECH_KEY || "";
   const region = process.env.AZURE_SPEECH_REGION || "";
   if (!key || !region) return null;
 
-  const voice = pickAzureVoice(accent);
-  const ssml = `<speak version="1.0" xml:lang="en-US"><voice name="${voice}">${escSSML(
-    text
-  )}</voice></speak>`;
+  const voice = voiceOverride || pickAzureVoice(accent);
+
+  // Azure prosody rate: brug % (1.0 => 0%, 0.98 => -2%, 1.08 => +8%)
+  const ratePct = Math.round((Number(rate || 1) - 1) * 100);
+  const rateStr = `${ratePct >= 0 ? "+" : ""}${ratePct}%`;
+
+  // Brug accent til sprog-tag (så UK ikke står som en-US)
+  const lang = (accent || "en_us").toLowerCase() === "en_br" ? "en-GB" : "en-US";
+
+  // (valgfrit men ofte mindre robot): "express-as"
+  // Hvis du ikke vil have det, så slet <mstts:express-as ...> wrapperen.
+  const ssml =
+    `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" ` +
+    `xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${lang}">` +
+    `<voice name="${voice}">` +
+    `<mstts:express-as style="friendly">` +
+    `<prosody rate="${rateStr}">${escSSML(text)}</prosody>` +
+    `</mstts:express-as>` +
+    `</voice></speak>`;
+
   const url = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
 
   const resp = await fetch(url, {
@@ -111,14 +131,14 @@ async function toWavPcm16Mono16k(inputBuf, inputExt = ".mp3") {
   });
 }
 
-export async function getTtsAudio({ text, accent = "en_us", rate = 1.0 }) {
+export async function getTtsAudio({ text, accent = "en_us", rate = 1.0, voice = "" }) {
   const t = String(text || "").trim();
   if (!t) throw new Error("Missing text");
 
   // 1) Azure first (if keys exist & valid)
   let mp3 = null;
   try {
-    mp3 = await fetchAzureMp3({ text: t, accent, rate });
+    mp3 = await fetchAzureMp3({ text: t, accent, rate, voice });
   } catch (e) {
     console.error("[tts] Azure failed:", e?.message || e);
   }
