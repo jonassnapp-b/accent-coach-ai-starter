@@ -137,66 +137,6 @@ function sleep(ms) {
     mediaRecRef.current = rec;
   }
 
-  function pickBestVoiceForAccent(accent) {
-    try {
-      if (!("speechSynthesis" in window)) return null;
-      const voices = window.speechSynthesis.getVoices?.() || [];
-      if (!voices.length) return null;
-
-      const want = accent === "en_br" ? ["en-GB", "en_GB"] : ["en-US", "en_US"];
-      const candidates = voices.filter((v) => {
-        const lang = (v.lang || "").toLowerCase();
-        return want.some((w) => lang.includes(w.toLowerCase()));
-      });
-
-      const prefer = (arr) => {
-        const byDefault = arr.find((v) => v.default);
-        if (byDefault) return byDefault;
-        const byName = arr.find((v) => /google|microsoft|natural|neural/i.test(v.name || ""));
-        if (byName) return byName;
-        return arr[0] || null;
-      };
-
-      return prefer(candidates) || prefer(voices.filter((v) => (v.lang || "").toLowerCase().startsWith("en"))) || voices[0];
-    } catch {
-      return null;
-    }
-  }
-
-  function speakTts(text) {
-    // Browser TTS; we choose a better EN voice if available.
-    return new Promise((resolve) => {
-      try {
-        if (!("speechSynthesis" in window)) return resolve();
-
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-
-        const voice = pickBestVoiceForAccent(accentUi);
-        if (voice) u.voice = voice;
-
-        u.rate = 1.0;
-        u.pitch = 1.0;
-        u.volume = settings?.soundEnabled === false ? 0 : 1;
-
-        u.onstart = () => setIsSpeaking(true);
-        u.onend = () => {
-          setIsSpeaking(false);
-          resolve();
-        };
-        u.onerror = () => {
-          setIsSpeaking(false);
-          resolve();
-        };
-
-        window.speechSynthesis.speak(u);
-      } catch {
-        setIsSpeaking(false);
-        resolve();
-      }
-    });
-  }
-
   function buildNewTarget(nextMode = mode, nextDiff = difficulty) {
     const pool = nextMode === "sentences" ? (SENTENCES[nextDiff] || []) : (WORDS[nextDiff] || []);
     return pickRandom(pool);
@@ -267,7 +207,7 @@ async function speakSequence(t) {
   }
 
   // pause before the target
-  await sleep(700);
+  await sleep(300);
 
   setIsSpeakingTarget(true);
   try {
@@ -286,10 +226,32 @@ async function speakSequence(t) {
     setStatus("");
 
     // speak while showing "speaking" visuals
-await speakSequence(t);
+// 1) intro: sig kun “Repeat after me.”
+setIsSpeaking(true);
+try {
+  await playTts("Repeat after me.", 1.0);
+} catch (e) {
+  if (!IS_PROD) console.warn("[TTS intro]", e);
+} finally {
+  setIsSpeaking(false);
+}
 
-    // then transition into main flow card
+// 2) transition til flow NU
 setStage("flow");
+
+// 3) vent en smule så animationen når at lande
+await sleep(220); // juster 160–260 hvis du vil
+
+// 4) sig target mens flow er på skærmen + pop
+setIsSpeakingTarget(true);
+try {
+  await playTts(t, 0.98);
+} catch (e) {
+  if (!IS_PROD) console.warn("[TTS target]", e);
+} finally {
+  setIsSpeakingTarget(false);
+}
+
   }
 
   function onStart() {
@@ -736,11 +698,10 @@ setIsSpeakingTarget(false);
                   </div>
                 </div>
               ) : null}
-
+<audio ref={ttsAudioRef} playsInline preload="auto" />
                           </motion.div>
           )}
         </AnimatePresence>
-        <audio ref={ttsAudioRef} playsInline preload="auto" />
       </div>
     </div>
   );
