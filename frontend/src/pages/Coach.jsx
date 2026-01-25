@@ -584,7 +584,7 @@ setIsSpeakingTarget(false);
     margin: "0 auto",
   };
 
-  const stack = { display: "grid", gap: 14 };
+  const stack = { display: "grid", gap: 20 };
 
   const selectWrapStyle = { position: "relative", width: "100%" };
 
