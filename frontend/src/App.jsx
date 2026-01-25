@@ -12,7 +12,7 @@ import { SettingsProvider } from "./lib/settings-store.jsx";
 
 import Record from "./pages/Record.jsx";
 import Feedback from "./pages/Feedback.jsx";
-import { Mic, AudioWaveform, Target, Settings as SettingsIcon } from "lucide-react";
+import { Mic, AudioWaveform, Target, Settings as SettingsIcon, MessageCircle } from "lucide-react";
 
 
 
@@ -21,7 +21,7 @@ const ProgressiveSentenceMastery = lazy(() => import("./pages/ProgressiveSentenc
 const WeaknessLab = lazy(() => import("./pages/WeaknessLab.jsx"));
 const Settings   = lazy(() => import("./pages/Settings.jsx"));
 const Bookmarks  = lazy(() => import("./pages/Bookmarks.jsx"));
-
+const Coach = lazy(() => import("./pages/Coach.jsx"));
 
 
 import { submitReferralOpen } from "./lib/api.js";
@@ -34,6 +34,7 @@ import "./styles.css";
 
 /* ---------------- Prefetch helpers (route-level) ---------------- */
 const routePrefetch = {
+    "/coach":     () => import("./pages/Coach.jsx"),
   "/imitate":    () => import("./pages/ProgressiveSentenceMastery.jsx"),
   "/weakness":   () => import("./pages/WeaknessLab.jsx"),
   "/settings":   () => import("./pages/Settings.jsx"),
@@ -74,6 +75,7 @@ function PracticeGate() {
 /* ---------------- Tabs ---------------- */
 const TABS = [
   { path: "/record",   label: "Practice",  Icon: Mic,       element: <PracticeGate /> },
+    { path: "/coach",    label: "Talk",      Icon: MessageCircle, element: <Coach /> },
   { path: "/imitate",  label: "Coach",     Icon: AudioWaveform,  element: <ProgressiveSentenceMastery /> },
   { path: "/weakness", label: "Weakness",  Icon: Target,    element: <WeaknessLab /> },
   { path: "/settings", label: "Settings",  Icon: SettingsIcon, element: <Settings /> },
@@ -134,6 +136,7 @@ function AppInner() {
     const idle = (cb) =>
       (window.requestIdleCallback ? window.requestIdleCallback(cb) : setTimeout(cb, 350));
     idle(() => {
+        prefetchRoute("/coach");
   prefetchRoute("/imitate");
   prefetchRoute("/weakness");
   prefetchRoute("/bookmarks");
