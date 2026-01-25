@@ -1,6 +1,6 @@
 // src/pages/Coach.jsx
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, Mic, StopCircle, ArrowLeft } from "lucide-react";
+import { ChevronDown, Mic, StopCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
@@ -51,7 +51,7 @@ function pickRandom(arr) {
 export default function Coach() {
   const { settings } = useSettings();
 
-  // light tokens (match your Record page vibe)
+  // light tokens
   const LIGHT_TEXT = "rgba(17,24,39,0.92)";
   const LIGHT_MUTED = "rgba(17,24,39,0.55)";
   const LIGHT_BORDER = "rgba(0,0,0,0.10)";
@@ -62,7 +62,7 @@ export default function Coach() {
 
   const TABBAR_OFFSET = 64;
 
-  // ✅ dropdown state
+  // dropdown state
   const [mode, setMode] = useState("words"); // words | sentences
   const [difficulty, setDifficulty] = useState("easy"); // easy | medium | hard
   const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
@@ -71,8 +71,11 @@ export default function Coach() {
     setAccentUi(settings?.accentDefault || "en_us");
   }, [settings?.accentDefault]);
 
-  // ✅ stage: setup -> flow (after Start)
-  const [stage, setStage] = useState("setup"); // setup | flow
+  // ✅ stages: setup -> intro (speaking) -> flow
+  const [stage, setStage] = useState("setup"); // setup | intro | flow
+
+  // speaking indicator
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   // flow state
   const [target, setTarget] = useState("");
@@ -89,33 +92,11 @@ export default function Coach() {
   const [lastUrl, setLastUrl] = useState(null);
   const userAudioRef = useRef(null);
 
-  function stopTts() {
-    try {
-      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-    } catch {}
-  }
-
   function disposeRecorder() {
     try {
       mediaRecRef.current?.stream?.getTracks()?.forEach((t) => t.stop());
     } catch {}
     mediaRecRef.current = null;
-  }
-
-  function resetFlowState() {
-    stopTts();
-    try {
-      if (lastUrl) URL.revokeObjectURL(lastUrl);
-    } catch {}
-    setLastUrl(null);
-
-    disposeRecorder();
-    setIsRecording(false);
-    setIsAnalyzing(false);
-
-    setTarget("");
-    setResult(null);
-    setStatus("");
   }
 
   async function ensureMic() {
@@ -146,19 +127,64 @@ export default function Coach() {
     mediaRecRef.current = rec;
   }
 
-  // NOTE: This is still browser TTS. See note below for "real" human TTS.
-  function speakTts(text) {
+  function pickBestVoiceForAccent(accent) {
     try {
-      if (!("speechSynthesis" in window)) return;
-      window.speechSynthesis.cancel();
+      if (!("speechSynthesis" in window)) return null;
+      const voices = window.speechSynthesis.getVoices?.() || [];
+      if (!voices.length) return null;
 
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1.0;
-      u.pitch = 1.0;
-      u.volume = settings?.soundEnabled === false ? 0 : 1;
+      const want = accent === "en_br" ? ["en-GB", "en_GB"] : ["en-US", "en_US"];
+      const candidates = voices.filter((v) => {
+        const lang = (v.lang || "").toLowerCase();
+        return want.some((w) => lang.includes(w.toLowerCase()));
+      });
 
-      window.speechSynthesis.speak(u);
-    } catch {}
+      const prefer = (arr) => {
+        const byDefault = arr.find((v) => v.default);
+        if (byDefault) return byDefault;
+        const byName = arr.find((v) => /google|microsoft|natural|neural/i.test(v.name || ""));
+        if (byName) return byName;
+        return arr[0] || null;
+      };
+
+      return prefer(candidates) || prefer(voices.filter((v) => (v.lang || "").toLowerCase().startsWith("en"))) || voices[0];
+    } catch {
+      return null;
+    }
+  }
+
+  function speakTts(text) {
+    // Browser TTS; we choose a better EN voice if available.
+    return new Promise((resolve) => {
+      try {
+        if (!("speechSynthesis" in window)) return resolve();
+
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+
+        const voice = pickBestVoiceForAccent(accentUi);
+        if (voice) u.voice = voice;
+
+        u.rate = 1.0;
+        u.pitch = 1.0;
+        u.volume = settings?.soundEnabled === false ? 0 : 1;
+
+        u.onstart = () => setIsSpeaking(true);
+        u.onend = () => {
+          setIsSpeaking(false);
+          resolve();
+        };
+        u.onerror = () => {
+          setIsSpeaking(false);
+          resolve();
+        };
+
+        window.speechSynthesis.speak(u);
+      } catch {
+        setIsSpeaking(false);
+        resolve();
+      }
+    });
   }
 
   function buildNewTarget(nextMode = mode, nextDiff = difficulty) {
@@ -171,25 +197,51 @@ export default function Coach() {
     return `Try to pronounce: ${t}`;
   }
 
-  function beginFlow() {
+  async function beginIntroThenFlow() {
     const t = buildNewTarget(mode, difficulty);
     setTarget(t);
     setResult(null);
     setStatus("");
-    speakTts(nextInstruction(t, mode));
+
+    // speak while showing "speaking" visuals
+    await speakTts(nextInstruction(t, mode));
+
+    // then transition into main flow card
+    setStage("flow");
   }
 
   function onStart() {
-    setStage("flow");
-    // start after transition tick
-    setTimeout(() => beginFlow(), 50);
+    if (isBusy) return;
+    setStage("intro");
   }
 
   function onBack() {
-    if (isBusy) return; // keep simple: don't allow during recording/analyze
-    resetFlowState();
+    if (isBusy) return;
+    try {
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    } catch {}
+    setIsSpeaking(false);
+
+    // cleanup recording + audio url
+    try {
+      if (lastUrl) URL.revokeObjectURL(lastUrl);
+    } catch {}
+    setLastUrl(null);
+    disposeRecorder();
+    setIsRecording(false);
+    setIsAnalyzing(false);
+
+    setTarget("");
+    setResult(null);
+    setStatus("");
     setStage("setup");
   }
+
+  useEffect(() => {
+    if (stage !== "intro") return;
+    beginIntroThenFlow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
 
   function handleStop(rec) {
     setIsRecording(false);
@@ -261,19 +313,19 @@ export default function Coach() {
 
       if (overall >= threshold + 7) {
         setStatus("Well done ✅");
-        speakTts("Well done. Let's go to the next one.");
+        await speakTts("Well done. Let's go to the next one.");
         const next = buildNewTarget(mode, difficulty);
         setTarget(next);
-        setTimeout(() => speakTts(nextInstruction(next, mode)), 250);
+        await speakTts(nextInstruction(next, mode));
       } else if (overall >= threshold) {
         setStatus("That’s alright — next 👌");
-        speakTts("That's alright. Let's go to the next one.");
+        await speakTts("That's alright. Let's go to the next one.");
         const next = buildNewTarget(mode, difficulty);
         setTarget(next);
-        setTimeout(() => speakTts(nextInstruction(next, mode)), 250);
+        await speakTts(nextInstruction(next, mode));
       } else {
         setStatus("Try again (listen to the feedback) 🔁");
-        speakTts("Try again.");
+        await speakTts("Try again.");
       }
     } catch (e) {
       setStatus(IS_PROD ? "Something went wrong. Try again." : e?.message || String(e));
@@ -282,19 +334,7 @@ export default function Coach() {
     }
   }
 
-  // cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopTts();
-      disposeRecorder();
-      try {
-        if (lastUrl) URL.revokeObjectURL(lastUrl);
-      } catch {}
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /* ---------- styles ---------- */
+  // layout: one big setup card, dropdowns stacked with good vertical spacing
   const bigCardStyle = {
     background: LIGHT_SURFACE,
     border: `1px solid ${LIGHT_BORDER}`,
@@ -302,25 +342,16 @@ export default function Coach() {
     boxShadow: LIGHT_SHADOW,
     padding: 18,
     width: "100%",
-    maxWidth: 560,
+    maxWidth: 520,
     margin: "0 auto",
   };
 
-  // ✅ more vertical space between dropdowns
-  const stackStyle = {
-    display: "flex",
-    flexDirection: "column",
-    gap: 16, // ⬅️ more space up/down
-  };
+  const stack = { display: "grid", gap: 14 };
 
-  const selectWrapStyle = {
-    position: "relative",
-    width: "100%",
-  };
+  const selectWrapStyle = { position: "relative", width: "100%" };
 
   const selectStyle = {
     height: 48,
-    width: "100%",
     borderRadius: 16,
     padding: "0 14px",
     fontWeight: 900,
@@ -331,6 +362,7 @@ export default function Coach() {
     cursor: "pointer",
     appearance: "none",
     paddingRight: 40,
+    width: "100%",
   };
 
   const chevronStyle = {
@@ -340,6 +372,27 @@ export default function Coach() {
     transform: "translateY(-50%)",
     color: LIGHT_MUTED,
     pointerEvents: "none",
+  };
+
+  const startBtnStyle = {
+    height: 46,
+    padding: "0 18px",
+    borderRadius: 16,
+    border: "none",
+    background: BTN_BLUE,
+    color: "white",
+    fontWeight: 900,
+    cursor: "pointer",
+    justifySelf: "center",
+    width: 140,
+  };
+
+  const speakingCardStyle = {
+    ...bigCardStyle,
+    minHeight: 220,
+    display: "grid",
+    placeItems: "center",
+    gap: 12,
   };
 
   return (
@@ -366,16 +419,10 @@ export default function Coach() {
               transition={{ duration: 0.18 }}
               style={bigCardStyle}
             >
-              <div style={stackStyle}>
+              <div style={stack}>
                 {/* Mode */}
                 <div style={selectWrapStyle}>
-                  <select
-                    aria-label="Mode"
-                    value={mode}
-                    onChange={(e) => setMode(e.target.value)}
-                    style={selectStyle}
-                    title="Mode"
-                  >
+                  <select aria-label="Mode" value={mode} onChange={(e) => setMode(e.target.value)} style={selectStyle}>
                     <option value="words">Words</option>
                     <option value="sentences">Sentences</option>
                   </select>
@@ -389,7 +436,6 @@ export default function Coach() {
                     value={difficulty}
                     onChange={(e) => setDifficulty(e.target.value)}
                     style={selectStyle}
-                    title="Difficulty"
                   >
                     <option value="easy">Easy</option>
                     <option value="medium">Medium</option>
@@ -405,7 +451,6 @@ export default function Coach() {
                     value={accentUi}
                     onChange={(e) => setAccentUi(e.target.value)}
                     style={selectStyle}
-                    title="Accent"
                   >
                     <option value="en_us">American 🇺🇸</option>
                     <option value="en_br">British 🇬🇧</option>
@@ -413,24 +458,62 @@ export default function Coach() {
                   <ChevronDown className="h-4 w-4" style={chevronStyle} />
                 </div>
 
-                {/* Start */}
-                <div style={{ display: "grid", placeItems: "center", marginTop: 4 }}>
-                  <button
-                    type="button"
-                    onClick={onStart}
-                    style={{
-                      height: 48,
-                      padding: "0 22px",
-                      borderRadius: 16,
-                      border: "none",
-                      background: BTN_BLUE,
-                      color: "white",
-                      fontWeight: 900,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Start
-                  </button>
+                <button type="button" onClick={onStart} style={startBtnStyle}>
+                  Start
+                </button>
+              </div>
+            </motion.div>
+          ) : stage === "intro" ? (
+            <motion.div
+              key="intro"
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
+              style={speakingCardStyle}
+            >
+              <div style={{ display: "grid", justifyItems: "center", gap: 10 }}>
+                {/* simple “AI person” bubble */}
+                <div
+                  style={{
+                    width: 68,
+                    height: 68,
+                    borderRadius: 999,
+                    background: "#ffffff",
+                    border: `1px solid ${LIGHT_BORDER}`,
+                    boxShadow: "0 10px 24px rgba(0,0,0,0.06)",
+                    display: "grid",
+                    placeItems: "center",
+                    fontWeight: 900,
+                    color: LIGHT_TEXT,
+                  }}
+                >
+                  AI
+                </div>
+
+                <div style={{ fontWeight: 900, color: LIGHT_TEXT }}>
+                  Coach is speaking{isSpeaking ? "…" : ""}
+                </div>
+
+                {/* tiny waveform */}
+                <div style={{ display: "flex", gap: 6, alignItems: "end", height: 18 }}>
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ height: 6, opacity: 0.6 }}
+                      animate={{ height: isSpeaking ? [6, 16, 8, 14, 6] : 6, opacity: 0.9 }}
+                      transition={{
+                        duration: isSpeaking ? 0.9 : 0.2,
+                        repeat: isSpeaking ? Infinity : 0,
+                        delay: i * 0.06,
+                      }}
+                      style={{
+                        width: 6,
+                        borderRadius: 999,
+                        background: BTN_BLUE,
+                      }}
+                    />
+                  ))}
                 </div>
               </div>
             </motion.div>
@@ -449,32 +532,53 @@ export default function Coach() {
                 padding: 18,
               }}
             >
-              {/* Top row: Back */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", marginBottom: 10 }}>
+              {/* Back */}
+              <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10 }}>
                 <button
                   type="button"
                   onClick={onBack}
                   disabled={isBusy}
-                  title="Back"
                   style={{
-                    height: 40,
+                    height: 38,
                     padding: "0 12px",
                     borderRadius: 14,
-                    background: LIGHT_SURFACE,
                     border: `1px solid ${LIGHT_BORDER}`,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
+                    background: LIGHT_SURFACE,
                     fontWeight: 900,
                     color: LIGHT_TEXT,
-                    opacity: isBusy ? 0.55 : 1,
                     cursor: isBusy ? "not-allowed" : "pointer",
+                    opacity: isBusy ? 0.6 : 1,
                   }}
                 >
-                  <ArrowLeft className="h-4 w-4" />
                   Back
                 </button>
               </div>
+
+              {/* Speaking mini indicator */}
+              {isSpeaking ? (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    marginBottom: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 999,
+                      border: `1px solid ${LIGHT_BORDER}`,
+                      background: "#fff",
+                      boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+                      fontWeight: 900,
+                      color: LIGHT_TEXT,
+                      fontSize: 12,
+                    }}
+                  >
+                    Coach is speaking…
+                  </div>
+                </div>
+              ) : null}
 
               {/* Prompt */}
               <div style={{ textAlign: "center", fontWeight: 900, fontSize: 22 }}>{target || "—"}</div>
