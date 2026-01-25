@@ -1,6 +1,7 @@
 // src/pages/Coach.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Volume2, StopCircle, ArrowUp, RefreshCw, Sparkles } from "lucide-react";
+import { ChevronDown, RefreshCw, Mic, StopCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 
@@ -21,159 +22,79 @@ function getApiBase() {
   return (ls || env || window.location.origin).replace(/\/+$/, "");
 }
 
-/* ---------------- content pools ---------------- */
+/* ---------------- simple pools ---------------- */
 const WORDS = {
-  easy: [
-    "water", "coffee", "world", "future", "music", "people", "focus", "really", "alright", "comfortable",
-    "camera", "purple", "problem", "market", "school",
-  ],
-  medium: [
-    "thought", "through", "three", "thirty", "literature", "entrepreneur", "comfortable", "particularly",
-    "development", "opportunity", "environment", "performance",
-  ],
-  hard: [
-    "rural", "urbanization", "inequality", "probability", "statistically", "authenticity",
-    "responsibility", "interoperability", "characteristically",
-  ],
+  easy: ["water", "coffee", "music", "people", "world", "future", "camera", "really"],
+  medium: ["comfortable", "sentence", "accent", "problem", "thirty", "through", "thought", "focus"],
+  hard: ["particularly", "entrepreneurship", "authenticity", "responsibility", "vulnerability"],
 };
 
 const SENTENCES = {
   easy: [
-    "I want a coffee, please.",
-    "The water is cold today.",
-    "I feel alright now.",
-    "I like music in the morning.",
+    "I like coffee.",
+    "The water is cold.",
+    "I live in Denmark.",
+    "This is my phone.",
   ],
   medium: [
-    "I thought it through before I decided.",
-    "Three people walked through the door.",
-    "I feel comfortable speaking a little slower.",
-    "I want to improve my pronunciation step by step.",
+    "I want to sound more natural when I speak.",
+    "Please try to pronounce this clearly and slowly.",
+    "I recorded my voice and got feedback.",
   ],
   hard: [
-    "Urbanization can change opportunity and inequality over time.",
-    "I want a natural rhythm without losing clarity.",
-    "This is statistically significant, but the story matters too.",
-    "Responsibility and authenticity are hard to balance in practice.",
+    "I would rather practice consistently than rush and burn out.",
+    "Clear pronunciation comes from rhythm, stress, and good vowels.",
   ],
 };
 
-/* ---------------- small helpers ---------------- */
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
-}
-
 function pickRandom(arr) {
-  const a = Array.isArray(arr) ? arr : [];
-  if (!a.length) return "";
-  return a[Math.floor(Math.random() * a.length)];
+  if (!arr?.length) return "";
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function getOverallPctFromApi(json) {
-  // Use what the API already returns (simple + stable)
-  const v = Number(json?.overall ?? json?.pronunciation ?? json?.overallAccuracy ?? json?.score ?? 0);
-  // if it looks like 0..1, scale
-  const pct = v <= 1 ? Math.round(clamp(v, 0, 1) * 100) : Math.round(clamp(v, 0, 100));
-  return pct;
-}
-
-function chooseThreshold(difficulty) {
-  // “good enough” thresholds
-  if (difficulty === "easy") return 75;
-  if (difficulty === "medium") return 82;
-  return 88;
-}
-
-function choosePraise(overallPct, threshold) {
-  if (overallPct >= Math.max(92, threshold + 10)) return "Well done! 🔥";
-  if (overallPct >= threshold) return "That’s alright — next one ✅";
-  return "Try again — listen once, then repeat 👂";
-}
-
-/* ---------------- TTS ---------------- */
-function speak(text, { rate = 1.0 } = {}) {
-  try {
-    if (!("speechSynthesis" in window)) return false;
-    const u = new SpeechSynthesisUtterance(String(text || ""));
-    u.rate = clamp(Number(rate) || 1.0, 0.5, 1.2);
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
+/* ---------------- page ---------------- */
 export default function Coach() {
   const { settings } = useSettings();
 
-  // UI state
-  const [mode, setMode] = useState("word"); // "word" | "sentence"
-  const [difficulty, setDifficulty] = useState("easy"); // easy|medium|hard
+  // light tokens (match your Record page vibe)
+  const LIGHT_TEXT = "rgba(17,24,39,0.92)";
+  const LIGHT_MUTED = "rgba(17,24,39,0.55)";
+  const LIGHT_BORDER = "rgba(0,0,0,0.10)";
+  const LIGHT_SHADOW = "0 10px 24px rgba(0,0,0,0.06)";
+  const LIGHT_SURFACE = "#FFFFFF";
+  const LIGHT_BG = "#EEF5FF";
+  const BTN_BLUE = "#2196F3";
+
+  const TABBAR_OFFSET = 64;
+
+  // ✅ dropdown state (like accent)
+  const [mode, setMode] = useState("words"); // words | sentences
+  const [difficulty, setDifficulty] = useState("easy"); // easy | medium | hard
   const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
 
   useEffect(() => {
     setAccentUi(settings?.accentDefault || "en_us");
   }, [settings?.accentDefault]);
 
-  // session state
-  const [started, setStarted] = useState(false);
+  // ✅ stage: start screen shows ONLY controls + start
+  const [stage, setStage] = useState("idle"); // idle | running
   const [target, setTarget] = useState("");
-  const [status, setStatus] = useState("Tap Start to begin.");
-  const [streak, setStreak] = useState(0);
-  const [levelHint, setLevelHint] = useState("");
+  const [result, setResult] = useState(null);
+  const [status, setStatus] = useState("");
 
-  // recording + result
+  // recording
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [err, setErr] = useState("");
-  const [result, setResult] = useState(null);
+  const isBusy = isRecording || isAnalyzing;
 
   const mediaRecRef = useRef(null);
   const chunksRef = useRef([]);
+  const userAudioRef = useRef(null);
   const [lastUrl, setLastUrl] = useState(null);
-
-  const threshold = useMemo(() => chooseThreshold(difficulty), [difficulty]);
-
-  function pool() {
-    if (mode === "sentence") return SENTENCES[difficulty] || [];
-    return WORDS[difficulty] || [];
-  }
-
-  function nextTarget({ speakIntro = true } = {}) {
-    const t = pickRandom(pool());
-    setTarget(t);
-    setResult(null);
-    setErr("");
-    setStatus("Say it when you're ready, then record.");
-    setLevelHint("");
-
-    if (speakIntro) {
-      // iOS-friendly: this should happen right after user gesture (Start/Next button)
-      speak(`Try to pronounce: ${t}`, { rate: 0.95 });
-    }
-  }
-
-  function resetSession() {
-    setStarted(false);
-    setTarget("");
-    setStatus("Tap Start to begin.");
-    setStreak(0);
-    setLevelHint("");
-    setResult(null);
-    setErr("");
-    try {
-      if (lastUrl) URL.revokeObjectURL(lastUrl);
-    } catch {}
-    setLastUrl(null);
-    disposeRecorder();
-    setIsRecording(false);
-    setIsAnalyzing(false);
-  }
 
   function disposeRecorder() {
     try {
-      mediaRecRef.current?.stream?.getTracks().forEach((t) => t.stop());
+      mediaRecRef.current?.stream?.getTracks()?.forEach((t) => t.stop());
     } catch {}
     mediaRecRef.current = null;
   }
@@ -202,7 +123,60 @@ export default function Coach() {
       if (e?.data && e.data.size > 0) chunksRef.current.push(e.data);
     };
     rec.onstop = () => handleStop(rec);
+
     mediaRecRef.current = rec;
+  }
+
+  function speakTts(text) {
+    try {
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+
+      const u = new SpeechSynthesisUtterance(text);
+      // Use system voice; accent selection is still handled by scoring + your app settings,
+      // but browser TTS voice depends on device.
+      u.rate = 1.0;
+      u.pitch = 1.0;
+      u.volume = settings?.soundEnabled === false ? 0 : 1;
+
+      window.speechSynthesis.speak(u);
+    } catch {}
+  }
+
+  function buildNewTarget(nextMode = mode, nextDiff = difficulty) {
+    const pool =
+      nextMode === "sentences"
+        ? (SENTENCES[nextDiff] || [])
+        : (WORDS[nextDiff] || []);
+    return pickRandom(pool);
+  }
+
+  function resetRun() {
+    setResult(null);
+    setStatus("");
+    const t = buildNewTarget();
+    setTarget(t);
+    // short instruction
+    speakTts(nextInstruction(t));
+  }
+
+  function nextInstruction(t) {
+    if (mode === "sentences") return `Try to say: ${t}`;
+    return `Try to pronounce: ${t}`;
+  }
+
+  function onStart() {
+    const t = buildNewTarget();
+    setTarget(t);
+    setResult(null);
+    setStatus("");
+    setStage("running");
+    speakTts(nextInstruction(t));
+  }
+
+  function onRefresh() {
+    if (isBusy) return;
+    resetRun();
   }
 
   function handleStop(rec) {
@@ -210,6 +184,7 @@ export default function Coach() {
 
     const chunks = chunksRef.current.slice();
     chunksRef.current = [];
+
     disposeRecorder();
 
     try {
@@ -218,44 +193,37 @@ export default function Coach() {
 
     const type = chunks[0]?.type || rec?.mimeType || "audio/webm";
     const blob = new Blob(chunks, { type });
-    const localUrl = URL.createObjectURL(blob);
 
+    const localUrl = URL.createObjectURL(blob);
     setLastUrl(localUrl);
     setIsAnalyzing(true);
     sendToServer(blob, localUrl);
   }
 
-  async function startRecord() {
-    if (!started || !target) return;
-    try {
-      setErr("");
-      await ensureMic();
-      chunksRef.current = [];
-      mediaRecRef.current.start();
-      setIsRecording(true);
-      setStatus("Recording…");
-    } catch (e) {
-      setErr(!IS_PROD ? (e?.message || String(e)) : "Microphone access is blocked. Please allow it and try again.");
-      setIsRecording(false);
-      setStatus("Tap Record to try again.");
-    }
+  async function startRecording() {
+    if (!target?.trim()) return;
+    setStatus("");
+    await ensureMic();
+    chunksRef.current = [];
+    mediaRecRef.current.start();
+    setIsRecording(true);
   }
 
-  function stopRecord() {
+  function stopRecording() {
     try {
       if (mediaRecRef.current && mediaRecRef.current.state !== "inactive") mediaRecRef.current.stop();
     } catch {}
   }
 
   async function toggleRecord() {
-    if (isAnalyzing) return;
-    if (isRecording) stopRecord();
-    else await startRecord();
+    if (isRecording) stopRecording();
+    else if (!isAnalyzing) await startRecording();
   }
 
   async function sendToServer(audioBlob, localUrl) {
     try {
       const base = getApiBase();
+
       const fd = new FormData();
       fd.append("audio", audioBlob, "clip.webm");
       fd.append("refText", target);
@@ -264,11 +232,6 @@ export default function Coach() {
       const r = await fetch(`${base}/api/analyze-speech`, { method: "POST", body: fd });
       const json = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
-
-      const overallPct = getOverallPctFromApi(json);
-      const ok = overallPct >= threshold;
-
-      const msg = choosePraise(overallPct, threshold);
 
       const payload = {
         ...json,
@@ -281,361 +244,307 @@ export default function Coach() {
 
       setResult(payload);
 
-      if (ok) {
-        const nextStreak = streak + 1;
-        setStreak(nextStreak);
-        setStatus(msg);
+      // simple “coach reaction”
+      const overall = Number(json?.overall ?? json?.overallAccuracy ?? json?.pronunciation ?? 0);
+      const threshold = difficulty === "easy" ? 75 : difficulty === "medium" ? 82 : 88;
 
-        speak(msg, { rate: 1.0 });
-
-        // recommend level up after a small win streak
-        if (nextStreak >= 5) {
-          if (difficulty === "easy") setLevelHint("You’re on a streak — try Medium difficulty.");
-          else if (difficulty === "medium") setLevelHint("Nice — consider switching to Hard difficulty.");
-          else setLevelHint("You’re crushing Hard — keep going 🔥");
-        }
-
-        // auto-advance after a short delay
-        setTimeout(() => {
-          // only auto-advance if user didn’t start a new recording
-          setResult((cur) => cur); // no-op (keeps latest)
-          nextTarget({ speakIntro: true });
-        }, 900);
+      if (overall >= threshold + 7) {
+        setStatus("Well done ✅");
+        speakTts("Well done. Let's go to the next one.");
+        const next = buildNewTarget(mode, difficulty);
+        setTarget(next);
+        // speak next target after a tiny delay
+        setTimeout(() => speakTts(nextInstruction(next)), 250);
+      } else if (overall >= threshold) {
+        setStatus("That’s alright — next 👌");
+        speakTts("That's alright. Let's go to the next one.");
+        const next = buildNewTarget(mode, difficulty);
+        setTarget(next);
+        setTimeout(() => speakTts(nextInstruction(next)), 250);
       } else {
-        setStreak(0);
-        setStatus(msg);
-        speak("Try again.", { rate: 1.0 });
+        setStatus("Try again (listen to the feedback) 🔁");
+        speakTts("Try again.");
       }
     } catch (e) {
-      setErr(!IS_PROD ? (e?.message || String(e)) : "Something went wrong. Try again.");
-      setStatus("Tap Record to try again.");
+      setStatus(IS_PROD ? "Something went wrong. Try again." : (e?.message || String(e)));
     } finally {
       setIsAnalyzing(false);
     }
   }
 
-  // light-only UI tokens
-  const LIGHT_TEXT = "rgba(17,24,39,0.92)";
-  const LIGHT_MUTED = "rgba(17,24,39,0.55)";
-  const LIGHT_BORDER = "rgba(0,0,0,0.10)";
-  const LIGHT_SHADOW = "0 10px 24px rgba(0,0,0,0.06)";
-  const LIGHT_SURFACE = "#FFFFFF";
-  const LIGHT_PANEL = "#F2F2F7";
-  const BLUE = "#2196F3";
-  const ORANGE = "#FF9800";
+  // ✅ when mode/difficulty changes: keep idle screen clean, and if running, regenerate target
+  useEffect(() => {
+    if (stage !== "running") return;
+    if (isBusy) return;
+    const t = buildNewTarget(mode, difficulty);
+    setTarget(t);
+    setResult(null);
+    setStatus("");
+    speakTts(nextInstruction(t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, difficulty]);
+
+  // ✅ Control row style: NEVER wrap (fixes the “2 lines” problem)
+  const controlRowStyle = {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "nowrap",
+    overflowX: "auto",
+    WebkitOverflowScrolling: "touch",
+    padding: "10px 12px",
+    background: LIGHT_SURFACE,
+    border: `1px solid ${LIGHT_BORDER}`,
+    borderRadius: 18,
+    boxShadow: LIGHT_SHADOW,
+    maxWidth: "100%",
+  };
+
+  const selectWrapStyle = {
+    position: "relative",
+    flex: "0 0 auto",
+  };
+
+  const selectStyle = {
+    height: 44,
+    borderRadius: 16,
+    padding: "0 12px",
+    fontWeight: 900,
+    color: LIGHT_TEXT,
+    background: LIGHT_SURFACE,
+    border: `1px solid ${LIGHT_BORDER}`,
+    boxShadow: "none",
+    outline: "none",
+    cursor: isBusy ? "not-allowed" : "pointer",
+    appearance: "none",
+    paddingRight: 34,
+  };
 
   return (
-    <div className="page" style={{ minHeight: "100vh", background: "#fff", color: LIGHT_TEXT }}>
+    <div className="page" style={{ minHeight: "100vh", background: LIGHT_BG, color: LIGHT_TEXT }}>
       <div className="mx-auto w-full" style={{ maxWidth: 720, padding: "14px 12px 8px" }}>
-        <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18 }}>
+        <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: LIGHT_TEXT }}>
           Talk Coach
         </div>
       </div>
 
-      <div className="mx-auto w-full" style={{ maxWidth: 720, padding: "14px 16px 24px" }}>
-        {/* Controls */}
-        <div
-          style={{
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: LIGHT_SURFACE,
-            boxShadow: LIGHT_SHADOW,
-            borderRadius: 18,
-            padding: 12,
-            display: "grid",
-            gap: 10,
-          }}
-        >
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {/* Mode */}
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                type="button"
-                onClick={() => setMode("word")}
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: 14,
-                  border: `1px solid ${LIGHT_BORDER}`,
-                  background: mode === "word" ? BLUE : LIGHT_PANEL,
-                  color: mode === "word" ? "white" : LIGHT_TEXT,
-                  fontWeight: 900,
-                }}
-              >
-                Words
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("sentence")}
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: 14,
-                  border: `1px solid ${LIGHT_BORDER}`,
-                  background: mode === "sentence" ? BLUE : LIGHT_PANEL,
-                  color: mode === "sentence" ? "white" : LIGHT_TEXT,
-                  fontWeight: 900,
-                }}
-              >
-                Sentences
-              </button>
-            </div>
+      <div
+        className="mx-auto w-full"
+        style={{
+          maxWidth: 720,
+          padding: "12px 12px",
+          paddingBottom: `calc(${TABBAR_OFFSET}px + 24px)`,
+        }}
+      >
+        {/* ✅ ONLY controls at start (idle) + Start */}
+        <div style={controlRowStyle}>
+          {/* Mode */}
+          <div style={selectWrapStyle}>
+            <select
+              aria-label="Mode"
+              value={mode}
+              onChange={(e) => setMode(e.target.value)}
+              disabled={isBusy}
+              style={selectStyle}
+              title="Mode"
+            >
+              <option value="words">Words</option>
+              <option value="sentences">Sentences</option>
+            </select>
+            <ChevronDown
+              className="h-4 w-4"
+              style={{
+                position: "absolute",
+                right: 10,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: LIGHT_MUTED,
+                pointerEvents: "none",
+              }}
+            />
+          </div>
 
-            {/* Difficulty */}
-            <div style={{ display: "flex", gap: 8 }}>
-              {["easy", "medium", "hard"].map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => {
-                    setDifficulty(d);
-                    setStreak(0);
-                    setLevelHint("");
-                    if (started) nextTarget({ speakIntro: true });
-                  }}
-                  style={{
-                    padding: "10px 12px",
-                    borderRadius: 14,
-                    border: `1px solid ${LIGHT_BORDER}`,
-                    background: difficulty === d ? ORANGE : LIGHT_PANEL,
-                    color: difficulty === d ? "white" : LIGHT_TEXT,
-                    fontWeight: 900,
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
+          {/* Difficulty */}
+          <div style={selectWrapStyle}>
+            <select
+              aria-label="Difficulty"
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value)}
+              disabled={isBusy}
+              style={selectStyle}
+              title="Difficulty"
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+            <ChevronDown
+              className="h-4 w-4"
+              style={{
+                position: "absolute",
+                right: 10,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: LIGHT_MUTED,
+                pointerEvents: "none",
+              }}
+            />
+          </div>
 
-            {/* Accent */}
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-              <select
-                value={accentUi}
-                onChange={(e) => setAccentUi(e.target.value)}
-                style={{
-                  height: 42,
-                  borderRadius: 14,
-                  padding: "0 12px",
-                  fontWeight: 900,
-                  color: LIGHT_TEXT,
-                  background: LIGHT_PANEL,
-                  border: `1px solid ${LIGHT_BORDER}`,
-                  outline: "none",
-                  cursor: "pointer",
-                }}
-                title="Accent"
-              >
-                <option value="en_us">🇺🇸</option>
-                <option value="en_br">🇬🇧</option>
-              </select>
+          {/* Accent */}
+          <div style={selectWrapStyle}>
+            <select
+              aria-label="Accent"
+              value={accentUi}
+              onChange={(e) => {
+                if (!isBusy) setAccentUi(e.target.value);
+              }}
+              disabled={isBusy}
+              style={selectStyle}
+              title="Accent"
+            >
+              <option value="en_us">🇺🇸</option>
+              <option value="en_br">🇬🇧</option>
+            </select>
+            <ChevronDown
+              className="h-4 w-4"
+              style={{
+                position: "absolute",
+                right: 10,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: LIGHT_MUTED,
+                pointerEvents: "none",
+              }}
+            />
+          </div>
 
-              <button
-                type="button"
-                onClick={resetSession}
-                title="Reset"
+          {/* Refresh */}
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isBusy || stage !== "running"}
+            title="New prompt"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              background: LIGHT_SURFACE,
+              border: `1px solid ${LIGHT_BORDER}`,
+              display: "grid",
+              placeItems: "center",
+              opacity: isBusy || stage !== "running" ? 0.45 : 1,
+              cursor: isBusy || stage !== "running" ? "not-allowed" : "pointer",
+              flex: "0 0 auto",
+            }}
+          >
+            <RefreshCw className="h-5 w-5" style={{ color: LIGHT_TEXT, opacity: 0.8 }} />
+          </button>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <AnimatePresence mode="wait">
+            {stage === "idle" ? (
+              <motion.div
+                key="idle"
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ duration: 0.18 }}
                 style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 14,
+                  background: LIGHT_SURFACE,
                   border: `1px solid ${LIGHT_BORDER}`,
-                  background: LIGHT_PANEL,
+                  borderRadius: 22,
+                  boxShadow: LIGHT_SHADOW,
+                  padding: 18,
+                  minHeight: 220,
                   display: "grid",
                   placeItems: "center",
                 }}
               >
-                <RefreshCw className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Status row */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-            <div style={{ fontWeight: 900, color: LIGHT_MUTED }}>
-              Threshold: <span style={{ color: LIGHT_TEXT }}>{threshold}%</span>
-              <span style={{ marginLeft: 10 }}>
-                Streak: <span style={{ color: LIGHT_TEXT }}>{streak}</span>
-              </span>
-            </div>
-            {levelHint ? (
-              <div style={{ fontWeight: 900, color: ORANGE, display: "flex", alignItems: "center", gap: 6 }}>
-                <Sparkles className="h-4 w-4" />
-                {levelHint}
-              </div>
+                <button
+                  type="button"
+                  onClick={onStart}
+                  style={{
+                    height: 46,
+                    padding: "0 18px",
+                    borderRadius: 16,
+                    border: "none",
+                    background: BTN_BLUE,
+                    color: "white",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                  }}
+                >
+                  Start
+                </button>
+              </motion.div>
             ) : (
-              <div />
-            )}
-          </div>
-        </div>
-
-        {/* Main stage */}
-        <div
-          style={{
-            marginTop: 14,
-            borderRadius: 22,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: LIGHT_PANEL,
-            padding: 16,
-            minHeight: 360,
-            display: "grid",
-            alignContent: "start",
-            gap: 12,
-          }}
-        >
-          {!started ? (
-            <div style={{ display: "grid", placeItems: "center", height: 320, textAlign: "center", gap: 10 }}>
-              <div style={{ fontWeight: 900, fontSize: 18 }}>Ready?</div>
-              <div style={{ color: LIGHT_MUTED, fontWeight: 800, maxWidth: 520 }}>
-                Tap Start. You’ll get a random {mode === "sentence" ? "sentence" : "word"} and instant feedback.
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setStarted(true);
-                  setStreak(0);
-                  nextTarget({ speakIntro: true });
-                }}
-                style={{
-                  marginTop: 6,
-                  padding: "12px 16px",
-                  borderRadius: 16,
-                  border: "none",
-                  background: BLUE,
-                  color: "white",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                Start
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Target */}
-              <div
+              <motion.div
+                key="running"
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ duration: 0.18 }}
                 style={{
                   background: LIGHT_SURFACE,
                   border: `1px solid ${LIGHT_BORDER}`,
-                  borderRadius: 18,
-                  padding: "14px 14px",
-                  boxShadow: "0 10px 24px rgba(0,0,0,0.06)",
+                  borderRadius: 22,
+                  boxShadow: LIGHT_SHADOW,
+                  padding: 18,
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-                  <div style={{ fontWeight: 900, fontSize: 13, color: LIGHT_MUTED }}>
-                    Target
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      type="button"
-                      onClick={() => speak(`Try to pronounce: ${target}`, { rate: 0.95 })}
-                      style={{
-                        height: 36,
-                        padding: "0 12px",
-                        borderRadius: 999,
-                        border: `1px solid ${LIGHT_BORDER}`,
-                        background: LIGHT_PANEL,
-                        fontWeight: 900,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                      }}
-                      title="Play prompt"
-                    >
-                      <Volume2 className="h-4 w-4" />
-                      Listen
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => nextTarget({ speakIntro: true })}
-                      style={{
-                        height: 36,
-                        padding: "0 12px",
-                        borderRadius: 999,
-                        border: `1px solid ${LIGHT_BORDER}`,
-                        background: LIGHT_PANEL,
-                        fontWeight: 900,
-                      }}
-                      title="Next target"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 10, fontWeight: 950, fontSize: mode === "sentence" ? 26 : 34 }}>
-                  {target}
-                </div>
-
-                <div style={{ marginTop: 10, color: LIGHT_MUTED, fontWeight: 800, fontSize: 13 }}>
-                  {status}
+                {/* Prompt */}
+                <div style={{ textAlign: "center", fontWeight: 900, fontSize: 22 }}>
+                  {target || "—"}
                 </div>
 
                 {/* Record button */}
-                <div style={{ marginTop: 14, display: "flex", justifyContent: "center" }}>
+                <div style={{ display: "grid", placeItems: "center", marginTop: 14 }}>
                   <button
                     type="button"
                     onClick={toggleRecord}
-                    disabled={isAnalyzing}
+                    disabled={isAnalyzing || !target}
+                    title={isRecording ? "Stop" : "Record"}
                     style={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: 999,
+                      width: 52,
+                      height: 52,
+                      borderRadius: 18,
                       border: "none",
-                      background: isRecording ? ORANGE : "#8B5CF6",
+                      background: isRecording ? "#111827" : BTN_BLUE,
                       display: "grid",
                       placeItems: "center",
                       cursor: isAnalyzing ? "not-allowed" : "pointer",
                       opacity: isAnalyzing ? 0.6 : 1,
                     }}
-                    title={isRecording ? "Stop" : "Record"}
-                    aria-label={isRecording ? "Stop recording" : "Start recording"}
                   >
                     {isRecording ? (
-                      <StopCircle className="h-7 w-7" style={{ color: "white" }} />
+                      <StopCircle className="h-6 w-6" style={{ color: "white" }} />
                     ) : (
-                      <ArrowUp className="h-7 w-7" style={{ color: "white" }} />
+                      <Mic className="h-6 w-6" style={{ color: "white" }} />
                     )}
                   </button>
-                </div>
 
-                <div style={{ marginTop: 8, textAlign: "center", color: LIGHT_MUTED, fontWeight: 800, fontSize: 12 }}>
-                  {isRecording ? "Recording…" : isAnalyzing ? "Analyzing…" : " "}
-                </div>
-
-                {err ? (
-                  <div style={{ marginTop: 10, textAlign: "center", color: "#e5484d", fontWeight: 900, fontSize: 13 }}>
-                    {err}
+                  <div style={{ marginTop: 10, minHeight: 18, color: LIGHT_MUTED, fontWeight: 800, fontSize: 12 }}>
+                    {isRecording ? "Recording…" : isAnalyzing ? "Analyzing…" : status || " "}
                   </div>
-                ) : null}
-              </div>
+                </div>
 
-              {/* Feedback */}
-              {result ? (
-                <div style={{ background: "transparent" }}>
-                  <div className="pf-embed-wrap" style={{ width: "100%", minWidth: 0 }}>
-                    <div className="pf-embed-inner">
-                      <PhonemeFeedback result={result} embed={true} hideBookmark={true} />
+                {/* Feedback */}
+                {result ? (
+                  <div style={{ marginTop: 12 }}>
+                    <div className="pf-embed-wrap" style={{ width: "100%", minWidth: 0 }}>
+                      <div className="pf-embed-inner">
+                        <PhonemeFeedback result={result} embed={true} hideBookmark={true} />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    borderRadius: 18,
-                    border: `1px solid ${LIGHT_BORDER}`,
-                    background: "rgba(255,255,255,0.65)",
-                    padding: 14,
-                    color: LIGHT_MUTED,
-                    fontWeight: 800,
-                    textAlign: "center",
-                  }}
-                >
-                  Record to get instant visual feedback.
-                </div>
-              )}
-            </>
-          )}
+                ) : null}
+
+                <audio ref={userAudioRef} playsInline preload="auto" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
