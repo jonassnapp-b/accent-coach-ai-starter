@@ -90,7 +90,17 @@ export default function Coach() {
   const mediaRecRef = useRef(null);
   const chunksRef = useRef([]);
   const [lastUrl, setLastUrl] = useState(null);
-  const userAudioRef = useRef(null);
+  // ✅ TTS audio (Azure via /api/tts)
+const ttsAudioRef = useRef(null);
+const ttsUrlRef = useRef(null);
+
+// pop effect while the target is spoken
+const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 
   function disposeRecorder() {
     try {
@@ -191,11 +201,83 @@ export default function Coach() {
     const pool = nextMode === "sentences" ? (SENTENCES[nextDiff] || []) : (WORDS[nextDiff] || []);
     return pickRandom(pool);
   }
+async function playTts(text, rate = 1.0) {
+  const t = String(text || "").trim();
+  if (!t) return;
 
-  function nextInstruction(t, nextMode = mode) {
-    if (nextMode === "sentences") return `Try to say: ${t}`;
-    return `Try to pronounce: ${t}`;
+  // stop previous
+  try {
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current.currentTime = 0;
+    }
+  } catch {}
+
+  // revoke old url
+  try {
+    if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current);
+  } catch {}
+  ttsUrlRef.current = null;
+
+  const base = getApiBase();
+  const r = await fetch(`${base}/api/tts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text: t,
+      accent: accentUi, // en_us or en_br
+      rate,
+    }),
+  });
+
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    throw new Error(j?.detail || j?.error || `TTS failed (${r.status})`);
   }
+
+  const buf = await r.arrayBuffer();
+  const blob = new Blob([buf], { type: "audio/wav" }); // your endpoint returns wav
+  const url = URL.createObjectURL(blob);
+  ttsUrlRef.current = url;
+
+  const a = ttsAudioRef.current;
+  if (!a) return;
+
+  a.src = url;
+  a.volume = settings?.soundEnabled === false ? 0 : 1;
+
+  await a.play();
+  await new Promise((resolve) => {
+    const done = () => resolve();
+    a.onended = done;
+    a.onerror = done;
+  });
+}
+
+// ✅ “Repeat after me.” + pause + target pop while spoken
+async function speakSequence(t) {
+  setIsSpeaking(true);
+  try {
+    await playTts("Repeat after me.", 1.0);
+  } catch (e) {
+    // don’t crash UX; just stop indicator
+    if (!IS_PROD) console.warn("[TTS intro]", e);
+  } finally {
+    setIsSpeaking(false);
+  }
+
+  // pause before the target
+  await sleep(700);
+
+  setIsSpeakingTarget(true);
+  try {
+    await playTts(t, 0.98);
+  } catch (e) {
+    if (!IS_PROD) console.warn("[TTS target]", e);
+  } finally {
+    setIsSpeakingTarget(false);
+  }
+}
 
   async function beginIntroThenFlow() {
     const t = buildNewTarget(mode, difficulty);
@@ -204,10 +286,10 @@ export default function Coach() {
     setStatus("");
 
     // speak while showing "speaking" visuals
-    await speakTts(nextInstruction(t, mode));
+await speakSequence(t);
 
     // then transition into main flow card
-    setStage("flow");
+setStage("flow");
   }
 
   function onStart() {
@@ -217,10 +299,19 @@ export default function Coach() {
 
   function onBack() {
     if (isBusy) return;
-    try {
-      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
-    } catch {}
-    setIsSpeaking(false);
+    // stop any TTS audio
+try {
+  if (ttsAudioRef.current) {
+    ttsAudioRef.current.pause();
+    ttsAudioRef.current.currentTime = 0;
+  }
+} catch {}
+try {
+  if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current);
+} catch {}
+ttsUrlRef.current = null;
+setIsSpeaking(false);
+setIsSpeakingTarget(false);
 
     // cleanup recording + audio url
     try {
@@ -313,19 +404,19 @@ export default function Coach() {
 
       if (overall >= threshold + 7) {
         setStatus("Well done ✅");
-        await speakTts("Well done. Let's go to the next one.");
+        await playTts("Well done. Let's go to the next one.");
         const next = buildNewTarget(mode, difficulty);
         setTarget(next);
-        await speakTts(nextInstruction(next, mode));
+        await speakSequence(next)
       } else if (overall >= threshold) {
         setStatus("That’s alright — next 👌");
-        await speakTts("That's alright. Let's go to the next one.");
+        await playTts("That's alright. Let's go to the next one.");
         const next = buildNewTarget(mode, difficulty);
         setTarget(next);
-        await speakTts(nextInstruction(next, mode));
+        await speakSequence(next)
       } else {
         setStatus("Try again (listen to the feedback) 🔁");
-        await speakTts("Try again.");
+        await playTts("Try again.");
       }
     } catch (e) {
       setStatus(IS_PROD ? "Something went wrong. Try again." : e?.message || String(e));
@@ -581,10 +672,31 @@ export default function Coach() {
               ) : null}
 
               {/* Prompt */}
-              <div style={{ textAlign: "center", fontWeight: 900, fontSize: 22 }}>{target || "—"}</div>
+              <motion.div
+  style={{ textAlign: "center", fontWeight: 900, fontSize: 22 }}
+  animate={isSpeakingTarget ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+  transition={isSpeakingTarget ? { duration: 0.55, ease: "easeOut" } : { duration: 0.12 }}
+>
+  <span style={{ position: "relative", display: "inline-block", padding: "2px 10px", borderRadius: 14 }}>
+    {isSpeakingTarget ? (
+      <span
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: -12,
+          borderRadius: 18,
+          background: "rgba(33,150,243,0.14)",
+          filter: "blur(12px)",
+          zIndex: 0,
+        }}
+      />
+    ) : null}
+    <span style={{ position: "relative", zIndex: 1 }}>{target || "—"}</span>
+  </span>
+</motion.div>
 
               {/* Record button */}
-              <div style={{ display: "grid", placeItems: "center", marginTop: 14 }}>
+              <div style={{ display: "grid", placeItems: "center", marginTop: 52 }}>
                 <button
                   type="button"
                   onClick={toggleRecord}
@@ -625,7 +737,7 @@ export default function Coach() {
                 </div>
               ) : null}
 
-              <audio ref={userAudioRef} playsInline preload="auto" />
+              <audio ref={ttsAudioRef} playsInline preload="auto" />
             </motion.div>
           )}
         </AnimatePresence>
