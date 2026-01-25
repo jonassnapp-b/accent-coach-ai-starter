@@ -62,7 +62,7 @@ export default function Coach() {
 
   const TABBAR_OFFSET = 64;
 
-  // ✅ dropdown state (like accent)
+  // dropdown state
   const [mode, setMode] = useState("words"); // words | sentences
   const [difficulty, setDifficulty] = useState("easy"); // easy | medium | hard
   const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
@@ -71,7 +71,7 @@ export default function Coach() {
     setAccentUi(settings?.accentDefault || "en_us");
   }, [settings?.accentDefault]);
 
-  // ✅ stage: ONLY big card with 3 dropdowns first, then transition into the flow
+  // stages
   const [stage, setStage] = useState("setup"); // setup | flow
 
   // flow state
@@ -88,9 +88,6 @@ export default function Coach() {
   const chunksRef = useRef([]);
   const [lastUrl, setLastUrl] = useState(null);
   const userAudioRef = useRef(null);
-
-  // used to auto-transition after dropdown changes
-  const startTimerRef = useRef(null);
 
   function disposeRecorder() {
     try {
@@ -158,6 +155,17 @@ export default function Coach() {
     setStatus("");
     speakTts(nextInstruction(t, mode));
   }
+
+  function onStart() {
+    if (isBusy) return;
+    setStage("flow");
+  }
+
+  useEffect(() => {
+    if (stage !== "flow") return;
+    beginFlow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
 
   function handleStop(rec) {
     setIsRecording(false);
@@ -250,40 +258,7 @@ export default function Coach() {
     }
   }
 
-  // ✅ Auto-transition: when user touches any dropdown in setup, go to flow (no Start button)
-  function scheduleAutoStart() {
-    if (stage !== "setup") return;
-    if (startTimerRef.current) clearTimeout(startTimerRef.current);
-
-    // tiny delay so UI feels intentional (and gives a clean transition)
-    startTimerRef.current = setTimeout(() => {
-      setStage("flow");
-    }, 180);
-  }
-
-  useEffect(() => {
-    if (stage !== "flow") return;
-    // when we enter flow, start it immediately
-    beginFlow();
-
-    return () => {
-      // cleanup any timer
-      if (startTimerRef.current) clearTimeout(startTimerRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage]);
-
-  // If user changes settings while still on setup, we just schedule the start.
-  // If user somehow changes state after flow (shouldn't happen because controls aren't shown),
-  // we don't auto-regenerate here.
-  useEffect(() => {
-    if (stage !== "setup") return;
-    scheduleAutoStart();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, difficulty, accentUi]);
-
-  // ✅ ONE big card layout: 3 dropdowns in one row, never “2 lines”.
-  // If viewport too narrow, row scrolls horizontally instead of wrapping.
+  // ✅ Setup card layout: 3 dropdowns in one row; never wraps (scrolls instead)
   const bigCardStyle = {
     background: LIGHT_SURFACE,
     border: `1px solid ${LIGHT_BORDER}`,
@@ -305,10 +280,7 @@ export default function Coach() {
     paddingBottom: 2,
   };
 
-  const selectWrapStyle = {
-    position: "relative",
-    flex: "0 0 auto",
-  };
+  const selectWrapStyle = { position: "relative", flex: "0 0 auto" };
 
   const selectStyle = {
     height: 44,
@@ -360,16 +332,7 @@ export default function Coach() {
               <div style={rowNoWrap}>
                 {/* Mode */}
                 <div style={selectWrapStyle}>
-                  <select
-                    aria-label="Mode"
-                    value={mode}
-                    onChange={(e) => {
-                      setMode(e.target.value);
-                      scheduleAutoStart();
-                    }}
-                    style={selectStyle}
-                    title="Mode"
-                  >
+                  <select aria-label="Mode" value={mode} onChange={(e) => setMode(e.target.value)} style={selectStyle} title="Mode">
                     <option value="words">Words</option>
                     <option value="sentences">Sentences</option>
                   </select>
@@ -381,10 +344,7 @@ export default function Coach() {
                   <select
                     aria-label="Difficulty"
                     value={difficulty}
-                    onChange={(e) => {
-                      setDifficulty(e.target.value);
-                      scheduleAutoStart();
-                    }}
+                    onChange={(e) => setDifficulty(e.target.value)}
                     style={selectStyle}
                     title="Difficulty"
                   >
@@ -400,10 +360,7 @@ export default function Coach() {
                   <select
                     aria-label="Accent"
                     value={accentUi}
-                    onChange={(e) => {
-                      setAccentUi(e.target.value);
-                      scheduleAutoStart();
-                    }}
+                    onChange={(e) => setAccentUi(e.target.value)}
                     style={selectStyle}
                     title="Accent"
                   >
@@ -412,6 +369,28 @@ export default function Coach() {
                   </select>
                   <ChevronDown className="h-4 w-4" style={chevronStyle} />
                 </div>
+              </div>
+
+              {/* Start button (inside SAME big card) */}
+              <div style={{ display: "grid", placeItems: "center", marginTop: 14 }}>
+                <button
+                  type="button"
+                  onClick={onStart}
+                  disabled={isBusy}
+                  style={{
+                    height: 46,
+                    padding: "0 18px",
+                    borderRadius: 16,
+                    border: "none",
+                    background: BTN_BLUE,
+                    color: "white",
+                    fontWeight: 900,
+                    cursor: isBusy ? "not-allowed" : "pointer",
+                    opacity: isBusy ? 0.6 : 1,
+                  }}
+                >
+                  Start
+                </button>
               </div>
             </motion.div>
           ) : (
