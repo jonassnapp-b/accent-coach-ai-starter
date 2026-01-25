@@ -143,29 +143,45 @@ export async function getTtsAudio({ text, accent = "en_us", rate = 1.0, voice = 
   const t = String(text || "").trim();
   if (!t) throw new Error("Missing text");
 
-// 1) OpenAI first
-let mp3 = null;
-try {
-  mp3 = await fetchOpenAiMp3({ text: t, accent, rate });
-} catch (e) {
-  console.error("[tts] OpenAI failed:", e?.message || e);
-}
+  const a = (accent || "en_us").toLowerCase();
 
-// 2) Azure fallback (if keys exist & valid)
-if (!mp3) {
-  try {
-    mp3 = await fetchAzureMp3({ text: t, accent, rate, voice });
-  } catch (e) {
-    console.error("[tts] Azure failed:", e?.message || e);
+  let mp3 = null;
+
+  // ✅ British: Azure first (real en-GB voices)
+  if (a === "en_br") {
+    try {
+      mp3 = await fetchAzureMp3({ text: t, accent: a, rate, voice });
+    } catch (e) {
+      console.error("[tts] Azure failed:", e?.message || e);
+    }
+    if (!mp3) {
+      try {
+        mp3 = await fetchOpenAiMp3({ text: t, accent: a, rate });
+      } catch (e) {
+        console.error("[tts] OpenAI failed:", e?.message || e);
+      }
+    }
+  } else {
+    // ✅ American: OpenAI first
+    try {
+      mp3 = await fetchOpenAiMp3({ text: t, accent: a, rate });
+    } catch (e) {
+      console.error("[tts] OpenAI failed:", e?.message || e);
+    }
+    if (!mp3) {
+      try {
+        mp3 = await fetchAzureMp3({ text: t, accent: a, rate, voice });
+      } catch (e) {
+        console.error("[tts] Azure failed:", e?.message || e);
+      }
+    }
   }
-}
-
 
   if (!mp3?.audioBuffer) {
     throw new Error("No TTS provider available (Azure/OpenAI both failed).");
   }
 
-  // 3) Always return WAV 16k PCM mono (SpeechSuper-friendly)
   const wav = await toWavPcm16Mono16k(mp3.audioBuffer, ".mp3");
   return { audioBuffer: wav, mime: "audio/wav" };
 }
+
