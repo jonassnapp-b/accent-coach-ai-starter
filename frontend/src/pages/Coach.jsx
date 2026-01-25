@@ -124,19 +124,50 @@ export default function Coach() {
     mediaRecRef.current = rec;
   }
 
-  function speakTts(text) {
+async function speakTts(text) {
+  try {
+    if (!text) return;
+    if (settings?.soundEnabled === false) return;
+
+    const base = getApiBase();
+
+    // Forventer at din backend laver Azure TTS og returnerer audio (mp3/wav)
+    // Endpoint-navn: /api/tts (tilpas hvis din eksisterende hedder noget andet)
+    const r = await fetch(`${base}/api/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text,
+        // hold det simpelt: accent følger din dropdown
+        accent: accentUi === "en_br" ? "en-GB" : "en-US",
+      }),
+    });
+
+    if (!r.ok) throw new Error("TTS failed");
+
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+
+    const a = userAudioRef.current;
+    if (!a) return;
+
     try {
-      if (!("speechSynthesis" in window)) return;
-      window.speechSynthesis.cancel();
-
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1.0;
-      u.pitch = 1.0;
-      u.volume = settings?.soundEnabled === false ? 0 : 1;
-
-      window.speechSynthesis.speak(u);
+      a.pause();
+      a.currentTime = 0;
     } catch {}
+
+    a.src = url;
+    a.onended = () => {
+      try { URL.revokeObjectURL(url); } catch {}
+      a.onended = null;
+    };
+
+    await a.play().catch(() => {});
+  } catch (e) {
+    // i prod: bare silent fail
+    if (!IS_PROD) console.warn("[Coach TTS]", e);
   }
+}
 
   function buildNewTarget(nextMode = mode, nextDiff = difficulty) {
     const pool = nextMode === "sentences" ? (SENTENCES[nextDiff] || []) : (WORDS[nextDiff] || []);
@@ -269,32 +300,31 @@ export default function Coach() {
     maxWidth: 520,
     margin: "0 auto",
   };
+  
+const rowStack = {
+  display: "grid",
+  gap: 12,
+  width: "100%",
+};
 
-  const rowNoWrap = {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    flexWrap: "nowrap",
-    overflowX: "auto",
-    WebkitOverflowScrolling: "touch",
-    paddingBottom: 2,
-  };
 
-  const selectWrapStyle = { position: "relative", flex: "0 0 auto" };
+  const selectWrapStyle = { position: "relative", width: "100%" };
 
-  const selectStyle = {
-    height: 44,
-    borderRadius: 16,
-    padding: "0 12px",
-    fontWeight: 900,
-    color: LIGHT_TEXT,
-    background: LIGHT_SURFACE,
-    border: `1px solid ${LIGHT_BORDER}`,
-    outline: "none",
-    cursor: "pointer",
-    appearance: "none",
-    paddingRight: 34,
-  };
+const selectStyle = {
+  height: 46,
+  width: "100%",
+  borderRadius: 16,
+  padding: "0 12px",
+  fontWeight: 900,
+  color: LIGHT_TEXT,
+  background: LIGHT_SURFACE,
+  border: `1px solid ${LIGHT_BORDER}`,
+  outline: "none",
+  cursor: "pointer",
+  appearance: "none",
+  paddingRight: 34,
+};
+
 
   const chevronStyle = {
     position: "absolute",
@@ -329,7 +359,7 @@ export default function Coach() {
               transition={{ duration: 0.18 }}
               style={bigCardStyle}
             >
-              <div style={rowNoWrap}>
+              <div style={rowStack}>
                 {/* Mode */}
                 <div style={selectWrapStyle}>
                   <select aria-label="Mode" value={mode} onChange={(e) => setMode(e.target.value)} style={selectStyle} title="Mode">
