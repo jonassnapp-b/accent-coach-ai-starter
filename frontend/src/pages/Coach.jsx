@@ -1,6 +1,6 @@
 // src/pages/Coach.jsx
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, Mic, StopCircle } from "lucide-react";
+import { ChevronDown, Mic, StopCircle, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
@@ -62,7 +62,7 @@ export default function Coach() {
 
   const TABBAR_OFFSET = 64;
 
-  // dropdown state
+  // ✅ dropdown state
   const [mode, setMode] = useState("words"); // words | sentences
   const [difficulty, setDifficulty] = useState("easy"); // easy | medium | hard
   const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
@@ -71,7 +71,7 @@ export default function Coach() {
     setAccentUi(settings?.accentDefault || "en_us");
   }, [settings?.accentDefault]);
 
-  // stages
+  // ✅ stage: setup -> flow (after Start)
   const [stage, setStage] = useState("setup"); // setup | flow
 
   // flow state
@@ -89,11 +89,33 @@ export default function Coach() {
   const [lastUrl, setLastUrl] = useState(null);
   const userAudioRef = useRef(null);
 
+  function stopTts() {
+    try {
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    } catch {}
+  }
+
   function disposeRecorder() {
     try {
       mediaRecRef.current?.stream?.getTracks()?.forEach((t) => t.stop());
     } catch {}
     mediaRecRef.current = null;
+  }
+
+  function resetFlowState() {
+    stopTts();
+    try {
+      if (lastUrl) URL.revokeObjectURL(lastUrl);
+    } catch {}
+    setLastUrl(null);
+
+    disposeRecorder();
+    setIsRecording(false);
+    setIsAnalyzing(false);
+
+    setTarget("");
+    setResult(null);
+    setStatus("");
   }
 
   async function ensureMic() {
@@ -124,50 +146,20 @@ export default function Coach() {
     mediaRecRef.current = rec;
   }
 
-async function speakTts(text) {
-  try {
-    if (!text) return;
-    if (settings?.soundEnabled === false) return;
-
-    const base = getApiBase();
-
-    // Forventer at din backend laver Azure TTS og returnerer audio (mp3/wav)
-    // Endpoint-navn: /api/tts (tilpas hvis din eksisterende hedder noget andet)
-    const r = await fetch(`${base}/api/tts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text,
-        // hold det simpelt: accent følger din dropdown
-        accent: accentUi === "en_br" ? "en-GB" : "en-US",
-      }),
-    });
-
-    if (!r.ok) throw new Error("TTS failed");
-
-    const blob = await r.blob();
-    const url = URL.createObjectURL(blob);
-
-    const a = userAudioRef.current;
-    if (!a) return;
-
+  // NOTE: This is still browser TTS. See note below for "real" human TTS.
+  function speakTts(text) {
     try {
-      a.pause();
-      a.currentTime = 0;
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.0;
+      u.pitch = 1.0;
+      u.volume = settings?.soundEnabled === false ? 0 : 1;
+
+      window.speechSynthesis.speak(u);
     } catch {}
-
-    a.src = url;
-    a.onended = () => {
-      try { URL.revokeObjectURL(url); } catch {}
-      a.onended = null;
-    };
-
-    await a.play().catch(() => {});
-  } catch (e) {
-    // i prod: bare silent fail
-    if (!IS_PROD) console.warn("[Coach TTS]", e);
   }
-}
 
   function buildNewTarget(nextMode = mode, nextDiff = difficulty) {
     const pool = nextMode === "sentences" ? (SENTENCES[nextDiff] || []) : (WORDS[nextDiff] || []);
@@ -188,15 +180,16 @@ async function speakTts(text) {
   }
 
   function onStart() {
-    if (isBusy) return;
     setStage("flow");
+    // start after transition tick
+    setTimeout(() => beginFlow(), 50);
   }
 
-  useEffect(() => {
-    if (stage !== "flow") return;
-    beginFlow();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage]);
+  function onBack() {
+    if (isBusy) return; // keep simple: don't allow during recording/analyze
+    resetFlowState();
+    setStage("setup");
+  }
 
   function handleStop(rec) {
     setIsRecording(false);
@@ -289,46 +282,60 @@ async function speakTts(text) {
     }
   }
 
-  // ✅ Setup card layout: 3 dropdowns in one row; never wraps (scrolls instead)
+  // cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopTts();
+      disposeRecorder();
+      try {
+        if (lastUrl) URL.revokeObjectURL(lastUrl);
+      } catch {}
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ---------- styles ---------- */
   const bigCardStyle = {
     background: LIGHT_SURFACE,
     border: `1px solid ${LIGHT_BORDER}`,
     borderRadius: 22,
     boxShadow: LIGHT_SHADOW,
-    padding: 14,
+    padding: 18,
     width: "100%",
-    maxWidth: 520,
+    maxWidth: 560,
     margin: "0 auto",
   };
-  
-const rowStack = {
-  display: "grid",
-  gap: 12,
-  width: "100%",
-};
 
+  // ✅ more vertical space between dropdowns
+  const stackStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 16, // ⬅️ more space up/down
+  };
 
-  const selectWrapStyle = { position: "relative", width: "100%" };
+  const selectWrapStyle = {
+    position: "relative",
+    width: "100%",
+  };
 
-const selectStyle = {
-  height: 46,
-  width: "100%",
-  borderRadius: 16,
-  padding: "0 12px",
-  fontWeight: 900,
-  color: LIGHT_TEXT,
-  background: LIGHT_SURFACE,
-  border: `1px solid ${LIGHT_BORDER}`,
-  outline: "none",
-  cursor: "pointer",
-  appearance: "none",
-  paddingRight: 34,
-};
-
+  const selectStyle = {
+    height: 48,
+    width: "100%",
+    borderRadius: 16,
+    padding: "0 14px",
+    fontWeight: 900,
+    color: LIGHT_TEXT,
+    background: LIGHT_SURFACE,
+    border: `1px solid ${LIGHT_BORDER}`,
+    outline: "none",
+    cursor: "pointer",
+    appearance: "none",
+    paddingRight: 40,
+  };
 
   const chevronStyle = {
     position: "absolute",
-    right: 10,
+    right: 12,
     top: "50%",
     transform: "translateY(-50%)",
     color: LIGHT_MUTED,
@@ -359,10 +366,16 @@ const selectStyle = {
               transition={{ duration: 0.18 }}
               style={bigCardStyle}
             >
-              <div style={rowStack}>
+              <div style={stackStyle}>
                 {/* Mode */}
                 <div style={selectWrapStyle}>
-                  <select aria-label="Mode" value={mode} onChange={(e) => setMode(e.target.value)} style={selectStyle} title="Mode">
+                  <select
+                    aria-label="Mode"
+                    value={mode}
+                    onChange={(e) => setMode(e.target.value)}
+                    style={selectStyle}
+                    title="Mode"
+                  >
                     <option value="words">Words</option>
                     <option value="sentences">Sentences</option>
                   </select>
@@ -394,33 +407,31 @@ const selectStyle = {
                     style={selectStyle}
                     title="Accent"
                   >
-                    <option value="en_us">🇺🇸</option>
-                    <option value="en_br">🇬🇧</option>
+                    <option value="en_us">American 🇺🇸</option>
+                    <option value="en_br">British 🇬🇧</option>
                   </select>
                   <ChevronDown className="h-4 w-4" style={chevronStyle} />
                 </div>
-              </div>
 
-              {/* Start button (inside SAME big card) */}
-              <div style={{ display: "grid", placeItems: "center", marginTop: 14 }}>
-                <button
-                  type="button"
-                  onClick={onStart}
-                  disabled={isBusy}
-                  style={{
-                    height: 46,
-                    padding: "0 18px",
-                    borderRadius: 16,
-                    border: "none",
-                    background: BTN_BLUE,
-                    color: "white",
-                    fontWeight: 900,
-                    cursor: isBusy ? "not-allowed" : "pointer",
-                    opacity: isBusy ? 0.6 : 1,
-                  }}
-                >
-                  Start
-                </button>
+                {/* Start */}
+                <div style={{ display: "grid", placeItems: "center", marginTop: 4 }}>
+                  <button
+                    type="button"
+                    onClick={onStart}
+                    style={{
+                      height: 48,
+                      padding: "0 22px",
+                      borderRadius: 16,
+                      border: "none",
+                      background: BTN_BLUE,
+                      color: "white",
+                      fontWeight: 900,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Start
+                  </button>
+                </div>
               </div>
             </motion.div>
           ) : (
@@ -438,6 +449,33 @@ const selectStyle = {
                 padding: 18,
               }}
             >
+              {/* Top row: Back */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", marginBottom: 10 }}>
+                <button
+                  type="button"
+                  onClick={onBack}
+                  disabled={isBusy}
+                  title="Back"
+                  style={{
+                    height: 40,
+                    padding: "0 12px",
+                    borderRadius: 14,
+                    background: LIGHT_SURFACE,
+                    border: `1px solid ${LIGHT_BORDER}`,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    fontWeight: 900,
+                    color: LIGHT_TEXT,
+                    opacity: isBusy ? 0.55 : 1,
+                    cursor: isBusy ? "not-allowed" : "pointer",
+                  }}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </button>
+              </div>
+
               {/* Prompt */}
               <div style={{ textAlign: "center", fontWeight: 900, fontSize: 22 }}>{target || "—"}</div>
 
