@@ -700,10 +700,11 @@ setIsSpeakingTarget(false);
                   </div>
                 </div>
               ) : null}
-<audio ref={ttsAudioRef} playsInline preload="auto" />
                           </motion.div>
           )}
         </AnimatePresence>
+        <audio ref={ttsAudioRef} playsInline preload="auto" />
+
       </div>
     </div>
   );
