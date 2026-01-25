@@ -71,6 +71,11 @@ export default function Coach() {
     setAccentUi(settings?.accentDefault || "en_us");
   }, [settings?.accentDefault]);
 
+useEffect(() => {
+  warmupTts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
   // ✅ stages: setup -> intro (speaking) -> flow
   const [stage, setStage] = useState("setup"); // setup | intro | flow
 
@@ -99,6 +104,13 @@ const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+async function warmupTts() {
+  try {
+    // ultra kort request bare for at varme function + azure forbindelsen
+    await playTts(" ", 1.0);
+  } catch {}
 }
 
 
@@ -207,7 +219,7 @@ async function speakSequence(t) {
   }
 
   // pause before the target
-  await sleep(300);
+  await sleep(200);
 
   setIsSpeakingTarget(true);
   try {
@@ -254,14 +266,12 @@ try {
 
   }
 
- async function onStart() {
+async function onStart() {
   if (isBusy) return;
 
   setStage("intro");
 
-  // lad intro-card render'e før vi spiller lyd (men stadig i klik-flow)
-  await new Promise((r) => requestAnimationFrame(r));
-
+  // Kør TTS med det samme (stadig i click event)
   await beginIntroThenFlow();
 }
 
