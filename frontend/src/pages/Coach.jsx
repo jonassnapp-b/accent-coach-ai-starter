@@ -266,6 +266,34 @@ if (myId !== ttsPlayIdRef.current) return;
   });
 }
 
+async function playPrewarmedUrl(url) {
+  const myId = ++ttsPlayIdRef.current;
+
+  // stop previous
+  try {
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current.currentTime = 0;
+    }
+  } catch {}
+
+  const a = ttsAudioRef.current;
+  if (!a) return;
+
+  a.src = url;
+  a.volume = settings?.soundEnabled === false ? 0 : 1;
+
+  if (myId !== ttsPlayIdRef.current) return;
+
+  await a.play();
+  await new Promise((resolve) => {
+    const done = () => resolve();
+    a.onended = done;
+    a.onerror = done;
+  });
+}
+
+
 async function prewarmRepeat() {
   // allerede cached
   if (prewarmUrlRef.current) return;
@@ -325,12 +353,17 @@ async function speakSequence(t) {
 // 1) intro: sig kun “Repeat after me.”
 setIsSpeaking(true);
 try {
-  await playTts("Repeat after me.", 1.0);
+  if (prewarmUrlRef.current) {
+    await playPrewarmedUrl(prewarmUrlRef.current); // ✅ instant (ingen fetch)
+  } else {
+    await playTts("Repeat after me.", 1.0);         // fallback hvis ikke prewarmed endnu
+  }
 } catch (e) {
   if (!IS_PROD) console.warn("[TTS intro]", e);
 } finally {
   setIsSpeaking(false);
 }
+
 
 // 2) transition til flow NU
 setStage("flow");
@@ -354,6 +387,11 @@ async function onStart() {
   if (isBusy) return;
 
   setStage("intro");
+  
+  if (!prewarmUrlRef.current) {
+  await prewarmRepeat();
+}
+
 
   // Kør TTS med det samme (stadig i click event)
   await beginIntroThenFlow();
