@@ -799,6 +799,17 @@ export default function PhonemeFeedback({ result, embed = false, hideBookmark = 
   const words = Array.isArray(result.words) ? result.words : [];
   const targetSentenceRaw = (result.target || result.reference || result.text || result.refText || "").trim();
   const recognition = (result.recognition ?? result.transcript ?? "").trim();
+  const metaRecognition = (result.recognition ?? "").trim();
+const metaConfidence = result.confidence ?? null;
+const metaWarning = result.warning ?? null;
+const metaIntegrity = result.integrity ?? null;
+const metaPauseCount = result.pause_count ?? null;
+const metaSpeed = result.speed ?? null;
+const metaDuration = result.numeric_duration ?? result.duration ?? null;
+
+const metaFiller = result.pause_filler ?? null;
+const metaLiaison = result.liaison ?? null;
+const metaPlosion = result.plosion ?? null;
 
   const wordsJoined = Array.isArray(words) ? words.map((w) => (w.word ?? w.w ?? "")).join(" ").trim() : "";
   const displaySentence = targetSentenceRaw || recognition || wordsJoined;
@@ -836,7 +847,6 @@ const modelBOverall = useMemo(() => {
 }, [result, oneWord, wordPhs]);
 
   const targetText = oneWord ? wordText || "" : displaySentence || "";
-  
 const targetScorePct = modelBOverall.pct;
 const hasSpoken =
   Number(targetScorePct) > 0 &&
