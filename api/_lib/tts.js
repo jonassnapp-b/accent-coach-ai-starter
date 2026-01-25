@@ -84,12 +84,20 @@ async function fetchOpenAiMp3({ text, accent, rate }) {
   const a = (accent || "en_us").toLowerCase();
   const voice = a === "en_br" ? "sage" : "alloy";
 
-  const speech = await openai.audio.speech.create({
-    model: "gpt-4o-mini-tts",
-    voice,
-    input: text,
-    format: "mp3",
-  });
+const speed = Number(rate ?? 1.0) || 1.0;
+
+const speech = await openai.audio.speech.create({
+  model: "gpt-4o-mini-tts",
+  voice,
+  input: text,
+  format: "mp3",
+  speed,
+  instructions:
+    a === "en_br"
+      ? "Speak natural British English. Warm and human, not robotic."
+      : "Speak natural American English. Warm and human, not robotic.",
+});
+
 
   const buf = Buffer.from(await speech.arrayBuffer());
   return { audioBuffer: buf, mime: "audio/mpeg" };
@@ -135,22 +143,23 @@ export async function getTtsAudio({ text, accent = "en_us", rate = 1.0, voice = 
   const t = String(text || "").trim();
   if (!t) throw new Error("Missing text");
 
-  // 1) Azure first (if keys exist & valid)
-  let mp3 = null;
+// 1) OpenAI first
+let mp3 = null;
+try {
+  mp3 = await fetchOpenAiMp3({ text: t, accent, rate });
+} catch (e) {
+  console.error("[tts] OpenAI failed:", e?.message || e);
+}
+
+// 2) Azure fallback (if keys exist & valid)
+if (!mp3) {
   try {
     mp3 = await fetchAzureMp3({ text: t, accent, rate, voice });
   } catch (e) {
     console.error("[tts] Azure failed:", e?.message || e);
   }
+}
 
-  // 2) OpenAI fallback
-  if (!mp3) {
-    try {
-      mp3 = await fetchOpenAiMp3({ text: t, accent, rate });
-    } catch (e) {
-      console.error("[tts] OpenAI failed:", e?.message || e);
-    }
-  }
 
   if (!mp3?.audioBuffer) {
     throw new Error("No TTS provider available (Azure/OpenAI both failed).");
