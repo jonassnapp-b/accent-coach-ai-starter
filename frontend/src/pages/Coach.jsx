@@ -77,12 +77,6 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [accentUi]);
 
-
-useEffect(() => {
-  warmupTts();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
-
   // ✅ stages: setup -> intro (speaking) -> flow
   const [stage, setStage] = useState("setup"); // setup | intro | flow
 
@@ -115,13 +109,6 @@ const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
-}
-
-async function warmupTts() {
-  try {
-    // ultra kort request bare for at varme function + azure forbindelsen
-    await playTts("ok", 1.0);
-  } catch {}
 }
 
 
