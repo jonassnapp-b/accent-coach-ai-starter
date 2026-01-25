@@ -74,8 +74,8 @@ function PracticeGate() {
 /* ---------------- Tabs ---------------- */
 /* ---------------- Tabs ---------------- */
 const TABS = [
-  { path: "/record",   label: "Practice",  Icon: Mic,       element: <PracticeGate /> },
-    { path: "/coach",    label: "Talk",      Icon: MessageCircle, element: <Coach /> },
+  { path: "/coach",  label: "Talk",     Icon: MessageCircle, element: <Coach /> },
+  { path: "/record", label: "Practice", Icon: Mic, element: <PracticeGate /> },
   { path: "/imitate",  label: "Coach",     Icon: AudioWaveform,  element: <ProgressiveSentenceMastery /> },
   { path: "/weakness", label: "Weakness",  Icon: Target,    element: <WeaknessLab /> },
   { path: "/settings", label: "Settings",  Icon: SettingsIcon, element: <Settings /> },
@@ -196,7 +196,7 @@ function AppInner() {
             {/* Onboarding always reachable */}
             
             {/* Default route */}
-           <Route path="/" element={<Navigate to="/record" replace />} />
+           <Route path="/" element={<Navigate to="/coach" replace />} />
 
 
             {/* Tabs */}
@@ -227,7 +227,7 @@ function AppInner() {
               onTouchStart={() => prefetchRoute(t.path)}
               // 👇 NYT: stempler et "user gesture" tidspunkt for Imitate/Speak
               onClick={() => {
-                if (t.path === "/imitate" || t.path === "/speak") {
+                if (t.path === "/imitate" || t.path === "/coach") {
                   sessionStorage.setItem("ac_last_nav_click", String(Date.now()));
                 }
               }}

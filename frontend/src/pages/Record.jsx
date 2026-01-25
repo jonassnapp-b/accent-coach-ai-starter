@@ -338,7 +338,8 @@ refreshSuggestions();
 }
 }
   /* ---------------- Layout constants ---------------- */
-  const TABBAR_OFFSET = 64;
+  const TABBAR_OFFSET = 84; // matcher tabbar-højde bedre
+const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
   const SEND_PURPLE = "#8B5CF6";
 
   // Light-mode tokens for this page (since you want “no dark mode”)
@@ -397,7 +398,7 @@ refreshSuggestions();
   style={{
     maxWidth: 720,
     padding: "18px 16px",
-    paddingBottom: `calc(${TABBAR_OFFSET}px + 170px)`,
+    paddingBottom: `calc(${TABBAR_OFFSET}px + 170px + ${SAFE_BOTTOM})`,
     overflowX: "hidden",  // ✅ extra safety for this page
   }}
 >
@@ -432,7 +433,7 @@ refreshSuggestions();
           position: "fixed",
           left: 0,
           right: 0,
-          bottom: `calc(${TABBAR_OFFSET}px)`,
+          bottom: `calc(${TABBAR_OFFSET}px + ${SAFE_BOTTOM})`,
           zIndex: 40,
           padding: "10px 12px 14px",
           background: LIGHT_BAR,
