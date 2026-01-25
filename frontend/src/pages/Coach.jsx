@@ -72,6 +72,13 @@ export default function Coach() {
   }, [settings?.accentDefault]);
 
 useEffect(() => {
+  // forvarm så snart accent er kendt
+  prewarmRepeat();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [accentUi]);
+
+
+useEffect(() => {
   warmupTts();
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
@@ -98,6 +105,8 @@ useEffect(() => {
   // ✅ TTS audio (Azure via /api/tts)
 const ttsAudioRef = useRef(null);
 const ttsUrlRef = useRef(null);
+const prewarmUrlRef = useRef(null);
+const [prewarmReady, setPrewarmReady] = useState(false);
 
 // pop effect while the target is spoken
 const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
@@ -206,20 +215,44 @@ async function playTts(text, rate = 1.0) {
   });
 }
 
+async function prewarmRepeat() {
+  // allerede cached
+  if (prewarmUrlRef.current) return;
+
+  try {
+    const base = getApiBase();
+
+    // fetch repeat audio én gang
+    const r = await fetch(`${base}/api/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: "Repeat after me.",
+        accent: accentUi, // bruger valgt accent
+        rate: 1.0,
+      }),
+    });
+
+    if (!r.ok) return;
+
+    const buf = await r.arrayBuffer();
+    const blob = new Blob([buf], { type: "audio/wav" });
+    const url = URL.createObjectURL(blob);
+
+    prewarmUrlRef.current = url;
+    setPrewarmReady(true);
+  } catch {
+    // ignore – app skal stadig virke uden
+  }
+}
+
+
 // ✅ “Repeat after me.” + pause + target pop while spoken
 async function speakSequence(t) {
-  setIsSpeaking(true);
-  try {
-    await playTts("Repeat after me.", 1.0);
-  } catch (e) {
-    // don’t crash UX; just stop indicator
-    if (!IS_PROD) console.warn("[TTS intro]", e);
-  } finally {
-    setIsSpeaking(false);
-  }
+
 
   // pause before the target
-  await sleep(200);
+  await sleep(150);
 
   setIsSpeakingTarget(true);
   try {
@@ -289,6 +322,14 @@ try {
   if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current);
 } catch {}
 ttsUrlRef.current = null;
+try {
+  if (prewarmUrlRef.current) {
+    URL.revokeObjectURL(prewarmUrlRef.current);
+  }
+} catch {}
+prewarmUrlRef.current = null;
+setPrewarmReady(false);
+
 setIsSpeaking(false);
 setIsSpeakingTarget(false);
 
