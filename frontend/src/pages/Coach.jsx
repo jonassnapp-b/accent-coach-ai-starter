@@ -1,6 +1,6 @@
 // src/pages/Coach.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, RefreshCw, Mic, StopCircle } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { ChevronDown, Mic, StopCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
@@ -30,12 +30,7 @@ const WORDS = {
 };
 
 const SENTENCES = {
-  easy: [
-    "I like coffee.",
-    "The water is cold.",
-    "I live in Denmark.",
-    "This is my phone.",
-  ],
+  easy: ["I like coffee.", "The water is cold.", "I live in Denmark.", "This is my phone."],
   medium: [
     "I want to sound more natural when I speak.",
     "Please try to pronounce this clearly and slowly.",
@@ -76,8 +71,10 @@ export default function Coach() {
     setAccentUi(settings?.accentDefault || "en_us");
   }, [settings?.accentDefault]);
 
-  // ✅ stage: start screen shows ONLY controls + start
-  const [stage, setStage] = useState("idle"); // idle | running
+  // ✅ stage: ONLY big card with 3 dropdowns first, then transition into the flow
+  const [stage, setStage] = useState("setup"); // setup | flow
+
+  // flow state
   const [target, setTarget] = useState("");
   const [result, setResult] = useState(null);
   const [status, setStatus] = useState("");
@@ -89,8 +86,11 @@ export default function Coach() {
 
   const mediaRecRef = useRef(null);
   const chunksRef = useRef([]);
-  const userAudioRef = useRef(null);
   const [lastUrl, setLastUrl] = useState(null);
+  const userAudioRef = useRef(null);
+
+  // used to auto-transition after dropdown changes
+  const startTimerRef = useRef(null);
 
   function disposeRecorder() {
     try {
@@ -133,8 +133,6 @@ export default function Coach() {
       window.speechSynthesis.cancel();
 
       const u = new SpeechSynthesisUtterance(text);
-      // Use system voice; accent selection is still handled by scoring + your app settings,
-      // but browser TTS voice depends on device.
       u.rate = 1.0;
       u.pitch = 1.0;
       u.volume = settings?.soundEnabled === false ? 0 : 1;
@@ -144,39 +142,21 @@ export default function Coach() {
   }
 
   function buildNewTarget(nextMode = mode, nextDiff = difficulty) {
-    const pool =
-      nextMode === "sentences"
-        ? (SENTENCES[nextDiff] || [])
-        : (WORDS[nextDiff] || []);
+    const pool = nextMode === "sentences" ? (SENTENCES[nextDiff] || []) : (WORDS[nextDiff] || []);
     return pickRandom(pool);
   }
 
-  function resetRun() {
-    setResult(null);
-    setStatus("");
-    const t = buildNewTarget();
-    setTarget(t);
-    // short instruction
-    speakTts(nextInstruction(t));
-  }
-
-  function nextInstruction(t) {
-    if (mode === "sentences") return `Try to say: ${t}`;
+  function nextInstruction(t, nextMode = mode) {
+    if (nextMode === "sentences") return `Try to say: ${t}`;
     return `Try to pronounce: ${t}`;
   }
 
-  function onStart() {
-    const t = buildNewTarget();
+  function beginFlow() {
+    const t = buildNewTarget(mode, difficulty);
     setTarget(t);
     setResult(null);
     setStatus("");
-    setStage("running");
-    speakTts(nextInstruction(t));
-  }
-
-  function onRefresh() {
-    if (isBusy) return;
-    resetRun();
+    speakTts(nextInstruction(t, mode));
   }
 
   function handleStop(rec) {
@@ -244,7 +224,6 @@ export default function Coach() {
 
       setResult(payload);
 
-      // simple “coach reaction”
       const overall = Number(json?.overall ?? json?.overallAccuracy ?? json?.pronunciation ?? 0);
       const threshold = difficulty === "easy" ? 75 : difficulty === "medium" ? 82 : 88;
 
@@ -253,51 +232,77 @@ export default function Coach() {
         speakTts("Well done. Let's go to the next one.");
         const next = buildNewTarget(mode, difficulty);
         setTarget(next);
-        // speak next target after a tiny delay
-        setTimeout(() => speakTts(nextInstruction(next)), 250);
+        setTimeout(() => speakTts(nextInstruction(next, mode)), 250);
       } else if (overall >= threshold) {
         setStatus("That’s alright — next 👌");
         speakTts("That's alright. Let's go to the next one.");
         const next = buildNewTarget(mode, difficulty);
         setTarget(next);
-        setTimeout(() => speakTts(nextInstruction(next)), 250);
+        setTimeout(() => speakTts(nextInstruction(next, mode)), 250);
       } else {
         setStatus("Try again (listen to the feedback) 🔁");
         speakTts("Try again.");
       }
     } catch (e) {
-      setStatus(IS_PROD ? "Something went wrong. Try again." : (e?.message || String(e)));
+      setStatus(IS_PROD ? "Something went wrong. Try again." : e?.message || String(e));
     } finally {
       setIsAnalyzing(false);
     }
   }
 
-  // ✅ when mode/difficulty changes: keep idle screen clean, and if running, regenerate target
-  useEffect(() => {
-    if (stage !== "running") return;
-    if (isBusy) return;
-    const t = buildNewTarget(mode, difficulty);
-    setTarget(t);
-    setResult(null);
-    setStatus("");
-    speakTts(nextInstruction(t));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, difficulty]);
+  // ✅ Auto-transition: when user touches any dropdown in setup, go to flow (no Start button)
+  function scheduleAutoStart() {
+    if (stage !== "setup") return;
+    if (startTimerRef.current) clearTimeout(startTimerRef.current);
 
-  // ✅ Control row style: NEVER wrap (fixes the “2 lines” problem)
-  const controlRowStyle = {
+    // tiny delay so UI feels intentional (and gives a clean transition)
+    startTimerRef.current = setTimeout(() => {
+      setStage("flow");
+    }, 180);
+  }
+
+  useEffect(() => {
+    if (stage !== "flow") return;
+    // when we enter flow, start it immediately
+    beginFlow();
+
+    return () => {
+      // cleanup any timer
+      if (startTimerRef.current) clearTimeout(startTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
+
+  // If user changes settings while still on setup, we just schedule the start.
+  // If user somehow changes state after flow (shouldn't happen because controls aren't shown),
+  // we don't auto-regenerate here.
+  useEffect(() => {
+    if (stage !== "setup") return;
+    scheduleAutoStart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, difficulty, accentUi]);
+
+  // ✅ ONE big card layout: 3 dropdowns in one row, never “2 lines”.
+  // If viewport too narrow, row scrolls horizontally instead of wrapping.
+  const bigCardStyle = {
+    background: LIGHT_SURFACE,
+    border: `1px solid ${LIGHT_BORDER}`,
+    borderRadius: 22,
+    boxShadow: LIGHT_SHADOW,
+    padding: 14,
+    width: "100%",
+    maxWidth: 520,
+    margin: "0 auto",
+  };
+
+  const rowNoWrap = {
     display: "flex",
     alignItems: "center",
     gap: 10,
     flexWrap: "nowrap",
     overflowX: "auto",
     WebkitOverflowScrolling: "touch",
-    padding: "10px 12px",
-    background: LIGHT_SURFACE,
-    border: `1px solid ${LIGHT_BORDER}`,
-    borderRadius: 18,
-    boxShadow: LIGHT_SHADOW,
-    maxWidth: "100%",
+    paddingBottom: 2,
   };
 
   const selectWrapStyle = {
@@ -313,19 +318,25 @@ export default function Coach() {
     color: LIGHT_TEXT,
     background: LIGHT_SURFACE,
     border: `1px solid ${LIGHT_BORDER}`,
-    boxShadow: "none",
     outline: "none",
-    cursor: isBusy ? "not-allowed" : "pointer",
+    cursor: "pointer",
     appearance: "none",
     paddingRight: 34,
+  };
+
+  const chevronStyle = {
+    position: "absolute",
+    right: 10,
+    top: "50%",
+    transform: "translateY(-50%)",
+    color: LIGHT_MUTED,
+    pointerEvents: "none",
   };
 
   return (
     <div className="page" style={{ minHeight: "100vh", background: LIGHT_BG, color: LIGHT_TEXT }}>
       <div className="mx-auto w-full" style={{ maxWidth: 720, padding: "14px 12px 8px" }}>
-        <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: LIGHT_TEXT }}>
-          Talk Coach
-        </div>
+        <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: LIGHT_TEXT }}>Talk Coach</div>
       </div>
 
       <div
@@ -336,216 +347,137 @@ export default function Coach() {
           paddingBottom: `calc(${TABBAR_OFFSET}px + 24px)`,
         }}
       >
-        {/* ✅ ONLY controls at start (idle) + Start */}
-        <div style={controlRowStyle}>
-          {/* Mode */}
-          <div style={selectWrapStyle}>
-            <select
-              aria-label="Mode"
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              disabled={isBusy}
-              style={selectStyle}
-              title="Mode"
+        <AnimatePresence mode="wait">
+          {stage === "setup" ? (
+            <motion.div
+              key="setup"
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
+              style={bigCardStyle}
             >
-              <option value="words">Words</option>
-              <option value="sentences">Sentences</option>
-            </select>
-            <ChevronDown
-              className="h-4 w-4"
-              style={{
-                position: "absolute",
-                right: 10,
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: LIGHT_MUTED,
-                pointerEvents: "none",
-              }}
-            />
-          </div>
+              <div style={rowNoWrap}>
+                {/* Mode */}
+                <div style={selectWrapStyle}>
+                  <select
+                    aria-label="Mode"
+                    value={mode}
+                    onChange={(e) => {
+                      setMode(e.target.value);
+                      scheduleAutoStart();
+                    }}
+                    style={selectStyle}
+                    title="Mode"
+                  >
+                    <option value="words">Words</option>
+                    <option value="sentences">Sentences</option>
+                  </select>
+                  <ChevronDown className="h-4 w-4" style={chevronStyle} />
+                </div>
 
-          {/* Difficulty */}
-          <div style={selectWrapStyle}>
-            <select
-              aria-label="Difficulty"
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-              disabled={isBusy}
-              style={selectStyle}
-              title="Difficulty"
+                {/* Difficulty */}
+                <div style={selectWrapStyle}>
+                  <select
+                    aria-label="Difficulty"
+                    value={difficulty}
+                    onChange={(e) => {
+                      setDifficulty(e.target.value);
+                      scheduleAutoStart();
+                    }}
+                    style={selectStyle}
+                    title="Difficulty"
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                  <ChevronDown className="h-4 w-4" style={chevronStyle} />
+                </div>
+
+                {/* Accent */}
+                <div style={selectWrapStyle}>
+                  <select
+                    aria-label="Accent"
+                    value={accentUi}
+                    onChange={(e) => {
+                      setAccentUi(e.target.value);
+                      scheduleAutoStart();
+                    }}
+                    style={selectStyle}
+                    title="Accent"
+                  >
+                    <option value="en_us">🇺🇸</option>
+                    <option value="en_br">🇬🇧</option>
+                  </select>
+                  <ChevronDown className="h-4 w-4" style={chevronStyle} />
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="flow"
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
+              style={{
+                background: LIGHT_SURFACE,
+                border: `1px solid ${LIGHT_BORDER}`,
+                borderRadius: 22,
+                boxShadow: LIGHT_SHADOW,
+                padding: 18,
+              }}
             >
-              <option value="easy">Easy</option>
-              <option value="medium">Medium</option>
-              <option value="hard">Hard</option>
-            </select>
-            <ChevronDown
-              className="h-4 w-4"
-              style={{
-                position: "absolute",
-                right: 10,
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: LIGHT_MUTED,
-                pointerEvents: "none",
-              }}
-            />
-          </div>
+              {/* Prompt */}
+              <div style={{ textAlign: "center", fontWeight: 900, fontSize: 22 }}>{target || "—"}</div>
 
-          {/* Accent */}
-          <div style={selectWrapStyle}>
-            <select
-              aria-label="Accent"
-              value={accentUi}
-              onChange={(e) => {
-                if (!isBusy) setAccentUi(e.target.value);
-              }}
-              disabled={isBusy}
-              style={selectStyle}
-              title="Accent"
-            >
-              <option value="en_us">🇺🇸</option>
-              <option value="en_br">🇬🇧</option>
-            </select>
-            <ChevronDown
-              className="h-4 w-4"
-              style={{
-                position: "absolute",
-                right: 10,
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: LIGHT_MUTED,
-                pointerEvents: "none",
-              }}
-            />
-          </div>
-
-          {/* Refresh */}
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={isBusy || stage !== "running"}
-            title="New prompt"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 16,
-              background: LIGHT_SURFACE,
-              border: `1px solid ${LIGHT_BORDER}`,
-              display: "grid",
-              placeItems: "center",
-              opacity: isBusy || stage !== "running" ? 0.45 : 1,
-              cursor: isBusy || stage !== "running" ? "not-allowed" : "pointer",
-              flex: "0 0 auto",
-            }}
-          >
-            <RefreshCw className="h-5 w-5" style={{ color: LIGHT_TEXT, opacity: 0.8 }} />
-          </button>
-        </div>
-
-        <div style={{ marginTop: 16 }}>
-          <AnimatePresence mode="wait">
-            {stage === "idle" ? (
-              <motion.div
-                key="idle"
-                initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                transition={{ duration: 0.18 }}
-                style={{
-                  background: LIGHT_SURFACE,
-                  border: `1px solid ${LIGHT_BORDER}`,
-                  borderRadius: 22,
-                  boxShadow: LIGHT_SHADOW,
-                  padding: 18,
-                  minHeight: 220,
-                  display: "grid",
-                  placeItems: "center",
-                }}
-              >
+              {/* Record button */}
+              <div style={{ display: "grid", placeItems: "center", marginTop: 14 }}>
                 <button
                   type="button"
-                  onClick={onStart}
+                  onClick={toggleRecord}
+                  disabled={isAnalyzing || !target}
+                  title={isRecording ? "Stop" : "Record"}
                   style={{
-                    height: 46,
-                    padding: "0 18px",
-                    borderRadius: 16,
+                    width: 52,
+                    height: 52,
+                    borderRadius: 18,
                     border: "none",
-                    background: BTN_BLUE,
-                    color: "white",
-                    fontWeight: 900,
-                    cursor: "pointer",
+                    background: isRecording ? "#111827" : BTN_BLUE,
+                    display: "grid",
+                    placeItems: "center",
+                    cursor: isAnalyzing ? "not-allowed" : "pointer",
+                    opacity: isAnalyzing ? 0.6 : 1,
                   }}
                 >
-                  Start
+                  {isRecording ? (
+                    <StopCircle className="h-6 w-6" style={{ color: "white" }} />
+                  ) : (
+                    <Mic className="h-6 w-6" style={{ color: "white" }} />
+                  )}
                 </button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="running"
-                initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                transition={{ duration: 0.18 }}
-                style={{
-                  background: LIGHT_SURFACE,
-                  border: `1px solid ${LIGHT_BORDER}`,
-                  borderRadius: 22,
-                  boxShadow: LIGHT_SHADOW,
-                  padding: 18,
-                }}
-              >
-                {/* Prompt */}
-                <div style={{ textAlign: "center", fontWeight: 900, fontSize: 22 }}>
-                  {target || "—"}
+
+                <div style={{ marginTop: 10, minHeight: 18, color: LIGHT_MUTED, fontWeight: 800, fontSize: 12 }}>
+                  {isRecording ? "Recording…" : isAnalyzing ? "Analyzing…" : status || " "}
                 </div>
+              </div>
 
-                {/* Record button */}
-                <div style={{ display: "grid", placeItems: "center", marginTop: 14 }}>
-                  <button
-                    type="button"
-                    onClick={toggleRecord}
-                    disabled={isAnalyzing || !target}
-                    title={isRecording ? "Stop" : "Record"}
-                    style={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: 18,
-                      border: "none",
-                      background: isRecording ? "#111827" : BTN_BLUE,
-                      display: "grid",
-                      placeItems: "center",
-                      cursor: isAnalyzing ? "not-allowed" : "pointer",
-                      opacity: isAnalyzing ? 0.6 : 1,
-                    }}
-                  >
-                    {isRecording ? (
-                      <StopCircle className="h-6 w-6" style={{ color: "white" }} />
-                    ) : (
-                      <Mic className="h-6 w-6" style={{ color: "white" }} />
-                    )}
-                  </button>
-
-                  <div style={{ marginTop: 10, minHeight: 18, color: LIGHT_MUTED, fontWeight: 800, fontSize: 12 }}>
-                    {isRecording ? "Recording…" : isAnalyzing ? "Analyzing…" : status || " "}
-                  </div>
-                </div>
-
-                {/* Feedback */}
-                {result ? (
-                  <div style={{ marginTop: 12 }}>
-                    <div className="pf-embed-wrap" style={{ width: "100%", minWidth: 0 }}>
-                      <div className="pf-embed-inner">
-                        <PhonemeFeedback result={result} embed={true} hideBookmark={true} />
-                      </div>
+              {/* Feedback */}
+              {result ? (
+                <div style={{ marginTop: 12 }}>
+                  <div className="pf-embed-wrap" style={{ width: "100%", minWidth: 0 }}>
+                    <div className="pf-embed-inner">
+                      <PhonemeFeedback result={result} embed={true} hideBookmark={true} />
                     </div>
                   </div>
-                ) : null}
+                </div>
+              ) : null}
 
-                <audio ref={userAudioRef} playsInline preload="auto" />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+              <audio ref={userAudioRef} playsInline preload="auto" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
