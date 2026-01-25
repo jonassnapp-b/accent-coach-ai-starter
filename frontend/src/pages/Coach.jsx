@@ -72,10 +72,19 @@ export default function Coach() {
   }, [settings?.accentDefault]);
 
 useEffect(() => {
-  // forvarm så snart accent er kendt
+  // ✅ reset prewarm when accent changes (so voice can change)
+  if (prewarmUrlRef.current) {
+    try { URL.revokeObjectURL(prewarmUrlRef.current); } catch {}
+    prewarmUrlRef.current = null;
+    setPrewarmReady(false);
+  }
+
+  // ✅ warm up again for the new accent
   prewarmRepeat();
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [accentUi]);
+
 
   // ✅ stages: setup -> intro (speaking) -> flow
   const [stage, setStage] = useState("setup"); // setup | intro | flow
@@ -321,7 +330,9 @@ async function playPrewarmedUrl(url) {
 
 async function prewarmRepeat() {
   // allerede cached
-  if (prewarmUrlRef.current) return;
+if (prewarmUrlRef.current) return;
+
+
 
   try {
     const base = getApiBase();
