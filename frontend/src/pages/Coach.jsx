@@ -254,10 +254,17 @@ try {
 
   }
 
-  function onStart() {
-    if (isBusy) return;
-    setStage("intro");
-  }
+ async function onStart() {
+  if (isBusy) return;
+
+  setStage("intro");
+
+  // lad intro-card render'e før vi spiller lyd (men stadig i klik-flow)
+  await new Promise((r) => requestAnimationFrame(r));
+
+  await beginIntroThenFlow();
+}
+
 
   function onBack() {
     if (isBusy) return;
@@ -290,11 +297,6 @@ setIsSpeakingTarget(false);
     setStage("setup");
   }
 
-  useEffect(() => {
-    if (stage !== "intro") return;
-    beginIntroThenFlow();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage]);
 
   function handleStop(rec) {
     setIsRecording(false);
