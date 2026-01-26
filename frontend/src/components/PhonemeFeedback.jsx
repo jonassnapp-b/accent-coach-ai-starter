@@ -1253,8 +1253,13 @@ function fireFocus(idx = 0) {
   const safeIdx = Math.max(0, Math.min(idx, chunkRows.length - 1));
   setActiveChunkIdx(safeIdx);
 
-  // ✅ send selected index too
-  onFocus({ chunkRows, wordText, activeChunkIdx: safeIdx });
+  // ✅ use the SAME key the overlay expects: idx
+  onFocus({
+    chunkRows,
+    wordText,
+    idx: safeIdx,
+    source: "click",
+  });
 }
 
 // ✅ Auto-open / auto-update focus mode (no click)
