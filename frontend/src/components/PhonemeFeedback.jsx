@@ -1264,7 +1264,7 @@ useEffect(() => {
   if (!chunkRows?.length) return;
 
   // Always keep overlay in sync with current active chunk
-  onFocus({ chunkRows, wordText, activeChunkIdx });
+  onFocus({ chunkRows, wordText, idx: activeChunkIdx, source: "auto" });
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [onFocus, wordText, chunkRows, activeChunkIdx]);
 

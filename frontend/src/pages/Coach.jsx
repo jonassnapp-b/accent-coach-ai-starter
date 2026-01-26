@@ -98,6 +98,7 @@ useEffect(() => {
   const [status, setStatus] = useState("");
     // ✅ Full-screen focus overlay state
   const [focusOpen, setFocusOpen] = useState(false);
+const focusDismissedRef = useRef(false);
   const [focusIdx, setFocusIdx] = useState(0);
   const [focusChunks, setFocusChunks] = useState([]);
   const [focusWord, setFocusWord] = useState("");
@@ -122,8 +123,24 @@ const [prewarmReady, setPrewarmReady] = useState(false);
 // pop effect while the target is spoken
 const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
 
-function openFocusOverlay({ chunkRows = [], wordText = "", idx = 0 } = {}) {
+function openFocusOverlay({ chunkRows = [], wordText = "", idx = 0, source = "auto" } = {}) {
   if (!chunkRows?.length) return;
+
+  // Hvis user lige har lukket (X), så må auto ikke genåbne overlay
+  if (source === "auto" && focusDismissedRef.current) {
+    // men hold data i sync i baggrunden (valgfrit)
+    setFocusChunks(chunkRows);
+    setFocusWord(wordText || "");
+    const safe = Math.max(0, Math.min(Number(idx) || 0, chunkRows.length - 1));
+    setFocusIdx(safe);
+    return;
+  }
+
+  // Hvis det er et click (eller vi ikke er dismissed), så må den åbne
+  if (source === "click") {
+    focusDismissedRef.current = false; // bruger har aktivt åbnet igen
+  }
+
   setFocusChunks(chunkRows);
   setFocusWord(wordText || "");
   const safe = Math.max(0, Math.min(Number(idx) || 0, chunkRows.length - 1));
@@ -132,9 +149,12 @@ function openFocusOverlay({ chunkRows = [], wordText = "", idx = 0 } = {}) {
 }
 
 
-  function closeFocusOverlay() {
-    setFocusOpen(false);
-  }
+
+function closeFocusOverlay() {
+  focusDismissedRef.current = true; // ✅ stop auto-genåbning
+  setFocusOpen(false);
+}
+
 
 function focusPrev() {
   setFocusIdx((i) => {
