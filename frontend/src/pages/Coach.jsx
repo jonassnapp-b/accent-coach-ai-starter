@@ -102,6 +102,12 @@ const focusDismissedRef = useRef(false);
   const [focusIdx, setFocusIdx] = useState(0);
   const [focusChunks, setFocusChunks] = useState([]);
   const [focusWord, setFocusWord] = useState("");
+// ✅ Reset the "user dismissed overlay" gate so auto-open can happen again
+function resetFocusAutoGate() {
+  focusDismissedRef.current = false;
+  setFocusOpen(false);
+  setFocusIdx(0);
+}
 
 
   // recording
@@ -442,7 +448,8 @@ async function beginIntroThenFlow() {
   setTarget(t);
   setResult(null);
   setStatus("");
-    
+    resetFocusAutoGate();
+
 
 
   // ✅ start target fetch NU (imens repeat spiller)
@@ -538,7 +545,8 @@ setIsSpeakingTarget(false);
     setResult(null);
     setStatus("");
     setStage("setup");
-    
+    resetFocusAutoGate();
+
 
   }
 
@@ -606,7 +614,8 @@ setIsSpeakingTarget(false);
         createdAt: Date.now(),
       };
 
-      setResult(payload);
+      resetFocusAutoGate();
+setResult(payload);
 
       const overall = Number(json?.overall ?? json?.overallAccuracy ?? json?.pronunciation ?? 0);
       const threshold = difficulty === "easy" ? 75 : difficulty === "medium" ? 82 : 88;
