@@ -670,12 +670,6 @@ export default function PhonemeFeedback({
     // ✅ Guided "zoom" on hero word chunks
   const [activeChunkIdx, setActiveChunkIdx] = useState(0);
 
-useEffect(() => {
-  // reset ONLY when the displayed word changes (avoid parent re-render resetting chunk)
-  setActiveChunkIdx(0);
-}, [wordText]);
-
-
   function prevChunk() {
     if (!chunkRows?.length) return;
     setActiveChunkIdx((i) => Math.max(0, i - 1));
@@ -853,6 +847,11 @@ const metaPlosion = result.plosion ?? null;
 
   const targetSingleWord = !isSentence && targetSentenceRaw && !/\s/.test(targetSentenceRaw) ? targetSentenceRaw : "";
   const wordText = targetSingleWord || apiWordText;
+
+useEffect(() => {
+  // reset ONLY when the displayed word changes (avoid parent re-render resetting chunk)
+  setActiveChunkIdx(0);
+}, [wordText]);
 
 
   // --- Overall score (Model B) for single-word results ---
