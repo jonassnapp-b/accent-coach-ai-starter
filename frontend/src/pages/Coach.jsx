@@ -150,7 +150,7 @@ function openFocusOverlay({ chunkRows = [], wordText = "", idx = 0, source = "au
 
 
 
-function closeFocusOverlay() {
+function closeFocusOverlay() { 
   focusDismissedRef.current = true; // ✅ stop auto-genåbning
   setFocusOpen(false);
 }
