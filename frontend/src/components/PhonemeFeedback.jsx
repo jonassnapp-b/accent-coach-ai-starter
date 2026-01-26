@@ -596,7 +596,14 @@ function buildChunkRowsFromWord(wordObj, fallbackWordText = "") {
 }
 
 
-export default function PhonemeFeedback({ result, embed = false, hideBookmark = false, onRetry }) {
+export default function PhonemeFeedback({
+  result,
+  embed = false,
+  hideBookmark = false,
+  onRetry,
+  mode = "full",      // ✅ default = gammel adfærd (så andre tabs ændres ikke)
+  onFocus,            // ✅ optional callback (kun Coach bruger den)
+}) {
   const { settings } = useSettings();
     // --- Global volume (0..1) ---
   const effectiveVolume = useMemo(() => {
@@ -1200,6 +1207,49 @@ async function playRecording() {
 
     return rows;
   }, [oneWord, cmuData, wordText]);
+  // ✅ Auto-pick worst chunk and tell Coach where to zoom
+const lastFocusKeyRef = useRef("");
+
+useEffect(() => {
+  if (mode !== "mainOnly") return;
+  if (typeof onFocus !== "function") return;
+  if (!oneWord) return;
+  if (!Array.isArray(chunkRows) || chunkRows.length === 0) return;
+
+  // avoid firing twice for same result/word
+  const focusKey = `${result?.createdAt || ""}:${wordText}:${chunkRows.length}`;
+  if (lastFocusKeyRef.current === focusKey) return;
+  lastFocusKeyRef.current = focusKey;
+
+  // pick worst chunk (lowest pct)
+  let worst = chunkRows[0];
+  for (const r of chunkRows) {
+    if ((r?.pct ?? 999) < (worst?.pct ?? 999)) worst = r;
+  }
+
+  // map chunkRows letters -> start/end character indexes inside wordText
+  let offset = 0;
+  let start = 0;
+  let end = 0;
+
+  for (const r of chunkRows) {
+    const len = String(r?.letters || "").length;
+    if (r === worst) {
+      start = offset;
+      end = offset + len;
+      break;
+    }
+    offset += len;
+  }
+
+  // safety
+  start = Math.max(0, Math.min(start, String(wordText || "").length));
+  end = Math.max(start, Math.min(end, String(wordText || "").length));
+
+  onFocus({ word: wordText, start, end, pct: worst?.pct ?? 0 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [mode, onFocus, oneWord, chunkRows, wordText, result]);
+
 const heroWordSpan = useMemo(() => {
   if (!chunkRows?.length) return null;
 
@@ -1217,8 +1267,24 @@ const heroWordSpan = useMemo(() => {
   return { startSec: start, endSec: end };
 }, [chunkRows]);
 
+function WordOnly() {
+  return (
+    <div className="pf-hero-word" style={{ color: ui.textStrong }}>
+      {chunkRows?.length
+        ? chunkRows.map((row) => (
+            <span key={`wseg-${row.i}`} style={{ color: scoreToColor01((row.pct ?? 0) / 100) }}>
+              {row.letters}
+            </span>
+          ))
+        : wordText}
+    </div>
+  );
+}
 
-  
+  if (mode === "wordOnly") {
+  return <WordOnly />;
+}
+
   return (
     <div
   className={embed ? "" : "rounded-[22px] relative"}
@@ -1364,7 +1430,7 @@ onClick={async () => {
               </div>
 
               {/* CHUNK LIST (same width as hero) */}
-              {chunkRows.length > 0 && (
+{mode === "full" && chunkRows.length > 0 && (
                 <div className="pf-list" style={{ width: "100%" }}>
                   {chunkRows.map((row) => {
                     const isOpen = openChunk === row.i;
