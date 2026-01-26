@@ -669,9 +669,10 @@ export default function PhonemeFeedback({
   const [activeChunkIdx, setActiveChunkIdx] = useState(0);
 
   useEffect(() => {
-    // reset when new result/word arrives
+    // reset when new result arrives
     setActiveChunkIdx(0);
-  }, [result, wordText]);
+  }, [result]);
+
 
   function prevChunk() {
     if (!chunkRows?.length) return;
@@ -1297,33 +1298,7 @@ function WordOnly() {
 
   );
 }
-{chunkRows?.length > 1 && (
-  <div className="mt-3 flex items-center justify-center gap-2">
-    <button
-      type="button"
-      className="pf-pill"
-      onClick={prevChunk}
-      disabled={activeChunkIdx <= 0}
-      title="Previous part"
-    >
-      Prev
-    </button>
 
-    <div style={{ fontSize: 12, fontWeight: 800, color: ui.textMuted }}>
-      {activeChunkIdx + 1}/{chunkRows.length}
-    </div>
-
-    <button
-      type="button"
-      className="pf-pill"
-      onClick={nextChunk}
-      disabled={activeChunkIdx >= chunkRows.length - 1}
-      title="Next part"
-    >
-      Next
-    </button>
-  </div>
-)}
 
 
   if (mode === "wordOnly") {
@@ -1388,6 +1363,33 @@ function WordOnly() {
                       ))
                     : wordText}
                 </div>
+{chunkRows?.length > 1 && (
+  <div className="mt-3 flex items-center justify-center gap-2">
+    <button
+      type="button"
+      className="pf-pill"
+      onClick={prevChunk}
+      disabled={activeChunkIdx <= 0}
+      title="Previous part"
+    >
+      Prev
+    </button>
+
+    <div style={{ fontSize: 12, fontWeight: 800, color: ui.textMuted }}>
+      {activeChunkIdx + 1}/{chunkRows.length}
+    </div>
+
+    <button
+      type="button"
+      className="pf-pill"
+      onClick={nextChunk}
+      disabled={activeChunkIdx >= chunkRows.length - 1}
+      title="Next part"
+    >
+      Next
+    </button>
+  </div>
+)}
 
                 <div className="flex items-center justify-center gap-3">
                   <button
