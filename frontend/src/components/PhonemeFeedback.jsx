@@ -601,8 +601,8 @@ export default function PhonemeFeedback({
   embed = false,
   hideBookmark = false,
   onRetry,
-  mode = "full",      // ✅ default = gammel adfærd (så andre tabs ændres ikke)
-          // ✅ optional callback (kun Coach bruger den)
+  mode = "full",
+  onFocus, // ✅ add back (kun callback)
 }) {
   const { settings } = useSettings();
     // --- Global volume (0..1) ---
@@ -665,6 +665,24 @@ export default function PhonemeFeedback({
   const [booked, setBooked] = useState(false);
   const [openChunk, setOpenChunk] = useState(null);
   const [openDetail, setOpenDetail] = useState(null); // key = `${row.i}:${id}`
+    // ✅ Guided "zoom" on hero word chunks
+  const [activeChunkIdx, setActiveChunkIdx] = useState(0);
+
+  useEffect(() => {
+    // reset when new result/word arrives
+    setActiveChunkIdx(0);
+  }, [result, wordText]);
+
+  function prevChunk() {
+    if (!chunkRows?.length) return;
+    setActiveChunkIdx((i) => Math.max(0, i - 1));
+  }
+
+  function nextChunk() {
+    if (!chunkRows?.length) return;
+    setActiveChunkIdx((i) => Math.min(chunkRows.length - 1, i + 1));
+  }
+
 
   const [selectedPhKey, setSelectedPhKey] = useState(null);
   const [tipByKey, setTipByKey] = useState(() => ({}));
@@ -1228,17 +1246,85 @@ const heroWordSpan = useMemo(() => {
 
 function WordOnly() {
   return (
-    <div className="pf-hero-word" style={{ color: ui.textStrong }}>
-      {chunkRows?.length
-        ? chunkRows.map((row) => (
-            <span key={`wseg-${row.i}`} style={{ color: scoreToColor01((row.pct ?? 0) / 100) }}>
-              {row.letters}
-            </span>
-          ))
-        : wordText}
-    </div>
+   <div
+  className="pf-hero-word"
+  style={{
+    color: ui.textStrong,
+    display: "inline-flex",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 0,
+  }}
+>
+  {chunkRows?.length
+    ? chunkRows.map((row, idx) => {
+        const isActive = idx === activeChunkIdx;
+
+        return (
+          <span
+            key={`wseg-${row.i}`}
+            onClick={() => setActiveChunkIdx(idx)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setActiveChunkIdx(idx);
+              }
+            }}
+            style={{
+              color: scoreToColor01((row.pct ?? 0) / 100),
+
+              // ✅ the actual "zoom / focus" effect:
+              transform: isActive ? "scale(1.18)" : "scale(1.0)",
+              opacity: isActive ? 1 : 0.25,
+              filter: isActive ? "none" : "blur(0px)",
+
+              transformOrigin: "50% 60%",
+              transition: "transform 220ms ease, opacity 220ms ease",
+              cursor: "pointer",
+
+              // makes it feel like you're focusing a segment
+              padding: "0 1px",
+            }}
+          >
+            {row.letters}
+          </span>
+        );
+      })
+    : wordText}
+</div>
+
   );
 }
+{chunkRows?.length > 1 && (
+  <div className="mt-3 flex items-center justify-center gap-2">
+    <button
+      type="button"
+      className="pf-pill"
+      onClick={prevChunk}
+      disabled={activeChunkIdx <= 0}
+      title="Previous part"
+    >
+      Prev
+    </button>
+
+    <div style={{ fontSize: 12, fontWeight: 800, color: ui.textMuted }}>
+      {activeChunkIdx + 1}/{chunkRows.length}
+    </div>
+
+    <button
+      type="button"
+      className="pf-pill"
+      onClick={nextChunk}
+      disabled={activeChunkIdx >= chunkRows.length - 1}
+      title="Next part"
+    >
+      Next
+    </button>
+  </div>
+)}
+
 
   if (mode === "wordOnly") {
   return <WordOnly />;
