@@ -1245,6 +1245,17 @@ const heroWordSpan = useMemo(() => {
   return { startSec: start, endSec: end };
 }, [chunkRows]);
 
+function fireFocus(idx = 0) {
+  if (!onFocus) return;
+  if (!chunkRows?.length) return;
+
+  // (valgfrit) sync den "1/2" visning du allerede har
+  setActiveChunkIdx(Math.max(0, Math.min(idx, chunkRows.length - 1)));
+
+  // ✅ det her er det som åbner overlay i Coach.jsx
+  onFocus({ chunkRows, wordText });
+}
+
 function WordOnly() {
   return (
    <div
@@ -1355,14 +1366,33 @@ function WordOnly() {
                 style={{ width: "100%" }}
               >
                 <div className="pf-hero-word" style={{ color: ui.textStrong }}>
-                  {chunkRows?.length
-                    ? chunkRows.map((row) => (
-                        <span key={`wseg-${row.i}`} style={{ color: scoreToColor01((row.pct ?? 0) / 100) }}>
-                          {row.letters}
-                        </span>
-                      ))
-                    : wordText}
-                </div>
+  {chunkRows?.length
+    ? chunkRows.map((row, idx) => (
+        <span
+          key={`wseg-${row.i}`}
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            fireFocus(idx);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              fireFocus(idx);
+            }
+          }}
+          style={{ color: scoreToColor01((row.pct ?? 0) / 100), cursor: "pointer" }}
+          title="Open full-screen focus"
+        >
+          {row.letters}
+        </span>
+      ))
+    : wordText}
+</div>
+)
+
 {chunkRows?.length > 1 && (
   <div className="mt-3 flex items-center justify-center gap-2">
     <button
