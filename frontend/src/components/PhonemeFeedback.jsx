@@ -670,6 +670,7 @@ export default function PhonemeFeedback({
     // ✅ Guided "zoom" on hero word chunks
   const [activeChunkIdx, setActiveChunkIdx] = useState(0);
 const [focusNonce, setFocusNonce] = useState(0);
+const autoFocusDoneRef = useRef(false);
 
   function prevChunk() {
     if (!chunkRows?.length) return;
@@ -856,6 +857,7 @@ useEffect(() => {
 
 useEffect(() => {
   if (!result) return;
+  autoFocusDoneRef.current = false; // ✅ reset auto-focus for nyt result
 
   // Every new analysis result should be treated as a NEW focus event
   setFocusNonce((n) => n + 1);
@@ -1278,16 +1280,20 @@ useEffect(() => {
   if (!onFocus) return;
   if (!chunkRows?.length) return;
 
+  // 🔒 Auto-open må kun ske én gang pr. nyt result
+  if (autoFocusDoneRef.current) return;
+
+  autoFocusDoneRef.current = true;
+
   onFocus({
     chunkRows,
     wordText,
-    idx: 0,            // 🔒 altid start på første chunk
+    idx: 0,
     source: "auto",
     nonce: focusNonce,
   });
-  // ⚠️ VIGTIGT: ingen activeChunkIdx her
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [onFocus, chunkRows, wordText, focusNonce]);
+}, [focusNonce]);
 
 
 
@@ -1438,6 +1444,19 @@ function WordOnly() {
       ))
     : wordText}
 </div>
+{onFocus && (
+  <div
+    style={{
+      marginTop: 8,
+      fontSize: 12,
+      fontWeight: 700,
+      textAlign: "center",
+      color: "rgba(17,24,39,0.55)",
+    }}
+  >
+    Tap the word to zoom in and review pronunciation
+  </div>
+)}
 
 
                 <div className="flex items-center justify-center gap-3">
