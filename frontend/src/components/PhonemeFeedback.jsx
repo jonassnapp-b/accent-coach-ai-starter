@@ -602,7 +602,7 @@ export default function PhonemeFeedback({
   hideBookmark = false,
   onRetry,
   mode = "full",      // ✅ default = gammel adfærd (så andre tabs ændres ikke)
-  onFocus,            // ✅ optional callback (kun Coach bruger den)
+          // ✅ optional callback (kun Coach bruger den)
 }) {
   const { settings } = useSettings();
     // --- Global volume (0..1) ---
@@ -1207,48 +1207,7 @@ async function playRecording() {
 
     return rows;
   }, [oneWord, cmuData, wordText]);
-  // ✅ Auto-pick worst chunk and tell Coach where to zoom
-const lastFocusKeyRef = useRef("");
-
-useEffect(() => {
-  if (mode !== "mainOnly") return;
-  if (typeof onFocus !== "function") return;
-  if (!oneWord) return;
-  if (!Array.isArray(chunkRows) || chunkRows.length === 0) return;
-
-  // avoid firing twice for same result/word
-  const focusKey = `${result?.createdAt || ""}:${wordText}:${chunkRows.length}`;
-  if (lastFocusKeyRef.current === focusKey) return;
-  lastFocusKeyRef.current = focusKey;
-
-  // pick worst chunk (lowest pct)
-  let worst = chunkRows[0];
-  for (const r of chunkRows) {
-    if ((r?.pct ?? 999) < (worst?.pct ?? 999)) worst = r;
-  }
-
-  // map chunkRows letters -> start/end character indexes inside wordText
-  let offset = 0;
-  let start = 0;
-  let end = 0;
-
-  for (const r of chunkRows) {
-    const len = String(r?.letters || "").length;
-    if (r === worst) {
-      start = offset;
-      end = offset + len;
-      break;
-    }
-    offset += len;
-  }
-
-  // safety
-  start = Math.max(0, Math.min(start, String(wordText || "").length));
-  end = Math.max(start, Math.min(end, String(wordText || "").length));
-
-  onFocus({ word: wordText, start, end, pct: worst?.pct ?? 0 });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [mode, onFocus, oneWord, chunkRows, wordText, result]);
+  
 
 const heroWordSpan = useMemo(() => {
   if (!chunkRows?.length) return null;

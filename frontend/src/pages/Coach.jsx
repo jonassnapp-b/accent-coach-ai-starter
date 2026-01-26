@@ -115,7 +115,7 @@ const [prewarmReady, setPrewarmReady] = useState(false);
 
 // pop effect while the target is spoken
 const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
-const [zoomFocus, setZoomFocus] = useState(null);
+
 
 
 function sleep(ms) {
@@ -386,7 +386,7 @@ async function beginIntroThenFlow() {
   setTarget(t);
   setResult(null);
   setStatus("");
-    setZoomFocus(null);
+    
 
 
   // ✅ start target fetch NU (imens repeat spiller)
@@ -482,7 +482,7 @@ setIsSpeakingTarget(false);
     setResult(null);
     setStatus("");
     setStage("setup");
-    setZoomFocus(null);
+    
 
   }
 
@@ -560,7 +560,7 @@ setIsSpeakingTarget(false);
         await playTts("Well done. Let's go to the next one.");
         const next = buildNewTarget(mode, difficulty);
         setTarget(next);
-        setZoomFocus(null);
+        
 
         await speakSequence(next)
       } else if (overall >= threshold) {
@@ -568,7 +568,7 @@ setIsSpeakingTarget(false);
         await playTts("That's alright. Let's go to the next one.");
         const next = buildNewTarget(mode, difficulty);
         setTarget(next);
-        setZoomFocus(null);
+        
 
         await speakSequence(next)
       } else {
@@ -891,54 +891,10 @@ setIsSpeakingTarget(false);
       embed={true}
       hideBookmark={true}
       mode="mainOnly"
-      onFocus={(focus) => {
-        // focus = { word, start, end } (bogstav-index i ordet)
-        setZoomFocus(focus);
-      }}
+     
     />
 
-    {/* Zoom overlay (starter kun når vi har focus) */}
-    {zoomFocus ? (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.22 }}
-        style={{
-          marginTop: 12,
-          borderRadius: 18,
-          border: `1px solid ${LIGHT_BORDER}`,
-          background: "#fff",
-          boxShadow: LIGHT_SHADOW,
-          padding: 14,
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ fontWeight: 900, marginBottom: 8 }}>Focus</div>
-
-        <div style={{ position: "relative", height: 74, display: "grid", placeItems: "center" }}>
-          <motion.div
-            // “zoom” følelse: skaler + flyt en smule (finjusteres senere)
-            animate={{ scale: 1.35 }}
-            transition={{ type: "spring", stiffness: 260, damping: 22 }}
-            style={{ transformOrigin: "center" }}
-          >
-            {/* Vi renderer samme "colored word" igen i PhonemeFeedback via en ny helper,
-                så vi kan zoome på præcis segment senere. For nu: bare zoom på hele ordet smooth. */}
-            <PhonemeFeedback
-              result={result}
-              embed={true}
-              hideBookmark={true}
-              mode="wordOnly"
-            />
-          </motion.div>
-        </div>
-
-        {/* placeholder til “specifik hjælp-grafik” senere */}
-        <div style={{ marginTop: 10, color: LIGHT_MUTED, fontWeight: 800, fontSize: 12 }}>
-          Tip graphics goes here (later)
-        </div>
-      </motion.div>
-    ) : null}
+   
   </div>
 ) : null}
 
