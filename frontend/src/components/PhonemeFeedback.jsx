@@ -1273,7 +1273,7 @@ function fireFocus(idx = 0) {
 }
 
 
-// ✅ Auto-open / auto-update focus mode (no click)
+// ✅ Auto-open focus ONLY when a NEW result arrives
 useEffect(() => {
   if (!onFocus) return;
   if (!chunkRows?.length) return;
@@ -1281,12 +1281,14 @@ useEffect(() => {
   onFocus({
     chunkRows,
     wordText,
-    idx: activeChunkIdx,
+    idx: 0,            // 🔒 altid start på første chunk
     source: "auto",
     nonce: focusNonce,
   });
+  // ⚠️ VIGTIGT: ingen activeChunkIdx her
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [onFocus, wordText, chunkRows, activeChunkIdx, focusNonce]);
+}, [onFocus, chunkRows, wordText, focusNonce]);
+
 
 
 
