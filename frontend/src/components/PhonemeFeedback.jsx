@@ -7,6 +7,7 @@ import { playAudioSegment } from "../lib/audioClipper.js";
 import { getCoachFeedback } from "../lib/phonemeCoach";
 import { burstConfetti } from "../lib/celebrations.js";
 import { calculateOverallScoreModelB } from "../lib/scoring/calculateOverallScoreModelB";
+import { motion } from "framer-motion";
 
 
 const IS_PROD = !!import.meta?.env?.PROD;
@@ -1249,12 +1250,23 @@ function fireFocus(idx = 0) {
   if (!onFocus) return;
   if (!chunkRows?.length) return;
 
-  // (valgfrit) sync den "1/2" visning du allerede har
-  setActiveChunkIdx(Math.max(0, Math.min(idx, chunkRows.length - 1)));
+  const safeIdx = Math.max(0, Math.min(idx, chunkRows.length - 1));
+  setActiveChunkIdx(safeIdx);
 
-  // ✅ det her er det som åbner overlay i Coach.jsx
-  onFocus({ chunkRows, wordText });
+  // ✅ send selected index too
+  onFocus({ chunkRows, wordText, activeChunkIdx: safeIdx });
 }
+
+// ✅ Auto-open / auto-update focus mode (no click)
+useEffect(() => {
+  if (!onFocus) return;
+  if (!chunkRows?.length) return;
+
+  // Always keep overlay in sync with current active chunk
+  onFocus({ chunkRows, wordText, activeChunkIdx });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [onFocus, wordText, chunkRows, activeChunkIdx]);
+
 
 function WordOnly() {
   return (
@@ -1360,38 +1372,31 @@ function WordOnly() {
             {/* ONE shared width wrapper for BOTH cards */}
             <div style={{ width: "100%", maxWidth: 420, margin: "0 auto" }}>
               {/* HERO CARD */}
-              <div
-                key={shineKey}
-                className={`pf-surface pf-hero-card ${(targetScorePct ?? 0) >= 85 ? "pf-hero-shine" : ""}`}
-                style={{ width: "100%" }}
-              >
+            <motion.div
+  layoutId="pf-hero-card"
+  key={shineKey}
+  className={`pf-surface pf-hero-card ${(targetScorePct ?? 0) >= 85 ? "pf-hero-shine" : ""}`}
+  style={{ width: "100%" }}
+>
                 <div className="pf-hero-word" style={{ color: ui.textStrong }}>
   {chunkRows?.length
     ? chunkRows.map((row, idx) => (
         <span
           key={`wseg-${row.i}`}
-          role="button"
-          tabIndex={0}
-          onClick={(e) => {
-            e.stopPropagation();
-            fireFocus(idx);
+          style={{
+            color: scoreToColor01((row.pct ?? 0) / 100),
+            transform: idx === activeChunkIdx ? "scale(1.08)" : "scale(1)",
+            opacity: idx === activeChunkIdx ? 1 : 0.35,
+            transition: "transform 220ms ease, opacity 220ms ease",
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              e.stopPropagation();
-              fireFocus(idx);
-            }
-          }}
-          style={{ color: scoreToColor01((row.pct ?? 0) / 100), cursor: "pointer" }}
-          title="Open full-screen focus"
         >
           {row.letters}
         </span>
       ))
     : wordText}
 </div>
-)
+
+
 
 {chunkRows?.length > 1 && (
   <div className="mt-3 flex items-center justify-center gap-2">
@@ -1504,7 +1509,7 @@ onClick={async () => {
   </div>
 )}
 
-              </div>
+</motion.div>
 
               {/* CHUNK LIST (same width as hero) */}
 {mode === "full" && chunkRows.length > 0 && (

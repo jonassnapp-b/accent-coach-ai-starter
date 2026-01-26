@@ -1,7 +1,7 @@
 // src/pages/Coach.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown, Mic, StopCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 
@@ -122,13 +122,13 @@ const [prewarmReady, setPrewarmReady] = useState(false);
 // pop effect while the target is spoken
 const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
 
-  function openFocusOverlay({ chunkRows = [], wordText = "" } = {}) {
-    if (!chunkRows?.length) return;
-    setFocusChunks(chunkRows);
-    setFocusWord(wordText || "");
-    setFocusIdx(0);
-    setFocusOpen(true);
-  }
+  function openFocusOverlay({ chunkRows = [], wordText = "", activeChunkIdx = 0 } = {}) {
+  if (!chunkRows?.length) return;
+  setFocusChunks(chunkRows);
+  setFocusWord(wordText || "");
+  setFocusIdx(Math.max(0, Math.min(activeChunkIdx, chunkRows.length - 1)));
+  setFocusOpen(true);
+}
 
   function closeFocusOverlay() {
     setFocusOpen(false);
@@ -682,6 +682,7 @@ setIsSpeakingTarget(false);
           paddingBottom: `calc(${TABBAR_OFFSET}px + 24px)`,
         }}
       >
+        <LayoutGroup>
         <AnimatePresence mode="wait">
           {stage === "setup" ? (
             <motion.div
@@ -915,7 +916,7 @@ setIsSpeakingTarget(false);
   result={result}
   embed={true}
   hideBookmark={true}
-  mode="mainOnly"
+  mode="full"
   onFocus={openFocusOverlay}
 />
    
@@ -925,6 +926,67 @@ setIsSpeakingTarget(false);
                           </motion.div>
           )}
         </AnimatePresence>
+        {/* === Fullscreen focus overlay (shared layout morph) === */}
+  <AnimatePresence>
+    {focusOpen && (
+      <motion.div
+        key="focusBackdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 9999,
+          background: "rgba(0,0,0,0.55)",
+          backdropFilter: "blur(10px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        onClick={closeFocusOverlay}
+      >
+        {/* IMPORTANT: same layoutId as hero card */}
+        <motion.div
+          layoutId="pf-hero-card"
+          transition={{ type: "spring", stiffness: 380, damping: 34 }}
+          style={{
+            background: "#fff",
+            borderRadius: 24,
+            padding: 32,
+            width: "90%",
+            maxWidth: 420,
+            textAlign: "center",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ fontSize: 14, opacity: 0.5, marginBottom: 6 }}>
+            {focusWord}
+          </div>
+
+          <div style={{ fontSize: 42, fontWeight: 900, marginBottom: 24 }}>
+            {focusChunks?.[focusIdx]?.letters || "—"}
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <button onClick={focusPrev} disabled={focusIdx === 0}>
+              <ChevronLeft />
+            </button>
+
+            <button onClick={closeFocusOverlay}>
+              <X />
+            </button>
+
+            <button onClick={focusNext} disabled={focusIdx === focusChunks.length - 1}>
+              <ChevronRight />
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+</LayoutGroup>
         {/* === Fullscreen focus overlay === */}
 {focusOpen && (
   <div
@@ -959,8 +1021,9 @@ setIsSpeakingTarget(false);
       </div>
 
       <div style={{ fontSize: 42, fontWeight: 900, marginBottom: 24 }}>
-        {focusChunks[focusIdx]}
-      </div>
+  {focusChunks?.[focusIdx]?.letters || "—"}
+</div>
+
 
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <button onClick={focusPrev} disabled={focusIdx === 0}>
