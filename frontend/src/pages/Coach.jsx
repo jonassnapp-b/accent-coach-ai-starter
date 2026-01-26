@@ -1,6 +1,6 @@
 // src/pages/Coach.jsx
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, Mic, StopCircle } from "lucide-react";
+import { ChevronDown, Mic, StopCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
@@ -96,6 +96,12 @@ useEffect(() => {
   const [target, setTarget] = useState("");
   const [result, setResult] = useState(null);
   const [status, setStatus] = useState("");
+    // ✅ Full-screen focus overlay state
+  const [focusOpen, setFocusOpen] = useState(false);
+  const [focusIdx, setFocusIdx] = useState(0);
+  const [focusChunks, setFocusChunks] = useState([]);
+  const [focusWord, setFocusWord] = useState("");
+
 
   // recording
   const [isRecording, setIsRecording] = useState(false);
@@ -116,6 +122,25 @@ const [prewarmReady, setPrewarmReady] = useState(false);
 // pop effect while the target is spoken
 const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
 
+  function openFocusOverlay({ chunkRows = [], wordText = "" } = {}) {
+    if (!chunkRows?.length) return;
+    setFocusChunks(chunkRows);
+    setFocusWord(wordText || "");
+    setFocusIdx(0);
+    setFocusOpen(true);
+  }
+
+  function closeFocusOverlay() {
+    setFocusOpen(false);
+  }
+
+  function focusPrev() {
+    setFocusIdx((i) => Math.max(0, i - 1));
+  }
+
+  function focusNext() {
+    setFocusIdx((i) => Math.min((focusChunks?.length || 1) - 1, i + 1));
+  }
 
 
 function sleep(ms) {
@@ -886,14 +911,13 @@ setIsSpeakingTarget(false);
               {/* Feedback */}
               {result ? (
   <div style={{ marginTop: 12 }}>
-    <PhonemeFeedback
-      result={result}
-      embed={true}
-      hideBookmark={true}
-      mode="mainOnly"
-     
-    />
-
+<PhonemeFeedback
+  result={result}
+  embed={true}
+  hideBookmark={true}
+  mode="mainOnly"
+  onFocus={openFocusOverlay}
+/>
    
   </div>
 ) : null}
@@ -901,7 +925,65 @@ setIsSpeakingTarget(false);
                           </motion.div>
           )}
         </AnimatePresence>
+        {/* === Fullscreen focus overlay === */}
+{focusOpen && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 9999,
+      background: "rgba(0,0,0,0.55)",
+      backdropFilter: "blur(10px)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+  >
+    <motion.div
+      key={focusIdx}
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ scale: 0.8, opacity: 0 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      style={{
+        background: "#fff",
+        borderRadius: 24,
+        padding: 32,
+        width: "90%",
+        maxWidth: 420,
+        textAlign: "center",
+      }}
+    >
+      <div style={{ fontSize: 14, opacity: 0.5, marginBottom: 6 }}>
+        {focusWord}
+      </div>
+
+      <div style={{ fontSize: 42, fontWeight: 900, marginBottom: 24 }}>
+        {focusChunks[focusIdx]}
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <button onClick={focusPrev} disabled={focusIdx === 0}>
+          <ChevronLeft />
+        </button>
+
+        <button onClick={closeFocusOverlay}>
+          <X />
+        </button>
+
+        <button
+          onClick={focusNext}
+          disabled={focusIdx === focusChunks.length - 1}
+        >
+          <ChevronRight />
+        </button>
+      </div>
+    </motion.div>
+  </div>
+)}
+
         <audio ref={ttsAudioRef} playsInline preload="auto" />
+
 
       </div>
     </div>
