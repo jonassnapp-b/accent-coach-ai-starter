@@ -1258,7 +1258,15 @@ function fireFocus(idx = 0) {
   onFocus({ chunkRows, wordText, activeChunkIdx: safeIdx });
 }
 
+// ✅ Auto-open / auto-update focus mode (no click)
+useEffect(() => {
+  if (!onFocus) return;
+  if (!chunkRows?.length) return;
 
+  // Always keep overlay in sync with current active chunk
+  onFocus({ chunkRows, wordText, activeChunkIdx });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [onFocus, wordText, chunkRows, activeChunkIdx]);
 
 
 function WordOnly() {
@@ -1388,10 +1396,6 @@ transition: "none",
       ))
     : wordText}
 </div>
-
-
-
-
 
                 <div className="flex items-center justify-center gap-3">
                   <button
