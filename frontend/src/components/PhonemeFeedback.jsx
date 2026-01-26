@@ -603,8 +603,10 @@ export default function PhonemeFeedback({
   hideBookmark = false,
   onRetry,
   mode = "full",
-  onFocus, // ✅ add back (kun callback)
+  showChunks = true, // ✅ NEW
+  onFocus,
 }) {
+
   const { settings } = useSettings();
   
     // --- Global volume (0..1) ---
@@ -1263,10 +1265,10 @@ useEffect(() => {
   if (!onFocus) return;
   if (!chunkRows?.length) return;
 
-  // Always keep overlay in sync with current active chunk
   onFocus({ chunkRows, wordText, idx: activeChunkIdx, source: "auto" });
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [onFocus, wordText, chunkRows, activeChunkIdx]);
+
 
 
 function WordOnly() {
@@ -1379,16 +1381,34 @@ function WordOnly() {
   className={`pf-surface pf-hero-card ${(targetScorePct ?? 0) >= 85 ? "pf-hero-shine" : ""}`}
   style={{ width: "100%" }}
 >
-                <div className="pf-hero-word" style={{ color: ui.textStrong }}>
+             <div
+  className="pf-hero-word"
+  role={onFocus ? "button" : undefined}
+  tabIndex={onFocus ? 0 : undefined}
+  onClick={() => {
+    if (!onFocus) return;
+    if (!chunkRows?.length) return;
+    onFocus({ chunkRows, wordText, idx: activeChunkIdx, source: "click" });
+  }}
+  onKeyDown={(e) => {
+    if (!onFocus) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (!chunkRows?.length) return;
+      onFocus({ chunkRows, wordText, idx: activeChunkIdx, source: "click" });
+    }
+  }}
+  style={{ color: ui.textStrong, cursor: onFocus ? "pointer" : "default" }}
+>
   {chunkRows?.length
     ? chunkRows.map((row, idx) => (
         <span
           key={`wseg-${row.i}`}
           style={{
             color: scoreToColor01((row.pct ?? 0) / 100),
-            transform: "scale(1)",
-opacity: 1,
-transition: "none",
+            transform: idx === activeChunkIdx ? "scale(1.08)" : "scale(1)",
+            opacity: idx === activeChunkIdx ? 1 : 0.35,
+            transition: "transform 220ms ease, opacity 220ms ease",
           }}
         >
           {row.letters}
@@ -1396,6 +1416,7 @@ transition: "none",
       ))
     : wordText}
 </div>
+
 
                 <div className="flex items-center justify-center gap-3">
                   <button
@@ -1483,8 +1504,8 @@ onClick={async () => {
 </motion.div>
 
               {/* CHUNK LIST (same width as hero) */}
-{mode === "full" && chunkRows.length > 0 && (
-                <div className="pf-list" style={{ width: "100%" }}>
+{mode === "full" && showChunks && chunkRows.length > 0 && (
+  <div className="pf-list" style={{ width: "100%" }}>
                   {chunkRows.map((row) => {
                     const isOpen = openChunk === row.i;
                     const badgePct = Math.max(0, Math.min(100, Number(row.pct) || 0));
