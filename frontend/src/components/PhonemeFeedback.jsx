@@ -1258,15 +1258,7 @@ function fireFocus(idx = 0) {
   onFocus({ chunkRows, wordText, activeChunkIdx: safeIdx });
 }
 
-// ✅ Auto-open / auto-update focus mode (no click)
-useEffect(() => {
-  if (!onFocus) return;
-  if (!chunkRows?.length) return;
 
-  // Always keep overlay in sync with current active chunk
-  onFocus({ chunkRows, wordText, activeChunkIdx });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [onFocus, wordText, chunkRows, activeChunkIdx]);
 
 
 function WordOnly() {
@@ -1399,33 +1391,7 @@ transition: "none",
 
 
 
-{chunkRows?.length > 1 && (
-  <div className="mt-3 flex items-center justify-center gap-2">
-    <button
-      type="button"
-      className="pf-pill"
-      onClick={prevChunk}
-      disabled={activeChunkIdx <= 0}
-      title="Previous part"
-    >
-      Prev
-    </button>
 
-    <div style={{ fontSize: 12, fontWeight: 800, color: ui.textMuted }}>
-      {activeChunkIdx + 1}/{chunkRows.length}
-    </div>
-
-    <button
-      type="button"
-      className="pf-pill"
-      onClick={nextChunk}
-      disabled={activeChunkIdx >= chunkRows.length - 1}
-      title="Next part"
-    >
-      Next
-    </button>
-  </div>
-)}
 
                 <div className="flex items-center justify-center gap-3">
                   <button
