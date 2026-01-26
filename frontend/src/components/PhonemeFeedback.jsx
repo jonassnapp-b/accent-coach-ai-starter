@@ -606,6 +606,7 @@ export default function PhonemeFeedback({
   onFocus, // ✅ add back (kun callback)
 }) {
   const { settings } = useSettings();
+  
     // --- Global volume (0..1) ---
   const effectiveVolume = useMemo(() => {
     // hvis du stadig bruger soundEnabled som master mute:
@@ -1385,9 +1386,9 @@ function WordOnly() {
           key={`wseg-${row.i}`}
           style={{
             color: scoreToColor01((row.pct ?? 0) / 100),
-            transform: idx === activeChunkIdx ? "scale(1.08)" : "scale(1)",
-            opacity: idx === activeChunkIdx ? 1 : 0.35,
-            transition: "transform 220ms ease, opacity 220ms ease",
+            transform: "scale(1)",
+opacity: 1,
+transition: "none",
           }}
         >
           {row.letters}

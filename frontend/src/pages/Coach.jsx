@@ -122,25 +122,36 @@ const [prewarmReady, setPrewarmReady] = useState(false);
 // pop effect while the target is spoken
 const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
 
-  function openFocusOverlay({ chunkRows = [], wordText = "", activeChunkIdx = 0 } = {}) {
+function openFocusOverlay({ chunkRows = [], wordText = "", idx = 0 } = {}) {
   if (!chunkRows?.length) return;
   setFocusChunks(chunkRows);
   setFocusWord(wordText || "");
-  setFocusIdx(Math.max(0, Math.min(activeChunkIdx, chunkRows.length - 1)));
+  const safe = Math.max(0, Math.min(Number(idx) || 0, chunkRows.length - 1));
+  setFocusIdx(safe);
   setFocusOpen(true);
 }
+
 
   function closeFocusOverlay() {
     setFocusOpen(false);
   }
 
-  function focusPrev() {
-    setFocusIdx((i) => Math.max(0, i - 1));
-  }
+function focusPrev() {
+  setFocusIdx((i) => {
+    const n = focusChunks?.length || 0;
+    if (n <= 1) return 0;
+    return (i - 1 + n) % n;
+  });
+}
 
-  function focusNext() {
-    setFocusIdx((i) => Math.min((focusChunks?.length || 1) - 1, i + 1));
-  }
+function focusNext() {
+  setFocusIdx((i) => {
+    const n = focusChunks?.length || 0;
+    if (n <= 1) return 0;
+    return (i + 1) % n;
+  });
+}
+
 
 
 function sleep(ms) {
@@ -969,81 +980,26 @@ setIsSpeakingTarget(false);
             {focusChunks?.[focusIdx]?.letters || "—"}
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <button onClick={focusPrev} disabled={focusIdx === 0}>
-              <ChevronLeft />
-            </button>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+  <button onClick={focusPrev}>
+    <ChevronLeft />
+  </button>
 
-            <button onClick={closeFocusOverlay}>
-              <X />
-            </button>
+  <button onClick={closeFocusOverlay}>
+    <X />
+  </button>
 
-            <button onClick={focusNext} disabled={focusIdx === focusChunks.length - 1}>
-              <ChevronRight />
-            </button>
-          </div>
+  <button onClick={focusNext}>
+    <ChevronRight />
+  </button>
+</div>
+
         </motion.div>
       </motion.div>
     )}
   </AnimatePresence>
 </LayoutGroup>
-        {/* === Fullscreen focus overlay === */}
-{focusOpen && (
-  <div
-    style={{
-      position: "fixed",
-      inset: 0,
-      zIndex: 9999,
-      background: "rgba(0,0,0,0.55)",
-      backdropFilter: "blur(10px)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-  >
-    <motion.div
-      key={focusIdx}
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0.8, opacity: 0 }}
-      transition={{ duration: 0.25, ease: "easeOut" }}
-      style={{
-        background: "#fff",
-        borderRadius: 24,
-        padding: 32,
-        width: "90%",
-        maxWidth: 420,
-        textAlign: "center",
-      }}
-    >
-      <div style={{ fontSize: 14, opacity: 0.5, marginBottom: 6 }}>
-        {focusWord}
-      </div>
-
-      <div style={{ fontSize: 42, fontWeight: 900, marginBottom: 24 }}>
-  {focusChunks?.[focusIdx]?.letters || "—"}
-</div>
-
-
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <button onClick={focusPrev} disabled={focusIdx === 0}>
-          <ChevronLeft />
-        </button>
-
-        <button onClick={closeFocusOverlay}>
-          <X />
-        </button>
-
-        <button
-          onClick={focusNext}
-          disabled={focusIdx === focusChunks.length - 1}
-        >
-          <ChevronRight />
-        </button>
-      </div>
-    </motion.div>
-  </div>
-)}
+    
 
         <audio ref={ttsAudioRef} playsInline preload="auto" />
 
