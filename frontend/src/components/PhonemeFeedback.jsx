@@ -669,6 +669,7 @@ export default function PhonemeFeedback({
   const [openDetail, setOpenDetail] = useState(null); // key = `${row.i}:${id}`
     // ✅ Guided "zoom" on hero word chunks
   const [activeChunkIdx, setActiveChunkIdx] = useState(0);
+const [focusNonce, setFocusNonce] = useState(0);
 
   function prevChunk() {
     if (!chunkRows?.length) return;
@@ -853,6 +854,15 @@ useEffect(() => {
   setActiveChunkIdx(0);
 }, [wordText]);
 
+useEffect(() => {
+  if (!result) return;
+
+  // Every new analysis result should be treated as a NEW focus event
+  setFocusNonce((n) => n + 1);
+
+  // also reset focus index so overlay starts at first chunk again
+  setActiveChunkIdx(0);
+}, [result]);
 
   // --- Overall score (Model B) for single-word results ---
 const modelBOverall = useMemo(() => {
@@ -1253,24 +1263,31 @@ function fireFocus(idx = 0) {
   const safeIdx = Math.max(0, Math.min(idx, chunkRows.length - 1));
   setActiveChunkIdx(safeIdx);
 
-  // ✅ use the SAME key the overlay expects: idx
   onFocus({
     chunkRows,
     wordText,
     idx: safeIdx,
     source: "click",
+    nonce: focusNonce,
   });
 }
+
 
 // ✅ Auto-open / auto-update focus mode (no click)
 useEffect(() => {
   if (!onFocus) return;
   if (!chunkRows?.length) return;
 
-  // Always keep overlay in sync with current active chunk
-  onFocus({ chunkRows, wordText, idx: activeChunkIdx, source: "auto" });
+  onFocus({
+    chunkRows,
+    wordText,
+    idx: activeChunkIdx,
+    source: "auto",
+    nonce: focusNonce,
+  });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [onFocus, wordText, chunkRows, activeChunkIdx]);
+}, [onFocus, wordText, chunkRows, activeChunkIdx, focusNonce]);
+
 
 
 function WordOnly() {
