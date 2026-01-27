@@ -971,18 +971,40 @@ export default function Coach() {
                     {currentWordScore == null ? " " : `Score: ${Math.round(currentWordScore)}`
                     }
                   </div>
-                  <div style={{ marginTop: 6, textAlign: "center", fontSize: 12, color: LIGHT_MUTED, fontWeight: 900 }}>
-  {(() => {
-    const ps = Array.isArray(currentWordObj?.phonemes) ? currentWordObj.phonemes : [];
-    const list = [];
-    for (const p of ps) {
+                 <div style={{ marginTop: 8, textAlign: "center" }}>
+  <span
+    style={{
+      fontSize: 13,
+      fontWeight: 900,
+      color: "#111827", // tydelig sort
+      marginRight: 6,
+    }}
+  >
+    Phonemes:
+  </span>
+
+  {Array.isArray(currentWordObj?.phonemes) &&
+    currentWordObj.phonemes.map((p, i) => {
       const code = getPhonemeCode(p);
-      if (!code) continue;
-      list.push(code);
-    }
-    return list.length ? `Phonemes: ${list.join(" · ")}` : " ";
-  })()}
-</div>
+      if (!code) return null;
+
+      const s = getScore(p);
+
+      return (
+        <span
+          key={`${code}_${i}`}
+          style={{
+            fontSize: 13,
+            fontWeight: 900,
+            color: scoreColor(s),
+            marginRight: 6,
+          }}
+        >
+          {code}
+        </span>
+      );
+    })}
+</div>''
 
 <div style={{ marginTop: 14 }}>
                 {/* Phoneme cards (only non-green + only if you have image; audio optional) */}
