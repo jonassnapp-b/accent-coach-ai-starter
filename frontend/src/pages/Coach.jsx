@@ -96,18 +96,11 @@ useEffect(() => {
   const [target, setTarget] = useState("");
   const [result, setResult] = useState(null);
   const [status, setStatus] = useState("");
-    // ✅ Full-screen focus overlay state
-  const [focusOpen, setFocusOpen] = useState(false);
-const focusDismissedRef = useRef(false);
-  const [focusIdx, setFocusIdx] = useState(0);
-  const [focusChunks, setFocusChunks] = useState([]);
-  const [focusWord, setFocusWord] = useState("");
-// ✅ Reset the "user dismissed overlay" gate so auto-open can happen again
-function resetFocusAutoGate() {
-  focusDismissedRef.current = false;
-  setFocusOpen(false);
-  setFocusIdx(0);
-}
+// ✅ Overlay-only focus state (always shown when we have chunks)
+const [focusIdx, setFocusIdx] = useState(0);
+const [focusChunks, setFocusChunks] = useState([]);
+const [focusWord, setFocusWord] = useState("");
+
 
 
   // recording
@@ -129,29 +122,13 @@ const [prewarmReady, setPrewarmReady] = useState(false);
 // pop effect while the target is spoken
 const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
 
-function openFocusOverlay({ chunkRows = [], wordText = "", idx = 0, source = "auto" } = {}) {
+function openFocusOverlay({ chunkRows = [], wordText = "", idx = 0 } = {}) {
   if (!chunkRows?.length) return;
-
-  // Hvis user lige har lukket (X), så må auto ikke genåbne overlay
-  if (source === "auto" && focusDismissedRef.current) {
-    // men hold data i sync i baggrunden (valgfrit)
-    setFocusChunks(chunkRows);
-    setFocusWord(wordText || "");
-    const safe = Math.max(0, Math.min(Number(idx) || 0, chunkRows.length - 1));
-    setFocusIdx(safe);
-    return;
-  }
-
-  // Hvis det er et click (eller vi ikke er dismissed), så må den åbne
-  if (source === "click") {
-    focusDismissedRef.current = false; // bruger har aktivt åbnet igen
-  }
 
   setFocusChunks(chunkRows);
   setFocusWord(wordText || "");
   const safe = Math.max(0, Math.min(Number(idx) || 0, chunkRows.length - 1));
   setFocusIdx(safe);
-  setFocusOpen(true);
 }
 
 
@@ -448,7 +425,9 @@ async function beginIntroThenFlow() {
   setTarget(t);
   setResult(null);
   setStatus("");
-    resetFocusAutoGate();
+    setFocusChunks([]);
+setFocusWord("");
+setFocusIdx(0);
 
 
 
@@ -545,7 +524,9 @@ setIsSpeakingTarget(false);
     setResult(null);
     setStatus("");
     setStage("setup");
-    resetFocusAutoGate();
+    setFocusChunks([]);
+setFocusWord("");
+setFocusIdx(0);
 
 
   }
@@ -614,7 +595,9 @@ setIsSpeakingTarget(false);
         createdAt: Date.now(),
       };
 
-      resetFocusAutoGate();
+      setFocusChunks([]);
+setFocusWord("");
+setFocusIdx(0);
 setResult(payload);
 
       const overall = Number(json?.overall ?? json?.overallAccuracy ?? json?.pronunciation ?? 0);
@@ -951,82 +934,70 @@ setResult(payload);
 
               {/* Feedback */}
               {result ? (
-  <div style={{ marginTop: 12 }}>
-<PhonemeFeedback
-  result={result}
-  embed={true}
-  hideBookmark={true}
-  mode="full"
-  onFocus={openFocusOverlay}
-/>
-   
+  <div style={{ display: "none" }}>
+    <PhonemeFeedback
+      result={result}
+      embed={true}
+      hideBookmark={true}
+      mode="full"
+      onFocus={openFocusOverlay}
+    />
   </div>
 ) : null}
+
 
                           </motion.div>
           )}
         </AnimatePresence>
-        {/* === Fullscreen focus overlay (shared layout morph) === */}
-  <AnimatePresence>
-    {focusOpen && (
-      <motion.div
-        key="focusBackdrop"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.18 }}
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 9999,
-          background: "rgba(0,0,0,0.55)",
-          backdropFilter: "blur(10px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-        onClick={closeFocusOverlay}
-      >
-        {/* IMPORTANT: same layoutId as hero card */}
-        <motion.div
-          layoutId="pf-hero-card"
-          transition={{ type: "spring", stiffness: 380, damping: 34 }}
-          style={{
-            background: "#fff",
-            borderRadius: 24,
-            padding: 32,
-            width: "90%",
-            maxWidth: 420,
-            textAlign: "center",
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div style={{ fontSize: 14, opacity: 0.5, marginBottom: 6 }}>
-            {focusWord}
-          </div>
+    {/* ✅ Overlay-only screen (always when we have chunks) */}
+{stage === "flow" && result && focusChunks?.length ? (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 9999,
+      background: LIGHT_BG,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16,
+    }}
+  >
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 24,
+        padding: 32,
+        width: "90%",
+        maxWidth: 420,
+        textAlign: "center",
+        border: `1px solid ${LIGHT_BORDER}`,
+        boxShadow: LIGHT_SHADOW,
+      }}
+    >
+      <div style={{ fontSize: 14, opacity: 0.5, marginBottom: 6 }}>
+        {focusWord}
+      </div>
 
-          <div style={{ fontSize: 42, fontWeight: 900, marginBottom: 24 }}>
-            {focusChunks?.[focusIdx]?.letters || "—"}
-          </div>
+      <div style={{ fontSize: 42, fontWeight: 900, marginBottom: 24 }}>
+        {focusChunks?.[focusIdx]?.letters || "—"}
+      </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-  <button onClick={focusPrev}>
-    <ChevronLeft />
-  </button>
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <button type="button" onClick={focusPrev}>
+          <ChevronLeft />
+        </button>
 
-  <button onClick={closeFocusOverlay}>
-    <X />
-  </button>
+        {/* ❌ No X button anymore (cannot close back to underlying page) */}
 
-  <button onClick={focusNext}>
-    <ChevronRight />
-  </button>
-</div>
+        <button type="button" onClick={focusNext}>
+          <ChevronRight />
+        </button>
+      </div>
+    </div>
+  </div>
+) : null}
 
-        </motion.div>
-      </motion.div>
-    )}
-  </AnimatePresence>
 </LayoutGroup>
     
 
