@@ -1,9 +1,8 @@
 // src/pages/Coach.jsx
-import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, Mic, StopCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
+import { ChevronDown, Mic, StopCircle, Volume2 } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
-import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 
 const IS_PROD = !!import.meta?.env?.PROD;
 
@@ -47,6 +46,98 @@ function pickRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+/* ---------------- Assets you actually have ---------------- */
+/**
+ * Images in: public/phonemes/images/<CODE>.png
+ * Audio in:  public/phonemes/audio/en_br/<CODE>.mp3
+ *           public/phonemes/audio/en_us/AO_us.mp3
+ *
+ * If missing -> we skip feedback for that phoneme (as requested).
+ */
+const AVAILABLE_IMAGES = new Set([
+  "AH", "AO", "AX", "CH", "DH", "EH", "EY", "IH", "IX", "IY", "JH", "OH", "OY", "SH", "TH", "UH", "UW", "UX", "ZH", "AA",
+]);
+
+const AVAILABLE_AUDIO_BR = new Set([
+  "AH", "AO", "AX", "EH", "EY", "IH", "IX", "IY", "JH", "OH", "OY", "SH", "TH", "UH", "UW", "UX", "ZH", "AA",
+  // NOTE: CH is .ogg in din mappe -> iOS problem -> vi skipper, indtil du har CH.mp3
+  // NOTE: DH.mp3 er ikke i dit screenshot -> hvis du har den, så tilføj "DH" her
+]);
+
+const AVAILABLE_AUDIO_US = new Set([
+  // i dit screenshot har du kun AO_us.mp3 i en_us
+  "AO",
+]);
+
+function resolvePhonemeAssets(code, accentUi) {
+  const c = String(code || "").trim().toUpperCase();
+  if (!c) return null;
+
+  const imgOk = AVAILABLE_IMAGES.has(c);
+  const imgSrc = imgOk ? `/phonemes/images/${c}.png` : null;
+
+  // audio:
+  // - if en_us and we have US version -> use that
+  // - else fallback to en_br if we have it
+  let audioSrc = null;
+
+  if (accentUi === "en_us" && AVAILABLE_AUDIO_US.has(c)) {
+    // special filename for US:
+    if (c === "AO") audioSrc = `/phonemes/audio/en_us/AO_us.mp3`;
+  } else if (AVAILABLE_AUDIO_BR.has(c)) {
+    audioSrc = `/phonemes/audio/en_br/${c}.mp3`;
+  }
+
+  // If either missing, we still allow showing image-only or audio-only?
+  // You asked: "overskrift + billede + lyd-knap under billed med lyd"
+  // => we require image, and audio is optional (button shown only if audio exists).
+  if (!imgSrc) return null;
+
+  return { imgSrc, audioSrc };
+}
+
+/* ---------------- SpeechSuper parsing helpers ---------------- */
+function getPhonemeCode(p) {
+  return String(p?.phoneme || p?.ipa || p?.symbol || "").trim().toUpperCase();
+}
+
+function getScore(obj) {
+  // try common fields (SpeechSuper varies)
+  const v =
+    obj?.accuracy ??
+    obj?.pronunciation ??
+    obj?.score ??
+    obj?.overall ??
+    obj?.overallAccuracy ??
+    obj?.pronunciationAccuracy ??
+    obj?.accuracyScore;
+
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+// same simple color logic for word + phonemes
+function scoreColor(score) {
+  if (score == null) return "rgba(17,24,39,0.55)";
+  if (score >= 85) return "#16a34a"; // green
+  if (score >= 70) return "#f59e0b"; // amber
+  return "#ef4444"; // red
+}
+function isGreen(score) {
+  return score != null && score >= 85;
+}
+
+function normalizeWordsFromResult(result, fallbackText) {
+  const arr = Array.isArray(result?.words) ? result.words : null;
+  if (arr?.length) return arr;
+
+  // fallback if SpeechSuper doesn't return words array
+  const text = String(fallbackText || "").trim();
+  if (!text) return [];
+  const parts = text.split(/\s+/g).filter(Boolean);
+  return parts.map((w) => ({ word: w, phonemes: [] }));
+}
+
 /* ---------------- page ---------------- */
 export default function Coach() {
   const { settings } = useSettings();
@@ -71,21 +162,6 @@ export default function Coach() {
     setAccentUi(settings?.accentDefault || "en_us");
   }, [settings?.accentDefault]);
 
-useEffect(() => {
-  // ✅ reset prewarm when accent changes (so voice can change)
-  if (prewarmUrlRef.current) {
-    try { URL.revokeObjectURL(prewarmUrlRef.current); } catch {}
-    prewarmUrlRef.current = null;
-    setPrewarmReady(false);
-  }
-
-  // ✅ warm up again for the new accent
-  prewarmRepeat();
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [accentUi]);
-
-
   // ✅ stages: setup -> intro (speaking) -> flow
   const [stage, setStage] = useState("setup"); // setup | intro | flow
 
@@ -96,12 +172,9 @@ useEffect(() => {
   const [target, setTarget] = useState("");
   const [result, setResult] = useState(null);
   const [status, setStatus] = useState("");
-// ✅ Overlay-only focus state (always shown when we have chunks)
-const [focusIdx, setFocusIdx] = useState(0);
-const [focusChunks, setFocusChunks] = useState([]);
-const [focusWord, setFocusWord] = useState("");
 
-
+  // overlay state (sentence dropdown)
+  const [selectedWordIdx, setSelectedWordIdx] = useState(0);
 
   // recording
   const [isRecording, setIsRecording] = useState(false);
@@ -111,56 +184,35 @@ const [focusWord, setFocusWord] = useState("");
   const mediaRecRef = useRef(null);
   const chunksRef = useRef([]);
   const [lastUrl, setLastUrl] = useState(null);
+
   // ✅ TTS audio (Azure via /api/tts)
-const ttsAudioRef = useRef(null);
-const ttsUrlRef = useRef(null);
-const ttsAbortRef = useRef(null);
-const ttsPlayIdRef = useRef(0);
-const prewarmUrlRef = useRef(null);
-const [prewarmReady, setPrewarmReady] = useState(false);
+  const ttsAudioRef = useRef(null);
+  const ttsUrlRef = useRef(null);
+  const ttsAbortRef = useRef(null);
+  const ttsPlayIdRef = useRef(0);
+  const prewarmUrlRef = useRef(null);
+  const [prewarmReady, setPrewarmReady] = useState(false);
 
-// pop effect while the target is spoken
-const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
+  // overlay phoneme audio player
+  const overlayAudioRef = useRef(null);
 
-function openFocusOverlay({ chunkRows = [], wordText = "", idx = 0 } = {}) {
-  if (!chunkRows?.length) return;
+  // pop effect while the target is spoken
+  const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
 
-  setFocusChunks(chunkRows);
-  setFocusWord(wordText || "");
-  const safe = Math.max(0, Math.min(Number(idx) || 0, chunkRows.length - 1));
-  setFocusIdx(safe);
-}
+  useEffect(() => {
+    // ✅ reset prewarm when accent changes (so voice can change)
+    if (prewarmUrlRef.current) {
+      try { URL.revokeObjectURL(prewarmUrlRef.current); } catch {}
+      prewarmUrlRef.current = null;
+      setPrewarmReady(false);
+    }
+    prewarmRepeat();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accentUi]);
 
-
-
-function closeFocusOverlay() { 
-  focusDismissedRef.current = true; // ✅ stop auto-genåbning
-  setFocusOpen(false);
-}
-
-
-function focusPrev() {
-  setFocusIdx((i) => {
-    const n = focusChunks?.length || 0;
-    if (n <= 1) return 0;
-    return (i - 1 + n) % n;
-  });
-}
-
-function focusNext() {
-  setFocusIdx((i) => {
-    const n = focusChunks?.length || 0;
-    if (n <= 1) return 0;
-    return (i + 1) % n;
-  });
-}
-
-
-
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
+  function sleep(ms) {
+    return new Promise((r) => setTimeout(r, ms));
+  }
 
   function disposeRecorder() {
     try {
@@ -202,320 +254,232 @@ function sleep(ms) {
     return pickRandom(pool);
   }
 
-function stopTtsNow() {
-  // 1) invalidate any pending async that would continue
-  ttsPlayIdRef.current += 1;
+  function stopTtsNow() {
+    ttsPlayIdRef.current += 1;
+    try { ttsAbortRef.current?.abort?.(); } catch {}
+    ttsAbortRef.current = null;
 
-  // 2) abort in-flight fetch
-  try {
-    ttsAbortRef.current?.abort?.();
-  } catch {}
-  ttsAbortRef.current = null;
+    try {
+      if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current.currentTime = 0;
+        ttsAudioRef.current.src = "";
+        ttsAudioRef.current.load?.();
+      }
+    } catch {}
 
-  // 3) stop audio immediately
-  try {
-    if (ttsAudioRef.current) {
-      ttsAudioRef.current.pause();
-      ttsAudioRef.current.currentTime = 0;
-      ttsAudioRef.current.src = "";
-      ttsAudioRef.current.load?.();
-    }
-  } catch {}
+    try { if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current); } catch {}
+    ttsUrlRef.current = null;
 
-  // 4) revoke blob url
-  try {
-    if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current);
-  } catch {}
-  ttsUrlRef.current = null;
-
-  setIsSpeaking(false);
-  setIsSpeakingTarget(false);
-}
-
-  async function playTts(text, rate = 1.0) {
-  const t = String(text || "").trim();
-  if (!t) return;
-
-  // stop previous
-  try {
-    if (ttsAudioRef.current) {
-      ttsAudioRef.current.pause();
-      ttsAudioRef.current.currentTime = 0;
-    }
-  } catch {}
-
-  // revoke old url
-  try {
-    if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current);
-  } catch {}
-  ttsUrlRef.current = null;
-
-const base = getApiBase();
-const myId = ++ttsPlayIdRef.current;
-
-try {
-  ttsAbortRef.current?.abort?.();
-} catch {}
-const controller = new AbortController();
-ttsAbortRef.current = controller;
-
-let r;
-try {
-  r = await fetch(`${base}/api/tts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text: t,
-      accent: accentUi, // en_us or en_br
-      rate,
-    }),
-    signal: controller.signal, // ✅ rigtigt sted
-  });
-} catch (e) {
-  if (e?.name === "AbortError") return; // ✅ back clicked -> ignore
-  throw e;
-}
-
-if (myId !== ttsPlayIdRef.current) return;
-
-if (myId !== ttsPlayIdRef.current) return;
-
-  if (!r.ok) {
-    const j = await r.json().catch(() => ({}));
-    throw new Error(j?.detail || j?.error || `TTS failed (${r.status})`);
+    setIsSpeaking(false);
+    setIsSpeakingTarget(false);
   }
 
-  let buf;
-try {
-  buf = await r.arrayBuffer();
-} catch (e) {
-  if (e?.name === "AbortError") return;
-  throw e;
-}
-if (myId !== ttsPlayIdRef.current) return;
+  async function playTts(text, rate = 1.0) {
+    const t = String(text || "").trim();
+    if (!t) return;
 
+    try {
+      if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current.currentTime = 0;
+      }
+    } catch {}
 
+    try { if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current); } catch {}
+    ttsUrlRef.current = null;
 
-  const blob = new Blob([buf], { type: "audio/wav" }); // your endpoint returns wav
-  const url = URL.createObjectURL(blob);
-  ttsUrlRef.current = url;
-
-  const a = ttsAudioRef.current;
-  if (!a) return;
-
-  a.src = url;
-  a.volume = settings?.soundEnabled === false ? 0 : 1;
-
-if (myId !== ttsPlayIdRef.current) return;
-
-  await a.play();
-  await new Promise((resolve) => {
-    const done = () => resolve();
-    a.onended = done;
-    a.onerror = done;
-  });
-}
-
-async function fetchTtsUrl(text, rate = 1.0) {
-  const t = String(text || "").trim();
-  if (!t) return null;
-
-  const base = getApiBase();
-  const controller = new AbortController();
-
-  // hvis du vil kunne abort'e den her også, kan du gemme controller i en ref,
-  // men jeg holder det MINIMALT her (du har allerede stopTtsNow til playTts flow)
-
-  const r = await fetch(`${base}/api/tts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: t, accent: accentUi, rate }),
-    signal: controller.signal,
-  });
-
-  if (!r.ok) return null;
-
-  const buf = await r.arrayBuffer();
-  const blob = new Blob([buf], { type: "audio/wav" });
-  return URL.createObjectURL(blob);
-}
-
-
-async function playPrewarmedUrl(url) {
-  const myId = ++ttsPlayIdRef.current;
-
-  // stop previous
-  try {
-    if (ttsAudioRef.current) {
-      ttsAudioRef.current.pause();
-      ttsAudioRef.current.currentTime = 0;
-    }
-  } catch {}
-
-  const a = ttsAudioRef.current;
-  if (!a) return;
-
-  a.src = url;
-  a.volume = settings?.soundEnabled === false ? 0 : 1;
-
-  if (myId !== ttsPlayIdRef.current) return;
-
-  await a.play();
-  await new Promise((resolve) => {
-    const done = () => resolve();
-    a.onended = done;
-    a.onerror = done;
-  });
-}
-
-
-async function prewarmRepeat() {
-  // allerede cached
-if (prewarmUrlRef.current) return;
-
-
-
-  try {
     const base = getApiBase();
+    const myId = ++ttsPlayIdRef.current;
 
-    // fetch repeat audio én gang
+    try { ttsAbortRef.current?.abort?.(); } catch {}
+    const controller = new AbortController();
+    ttsAbortRef.current = controller;
+
+    let r;
+    try {
+      r = await fetch(`${base}/api/tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: t, accent: accentUi, rate }),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      if (e?.name === "AbortError") return;
+      throw e;
+    }
+
+    if (myId !== ttsPlayIdRef.current) return;
+
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j?.detail || j?.error || `TTS failed (${r.status})`);
+    }
+
+    let buf;
+    try {
+      buf = await r.arrayBuffer();
+    } catch (e) {
+      if (e?.name === "AbortError") return;
+      throw e;
+    }
+    if (myId !== ttsPlayIdRef.current) return;
+
+    const blob = new Blob([buf], { type: "audio/wav" });
+    const url = URL.createObjectURL(blob);
+    ttsUrlRef.current = url;
+
+    const a = ttsAudioRef.current;
+    if (!a) return;
+
+    a.src = url;
+    a.volume = settings?.soundEnabled === false ? 0 : 1;
+
+    if (myId !== ttsPlayIdRef.current) return;
+
+    await a.play();
+    await new Promise((resolve) => {
+      const done = () => resolve();
+      a.onended = done;
+      a.onerror = done;
+    });
+  }
+
+  async function fetchTtsUrl(text, rate = 1.0) {
+    const t = String(text || "").trim();
+    if (!t) return null;
+
+    const base = getApiBase();
+    const controller = new AbortController();
+
     const r = await fetch(`${base}/api/tts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: "Repeat after me.",
-        accent: accentUi, // bruger valgt accent
-        rate: 1.0,
-      }),
+      body: JSON.stringify({ text: t, accent: accentUi, rate }),
+      signal: controller.signal,
     });
 
-    if (!r.ok) return;
+    if (!r.ok) return null;
 
     const buf = await r.arrayBuffer();
     const blob = new Blob([buf], { type: "audio/wav" });
-    const url = URL.createObjectURL(blob);
-
-    prewarmUrlRef.current = url;
-    setPrewarmReady(true);
-  } catch {
-    // ignore – app skal stadig virke uden
+    return URL.createObjectURL(blob);
   }
-}
 
+  async function playPrewarmedUrl(url) {
+    const myId = ++ttsPlayIdRef.current;
 
-// ✅ “Repeat after me.” + pause + target pop while spoken
-async function speakSequence(t) {
+    try {
+      if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current.currentTime = 0;
+      }
+    } catch {}
 
+    const a = ttsAudioRef.current;
+    if (!a) return;
 
-  // pause before the target
-  await sleep(100);
+    a.src = url;
+    a.volume = settings?.soundEnabled === false ? 0 : 1;
 
-  setIsSpeakingTarget(true);
-  try {
-    await playTts(t, 0.98);
-  } catch (e) {
-    if (!IS_PROD) console.warn("[TTS target]", e);
-  } finally {
-    setIsSpeakingTarget(false);
+    if (myId !== ttsPlayIdRef.current) return;
+
+    await a.play();
+    await new Promise((resolve) => {
+      const done = () => resolve();
+      a.onended = done;
+      a.onerror = done;
+    });
   }
-}
 
-async function beginIntroThenFlow() {
-  const t = buildNewTarget(mode, difficulty);
-  setTarget(t);
-  setResult(null);
-  setStatus("");
-    setFocusChunks([]);
-setFocusWord("");
-setFocusIdx(0);
+  async function prewarmRepeat() {
+    if (prewarmUrlRef.current) return;
 
+    try {
+      const base = getApiBase();
+      const r = await fetch(`${base}/api/tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: "Repeat after me.", accent: accentUi, rate: 1.0 }),
+      });
+      if (!r.ok) return;
 
+      const buf = await r.arrayBuffer();
+      const blob = new Blob([buf], { type: "audio/wav" });
+      const url = URL.createObjectURL(blob);
 
-  // ✅ start target fetch NU (imens repeat spiller)
-  const targetUrlPromise = fetchTtsUrl(t, 0.98);
-
-  // 1) intro: “Repeat after me.”
-  setIsSpeaking(true);
-  try {
-    if (prewarmUrlRef.current) {
-      await playPrewarmedUrl(prewarmUrlRef.current);
-    } else {
-      await playTts("Repeat after me.", 1.0);
+      prewarmUrlRef.current = url;
+      setPrewarmReady(true);
+    } catch {
+      // ignore
     }
-  } catch (e) {
-    if (!IS_PROD) console.warn("[TTS intro]", e);
-  } finally {
-    setIsSpeaking(false);
   }
 
-  // 2) transition til flow NU
-  setStage("flow");
-
-  // 3) sig target så snart repeat er færdig (uden ekstra sleep)
-  setIsSpeakingTarget(true);
-  try {
-    const targetUrl = await targetUrlPromise;
-
-    if (targetUrl) {
-      await playPrewarmedUrl(targetUrl);
-      try { URL.revokeObjectURL(targetUrl); } catch {}
-    } else {
+  async function speakSequence(t) {
+    await sleep(100);
+    setIsSpeakingTarget(true);
+    try {
       await playTts(t, 0.98);
+    } catch (e) {
+      if (!IS_PROD) console.warn("[TTS target]", e);
+    } finally {
+      setIsSpeakingTarget(false);
     }
-  } catch (e) {
-    if (!IS_PROD) console.warn("[TTS target]", e);
-  } finally {
-    setIsSpeakingTarget(false);
   }
-}
 
+  async function beginIntroThenFlow() {
+    const t = buildNewTarget(mode, difficulty);
+    setTarget(t);
+    setResult(null);
+    setStatus("");
+    setSelectedWordIdx(0);
 
-async function onStart() {
-  if (isBusy) return;
+    const targetUrlPromise = fetchTtsUrl(t, 0.98);
 
-  setStage("intro");
+    setIsSpeaking(true);
+    try {
+      if (prewarmUrlRef.current) await playPrewarmedUrl(prewarmUrlRef.current);
+      else await playTts("Repeat after me.", 1.0);
+    } catch (e) {
+      if (!IS_PROD) console.warn("[TTS intro]", e);
+    } finally {
+      setIsSpeaking(false);
+    }
 
-  if (!prewarmUrlRef.current) {
-  await prewarmRepeat();
-}
+    setStage("flow");
 
+    setIsSpeakingTarget(true);
+    try {
+      const targetUrl = await targetUrlPromise;
+      if (targetUrl) {
+        await playPrewarmedUrl(targetUrl);
+        try { URL.revokeObjectURL(targetUrl); } catch {}
+      } else {
+        await playTts(t, 0.98);
+      }
+    } catch (e) {
+      if (!IS_PROD) console.warn("[TTS target]", e);
+    } finally {
+      setIsSpeakingTarget(false);
+    }
+  }
 
-  // Kør TTS med det samme (stadig i click event)
-  await beginIntroThenFlow();
-}
-
+  async function onStart() {
+    if (isBusy) return;
+    setStage("intro");
+    if (!prewarmUrlRef.current) await prewarmRepeat();
+    await beginIntroThenFlow();
+  }
 
   function onBack() {
     if (isBusy) return;
     stopTtsNow();
 
-    // stop any TTS audio
-try {
-  if (ttsAudioRef.current) {
-    ttsAudioRef.current.pause();
-    ttsAudioRef.current.currentTime = 0;
-  }
-} catch {}
-try {
-  if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current);
-} catch {}
-ttsUrlRef.current = null;
-try {
-  if (prewarmUrlRef.current) {
-    URL.revokeObjectURL(prewarmUrlRef.current);
-  }
-} catch {}
-prewarmUrlRef.current = null;
-setPrewarmReady(false);
-
-setIsSpeaking(false);
-setIsSpeakingTarget(false);
-
-    // cleanup recording + audio url
     try {
       if (lastUrl) URL.revokeObjectURL(lastUrl);
     } catch {}
     setLastUrl(null);
+
     disposeRecorder();
     setIsRecording(false);
     setIsAnalyzing(false);
@@ -524,13 +488,8 @@ setIsSpeakingTarget(false);
     setResult(null);
     setStatus("");
     setStage("setup");
-    setFocusChunks([]);
-setFocusWord("");
-setFocusIdx(0);
-
-
+    setSelectedWordIdx(0);
   }
-
 
   function handleStop(rec) {
     setIsRecording(false);
@@ -546,8 +505,8 @@ setFocusIdx(0);
 
     const type = chunks[0]?.type || rec?.mimeType || "audio/webm";
     const blob = new Blob(chunks, { type });
-
     const localUrl = URL.createObjectURL(blob);
+
     setLastUrl(localUrl);
     setIsAnalyzing(true);
     sendToServer(blob, localUrl);
@@ -595,10 +554,8 @@ setFocusIdx(0);
         createdAt: Date.now(),
       };
 
-      setFocusChunks([]);
-setFocusWord("");
-setFocusIdx(0);
-setResult(payload);
+      setResult(payload);
+      setSelectedWordIdx(0);
 
       const overall = Number(json?.overall ?? json?.overallAccuracy ?? json?.pronunciation ?? 0);
       const threshold = difficulty === "easy" ? 75 : difficulty === "medium" ? 82 : 88;
@@ -608,20 +565,16 @@ setResult(payload);
         await playTts("Well done. Let's go to the next one.");
         const next = buildNewTarget(mode, difficulty);
         setTarget(next);
-        
-
-        await speakSequence(next)
+        await speakSequence(next);
       } else if (overall >= threshold) {
         setStatus("That’s alright — next 👌");
         await playTts("That's alright. Let's go to the next one.");
         const next = buildNewTarget(mode, difficulty);
         setTarget(next);
-        
-
-        await speakSequence(next)
+        await speakSequence(next);
       } else {
         setStatus("Try again (listen to the feedback) 🔁");
-        await playTts("Try again.");
+        // ✅ removed: TTS that says "Try again"
       }
     } catch (e) {
       setStatus(IS_PROD ? "Something went wrong. Try again." : e?.message || String(e));
@@ -630,7 +583,55 @@ setResult(payload);
     }
   }
 
-  // layout: one big setup card, dropdowns stacked with good vertical spacing
+  /* ---------------- overlay data ---------------- */
+  const words = useMemo(() => normalizeWordsFromResult(result, target), [result, target]);
+  const isSentence = useMemo(() => (mode === "sentences") || (words?.length > 1), [mode, words?.length]);
+
+  const safeWordIdx = Math.max(0, Math.min(selectedWordIdx, Math.max(0, (words?.length || 1) - 1)));
+  const currentWordObj = words?.[safeWordIdx] || null;
+
+  const currentWordText = String(currentWordObj?.word || currentWordObj?.text || currentWordObj?.name || target || "").trim();
+  const currentWordScore = getScore(currentWordObj);
+
+  const phonemeCards = useMemo(() => {
+    const ps = Array.isArray(currentWordObj?.phonemes) ? currentWordObj.phonemes : [];
+    const out = [];
+
+    for (const p of ps) {
+      const code = getPhonemeCode(p);
+      if (!code) continue;
+
+      const s = getScore(p);
+
+      // "ikke grøn" => show only if not green (or unknown score)
+      if (s != null && isGreen(s)) continue;
+
+      const assets = resolvePhonemeAssets(code, accentUi);
+      if (!assets) continue; // ✅ missing image => skip entirely (your rule)
+
+      out.push({
+        code,
+        score: s,
+        imgSrc: assets.imgSrc,
+        audioSrc: assets.audioSrc, // optional
+      });
+    }
+
+    return out;
+  }, [currentWordObj, accentUi]);
+
+  function playOverlayAudio(src) {
+    if (!src) return;
+    try {
+      if (!overlayAudioRef.current) overlayAudioRef.current = new Audio();
+      overlayAudioRef.current.pause();
+      overlayAudioRef.current.currentTime = 0;
+      overlayAudioRef.current.src = src;
+      overlayAudioRef.current.play().catch(() => {});
+    } catch {}
+  }
+
+  /* ---------------- styles ---------------- */
   const bigCardStyle = {
     background: LIGHT_SURFACE,
     border: `1px solid ${LIGHT_BORDER}`,
@@ -706,304 +707,358 @@ setResult(payload);
         }}
       >
         <LayoutGroup>
-        <AnimatePresence mode="wait">
-          {stage === "setup" ? (
-            <motion.div
-              key="setup"
-              initial={{ opacity: 0, y: 10, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.98 }}
-              transition={{ duration: 0.18 }}
-              style={bigCardStyle}
-            >
-              <div style={stack}>
-                {/* Mode */}
-                <div style={selectWrapStyle}>
-                  <select aria-label="Mode" value={mode} onChange={(e) => setMode(e.target.value)} style={selectStyle}>
-                    <option value="words">Words</option>
-                    <option value="sentences">Sentences</option>
-                  </select>
-                  <ChevronDown className="h-4 w-4" style={chevronStyle} />
-                </div>
+          <AnimatePresence mode="wait">
+            {stage === "setup" ? (
+              <motion.div
+                key="setup"
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ duration: 0.18 }}
+                style={bigCardStyle}
+              >
+                <div style={stack}>
+                  <div style={selectWrapStyle}>
+                    <select aria-label="Mode" value={mode} onChange={(e) => setMode(e.target.value)} style={selectStyle}>
+                      <option value="words">Words</option>
+                      <option value="sentences">Sentences</option>
+                    </select>
+                    <ChevronDown className="h-4 w-4" style={chevronStyle} />
+                  </div>
 
-                {/* Difficulty */}
-                <div style={selectWrapStyle}>
-                  <select
-                    aria-label="Difficulty"
-                    value={difficulty}
-                    onChange={(e) => setDifficulty(e.target.value)}
-                    style={selectStyle}
-                  >
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
-                  </select>
-                  <ChevronDown className="h-4 w-4" style={chevronStyle} />
-                </div>
+                  <div style={selectWrapStyle}>
+                    <select
+                      aria-label="Difficulty"
+                      value={difficulty}
+                      onChange={(e) => setDifficulty(e.target.value)}
+                      style={selectStyle}
+                    >
+                      <option value="easy">Easy</option>
+                      <option value="medium">Medium</option>
+                      <option value="hard">Hard</option>
+                    </select>
+                    <ChevronDown className="h-4 w-4" style={chevronStyle} />
+                  </div>
 
-                {/* Accent */}
-                <div style={selectWrapStyle}>
-                  <select
-                    aria-label="Accent"
-                    value={accentUi}
-                    onChange={(e) => setAccentUi(e.target.value)}
-                    style={selectStyle}
-                  >
-                    <option value="en_us">American 🇺🇸</option>
-                    <option value="en_br">British 🇬🇧</option>
-                  </select>
-                  <ChevronDown className="h-4 w-4" style={chevronStyle} />
-                </div>
+                  <div style={selectWrapStyle}>
+                    <select
+                      aria-label="Accent"
+                      value={accentUi}
+                      onChange={(e) => setAccentUi(e.target.value)}
+                      style={selectStyle}
+                    >
+                      <option value="en_us">American 🇺🇸</option>
+                      <option value="en_br">British 🇬🇧</option>
+                    </select>
+                    <ChevronDown className="h-4 w-4" style={chevronStyle} />
+                  </div>
 
-                <button type="button" onClick={onStart} style={startBtnStyle}>
-                  Start
-                </button>
-              </div>
-            </motion.div>
-          ) : stage === "intro" ? (
-            <motion.div
-              key="intro"
-              initial={{ opacity: 0, y: 10, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.98 }}
-              transition={{ duration: 0.18 }}
-              style={speakingCardStyle}
-            >
-              <div style={{ display: "grid", justifyItems: "center", gap: 10 }}>
-                {/* simple “AI person” bubble */}
-                <div
-                  style={{
-                    width: 68,
-                    height: 68,
-                    borderRadius: 999,
-                    background: "#ffffff",
-                    border: `1px solid ${LIGHT_BORDER}`,
-                    boxShadow: "0 10px 24px rgba(0,0,0,0.06)",
-                    display: "grid",
-                    placeItems: "center",
-                    fontWeight: 900,
-                    color: LIGHT_TEXT,
-                  }}
-                >
-                  AI
+                  <button type="button" onClick={onStart} style={startBtnStyle}>
+                    Start
+                  </button>
                 </div>
-
-                <div style={{ fontWeight: 900, color: LIGHT_TEXT }}>
-                  Coach is speaking{isSpeaking ? "…" : ""}
-                </div>
-
-                {/* tiny waveform */}
-                <div style={{ display: "flex", gap: 6, alignItems: "end", height: 18 }}>
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ height: 6, opacity: 0.6 }}
-                      animate={{ height: isSpeaking ? [6, 16, 8, 14, 6] : 6, opacity: 0.9 }}
-                      transition={{
-                        duration: isSpeaking ? 0.9 : 0.2,
-                        repeat: isSpeaking ? Infinity : 0,
-                        delay: i * 0.06,
-                      }}
-                      style={{
-                        width: 6,
-                        borderRadius: 999,
-                        background: BTN_BLUE,
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="flow"
-              initial={{ opacity: 0, y: 10, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.98 }}
-              transition={{ duration: 0.18 }}
-              style={{
-                background: LIGHT_SURFACE,
-                border: `1px solid ${LIGHT_BORDER}`,
-                borderRadius: 22,
-                boxShadow: LIGHT_SHADOW,
-                padding: 18,
-              }}
-            >
-              {/* Back */}
-              <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10 }}>
-                <button
-                  type="button"
-                  onClick={onBack}
-                  disabled={isBusy}
-                  style={{
-                    height: 38,
-                    padding: "0 12px",
-                    borderRadius: 14,
-                    border: `1px solid ${LIGHT_BORDER}`,
-                    background: LIGHT_SURFACE,
-                    fontWeight: 900,
-                    color: LIGHT_TEXT,
-                    cursor: isBusy ? "not-allowed" : "pointer",
-                    opacity: isBusy ? 0.6 : 1,
-                  }}
-                >
-                  Back
-                </button>
-              </div>
-
-              {/* Speaking mini indicator */}
-              {isSpeaking ? (
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    marginBottom: 10,
-                  }}
-                >
+              </motion.div>
+            ) : stage === "intro" ? (
+              <motion.div
+                key="intro"
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ duration: 0.18 }}
+                style={speakingCardStyle}
+              >
+                <div style={{ display: "grid", justifyItems: "center", gap: 10 }}>
                   <div
                     style={{
-                      padding: "6px 10px",
+                      width: 68,
+                      height: 68,
                       borderRadius: 999,
+                      background: "#ffffff",
                       border: `1px solid ${LIGHT_BORDER}`,
-                      background: "#fff",
-                      boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+                      boxShadow: "0 10px 24px rgba(0,0,0,0.06)",
+                      display: "grid",
+                      placeItems: "center",
                       fontWeight: 900,
                       color: LIGHT_TEXT,
-                      fontSize: 12,
                     }}
                   >
-                    Coach is speaking…
+                    AI
+                  </div>
+
+                  <div style={{ fontWeight: 900, color: LIGHT_TEXT }}>
+                    Coach is speaking{isSpeaking ? "…" : ""}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 6, alignItems: "end", height: 18 }}>
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ height: 6, opacity: 0.6 }}
+                        animate={{ height: isSpeaking ? [6, 16, 8, 14, 6] : 6, opacity: 0.9 }}
+                        transition={{
+                          duration: isSpeaking ? 0.9 : 0.2,
+                          repeat: isSpeaking ? Infinity : 0,
+                          delay: i * 0.06,
+                        }}
+                        style={{ width: 6, borderRadius: 999, background: BTN_BLUE }}
+                      />
+                    ))}
                   </div>
                 </div>
-              ) : null}
-
-              {/* Prompt */}
+              </motion.div>
+            ) : (
               <motion.div
-  style={{ textAlign: "center", fontWeight: 900, fontSize: 22 }}
-  animate={isSpeakingTarget ? { scale: [1, 1.06, 1] } : { scale: 1 }}
-  transition={isSpeakingTarget ? { duration: 0.55, ease: "easeOut" } : { duration: 0.12 }}
->
-  <span style={{ position: "relative", display: "inline-block", padding: "2px 10px", borderRadius: 14 }}>
-    {isSpeakingTarget ? (
-      <span
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          inset: -12,
-          borderRadius: 18,
-          background: "rgba(33,150,243,0.14)",
-          filter: "blur(12px)",
-          zIndex: 0,
-        }}
-      />
-    ) : null}
-    <span style={{ position: "relative", zIndex: 1 }}>{target || "—"}</span>
-  </span>
-</motion.div>
+                key="flow"
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ duration: 0.18 }}
+                style={{
+                  background: LIGHT_SURFACE,
+                  border: `1px solid ${LIGHT_BORDER}`,
+                  borderRadius: 22,
+                  boxShadow: LIGHT_SHADOW,
+                  padding: 18,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10 }}>
+                  <button
+                    type="button"
+                    onClick={onBack}
+                    disabled={isBusy}
+                    style={{
+                      height: 38,
+                      padding: "0 12px",
+                      borderRadius: 14,
+                      border: `1px solid ${LIGHT_BORDER}`,
+                      background: LIGHT_SURFACE,
+                      fontWeight: 900,
+                      color: LIGHT_TEXT,
+                      cursor: isBusy ? "not-allowed" : "pointer",
+                      opacity: isBusy ? 0.6 : 1,
+                    }}
+                  >
+                    Back
+                  </button>
+                </div>
 
-              {/* Record button */}
-              <div style={{ display: "grid", placeItems: "center", marginTop: 52 }}>
-                <button
-                  type="button"
-                  onClick={toggleRecord}
-                  disabled={isAnalyzing || !target}
-                  title={isRecording ? "Stop" : "Record"}
+                <motion.div
+                  style={{ textAlign: "center", fontWeight: 900, fontSize: 22 }}
+                  animate={isSpeakingTarget ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+                  transition={isSpeakingTarget ? { duration: 0.55, ease: "easeOut" } : { duration: 0.12 }}
+                >
+                  <span style={{ position: "relative", display: "inline-block", padding: "2px 10px", borderRadius: 14 }}>
+                    {isSpeakingTarget ? (
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          position: "absolute",
+                          inset: -12,
+                          borderRadius: 18,
+                          background: "rgba(33,150,243,0.14)",
+                          filter: "blur(12px)",
+                          zIndex: 0,
+                        }}
+                      />
+                    ) : null}
+                    <span style={{ position: "relative", zIndex: 1 }}>{target || "—"}</span>
+                  </span>
+                </motion.div>
+
+                <div style={{ display: "grid", placeItems: "center", marginTop: 52 }}>
+                  <button
+                    type="button"
+                    onClick={toggleRecord}
+                    disabled={isAnalyzing || !target}
+                    title={isRecording ? "Stop" : "Record"}
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: 18,
+                      border: "none",
+                      background: isRecording ? "#111827" : BTN_BLUE,
+                      display: "grid",
+                      placeItems: "center",
+                      cursor: isAnalyzing ? "not-allowed" : "pointer",
+                      opacity: isAnalyzing ? 0.6 : 1,
+                    }}
+                  >
+                    {isRecording ? (
+                      <StopCircle className="h-6 w-6" style={{ color: "white" }} />
+                    ) : (
+                      <Mic className="h-6 w-6" style={{ color: "white" }} />
+                    )}
+                  </button>
+
+                  <div style={{ marginTop: 10, minHeight: 18, color: LIGHT_MUTED, fontWeight: 800, fontSize: 12 }}>
+                    {isRecording ? "Recording…" : isAnalyzing ? "Analyzing…" : status || " "}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ✅ Overlay-only: appears after we have result */}
+          {stage === "flow" && result ? (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 9999,
+                background: LIGHT_BG,
+                overflowY: "auto",
+                padding: 16,
+              }}
+            >
+              <div
+                style={{
+                  maxWidth: 520,
+                  margin: "0 auto",
+                  display: "grid",
+                  gap: 12,
+                }}
+              >
+                {/* Header card */}
+                <div
                   style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 18,
-                    border: "none",
-                    background: isRecording ? "#111827" : BTN_BLUE,
-                    display: "grid",
-                    placeItems: "center",
-                    cursor: isAnalyzing ? "not-allowed" : "pointer",
-                    opacity: isAnalyzing ? 0.6 : 1,
+                    background: "#fff",
+                    borderRadius: 22,
+                    padding: 16,
+                    border: `1px solid ${LIGHT_BORDER}`,
+                    boxShadow: LIGHT_SHADOW,
                   }}
                 >
-                  {isRecording ? (
-                    <StopCircle className="h-6 w-6" style={{ color: "white" }} />
-                  ) : (
-                    <Mic className="h-6 w-6" style={{ color: "white" }} />
-                  )}
-                </button>
+                  <div style={{ fontSize: 12, fontWeight: 900, opacity: 0.55, marginBottom: 6 }}>
+                    Feedback
+                  </div>
 
-                <div style={{ marginTop: 10, minHeight: 18, color: LIGHT_MUTED, fontWeight: 800, fontSize: 12 }}>
-                  {isRecording ? "Recording…" : isAnalyzing ? "Analyzing…" : status || " "}
+                  {/* Sentence word dropdown */}
+                  {isSentence ? (
+                    <div style={{ ...selectWrapStyle, marginBottom: 10 }}>
+                      <select
+                        aria-label="Word"
+                        value={safeWordIdx}
+                        onChange={(e) => setSelectedWordIdx(Number(e.target.value))}
+                        style={selectStyle}
+                      >
+                        {words.map((w, i) => {
+                          const label = String(w?.word || w?.text || `Word ${i + 1}`).trim();
+                          return (
+                            <option key={`${label}_${i}`} value={i}>
+                              {label}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <ChevronDown className="h-4 w-4" style={chevronStyle} />
+                    </div>
+                  ) : null}
+
+                  {/* Word (colored like main) */}
+                  <div
+                    style={{
+                      fontSize: 34,
+                      fontWeight: 950,
+                      lineHeight: 1.1,
+                      textAlign: "center",
+                      color: scoreColor(currentWordScore),
+                    }}
+                  >
+                    {currentWordText || "—"}
+                  </div>
+
+                  <div style={{ marginTop: 8, textAlign: "center", fontSize: 12, color: LIGHT_MUTED, fontWeight: 800 }}>
+                    {currentWordScore == null ? " " : `Score: ${Math.round(currentWordScore)}`
+                    }
+                  </div>
                 </div>
+
+                {/* Phoneme cards (only non-green + only if you have image; audio optional) */}
+                {phonemeCards.length ? (
+                  <div style={{ display: "grid", gap: 12 }}>
+                    {phonemeCards.map((p, idx) => (
+                      <div
+                        key={`${p.code}_${idx}`}
+                        style={{
+                          background: "#fff",
+                          borderRadius: 22,
+                          padding: 14,
+                          border: `1px solid ${LIGHT_BORDER}`,
+                          boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+                          display: "grid",
+                          gap: 10,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                          <div style={{ fontWeight: 950, fontSize: 16, color: LIGHT_TEXT }}>
+                            {p.code}
+                          </div>
+                          <div style={{ fontWeight: 900, fontSize: 12, color: scoreColor(p.score) }}>
+                            {p.score == null ? "" : Math.round(p.score)}
+                          </div>
+                        </div>
+
+                        <div style={{ display: "grid", placeItems: "center" }}>
+                          <img
+                            src={p.imgSrc}
+                            alt={p.code}
+                            style={{
+                              width: "100%",
+                              maxWidth: 320,
+                              height: "auto",
+                              borderRadius: 16,
+                              border: `1px solid ${LIGHT_BORDER}`,
+                              background: "#fff",
+                            }}
+                          />
+                        </div>
+
+                        {p.audioSrc ? (
+                          <button
+                            type="button"
+                            onClick={() => playOverlayAudio(p.audioSrc)}
+                            style={{
+                              height: 44,
+                              borderRadius: 16,
+                              border: `1px solid ${LIGHT_BORDER}`,
+                              background: "#fff",
+                              fontWeight: 950,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 10,
+                              cursor: "pointer",
+                            }}
+                          >
+                            <Volume2 className="h-5 w-5" />
+                            Play sound
+                          </button>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      background: "#fff",
+                      borderRadius: 22,
+                      padding: 16,
+                      border: `1px solid ${LIGHT_BORDER}`,
+                      boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+                      color: LIGHT_MUTED,
+                      fontWeight: 900,
+                      textAlign: "center",
+                    }}
+                  >
+                    No visual feedback for this word (missing assets or all green).
+                  </div>
+                )}
               </div>
-
-              {/* Feedback */}
-              {result ? (
-  <div style={{ display: "none" }}>
-    <PhonemeFeedback
-      result={result}
-      embed={true}
-      hideBookmark={true}
-      mode="full"
-      onFocus={openFocusOverlay}
-    />
-  </div>
-) : null}
-
-
-                          </motion.div>
-          )}
-        </AnimatePresence>
-    {/* ✅ Overlay-only screen (always when we have chunks) */}
-{stage === "flow" && result && focusChunks?.length ? (
-  <div
-    style={{
-      position: "fixed",
-      inset: 0,
-      zIndex: 9999,
-      background: LIGHT_BG,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 16,
-    }}
-  >
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 24,
-        padding: 32,
-        width: "90%",
-        maxWidth: 420,
-        textAlign: "center",
-        border: `1px solid ${LIGHT_BORDER}`,
-        boxShadow: LIGHT_SHADOW,
-      }}
-    >
-      <div style={{ fontSize: 14, opacity: 0.5, marginBottom: 6 }}>
-        {focusWord}
-      </div>
-
-      <div style={{ fontSize: 42, fontWeight: 900, marginBottom: 24 }}>
-        {focusChunks?.[focusIdx]?.letters || "—"}
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <button type="button" onClick={focusPrev}>
-          <ChevronLeft />
-        </button>
-
-        {/* ❌ No X button anymore (cannot close back to underlying page) */}
-
-        <button type="button" onClick={focusNext}>
-          <ChevronRight />
-        </button>
-      </div>
-    </div>
-  </div>
-) : null}
-
-</LayoutGroup>
-    
+            </div>
+          ) : null}
+        </LayoutGroup>
 
         <audio ref={ttsAudioRef} playsInline preload="auto" />
-
-
       </div>
     </div>
   );

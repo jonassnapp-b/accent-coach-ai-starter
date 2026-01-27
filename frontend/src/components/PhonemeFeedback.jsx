@@ -298,6 +298,39 @@ function cmuChipLabel(cmu) {
   return cmuPrettyToken(t);
 }
 
+function phonemeImageUrl(cmu) {
+  const t = String(cmu || "").trim();
+  if (!t) return null;
+  return `/phonemes/images/${t}.png`;
+}
+
+function phonemeAudioUrl(cmu, accent = "en_us") {
+  const t = String(cmu || "").trim();
+  if (!t) return null;
+
+  // ✅ your current folder strategy:
+  // - en_br: most phonemes: /phonemes/audio/en_br/{CMU}.mp3
+  // - en_us: only AO special: /phonemes/audio/en_us/AO_us.mp3
+  if (accent === "en_us") {
+    if (t === "AO") return `/phonemes/audio/en_us/AO_us.mp3`;
+    // fallback to en_br for everything else
+    return `/phonemes/audio/en_br/${t}.mp3`;
+  }
+
+  return `/phonemes/audio/en_br/${t}.mp3`;
+}
+
+// Only show phoneme feedback if BOTH image + audio exist
+async function urlExists(url) {
+  if (!url) return false;
+  try {
+    const r = await fetch(url, { method: "HEAD" });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
 
 function range(a, b) {
   const out = [];
@@ -667,6 +700,8 @@ export default function PhonemeFeedback({
   const [booked, setBooked] = useState(false);
   const [openChunk, setOpenChunk] = useState(null);
   const [openDetail, setOpenDetail] = useState(null); // key = `${row.i}:${id}`
+  const [assetOkByCmu, setAssetOkByCmu] = useState(() => ({}));
+
     // ✅ Guided "zoom" on hero word chunks
   const [activeChunkIdx, setActiveChunkIdx] = useState(0);
 const [focusNonce, setFocusNonce] = useState(0);
@@ -838,7 +873,7 @@ const metaPlosion = result.plosion ?? null;
   const wordsJoined = Array.isArray(words) ? words.map((w) => (w.word ?? w.w ?? "")).join(" ").trim() : "";
   const displaySentence = targetSentenceRaw || recognition || wordsJoined;
 
-  const isSentence = false;
+  const isSentence = words.length > 1;
 
   const overall01 = to01(result.overall ?? result.pronunciation ?? result.overallAccuracy ?? result.score);
 
@@ -1240,6 +1275,36 @@ async function playRecording() {
     return rows;
   }, [oneWord, cmuData, wordText]);
   
+  useEffect(() => {
+  let cancelled = false;
+
+  async function run() {
+    // samlet liste af unikke CMU tokens vi faktisk render
+    const set = new Set();
+    for (const row of chunkRows || []) {
+      for (const ph of row?.phonemes || []) {
+        const t = String(ph?.cmu || "").trim();
+        if (t) set.add(t);
+      }
+    }
+
+    const next = {};
+    const accent = getUseGB() ? "en_br" : "en_us";
+
+    for (const cmu of set) {
+      const img = phonemeImageUrl(cmu);
+      const aud = phonemeAudioUrl(cmu, accent);
+      const ok = (await urlExists(img)) && (await urlExists(aud));
+      next[cmu] = ok;
+    }
+
+    if (!cancelled) setAssetOkByCmu(next);
+  }
+
+  run();
+  return () => { cancelled = true; };
+}, [chunkRows, result]); // result med, så den rechecker ved ny analyse
+
 
 const heroWordSpan = useMemo(() => {
   if (!chunkRows?.length) return null;
@@ -1649,33 +1714,72 @@ onClick={async () => {
                           </div>
                         </div>
 
-                      {isOpen && (
-  <div style={{ marginTop: 10 }}>
+                     {/* Media feedback for BAD phonemes (only if we have image+audio) */}
+<div
+  style={{
+    marginTop: 12,
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 10,
+  }}
+>
+  {row.phonemes
+    .filter((ph) => (ph?.pct ?? 0) < 85) // "ikke-grøn" threshold
+    .filter((ph) => assetOkByCmu?.[String(ph?.cmu || "").trim()])
+    .map((ph) => {
+      const cmu = String(ph.cmu || "").trim();
+      const accent = getUseGB() ? "en_br" : "en_us";
+      const imgUrl = phonemeImageUrl(cmu);
+      const audUrl = phonemeAudioUrl(cmu, accent);
 
-    {/* PHONEMES (existing) */}
-    <div className="phoneme-row">
-      {row.phonemes.map((ph) => (
-        <button
-          key={`${row.i}-ph-${ph.ix}`}
-          type="button"
-          className="phoneme-chip"
-          onClick={(e) => {
-            e.stopPropagation();
-            playUserSpan(ph.startSec, ph.endSec);
-          }}
-          title={`${ph.cmu} • ${ph.pct}%`}
+      return (
+        <div
+          key={`media-${row.i}-${ph.ix}`}
           style={{
-            borderColor: "rgba(0,0,0,0.12)",
-            color: scoreToColor01((ph.pct ?? 0) / 100),
+            border: "1px solid rgba(0,0,0,0.10)",
+            borderRadius: 16,
+            padding: 10,
+            background: "#fff",
+            textAlign: "center",
           }}
         >
-          <span style={{ fontWeight: 900 }}>{cmuChipLabel(ph.cmu)}</span>
-          <span style={{ opacity: 0.75, fontWeight: 800 }}>{ph.pct}%</span>
-        </button>
-      ))}
-    </div>
-  </div>
-)}
+          <div style={{ fontWeight: 900, marginBottom: 8, color: ui.textStrong }}>
+            {cmu}
+          </div>
+
+          <img
+            src={imgUrl}
+            alt={cmu}
+            style={{
+              width: "100%",
+              maxWidth: 180,
+              margin: "0 auto",
+              borderRadius: 12,
+              display: "block",
+            }}
+          />
+
+          <button
+            type="button"
+            className="pf-pill"
+            style={{ marginTop: 10 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              try {
+                const a = new Audio(audUrl);
+                a.volume = effectiveVolume;
+                const p = a.play();
+                if (p?.catch) p.catch(() => {});
+              } catch {}
+            }}
+          >
+            <Volume2 className="h-4 w-4" />
+            Sound
+          </button>
+        </div>
+      );
+    })}
+</div>
 
                       </div>
                     );
