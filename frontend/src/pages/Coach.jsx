@@ -176,6 +176,7 @@ export default function Coach() {
   // overlay state (sentence dropdown)
   const [selectedWordIdx, setSelectedWordIdx] = useState(0);
   const [expandedPhonemeKey, setExpandedPhonemeKey] = useState(null); // e.g. "UW_3"
+const [wordsOpen, setWordsOpen] = useState(false); // ✅ dropdown open/closed
 
   // recording
   const [isRecording, setIsRecording] = useState(false);
@@ -568,6 +569,13 @@ export default function Coach() {
       setResult(payload);
       setSelectedWordIdx(0);
       setExpandedPhonemeKey(null);
+// ✅ when feedback appears: open words dropdown and default to first word
+if ((mode === "sentences") || ((payload?.words?.length || 0) > 1)) {
+  setWordsOpen(true);
+  setSelectedWordIdx(0);
+} else {
+  setWordsOpen(false);
+}
 
 
       const overall = Number(json?.overall ?? json?.overallAccuracy ?? json?.pronunciation ?? 0);
@@ -907,39 +915,72 @@ const expandedTip = useMemo(() => {
                     boxShadow: LIGHT_SHADOW,
                   }}
                 >
-{/* Sentence words: tap to expand feedback for that word */}
 {isSentence ? (
   <div style={{ marginBottom: 12 }}>
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-      {words.map((w, i) => {
-        const label = String(w?.word || w?.text || `Word ${i + 1}`).trim();
-        const active = i === safeWordIdx;
+    {/* Header row (only shows chevron when OPEN) */}
+    <button
+      type="button"
+      onClick={() => setWordsOpen((v) => !v)}
+      style={{
+        width: "100%",
+        border: "none",
+        background: "transparent",
+        padding: 0,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "flex-start",
+        gap: 10,
+      }}
+    >
+      <div style={{ fontSize: 32, fontWeight: 950, color: LIGHT_TEXT }}>
+        {wordsOpen ? "Words" : (currentWordText || "Words")}
+      </div>
 
-        return (
-          <button
-            key={`${label}_${i}`}
-            type="button"
-            onClick={() => {
-              // toggle open/close for this word
-              setExpandedPhonemeKey(null);
-              setSelectedWordIdx((prev) => (prev === i ? -1 : i));
-            }}
-            style={{
-              border: `1px solid ${LIGHT_BORDER}`,
-              background: active ? "rgba(33,150,243,0.10)" : "#fff",
-              color: LIGHT_TEXT,
-              fontWeight: 900,
-              borderRadius: 999,
-              padding: "8px 12px",
-              cursor: "pointer",
-              opacity: active ? 1 : 0.92,
-            }}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
+      {wordsOpen ? (
+        <ChevronDown
+          className="h-6 w-6"
+          style={{
+            color: LIGHT_TEXT,
+            opacity: 0.9,
+            transform: "translateY(1px)",
+          }}
+        />
+      ) : null}
+    </button>
+
+    {/* Dropdown list */}
+    {wordsOpen ? (
+      <div style={{ marginTop: 14, display: "grid", gap: 22 }}>
+        {words.map((w, i) => {
+          const label = String(w?.word || w?.text || `Word ${i + 1}`).trim();
+          return (
+            <button
+              key={`${label}_${i}`}
+              type="button"
+              onClick={() => {
+                setExpandedPhonemeKey(null);
+                setSelectedWordIdx(i);
+                setWordsOpen(false); // ✅ close after selecting
+              }}
+              style={{
+                border: "none",
+                background: "transparent",
+                padding: 0,
+                textAlign: "left",
+                cursor: "pointer",
+                fontSize: 44,
+                fontWeight: 500,
+                color: "rgba(17,24,39,0.55)",
+                lineHeight: 1.05,
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    ) : null}
   </div>
 ) : null}
 
