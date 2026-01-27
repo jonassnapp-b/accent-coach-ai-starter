@@ -174,6 +174,7 @@ export default function Coach() {
   const [status, setStatus] = useState("");
 
   // overlay state (sentence dropdown)
+  const [selectedWordIdx, setSelectedWordIdx] = useState(0);
   const [expandedPhonemeKey, setExpandedPhonemeKey] = useState(null); // e.g. "UW_3"
 
   // recording
@@ -471,6 +472,8 @@ export default function Coach() {
   setResult(null);
   setStatus("");
   setSelectedWordIdx(0);
+  setExpandedPhonemeKey(null);
+
 
   setStage("flow");      // ✅ ingen intro
   await speakSequence(t); // ✅ siger kun target
