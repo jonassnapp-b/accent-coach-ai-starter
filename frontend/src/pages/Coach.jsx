@@ -174,7 +174,7 @@ export default function Coach() {
   const [status, setStatus] = useState("");
 
   // overlay state (sentence dropdown)
-  const [selectedWordIdx, setSelectedWordIdx] = useState(0);
+  const [expandedPhonemeKey, setExpandedPhonemeKey] = useState(null); // e.g. "UW_3"
 
   // recording
   const [isRecording, setIsRecording] = useState(false);
@@ -495,6 +495,8 @@ export default function Coach() {
     setStatus("");
     setStage("setup");
     setSelectedWordIdx(0);
+    setExpandedPhonemeKey(null);
+
   }
 
   function handleStop(rec) {
@@ -562,6 +564,8 @@ export default function Coach() {
 
       setResult(payload);
       setSelectedWordIdx(0);
+      setExpandedPhonemeKey(null);
+
 
       const overall = Number(json?.overall ?? json?.overallAccuracy ?? json?.pronunciation ?? 0);
       const threshold = difficulty === "easy" ? 75 : difficulty === "medium" ? 82 : 88;
@@ -599,32 +603,39 @@ export default function Coach() {
   const currentWordText = String(currentWordObj?.word || currentWordObj?.text || currentWordObj?.name || target || "").trim();
   const currentWordScore = getScore(currentWordObj);
 
-  const phonemeCards = useMemo(() => {
-    const ps = Array.isArray(currentWordObj?.phonemes) ? currentWordObj.phonemes : [];
-    const out = [];
+ const phonemeLineItems = useMemo(() => {
+  const ps = Array.isArray(currentWordObj?.phonemes) ? currentWordObj.phonemes : [];
+  const out = [];
 
-    for (const p of ps) {
-      const code = getPhonemeCode(p);
-      if (!code) continue;
+  for (let i = 0; i < ps.length; i++) {
+    const p = ps[i];
+    const code = getPhonemeCode(p);
+    if (!code) continue;
 
-      const s = getScore(p);
+    const s = getScore(p);
+    const assets = resolvePhonemeAssets(code, accentUi); // null hvis intet billede
 
-      // "ikke grøn" => show only if not green (or unknown score)
-      if (s != null && isGreen(s)) continue;
+    out.push({
+      key: `${code}_${i}`,
+      code,
+      score: s,
+      assets, // { imgSrc, audioSrc } eller null
+      hasImage: !!assets?.imgSrc,
+      // tip giver kun mening for ikke-grøn (samme regel som før)
+      hasTip: !!assets?.imgSrc && (s == null || !isGreen(s)),
+    });
+  }
 
-      const assets = resolvePhonemeAssets(code, accentUi);
-      if (!assets) continue; // ✅ missing image => skip entirely (your rule)
+  return out;
+}, [currentWordObj, accentUi]);
 
-      out.push({
-        code,
-        score: s,
-        imgSrc: assets.imgSrc,
-        audioSrc: assets.audioSrc, // optional
-      });
-    }
+const tipItems = useMemo(() => phonemeLineItems.filter((x) => x.hasTip), [phonemeLineItems]);
 
-    return out;
-  }, [currentWordObj, accentUi]);
+const expandedTip = useMemo(() => {
+  if (!expandedPhonemeKey) return null;
+  return tipItems.find((x) => x.key === expandedPhonemeKey) || null;
+}, [expandedPhonemeKey, tipItems]);
+
 
   function playOverlayAudio(src) {
     if (!src) return;
@@ -933,128 +944,170 @@ export default function Coach() {
                     {currentWordScore == null ? " " : `Score: ${Math.round(currentWordScore)}`
                     }
                   </div>
-                 <div style={{ marginTop: 10, textAlign: "center" }}>
-  <span
-    style={{
-      fontSize: 18,        // ✅ større
-      fontWeight: 950,
-      color: "#111827",    // ✅ tydelig sort
-      marginRight: 8,
-    }}
-  >
-    Phonemes:
-  </span>
+                <div style={{ marginTop: 12, textAlign: "center" }}>
+  <div style={{ display: "inline-flex", flexWrap: "wrap", justifyContent: "center", gap: 10, alignItems: "baseline" }}>
+    <span
+      style={{
+        fontSize: 26,        // ✅ meget større
+        fontWeight: 950,
+        color: "#111827",
+        marginRight: 6,
+      }}
+    >
+      Phonemes:
+    </span>
 
-  {(() => {
-    const ps = Array.isArray(currentWordObj?.phonemes) ? currentWordObj.phonemes : [];
-    const items = [];
-
-    for (const p of ps) {
-      const code = getPhonemeCode(p);
-      if (!code) continue;
-      const s = getScore(p);
-      items.push({ code, score: s });
-    }
-
-    if (!items.length) {
-      return <span style={{ fontSize: 18, fontWeight: 900, color: LIGHT_MUTED }}>—</span>;
-    }
-
-    return items.map((it, i) => (
-      <span key={`${it.code}_${i}`}>
-        <span style={{ fontSize: 18, fontWeight: 950, color: scoreColor(it.score) }}>
+    {phonemeLineItems.length ? (
+      phonemeLineItems.map((it) => (
+        <button
+          key={it.key}
+          type="button"
+          onClick={() => {
+            // klik på phoneme vælger den (men åbner/lukker ikke card endnu)
+            if (it.hasTip) setExpandedPhonemeKey(it.key);
+            else setExpandedPhonemeKey(null);
+          }}
+          disabled={!it.hasTip}
+          title={it.hasTip ? "Select for tip" : it.hasImage ? "No tip needed (green)" : "No image available"}
+          style={{
+            border: "none",
+            background: "transparent",
+            padding: 0,
+            cursor: it.hasTip ? "pointer" : "default",
+            fontSize: 24,              // ✅ meget større
+            fontWeight: 950,
+            color: scoreColor(it.score), // ✅ farve efter score
+            textDecoration: it.hasImage ? "underline" : "none", // ✅ underline kun hvis billede findes
+            textUnderlineOffset: 6,
+            textDecorationThickness: 3,
+            opacity: it.hasTip ? 1 : 0.65,
+          }}
+        >
           {it.code}
-        </span>
-        {i < items.length - 1 ? (
-          <span style={{ fontSize: 18, fontWeight: 950, color: LIGHT_MUTED }}> · </span>
-        ) : null}
-      </span>
-    ));
-  })()}
+        </button>
+      ))
+    ) : (
+      <span style={{ fontSize: 24, fontWeight: 900, color: LIGHT_MUTED }}>—</span>
+    )}
+  </div>
 </div>
 
 
 <div style={{ marginTop: 14 }}>
-                {/* Phoneme cards (only non-green + only if you have image; audio optional) */}
-                {phonemeCards.length ? (
-                  <div style={{ display: "grid", gap: 12 }}>
-                    {phonemeCards.map((p, idx) => (
-                      <div
-                        key={`${p.code}_${idx}`}
-                        style={{
-                          background: "#fff",
-                          borderRadius: 22,
-                          padding: 14,
-                          border: `1px solid ${LIGHT_BORDER}`,
-                          boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
-                          display: "grid",
-                          gap: 10,
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                          <div style={{ fontWeight: 950, fontSize: 16, color: LIGHT_TEXT }}>
-                            {p.code}
-                          </div>
-                          <div style={{ fontWeight: 900, fontSize: 12, color: scoreColor(p.score) }}>
-                            {p.score == null ? "" : Math.round(p.score)}
-                          </div>
-                        </div>
+  {tipItems.length ? (
+    <div style={{ display: "grid", gap: 10 }}>
+      {/* “pil-knap” under stregen */}
+      <button
+        type="button"
+        onClick={() => {
+          // hvis intet valgt, vælg første tip-phoneme
+          if (!expandedPhonemeKey) {
+            setExpandedPhonemeKey(tipItems[0].key);
+            return;
+          }
+          // toggle open/close
+          setExpandedPhonemeKey((prev) => (prev ? null : tipItems[0].key));
+        }}
+        style={{
+          height: 46,
+          borderRadius: 16,
+          border: `1px solid ${LIGHT_BORDER}`,
+          background: "#fff",
+          fontWeight: 950,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          cursor: "pointer",
+        }}
+      >
+        <ChevronDown
+          className="h-5 w-5"
+          style={{
+            transform: expandedTip ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 160ms ease",
+          }}
+        />
+        {expandedTip ? `Hide tip` : `Show tip`}
+      </button>
 
-                        <div style={{ display: "grid", placeItems: "center" }}>
-                          <img
-                            src={p.imgSrc}
-                            alt={p.code}
-                            style={{
-                              width: "100%",
-                              maxWidth: 320,
-                              height: "auto",
-                              borderRadius: 16,
-                              border: `1px solid ${LIGHT_BORDER}`,
-                              background: "#fff",
-                            }}
-                          />
-                        </div>
+      {/* Card for KUN den valgte phoneme */}
+      {expandedTip ? (
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 22,
+            padding: 14,
+            border: `1px solid ${LIGHT_BORDER}`,
+            boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+            display: "grid",
+            gap: 10,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+            <div style={{ fontWeight: 950, fontSize: 18, color: LIGHT_TEXT }}>
+              {expandedTip.code}
+            </div>
+            <div style={{ fontWeight: 900, fontSize: 12, color: scoreColor(expandedTip.score) }}>
+              {expandedTip.score == null ? "" : Math.round(expandedTip.score)}
+            </div>
+          </div>
 
-                        {p.audioSrc ? (
-                          <button
-                            type="button"
-                            onClick={() => playOverlayAudio(p.audioSrc)}
-                            style={{
-                              height: 44,
-                              borderRadius: 16,
-                              border: `1px solid ${LIGHT_BORDER}`,
-                              background: "#fff",
-                              fontWeight: 950,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: 10,
-                              cursor: "pointer",
-                            }}
-                          >
-                            <Volume2 className="h-5 w-5" />
-                            Play sound
-                          </button>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      background: "#fff",
-                      borderRadius: 22,
-                      padding: 16,
-                      border: `1px solid ${LIGHT_BORDER}`,
-                      boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
-                      color: LIGHT_MUTED,
-                      fontWeight: 900,
-                      textAlign: "center",
-                    }}
-                  >
-                    No visual feedback for this word (missing assets or all green).
-                  </div>
-                  )}
+          <div style={{ display: "grid", placeItems: "center" }}>
+            <img
+              src={expandedTip.assets.imgSrc}
+              alt={expandedTip.code}
+              style={{
+                width: "100%",
+                maxWidth: 320,
+                height: "auto",
+                borderRadius: 16,
+                border: `1px solid ${LIGHT_BORDER}`,
+                background: "#fff",
+              }}
+            />
+          </div>
+
+          {expandedTip.assets.audioSrc ? (
+            <button
+              type="button"
+              onClick={() => playOverlayAudio(expandedTip.assets.audioSrc)}
+              style={{
+                height: 44,
+                borderRadius: 16,
+                border: `1px solid ${LIGHT_BORDER}`,
+                background: "#fff",
+                fontWeight: 950,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                cursor: "pointer",
+              }}
+            >
+              <Volume2 className="h-5 w-5" />
+              Play sound
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  ) : (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 22,
+        padding: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+        color: LIGHT_MUTED,
+        fontWeight: 900,
+        textAlign: "center",
+      }}
+    >
+      No tips for this word (missing assets or all green).
+    </div>
+  )}
 </div>
 
                 </div>
