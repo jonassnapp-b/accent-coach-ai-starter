@@ -206,8 +206,7 @@ export default function Coach() {
       prewarmUrlRef.current = null;
       setPrewarmReady(false);
     }
-    prewarmRepeat();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accentUi]);
 
   function sleep(ms) {
@@ -465,11 +464,18 @@ export default function Coach() {
   }
 
   async function onStart() {
-    if (isBusy) return;
-    setStage("intro");
-    if (!prewarmUrlRef.current) await prewarmRepeat();
-    await beginIntroThenFlow();
-  }
+  if (isBusy) return;
+
+  const t = buildNewTarget(mode, difficulty);
+  setTarget(t);
+  setResult(null);
+  setStatus("");
+  setSelectedWordIdx(0);
+
+  setStage("flow");      // ✅ ingen intro
+  await speakSequence(t); // ✅ siger kun target
+}
+
 
   function onBack() {
     if (isBusy) return;
@@ -758,54 +764,6 @@ export default function Coach() {
                   </button>
                 </div>
               </motion.div>
-            ) : stage === "intro" ? (
-              <motion.div
-                key="intro"
-                initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                transition={{ duration: 0.18 }}
-                style={speakingCardStyle}
-              >
-                <div style={{ display: "grid", justifyItems: "center", gap: 10 }}>
-                  <div
-                    style={{
-                      width: 68,
-                      height: 68,
-                      borderRadius: 999,
-                      background: "#ffffff",
-                      border: `1px solid ${LIGHT_BORDER}`,
-                      boxShadow: "0 10px 24px rgba(0,0,0,0.06)",
-                      display: "grid",
-                      placeItems: "center",
-                      fontWeight: 900,
-                      color: LIGHT_TEXT,
-                    }}
-                  >
-                    AI
-                  </div>
-
-                  <div style={{ fontWeight: 900, color: LIGHT_TEXT }}>
-                    Coach is speaking{isSpeaking ? "…" : ""}
-                  </div>
-
-                  <div style={{ display: "flex", gap: 6, alignItems: "end", height: 18 }}>
-                    {[0, 1, 2, 3, 4].map((i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ height: 6, opacity: 0.6 }}
-                        animate={{ height: isSpeaking ? [6, 16, 8, 14, 6] : 6, opacity: 0.9 }}
-                        transition={{
-                          duration: isSpeaking ? 0.9 : 0.2,
-                          repeat: isSpeaking ? Infinity : 0,
-                          delay: i * 0.06,
-                        }}
-                        style={{ width: 6, borderRadius: 999, background: BTN_BLUE }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
             ) : (
               <motion.div
                 key="flow"
@@ -902,13 +860,17 @@ export default function Coach() {
           {stage === "flow" && result ? (
             <div
               style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 9999,
-                background: LIGHT_BG,
-                overflowY: "auto",
-                padding: 16,
-              }}
+  position: "fixed",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: TABBAR_OFFSET, // ✅ efterlader plads til tabbar
+  zIndex: 9999,
+  background: LIGHT_BG,
+  overflowY: "auto",
+  padding: 16,
+}}
+
             >
               <div
                 style={{
@@ -971,40 +933,46 @@ export default function Coach() {
                     {currentWordScore == null ? " " : `Score: ${Math.round(currentWordScore)}`
                     }
                   </div>
-                 <div style={{ marginTop: 8, textAlign: "center" }}>
+                 <div style={{ marginTop: 10, textAlign: "center" }}>
   <span
     style={{
-      fontSize: 13,
-      fontWeight: 900,
-      color: "#111827", // tydelig sort
-      marginRight: 6,
+      fontSize: 18,        // ✅ større
+      fontWeight: 950,
+      color: "#111827",    // ✅ tydelig sort
+      marginRight: 8,
     }}
   >
     Phonemes:
   </span>
 
-  {Array.isArray(currentWordObj?.phonemes) &&
-    currentWordObj.phonemes.map((p, i) => {
+  {(() => {
+    const ps = Array.isArray(currentWordObj?.phonemes) ? currentWordObj.phonemes : [];
+    const items = [];
+
+    for (const p of ps) {
       const code = getPhonemeCode(p);
-      if (!code) return null;
-
+      if (!code) continue;
       const s = getScore(p);
+      items.push({ code, score: s });
+    }
 
-      return (
-        <span
-          key={`${code}_${i}`}
-          style={{
-            fontSize: 13,
-            fontWeight: 900,
-            color: scoreColor(s),
-            marginRight: 6,
-          }}
-        >
-          {code}
+    if (!items.length) {
+      return <span style={{ fontSize: 18, fontWeight: 900, color: LIGHT_MUTED }}>—</span>;
+    }
+
+    return items.map((it, i) => (
+      <span key={`${it.code}_${i}`}>
+        <span style={{ fontSize: 18, fontWeight: 950, color: scoreColor(it.score) }}>
+          {it.code}
         </span>
-      );
-    })}
-</div>''
+        {i < items.length - 1 ? (
+          <span style={{ fontSize: 18, fontWeight: 950, color: LIGHT_MUTED }}> · </span>
+        ) : null}
+      </span>
+    ));
+  })()}
+</div>
+
 
 <div style={{ marginTop: 14 }}>
                 {/* Phoneme cards (only non-green + only if you have image; audio optional) */}
