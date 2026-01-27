@@ -1571,36 +1571,6 @@ onClick={async () => {
 {targetScorePct != null && (
   <div style={{ marginTop: 12 }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          {/* Phonemes in this word (summary) */}
-    <div
-      style={{
-        marginTop: 6,
-        fontSize: 12,
-        fontWeight: 800,
-        textAlign: "left",
-        color: ui.textMuted,
-        letterSpacing: "0.2px",
-      }}
-    >
-      {(() => {
-        // Build ordered list of CMU phonemes appearing in this word (hero word only)
-        const list = [];
-        const seen = new Set();
-
-        for (const row of chunkRows || []) {
-          for (const ph of row?.phonemes || []) {
-            const cmu = String(ph?.cmu || "").trim();
-            if (!cmu) continue;
-            if (seen.has(cmu)) continue;
-            seen.add(cmu);
-            list.push(cmu);
-          }
-        }
-
-        return list.length ? `Phonemes: ${list.join(" · ")}` : null;
-      })()}
-    </div>
-
       <div style={{ fontSize: 12, fontWeight: 900, color: ui.textMuted }}>
         Overall score
       </div>

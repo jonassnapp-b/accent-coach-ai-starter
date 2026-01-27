@@ -971,8 +971,20 @@ export default function Coach() {
                     {currentWordScore == null ? " " : `Score: ${Math.round(currentWordScore)}`
                     }
                   </div>
-                </div>
+                  <div style={{ marginTop: 6, textAlign: "center", fontSize: 12, color: LIGHT_MUTED, fontWeight: 900 }}>
+  {(() => {
+    const ps = Array.isArray(currentWordObj?.phonemes) ? currentWordObj.phonemes : [];
+    const list = [];
+    for (const p of ps) {
+      const code = getPhonemeCode(p);
+      if (!code) continue;
+      list.push(code);
+    }
+    return list.length ? `Phonemes: ${list.join(" · ")}` : " ";
+  })()}
+</div>
 
+<div style={{ marginTop: 14 }}>
                 {/* Phoneme cards (only non-green + only if you have image; audio optional) */}
                 {phonemeCards.length ? (
                   <div style={{ display: "grid", gap: 12 }}>
@@ -1052,7 +1064,10 @@ export default function Coach() {
                   >
                     No visual feedback for this word (missing assets or all green).
                   </div>
-                )}
+                  )}
+</div>
+
+                </div>
               </div>
             </div>
           ) : null}
