@@ -917,43 +917,12 @@ const expandedTip = useMemo(() => {
                 >
 {isSentence ? (
   <div style={{ marginBottom: 12 }}>
-    {/* Header row (only shows chevron when OPEN) */}
-    <button
-      type="button"
-      onClick={() => setWordsOpen((v) => !v)}
-      style={{
-        width: "100%",
-        border: "none",
-        background: "transparent",
-        padding: 0,
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-start",
-        gap: 10,
-      }}
-    >
-      <div style={{ fontSize: 32, fontWeight: 950, color: LIGHT_TEXT }}>
-        {wordsOpen ? "Words" : (currentWordText || "Words")}
-      </div>
-
-      {wordsOpen ? (
-        <ChevronDown
-          className="h-6 w-6"
-          style={{
-            color: LIGHT_TEXT,
-            opacity: 0.9,
-            transform: "translateY(1px)",
-          }}
-        />
-      ) : null}
-    </button>
-
-    {/* Dropdown list */}
+    {/* ONLY the words list. Chevron only when OPEN. */}
     {wordsOpen ? (
-      <div style={{ marginTop: 14, display: "grid", gap: 22 }}>
+      <div style={{ display: "grid", gap: 22 }}>
         {words.map((w, i) => {
           const label = String(w?.word || w?.text || `Word ${i + 1}`).trim();
+
           return (
             <button
               key={`${label}_${i}`}
@@ -969,13 +938,30 @@ const expandedTip = useMemo(() => {
                 padding: 0,
                 textAlign: "left",
                 cursor: "pointer",
-                fontSize: 44,
-                fontWeight: 500,
-                color: "rgba(17,24,39,0.55)",
-                lineHeight: 1.05,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
               }}
             >
-              {label}
+              <span
+                style={{
+                  fontSize: 44,
+                  fontWeight: 500,
+                  color: "rgba(17,24,39,0.55)",
+                  lineHeight: 1.05,
+                }}
+              >
+                {label}
+              </span>
+
+              {/* ✅ chevron ONLY while the list is open */}
+              {i === 0 ? (
+                <ChevronDown
+                  className="h-6 w-6"
+                  style={{ color: "rgba(17,24,39,0.55)", opacity: 0.9 }}
+                />
+              ) : null}
             </button>
           );
         })}
@@ -983,6 +969,7 @@ const expandedTip = useMemo(() => {
     ) : null}
   </div>
 ) : null}
+
 
                   {/* Word (colored like main) */}
                   <div
