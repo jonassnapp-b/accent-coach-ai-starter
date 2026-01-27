@@ -930,7 +930,6 @@ const expandedTip = useMemo(() => {
               onClick={() => {
                 setExpandedPhonemeKey(null);
                 setSelectedWordIdx(i);
-                setWordsOpen(false); // ✅ close after selecting
               }}
               style={{
                 border: "none",
