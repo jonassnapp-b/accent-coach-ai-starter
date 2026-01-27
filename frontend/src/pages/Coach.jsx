@@ -600,10 +600,13 @@ export default function Coach() {
   const words = useMemo(() => normalizeWordsFromResult(result, target), [result, target]);
   const isSentence = useMemo(() => (mode === "sentences") || (words?.length > 1), [mode, words?.length]);
 
-  const safeWordIdx = Math.max(0, Math.min(selectedWordIdx, Math.max(0, (words?.length || 1) - 1)));
-  const currentWordObj = words?.[safeWordIdx] || null;
+ const maxIdx = Math.max(0, (words?.length || 1) - 1);
+const safeWordIdx = selectedWordIdx < 0 ? -1 : Math.max(0, Math.min(selectedWordIdx, maxIdx));
+const currentWordObj = safeWordIdx >= 0 ? (words?.[safeWordIdx] || null) : null;
 
-  const currentWordText = String(currentWordObj?.word || currentWordObj?.text || currentWordObj?.name || target || "").trim();
+  const currentWordText = String(
+  currentWordObj?.word || currentWordObj?.text || currentWordObj?.name || (isSentence ? "" : target) || ""
+).trim();
   const currentWordScore = getScore(currentWordObj);
 
  const phonemeLineItems = useMemo(() => {
@@ -904,31 +907,41 @@ const expandedTip = useMemo(() => {
                     boxShadow: LIGHT_SHADOW,
                   }}
                 >
-                  <div style={{ fontSize: 12, fontWeight: 900, opacity: 0.55, marginBottom: 6 }}>
-                    Feedback
-                  </div>
+{/* Sentence words: tap to expand feedback for that word */}
+{isSentence ? (
+  <div style={{ marginBottom: 12 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+      {words.map((w, i) => {
+        const label = String(w?.word || w?.text || `Word ${i + 1}`).trim();
+        const active = i === safeWordIdx;
 
-                  {/* Sentence word dropdown */}
-                  {isSentence ? (
-                    <div style={{ ...selectWrapStyle, marginBottom: 10 }}>
-                      <select
-                        aria-label="Word"
-                        value={safeWordIdx}
-                        onChange={(e) => setSelectedWordIdx(Number(e.target.value))}
-                        style={selectStyle}
-                      >
-                        {words.map((w, i) => {
-                          const label = String(w?.word || w?.text || `Word ${i + 1}`).trim();
-                          return (
-                            <option key={`${label}_${i}`} value={i}>
-                              {label}
-                            </option>
-                          );
-                        })}
-                      </select>
-                      <ChevronDown className="h-4 w-4" style={chevronStyle} />
-                    </div>
-                  ) : null}
+        return (
+          <button
+            key={`${label}_${i}`}
+            type="button"
+            onClick={() => {
+              // toggle open/close for this word
+              setExpandedPhonemeKey(null);
+              setSelectedWordIdx((prev) => (prev === i ? -1 : i));
+            }}
+            style={{
+              border: `1px solid ${LIGHT_BORDER}`,
+              background: active ? "rgba(33,150,243,0.10)" : "#fff",
+              color: LIGHT_TEXT,
+              fontWeight: 900,
+              borderRadius: 999,
+              padding: "8px 12px",
+              cursor: "pointer",
+              opacity: active ? 1 : 0.92,
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+) : null}
 
                   {/* Word (colored like main) */}
                   <div
@@ -947,171 +960,173 @@ const expandedTip = useMemo(() => {
                     {currentWordScore == null ? " " : `Score: ${Math.round(currentWordScore)}`
                     }
                   </div>
-                <div style={{ marginTop: 12, textAlign: "center" }}>
-  <div style={{ display: "inline-flex", flexWrap: "wrap", justifyContent: "center", gap: 10, alignItems: "baseline" }}>
-    <span
-      style={{
-        fontSize: 26,        // ✅ meget større
-        fontWeight: 950,
-        color: "#111827",
-        marginRight: 6,
-      }}
-    >
-      Phonemes:
-    </span>
-
-    {phonemeLineItems.length ? (
-      phonemeLineItems.map((it) => (
-        <button
-          key={it.key}
-          type="button"
-          onClick={() => {
-            // klik på phoneme vælger den (men åbner/lukker ikke card endnu)
-            if (it.hasTip) setExpandedPhonemeKey(it.key);
-            else setExpandedPhonemeKey(null);
-          }}
-          disabled={!it.hasTip}
-          title={it.hasTip ? "Select for tip" : it.hasImage ? "No tip needed (green)" : "No image available"}
+                
+                {currentWordObj ? (
+  <>
+    <div style={{ marginTop: 12, textAlign: "center" }}>
+      <div style={{ display: "inline-flex", flexWrap: "wrap", justifyContent: "center", gap: 10, alignItems: "baseline" }}>
+        <span
           style={{
-            border: "none",
-            background: "transparent",
-            padding: 0,
-            cursor: it.hasTip ? "pointer" : "default",
-            fontSize: 24,              // ✅ meget større
+            fontSize: 26,
             fontWeight: 950,
-            color: scoreColor(it.score), // ✅ farve efter score
-            textDecoration: it.hasImage ? "underline" : "none", // ✅ underline kun hvis billede findes
-            textUnderlineOffset: 6,
-            textDecorationThickness: 3,
-            opacity: it.hasTip ? 1 : 0.65,
+            color: "#111827",
+            marginRight: 6,
           }}
         >
-          {it.code}
-        </button>
-      ))
-    ) : (
-      <span style={{ fontSize: 24, fontWeight: 900, color: LIGHT_MUTED }}>—</span>
-    )}
-  </div>
-</div>
+          Phonemes:
+        </span>
 
+        {phonemeLineItems.length ? (
+          phonemeLineItems.map((it) => (
+            <button
+              key={it.key}
+              type="button"
+              onClick={() => {
+                if (it.hasTip) setExpandedPhonemeKey(it.key);
+                else setExpandedPhonemeKey(null);
+              }}
+              disabled={!it.hasTip}
+              title={it.hasTip ? "Select for tip" : it.hasImage ? "No tip needed (green)" : "No image available"}
+              style={{
+                border: "none",
+                background: "transparent",
+                padding: 0,
+                cursor: it.hasTip ? "pointer" : "default",
+                fontSize: 24,
+                fontWeight: 950,
+                color: scoreColor(it.score),
+                textDecoration: it.hasImage ? "underline" : "none",
+                textUnderlineOffset: 6,
+                textDecorationThickness: 3,
+                opacity: it.hasTip ? 1 : 0.65,
+              }}
+            >
+              {it.code}
+            </button>
+          ))
+        ) : (
+          <span style={{ fontSize: 24, fontWeight: 900, color: LIGHT_MUTED }}>—</span>
+        )}
+      </div>
+    </div>
 
-<div style={{ marginTop: 14 }}>
-  {tipItems.length ? (
-    <div style={{ display: "grid", gap: 10 }}>
-      {/* “pil-knap” under stregen */}
-      <button
-        type="button"
-        onClick={() => {
-          // hvis intet valgt, vælg første tip-phoneme
-          if (!expandedPhonemeKey) {
-            setExpandedPhonemeKey(tipItems[0].key);
-            return;
-          }
-          // toggle open/close
-          setExpandedPhonemeKey((prev) => (prev ? null : tipItems[0].key));
-        }}
-        style={{
-          height: 46,
-          borderRadius: 16,
-          border: `1px solid ${LIGHT_BORDER}`,
-          background: "#fff",
-          fontWeight: 950,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 10,
-          cursor: "pointer",
-        }}
-      >
-        <ChevronDown
-          className="h-5 w-5"
-          style={{
-            transform: expandedTip ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 160ms ease",
-          }}
-        />
-        {expandedTip ? `Hide tip` : `Show tip`}
-      </button>
+    <div style={{ marginTop: 14 }}>
+      {tipItems.length ? (
+        <div style={{ display: "grid", gap: 10 }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (!expandedPhonemeKey) {
+                setExpandedPhonemeKey(tipItems[0].key);
+                return;
+              }
+              setExpandedPhonemeKey((prev) => (prev ? null : tipItems[0].key));
+            }}
+            style={{
+              height: 46,
+              borderRadius: 16,
+              border: `1px solid ${LIGHT_BORDER}`,
+              background: "#fff",
+              fontWeight: 950,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              cursor: "pointer",
+            }}
+          >
+            <ChevronDown
+              className="h-5 w-5"
+              style={{
+                transform: expandedTip ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 160ms ease",
+              }}
+            />
+            {expandedTip ? `Hide tip` : `Show tip`}
+          </button>
 
-      {/* Card for KUN den valgte phoneme */}
-      {expandedTip ? (
+          {expandedTip ? (
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: 22,
+                padding: 14,
+                border: `1px solid ${LIGHT_BORDER}`,
+                boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+                display: "grid",
+                gap: 10,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                <div style={{ fontWeight: 950, fontSize: 18, color: LIGHT_TEXT }}>{expandedTip.code}</div>
+                <div style={{ fontWeight: 900, fontSize: 12, color: scoreColor(expandedTip.score) }}>
+                  {expandedTip.score == null ? "" : Math.round(expandedTip.score)}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", placeItems: "center" }}>
+                <img
+                  src={expandedTip.assets.imgSrc}
+                  alt={expandedTip.code}
+                  style={{
+                    width: "100%",
+                    maxWidth: 320,
+                    height: "auto",
+                    borderRadius: 16,
+                    border: `1px solid ${LIGHT_BORDER}`,
+                    background: "#fff",
+                  }}
+                />
+              </div>
+
+              {expandedTip.assets.audioSrc ? (
+                <button
+                  type="button"
+                  onClick={() => playOverlayAudio(expandedTip.assets.audioSrc)}
+                  style={{
+                    height: 44,
+                    borderRadius: 16,
+                    border: `1px solid ${LIGHT_BORDER}`,
+                    background: "#fff",
+                    fontWeight: 950,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Volume2 className="h-5 w-5" />
+                  Play sound
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : (
         <div
           style={{
             background: "#fff",
             borderRadius: 22,
-            padding: 14,
+            padding: 16,
             border: `1px solid ${LIGHT_BORDER}`,
             boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
-            display: "grid",
-            gap: 10,
+            color: LIGHT_MUTED,
+            fontWeight: 900,
+            textAlign: "center",
           }}
         >
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-            <div style={{ fontWeight: 950, fontSize: 18, color: LIGHT_TEXT }}>
-              {expandedTip.code}
-            </div>
-            <div style={{ fontWeight: 900, fontSize: 12, color: scoreColor(expandedTip.score) }}>
-              {expandedTip.score == null ? "" : Math.round(expandedTip.score)}
-            </div>
-          </div>
-
-          <div style={{ display: "grid", placeItems: "center" }}>
-            <img
-              src={expandedTip.assets.imgSrc}
-              alt={expandedTip.code}
-              style={{
-                width: "100%",
-                maxWidth: 320,
-                height: "auto",
-                borderRadius: 16,
-                border: `1px solid ${LIGHT_BORDER}`,
-                background: "#fff",
-              }}
-            />
-          </div>
-
-          {expandedTip.assets.audioSrc ? (
-            <button
-              type="button"
-              onClick={() => playOverlayAudio(expandedTip.assets.audioSrc)}
-              style={{
-                height: 44,
-                borderRadius: 16,
-                border: `1px solid ${LIGHT_BORDER}`,
-                background: "#fff",
-                fontWeight: 950,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                cursor: "pointer",
-              }}
-            >
-              <Volume2 className="h-5 w-5" />
-              Play sound
-            </button>
-          ) : null}
+          No tips for this word.
         </div>
-      ) : null}
+      )}
     </div>
-  ) : (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 22,
-        padding: 16,
-        border: `1px solid ${LIGHT_BORDER}`,
-        boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
-        color: LIGHT_MUTED,
-        fontWeight: 900,
-        textAlign: "center",
-      }}
-    >
-      No tips for this word (missing assets or all green).
-    </div>
-  )}
-</div>
+  </>
+) : (
+  <div style={{ marginTop: 12, textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>
+    Tap a word to see feedback.
+  </div>
+)}
+
 
                 </div>
               </div>
