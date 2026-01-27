@@ -182,6 +182,7 @@ const [wordsOpen, setWordsOpen] = useState(false); // ✅ dropdown open/closed
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const isBusy = isRecording || isAnalyzing;
+const [recordReady, setRecordReady] = useState(false);
 
   const mediaRecRef = useRef(null);
   const chunksRef = useRef([]);
@@ -416,17 +417,22 @@ const [wordsOpen, setWordsOpen] = useState(false); // ✅ dropdown open/closed
     }
   }
 
-  async function speakSequence(t) {
-    await sleep(100);
-    setIsSpeakingTarget(true);
-    try {
-      await playTts(t, 0.98);
-    } catch (e) {
-      if (!IS_PROD) console.warn("[TTS target]", e);
-    } finally {
-      setIsSpeakingTarget(false);
-    }
+ async function speakSequence(t) {
+  await sleep(100);
+
+  setRecordReady(false);        // ✅ hide mic before TTS
+  setIsSpeakingTarget(true);
+
+  try {
+    await playTts(t, 0.98);
+  } catch (e) {
+    if (!IS_PROD) console.warn("[TTS target]", e);
+  } finally {
+    setIsSpeakingTarget(false);
+    setRecordReady(true);       // ✅ show mic after TTS
   }
+}
+
 
   async function beginIntroThenFlow() {
     const t = buildNewTarget(mode, difficulty);
@@ -484,6 +490,7 @@ const [wordsOpen, setWordsOpen] = useState(false); // ✅ dropdown open/closed
   function onBack() {
     if (isBusy) return;
     stopTtsNow();
+    setRecordReady(false);
 
     try {
       if (lastUrl) URL.revokeObjectURL(lastUrl);
@@ -849,29 +856,50 @@ const expandedTip = useMemo(() => {
                 </motion.div>
 
                 <div style={{ display: "grid", placeItems: "center", marginTop: 52 }}>
-                  <button
-                    type="button"
-                    onClick={toggleRecord}
-                    disabled={isAnalyzing || !target}
-                    title={isRecording ? "Stop" : "Record"}
-                    style={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: 18,
-                      border: "none",
-                      background: isRecording ? "#111827" : BTN_BLUE,
-                      display: "grid",
-                      placeItems: "center",
-                      cursor: isAnalyzing ? "not-allowed" : "pointer",
-                      opacity: isAnalyzing ? 0.6 : 1,
-                    }}
-                  >
-                    {isRecording ? (
-                      <StopCircle className="h-6 w-6" style={{ color: "white" }} />
-                    ) : (
-                      <Mic className="h-6 w-6" style={{ color: "white" }} />
-                    )}
-                  </button>
+                  <AnimatePresence mode="wait">
+  {recordReady ? (
+    <motion.div
+      key="mic"
+      initial={{ opacity: 0, y: 6, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 6, scale: 0.98 }}
+      transition={{ duration: 0.18 }}
+    >
+      <button
+        type="button"
+        onClick={toggleRecord}
+        disabled={isAnalyzing || !target}
+        title={isRecording ? "Stop" : "Record"}
+        style={{
+          width: 52,
+          height: 52,
+          borderRadius: 18,
+          border: "none",
+          background: isRecording ? "#111827" : BTN_BLUE,
+          display: "grid",
+          placeItems: "center",
+          cursor: isAnalyzing ? "not-allowed" : "pointer",
+          opacity: isAnalyzing ? 0.6 : 1,
+        }}
+      >
+        {isRecording ? (
+          <StopCircle className="h-6 w-6" style={{ color: "white" }} />
+        ) : (
+          <Mic className="h-6 w-6" style={{ color: "white" }} />
+        )}
+      </button>
+    </motion.div>
+  ) : (
+    <motion.div
+      key="mic-spacer"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      style={{ width: 52, height: 52 }} // holder layout stabilt
+    />
+  )}
+</AnimatePresence>
+
 
                   <div style={{ marginTop: 10, minHeight: 18, color: LIGHT_MUTED, fontWeight: 800, fontSize: 12 }}>
                     {isRecording ? "Recording…" : isAnalyzing ? "Analyzing…" : status || " "}
@@ -922,47 +950,216 @@ const expandedTip = useMemo(() => {
       <div style={{ display: "grid", gap: 22 }}>
         {words.map((w, i) => {
           const label = String(w?.word || w?.text || `Word ${i + 1}`).trim();
+          const wordObj = w; // ✅ denne rækkes word
+const wordText = String(wordObj?.word || wordObj?.text || wordObj?.name || "").trim();
+const wordScore = getScore(wordObj);
 
-          return (
-            <button
-              key={`${label}_${i}`}
-              type="button"
-              onClick={() => {
-                setExpandedPhonemeKey(null);
-                setSelectedWordIdx(i);
-              }}
-              style={{
-                border: "none",
-                background: "transparent",
-                padding: 0,
-                textAlign: "left",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 44,
-                  fontWeight: 500,
-                  color: "rgba(17,24,39,0.55)",
-                  lineHeight: 1.05,
-                }}
-              >
-                {label}
-              </span>
+const rowPhonemeLineItems = (() => {
+  const ps = Array.isArray(wordObj?.phonemes) ? wordObj.phonemes : [];
+  const out = [];
+  for (let pi = 0; pi < ps.length; pi++) {
+    const p = ps[pi];
+    const code = getPhonemeCode(p);
+    if (!code) continue;
 
-              {/* ✅ chevron ONLY while the list is open */}
-              {i === 0 ? (
-                <ChevronDown
-                  className="h-6 w-6"
-                  style={{ color: "rgba(17,24,39,0.55)", opacity: 0.9 }}
-                />
-              ) : null}
-            </button>
-          );
+    const s = getScore(p);
+    const assets = resolvePhonemeAssets(code, accentUi);
+
+    out.push({
+      key: `${code}_${pi}`,
+      code,
+      score: s,
+      assets,
+      hasImage: !!assets?.imgSrc,
+      hasTip: !!assets?.imgSrc && (s == null || !isGreen(s)),
+    });
+  }
+  return out;
+})();
+
+const rowTipItems = rowPhonemeLineItems.filter((x) => x.hasTip);
+
+
+         return (
+  <div key={`${label}_${i}`} style={{ display: "grid", gap: 10 }}>
+    <button
+      type="button"
+      onClick={() => {
+        setExpandedPhonemeKey(null);
+        setSelectedWordIdx(i);
+
+        // optional: toggle accordion behavior
+        // setSelectedWordIdx((prev) => (prev === i ? -1 : i));
+      }}
+      style={{
+        border: "none",
+        background: "transparent",
+        padding: 0,
+        textAlign: "left",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+      }}
+    >
+      <span
+        style={{
+          fontSize: 44,
+          fontWeight: 500,
+          color: "rgba(17,24,39,0.55)",
+          lineHeight: 1.05,
+        }}
+      >
+        {label}
+      </span>
+
+      {/* chevron skal IKKE få listen til at forsvinde */}
+      <ChevronDown
+        className="h-6 w-6"
+        style={{
+          color: "rgba(17,24,39,0.55)",
+          opacity: 0.9,
+          transform: i === selectedWordIdx ? "rotate(180deg)" : "rotate(0deg)",
+          transition: "transform 160ms ease",
+        }}
+      />
+    </button>
+
+    {/* ✅ Accordion feedback UNDER selected word */}
+    <AnimatePresence initial={false}>
+      {i === selectedWordIdx ? (
+        <div style={{ paddingTop: 10 }}>
+  {/* Word (colored) */}
+  <div
+    style={{
+      fontSize: 34,
+      fontWeight: 950,
+      lineHeight: 1.1,
+      textAlign: "left",
+      color: scoreColor(wordScore),
+    }}
+  >
+    {wordText || label || "—"}
+  </div>
+
+  <div style={{ marginTop: 6, textAlign: "left", fontSize: 12, color: LIGHT_MUTED, fontWeight: 800 }}>
+    {wordScore == null ? " " : `Score: ${Math.round(wordScore)}`}
+  </div>
+
+  {/* Phonemes */}
+  <div style={{ marginTop: 12 }}>
+    <div style={{ display: "inline-flex", flexWrap: "wrap", gap: 10, alignItems: "baseline" }}>
+      <span style={{ fontSize: 20, fontWeight: 950, color: "#111827", marginRight: 6 }}>
+        Phonemes:
+      </span>
+
+      {rowPhonemeLineItems.length ? (
+        rowPhonemeLineItems.map((it) => (
+          <button
+            key={`row_${i}_${it.key}`}
+            type="button"
+            onClick={() => {
+              if (it.hasTip) setExpandedPhonemeKey(`row_${i}_${it.key}`);
+              else setExpandedPhonemeKey(null);
+            }}
+            disabled={!it.hasTip}
+            title={it.hasTip ? "Select for tip" : it.hasImage ? "No tip needed (green)" : "No image available"}
+            style={{
+              border: "none",
+              background: "transparent",
+              padding: 0,
+              cursor: it.hasTip ? "pointer" : "default",
+              fontSize: 20,
+              fontWeight: 950,
+              color: scoreColor(it.score),
+              textDecoration: it.hasImage ? "underline" : "none",
+              textUnderlineOffset: 6,
+              textDecorationThickness: 3,
+              opacity: it.hasTip ? 1 : 0.65,
+            }}
+          >
+            {it.code}
+          </button>
+        ))
+      ) : (
+        <span style={{ fontSize: 20, fontWeight: 900, color: LIGHT_MUTED }}>—</span>
+      )}
+    </div>
+  </div>
+
+  {/* Tip card for this row */}
+  {(() => {
+    const prefix = `row_${i}_`;
+    const rowExpandedLocalKey = expandedPhonemeKey?.startsWith(prefix) ? expandedPhonemeKey.slice(prefix.length) : null;
+    const rowExpandedTip = rowExpandedLocalKey ? rowTipItems.find((x) => x.key === rowExpandedLocalKey) : null;
+
+    return rowExpandedTip ? (
+      <div
+        style={{
+          marginTop: 12,
+          background: "#fff",
+          borderRadius: 22,
+          padding: 14,
+          border: `1px solid ${LIGHT_BORDER}`,
+          boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+          display: "grid",
+          gap: 10,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 950, fontSize: 18, color: LIGHT_TEXT }}>{rowExpandedTip.code}</div>
+          <div style={{ fontWeight: 900, fontSize: 12, color: scoreColor(rowExpandedTip.score) }}>
+            {rowExpandedTip.score == null ? "" : Math.round(rowExpandedTip.score)}
+          </div>
+        </div>
+
+        <div style={{ display: "grid", placeItems: "center" }}>
+          <img
+            src={rowExpandedTip.assets.imgSrc}
+            alt={rowExpandedTip.code}
+            style={{
+              width: "100%",
+              maxWidth: 320,
+              height: "auto",
+              borderRadius: 16,
+              border: `1px solid ${LIGHT_BORDER}`,
+              background: "#fff",
+            }}
+          />
+        </div>
+
+        {rowExpandedTip.assets.audioSrc ? (
+          <button
+            type="button"
+            onClick={() => playOverlayAudio(rowExpandedTip.assets.audioSrc)}
+            style={{
+              height: 44,
+              borderRadius: 16,
+              border: `1px solid ${LIGHT_BORDER}`,
+              background: "#fff",
+              fontWeight: 950,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              cursor: "pointer",
+            }}
+          >
+            <Volume2 className="h-5 w-5" />
+            Play sound
+          </button>
+        ) : null}
+      </div>
+    ) : null;
+  })()}
+</div>
+
+      ) : null}
+    </AnimatePresence>
+  </div>
+);
+
         })}
       </div>
     ) : null}
