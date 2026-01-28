@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import { ChevronDown, Mic, StopCircle, Volume2, Play, Pause } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
+import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 
 const IS_PROD = !!import.meta?.env?.PROD;
 
@@ -186,7 +187,8 @@ const [wordsOpen, setWordsOpen] = useState(false); // ✅ dropdown open/closed
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const isBusy = isRecording || isAnalyzing;
-const [recordReady, setRecordReady] = useState(false);
+
+const micStreamRef = useRef(null);
 
   const mediaRecRef = useRef(null);
   const chunksRef = useRef([]);
@@ -227,17 +229,18 @@ const correctTextRef = useRef("");
     return new Promise((r) => setTimeout(r, ms));
   }
 
-  function disposeRecorder() {
-    try {
-      mediaRecRef.current?.stream?.getTracks()?.forEach((t) => t.stop());
-    } catch {}
-    mediaRecRef.current = null;
-  }
+ function disposeRecorder() {
+  try {
+    micStreamRef.current?.getTracks?.()?.forEach((t) => t.stop());
+  } catch {}
+  micStreamRef.current = null;
+  mediaRecRef.current = null;
+}
 
   async function ensureMic() {
-    disposeRecorder();
-    if (!navigator?.mediaDevices?.getUserMedia) throw new Error("Microphone not supported on this device.");
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+   if (!navigator?.mediaDevices?.getUserMedia) throw new Error("Microphone not supported on this device.");
+const stream = micStreamRef.current || (await navigator.mediaDevices.getUserMedia({ audio: true }));
+micStreamRef.current = stream;
 
     let options = {};
     if (typeof MediaRecorder !== "undefined" && typeof MediaRecorder.isTypeSupported === "function") {
@@ -435,7 +438,6 @@ await new Promise((resolve) => {
  async function speakSequence(t) {
   await sleep(100);
 
-  setRecordReady(false);        // ✅ hide mic before TTS
   setIsSpeakingTarget(true);
 
   try {
@@ -444,7 +446,6 @@ await new Promise((resolve) => {
     if (!IS_PROD) console.warn("[TTS target]", e);
   } finally {
     setIsSpeakingTarget(false);
-    setRecordReady(true);       // ✅ show mic after TTS
   }
 }
 
@@ -497,16 +498,15 @@ await new Promise((resolve) => {
   setExpandedPhonemeKey(null);
 
 
-  setStage("flow");      // ✅ ingen intro
-  await speakSequence(t); // ✅ siger kun target
+setStage("flow");
+
 }
 
 
   function onBack() {
     if (isBusy) return;
     stopTtsNow();
-    setRecordReady(false);
-
+    
     try {
       if (lastUrl) URL.revokeObjectURL(lastUrl);
     } catch {}
@@ -533,8 +533,7 @@ setIsCorrectPlaying(false);
     const chunks = chunksRef.current.slice();
     chunksRef.current = [];
 
-    disposeRecorder();
-
+    
     try {
       if (lastUrl) URL.revokeObjectURL(lastUrl);
     } catch {}
@@ -624,22 +623,20 @@ if (!Number.isFinite(overall)) overall = 0;
 if (overall > 0 && overall <= 1) overall = overall * 100;
       const threshold = difficulty === "easy" ? 75 : difficulty === "medium" ? 82 : 88;
 
-      if (overall >= threshold + 7) {
-        setStatus("Well done ✅");
-        await playTts("Well done. Let's go to the next one.");
-        const next = buildNewTarget(mode, difficulty);
-        setTarget(next);
-        await speakSequence(next);
-      } else if (overall >= threshold) {
-        setStatus("That’s alright — next 👌");
-        await playTts("That's alright. Let's go to the next one.");
-        const next = buildNewTarget(mode, difficulty);
-        setTarget(next);
-        await speakSequence(next);
-      } else {
-        setStatus("Try again (listen to the feedback) 🔁");
-        // ✅ removed: TTS that says "Try again"
-      }
+    if (overall >= threshold + 7) {
+  setStatus("Well done ✅");
+  const next = buildNewTarget(mode, difficulty);
+  setTarget(next);
+  // don't auto-speak
+} else if (overall >= threshold) {
+  setStatus("That’s alright — next 👌");
+  const next = buildNewTarget(mode, difficulty);
+  setTarget(next);
+  // don't auto-speak
+} else {
+  setStatus("Try again (listen to the feedback) 🔁");
+}
+
     } catch (e) {
       setStatus(IS_PROD ? "Something went wrong. Try again." : e?.message || String(e));
     } finally {
@@ -816,8 +813,7 @@ function onTryAgain() {
   setIsUserPlaying(false);
   setIsCorrectPlaying(false);
 
-  speakSequence(t); // siger target igen og viser mic bagefter
-}
+  }
 
 
 function onNext() {
@@ -830,8 +826,7 @@ function onNext() {
   setExpandedPhonemeKey(null);
   setWordsOpen(false);
 
-  speakSequence(next);
-}
+  }
 
 
   /* ---------------- styles ---------------- */
@@ -1016,54 +1011,72 @@ function onNext() {
                         }}
                       />
                     ) : null}
-                    <span style={{ position: "relative", zIndex: 1 }}>{target || "—"}</span>
+                    <span
+  style={{
+    position: "relative",
+    zIndex: 1,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 10,
+  }}
+>
+  <span>{target || "—"}</span>
+
+  <button
+    type="button"
+    onClick={toggleCorrectTts}
+    disabled={!String(target).trim()}
+    title="Play pronunciation"
+    style={{
+      width: 34,
+      height: 34,
+      borderRadius: 12,
+      border: `1px solid ${LIGHT_BORDER}`,
+      background: "#fff",
+      display: "grid",
+      placeItems: "center",
+      cursor: String(target).trim() ? "pointer" : "not-allowed",
+      opacity: String(target).trim() ? 1 : 0.6,
+    }}
+  >
+    <Volume2 className="h-5 w-5" />
+  </button>
+</span>
                   </span>
                 </motion.div>
 
                 <div style={{ display: "grid", placeItems: "center", marginTop: 52 }}>
-                  <AnimatePresence mode="wait">
-  {recordReady ? (
-    <motion.div
-      key="mic"
-      initial={{ opacity: 0, y: 6, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 6, scale: 0.98 }}
-      transition={{ duration: 0.18 }}
-    >
-      <button
-        type="button"
-        onClick={toggleRecord}
-        disabled={isAnalyzing || !target}
-        title={isRecording ? "Stop" : "Record"}
-        style={{
-          width: 52,
-          height: 52,
-          borderRadius: 18,
-          border: "none",
-          background: isRecording ? "#111827" : BTN_BLUE,
-          display: "grid",
-          placeItems: "center",
-          cursor: isAnalyzing ? "not-allowed" : "pointer",
-          opacity: isAnalyzing ? 0.6 : 1,
-        }}
-      >
-        {isRecording ? (
-          <StopCircle className="h-6 w-6" style={{ color: "white" }} />
-        ) : (
-          <Mic className="h-6 w-6" style={{ color: "white" }} />
-        )}
-      </button>
-    </motion.div>
-  ) : (
-    <motion.div
-      key="mic-spacer"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      style={{ width: 52, height: 52 }} // holder layout stabilt
-    />
-  )}
-</AnimatePresence>
+                <motion.div
+  key="mic"
+  initial={{ opacity: 0, y: 6, scale: 0.98 }}
+  animate={{ opacity: 1, y: 0, scale: 1 }}
+  transition={{ duration: 0.18 }}
+>
+  <button
+    type="button"
+    onClick={toggleRecord}
+    disabled={isAnalyzing || !target}
+    title={isRecording ? "Stop" : "Record"}
+    style={{
+      width: 52,
+      height: 52,
+      borderRadius: 18,
+      border: "none",
+      background: isRecording ? "#111827" : BTN_BLUE,
+      display: "grid",
+      placeItems: "center",
+      cursor: isAnalyzing ? "not-allowed" : "pointer",
+      opacity: isAnalyzing ? 0.6 : 1,
+    }}
+  >
+    {isRecording ? (
+      <StopCircle className="h-6 w-6" style={{ color: "white" }} />
+    ) : (
+      <Mic className="h-6 w-6" style={{ color: "white" }} />
+    )}
+  </button>
+</motion.div>
+
 
 
                   <div style={{ marginTop: 10, minHeight: 18, color: LIGHT_MUTED, fontWeight: 800, fontSize: 12 }}>
@@ -1308,17 +1321,10 @@ return rowExpandedTip ? (
 
                   {/* Word (colored like main) */}
                   
-                  <div
-                    style={{
-                      fontSize: 34,
-                      fontWeight: 950,
-                      lineHeight: 1.1,
-                      textAlign: "center",
-                      color: scoreColor(currentWordScore),
-                    }}
-                  >
-                    {currentWordText || "—"}
-                  </div>
+                 <div style={{ display: "flex", justifyContent: "center" }}>
+  <PhonemeFeedback result={result} mode="wordOnly" embed />
+</div>
+
 
                   <div style={{ marginTop: 8, textAlign: "center", fontSize: 12, color: LIGHT_MUTED, fontWeight: 800 }}>
                     {currentWordScore == null ? " " : `Score: ${Math.round(currentWordScore)}`
