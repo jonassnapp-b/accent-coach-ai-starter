@@ -1,6 +1,6 @@
 // src/pages/Coach.jsx
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { ChevronDown, Mic, StopCircle, Volume2, Play } from "lucide-react";
+import { ChevronDown, Mic, StopCircle, Volume2, Play, Pause } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 
@@ -198,6 +198,12 @@ const [recordReady, setRecordReady] = useState(false);
 
   // overlay phoneme audio player
   const overlayAudioRef = useRef(null);
+// play/pause state for the big play buttons
+const [isUserPlaying, setIsUserPlaying] = useState(false);
+const [isCorrectPlaying, setIsCorrectPlaying] = useState(false);
+
+const userSrcRef = useRef("");
+const correctTextRef = useRef("");
 
 
   // pop effect while the target is spoken
@@ -276,6 +282,8 @@ const [recordReady, setRecordReady] = useState(false);
 
     setIsSpeaking(false);
     setIsSpeakingTarget(false);
+    setIsCorrectPlaying(false);
+
   }
 
   async function playTts(text, rate = 1.0) {
@@ -510,6 +518,8 @@ await new Promise((resolve) => {
     setStage("setup");
     setSelectedWordIdx(-1);
     setExpandedPhonemeKey(null);
+setIsUserPlaying(false);
+setIsCorrectPlaying(false);
 
   }
 
@@ -663,31 +673,109 @@ const expandedTip = useMemo(() => {
 }, [expandedPhonemeKey, tipItems]);
 
 
-function playOverlayAudio(src) {
+function toggleOverlayAudio(src, kind) {
   if (!src) return;
 
   try {
     if (!overlayAudioRef.current) overlayAudioRef.current = new Audio();
     const a = overlayAudioRef.current;
 
+    const isSameSrc = userSrcRef.current === src;
+
+    // If same src and currently playing -> pause
+    if (isSameSrc && !a.paused && !a.ended) {
+      a.pause();
+      if (kind === "user") setIsUserPlaying(false);
+      return;
+    }
+
+    // Otherwise: load and play
     a.pause();
     a.currentTime = 0;
     a.src = src;
+    userSrcRef.current = src;
+
     a.volume = settings?.soundEnabled === false ? 0 : 1;
+
+    // update state
+    a.onplay = () => {
+      if (kind === "user") setIsUserPlaying(true);
+    };
+    a.onpause = () => {
+      if (kind === "user") setIsUserPlaying(false);
+    };
+    a.onended = () => {
+      if (kind === "user") setIsUserPlaying(false);
+    };
+    a.onerror = () => {
+      if (kind === "user") setIsUserPlaying(false);
+    };
 
     a.play().catch(() => {});
   } catch {}
 }
 
-function playUserRecording() {
+function toggleUserRecording() {
   if (!result?.userAudioUrl) return;
-  playOverlayAudio(result.userAudioUrl);
+  toggleOverlayAudio(result.userAudioUrl, "user");
 }
 
-function playCorrectTts() {
+async function toggleCorrectTts() {
   const text = String(isSentence ? target : currentWordText).trim();
   if (!text) return;
-  playTts(text, 0.98);
+
+  const a = ttsAudioRef.current;
+  if (!a) return;
+
+  const sameText = correctTextRef.current === text;
+
+  // If same text and currently playing -> pause
+  if (sameText && !a.paused && !a.ended && a.src) {
+    a.pause();
+    setIsCorrectPlaying(false);
+    return;
+  }
+
+  // If same text and we already have src -> just play
+  if (sameText && a.src) {
+    a.play().catch(() => {});
+    return;
+  }
+
+  // Otherwise fetch new audio (non-blocking)
+  try {
+    setIsCorrectPlaying(false);
+    correctTextRef.current = text;
+
+    const base = getApiBase();
+    const r = await fetch(`${base}/api/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, accent: accentUi, rate: 0.98 }),
+    });
+
+    if (!r.ok) return;
+
+    const buf = await r.arrayBuffer();
+    const blob = new Blob([buf], { type: "audio/wav" });
+    const url = URL.createObjectURL(blob);
+
+    // cleanup old url
+    try { if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current); } catch {}
+    ttsUrlRef.current = url;
+
+    a.pause();
+    a.currentTime = 0;
+    a.src = url;
+    a.volume = settings?.soundEnabled === false ? 0 : 1;
+
+    a.onplay = () => setIsCorrectPlaying(true);
+    a.onpause = () => setIsCorrectPlaying(false);
+    a.onended = () => setIsCorrectPlaying(false);
+    a.onerror = () => setIsCorrectPlaying(false);
+
+    a.play().catch(() => {});
+  } catch {}
 }
 
 function onTryAgain() {
@@ -1430,7 +1518,7 @@ return rowExpandedTip ? (
 {/* ✅ Global playback (always at bottom, for both words + sentences) */}
 <div style={{ marginTop: 22, display: "grid", gap: 18 }}>
   {/* divider with more breathing room */}
-  <div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 10, marginBottom: 10 }} />
+  <div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 22, marginBottom: 22 }} />
 
   {/* You */}
   <div style={{ display: "grid", gap: 10 }}>
@@ -1438,7 +1526,7 @@ return rowExpandedTip ? (
     <div style={{ display: "flex", justifyContent: "center" }}>
       <button
         type="button"
-        onClick={playUserRecording}
+        onClick={toggleUserRecording}
         disabled={!result?.userAudioUrl}
         title="Play"
         style={{
@@ -1453,7 +1541,7 @@ return rowExpandedTip ? (
           opacity: result?.userAudioUrl ? 1 : 0.6,
         }}
       >
-        <Play className="h-12 w-12" />
+{isUserPlaying ? <Pause className="h-12 w-12" /> : <Play className="h-12 w-12" />}
       </button>
     </div>
   </div>
@@ -1464,7 +1552,7 @@ return rowExpandedTip ? (
     <div style={{ display: "flex", justifyContent: "center" }}>
       <button
         type="button"
-        onClick={playCorrectTts}
+        onClick={toggleCorrectTts}
         disabled={!String(target).trim()}
         title="Play"
         style={{
@@ -1479,12 +1567,12 @@ return rowExpandedTip ? (
           opacity: String(target).trim() ? 1 : 0.6,
         }}
       >
-        <Play className="h-12 w-12" />
+{isCorrectPlaying ? <Pause className="h-12 w-12" /> : <Play className="h-12 w-12" />}
       </button>
     </div>
   </div>
   {/* divider under Correct */}
-<div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 12, marginBottom: 14 }} />
+<div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 22, marginBottom: 22 }} />
 
 {/* Try again + Next */}
 <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
