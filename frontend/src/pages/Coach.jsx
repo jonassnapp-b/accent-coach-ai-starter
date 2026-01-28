@@ -356,11 +356,7 @@ micStreamRef.current = stream;
     if (myId !== ttsPlayIdRef.current) return;
 
 await a.play();
-await new Promise((resolve) => {
-  const done = () => resolve();
-  a.onended = done;
-  a.onerror = done;
-});
+
 
 
   }
@@ -402,14 +398,11 @@ await new Promise((resolve) => {
     a.src = url;
     a.volume = settings?.soundEnabled === false ? 0 : 1;
 
-    if (myId !== ttsPlayIdRef.current) return;
-
-    await a.play();
-    await new Promise((resolve) => {
-      const done = () => resolve();
-      a.onended = done;
-      a.onerror = done;
-    });
+    // IMPORTANT: do NOT wait for onended — allow instant re-trigger
+try {
+  await a.play();
+} catch {}
+return;
   }
 
   async function prewarmRepeat() {
@@ -435,16 +428,29 @@ await new Promise((resolve) => {
     }
   }
 
- async function speakSequence(t) {
-  await sleep(100);
+async function speakSequence(t) {
+  const text = String(t || "").trim();
+  if (!text) return;
+
+  // stop current TTS immediately (so button can be spam-clicked)
+  stopTtsNow();
 
   setIsSpeakingTarget(true);
 
-  try {
-    await playTts(t, 0.98);
-  } catch (e) {
-    if (!IS_PROD) console.warn("[TTS target]", e);
-  } finally {
+  // fire-and-forget
+  await playTts(text, 0.98);
+
+  // end animation when audio ends (without blocking new plays)
+  const a = ttsAudioRef.current;
+  if (a) {
+    const id = ttsPlayIdRef.current;
+    a.onended = () => {
+      if (id === ttsPlayIdRef.current) setIsSpeakingTarget(false);
+    };
+    a.onerror = () => {
+      if (id === ttsPlayIdRef.current) setIsSpeakingTarget(false);
+    };
+  } else {
     setIsSpeakingTarget(false);
   }
 }
@@ -499,6 +505,9 @@ await new Promise((resolve) => {
 
 
 setStage("flow");
+await ensureMic();
+setRecordReady(true);
+
 
 }
 
@@ -748,11 +757,15 @@ async function toggleCorrectTts() {
   const sameText = correctTextRef.current === text;
 
   // If same text and currently playing -> pause
-  if (sameText && !a.paused && !a.ended && a.src) {
+ if (sameText && a.src) {
+  // restart immediately (even mid-play)
+  try {
     a.pause();
-    setIsCorrectPlaying(false);
-    return;
-  }
+    a.currentTime = 0;
+    a.play().catch(() => {});
+  } catch {}
+  return;
+}
 
   // If same text and we already have src -> just play
   if (sameText && a.src) {
@@ -1321,9 +1334,18 @@ return rowExpandedTip ? (
 
                   {/* Word (colored like main) */}
                   
-                 <div style={{ display: "flex", justifyContent: "center" }}>
-  <PhonemeFeedback result={result} mode="wordOnly" embed />
+                <div
+  style={{
+    fontSize: 34,
+    fontWeight: 950,
+    lineHeight: 1.1,
+    textAlign: "center",
+    color: LIGHT_TEXT,
+  }}
+>
+  {currentWordText || "—"}
 </div>
+
 
 
                   <div style={{ marginTop: 8, textAlign: "center", fontSize: 12, color: LIGHT_MUTED, fontWeight: 800 }}>
