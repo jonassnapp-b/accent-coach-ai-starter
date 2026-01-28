@@ -1,6 +1,6 @@
 // src/pages/Coach.jsx
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { ChevronDown, Mic, StopCircle, Volume2 } from "lucide-react";
+import { ChevronDown, Mic, StopCircle, Volume2, AudioLines } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 
@@ -439,7 +439,7 @@ const [recordReady, setRecordReady] = useState(false);
     setTarget(t);
     setResult(null);
     setStatus("");
-    setSelectedWordIdx(0);
+    setSelectedWordIdx(-1);
 
     const targetUrlPromise = fetchTtsUrl(t, 0.98);
 
@@ -478,7 +478,7 @@ const [recordReady, setRecordReady] = useState(false);
   setTarget(t);
   setResult(null);
   setStatus("");
-  setSelectedWordIdx(0);
+  setSelectedWordIdx(-1);
   setExpandedPhonemeKey(null);
 
 
@@ -505,7 +505,7 @@ const [recordReady, setRecordReady] = useState(false);
     setResult(null);
     setStatus("");
     setStage("setup");
-    setSelectedWordIdx(0);
+    setSelectedWordIdx(-1);
     setExpandedPhonemeKey(null);
 
   }
@@ -670,6 +670,16 @@ const expandedTip = useMemo(() => {
       overlayAudioRef.current.play().catch(() => {});
     } catch {}
   }
+function playUserRecording() {
+  if (!result?.userAudioUrl) return;
+  playOverlayAudio(result.userAudioUrl);
+}
+
+function playCorrectTts() {
+  const text = String(isSentence ? target : currentWordText).trim();
+  if (!text) return;
+  playTts(text, 0.98);
+}
 
   /* ---------------- styles ---------------- */
   const bigCardStyle = {
@@ -1089,11 +1099,6 @@ const rowTipItems = rowPhonemeLineItems.filter((x) => x.hasTip);
       )}
     </div>
   </div>
-{rowTipItems.length > 0 ? (
-  <div style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED }}>
-    Tips available — tap the underlined phonemes.
-  </div>
-) : null}
 
 {/* Tip area for this row */}
 {(() => {
@@ -1120,14 +1125,70 @@ const rowTipItems = rowPhonemeLineItems.filter((x) => x.hasTip);
   const prefix = `row_${i}_`;
   const rowExpandedLocalKey = expandedPhonemeKey?.startsWith(prefix) ? expandedPhonemeKey.slice(prefix.length) : null;
   const rowExpandedTip = rowExpandedLocalKey ? rowTipItems.find((x) => x.key === rowExpandedLocalKey) : null;
-
 return rowExpandedTip ? (
   <div> ... tip card ... </div>
 ) : (
-  <div style={{ marginTop: 12, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED }}>
-    Tap a phoneme above to see a tip.
+  <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+    <div style={{ fontSize: 12, fontWeight: 800, color: LIGHT_MUTED }}>
+      Tap a phoneme above to see a tip.
+    </div>
+
+    {/* Divider */}
+    <div style={{ height: 1, background: LIGHT_BORDER, width: "100%" }} />
+
+    {/* You */}
+    <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>You</div>
+      <button
+        type="button"
+        onClick={playUserRecording}
+        disabled={!result?.userAudioUrl}
+        style={{
+          height: 44,
+          borderRadius: 16,
+          border: `1px solid ${LIGHT_BORDER}`,
+          background: "#fff",
+          fontWeight: 950,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
+          opacity: result?.userAudioUrl ? 1 : 0.6,
+        }}
+      >
+        <AudioLines className="h-5 w-5" />
+        Play
+      </button>
+    </div>
+
+    {/* Correct */}
+    <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>Correct</div>
+      <button
+        type="button"
+        onClick={playCorrectTts}
+        disabled={!String(isSentence ? target : currentWordText).trim()}
+        style={{
+          height: 44,
+          borderRadius: 16,
+          border: `1px solid ${LIGHT_BORDER}`,
+          background: "#fff",
+          fontWeight: 950,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          cursor: "pointer",
+        }}
+      >
+        <AudioLines className="h-5 w-5" />
+        Play
+      </button>
+    </div>
   </div>
 );
+
 
 })()}
 
@@ -1309,21 +1370,79 @@ return rowExpandedTip ? (
           ) : null}
         </div>
       ) : (
-        <div
+  <>
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 22,
+        padding: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+        color: LIGHT_MUTED,
+        fontWeight: 900,
+        textAlign: "center",
+      }}
+    >
+      No tips for this word.
+    </div>
+
+    <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+      <div style={{ height: 1, background: LIGHT_BORDER, width: "100%" }} />
+
+      <div style={{ display: "grid", gap: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>You</div>
+        <button
+          type="button"
+          onClick={playUserRecording}
+          disabled={!result?.userAudioUrl}
           style={{
-            background: "#fff",
-            borderRadius: 22,
-            padding: 16,
+            height: 44,
+            borderRadius: 16,
             border: `1px solid ${LIGHT_BORDER}`,
-            boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
-            color: LIGHT_MUTED,
-            fontWeight: 900,
-            textAlign: "center",
+            background: "#fff",
+            fontWeight: 950,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
+            opacity: result?.userAudioUrl ? 1 : 0.6,
           }}
         >
-          No tips for this word.
-        </div>
-      )}
+          <AudioLines className="h-5 w-5" />
+          Play
+        </button>
+      </div>
+
+      <div style={{ display: "grid", gap: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>Correct</div>
+        <button
+          type="button"
+          onClick={playCorrectTts}
+          disabled={!String(isSentence ? target : currentWordText).trim()}
+          style={{
+            height: 44,
+            borderRadius: 16,
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: "#fff",
+            fontWeight: 950,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            cursor: "pointer",
+          }}
+        >
+          <AudioLines className="h-5 w-5" />
+          Play
+        </button>
+      </div>
+    </div>
+  </>
+)}
+
+
+
     </div>
   </>
 ) : (
