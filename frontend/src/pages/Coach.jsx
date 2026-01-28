@@ -132,6 +132,26 @@ function isGreen(score) {
   return score != null && score >= 85;
 }
 
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+/**
+ * Flytter alle phoneme-scores så deres gennemsnit matcher wordScore.
+ * (Så "stemningen" i phonemerne matcher ordet.)
+ */
+function normalizePhonemeScore(phonemeScore, wordScore, allPhonemeScores) {
+  if (phonemeScore == null || wordScore == null) return phonemeScore;
+
+  const scores = (allPhonemeScores || []).filter((x) => Number.isFinite(x));
+  if (!scores.length) return phonemeScore;
+
+  const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const shift = wordScore - mean; // hvor meget phonemerne skal "op/ned"
+  return clamp(phonemeScore + shift, 0, 100);
+}
+
+
 function normalizeWordsFromResult(result, fallbackText) {
   const arr = Array.isArray(result?.words) ? result.words : null;
   if (arr?.length) return arr;
@@ -679,31 +699,36 @@ const wordOnlyResult = useMemo(() => {
   };
 }, [result, currentWordObj, currentWordText]);
 
- const phonemeLineItems = useMemo(() => {
+const phonemeLineItems = useMemo(() => {
   const ps = Array.isArray(currentWordObj?.phonemes) ? currentWordObj.phonemes : [];
   const out = [];
+
+  const rawScores = ps.map(getScore).filter((x) => Number.isFinite(x));
 
   for (let i = 0; i < ps.length; i++) {
     const p = ps[i];
     const code = getPhonemeCode(p);
     if (!code) continue;
 
-    const s = getScore(p);
-    const assets = resolvePhonemeAssets(code, accentUi); // null hvis intet billede
+    const raw = getScore(p);
+    const s = normalizePhonemeScore(raw, currentWordScore, rawScores);
+
+    const assets = resolvePhonemeAssets(code, accentUi);
 
     out.push({
       key: `${code}_${i}`,
       code,
-      score: s,
-      assets, // { imgSrc, audioSrc } eller null
+      score: s,          // ✅ normalized (kun til farve/visuelt)
+      rawScore: raw,     // (hvis du senere vil bruge den)
+      assets,
       hasImage: !!assets?.imgSrc,
-      // tip giver kun mening for ikke-grøn (samme regel som før)
-      hasTip: !!assets?.imgSrc && (s == null || !isGreen(s)),
+      hasTip: !!assets?.imgSrc && (s == null || !isGreen(s)), // ✅ baseret på normalized
     });
   }
 
   return out;
-}, [currentWordObj, accentUi]);
+}, [currentWordObj, accentUi, currentWordScore]);
+
 
 const tipItems = useMemo(() => phonemeLineItems.filter((x) => x.hasTip), [phonemeLineItems]);
 
@@ -1161,25 +1186,33 @@ const wordScore = getScore(wordObj);
 const rowPhonemeLineItems = (() => {
   const ps = Array.isArray(wordObj?.phonemes) ? wordObj.phonemes : [];
   const out = [];
+
+  const rawScores = ps.map(getScore).filter((x) => Number.isFinite(x));
+
   for (let pi = 0; pi < ps.length; pi++) {
     const p = ps[pi];
     const code = getPhonemeCode(p);
     if (!code) continue;
 
-    const s = getScore(p);
+    const raw = getScore(p);
+    const s = normalizePhonemeScore(raw, wordScore, rawScores);
+
     const assets = resolvePhonemeAssets(code, accentUi);
 
     out.push({
       key: `${code}_${pi}`,
       code,
-      score: s,
+      score: s,          // ✅ normalized
+      rawScore: raw,
       assets,
       hasImage: !!assets?.imgSrc,
-      hasTip: !!assets?.imgSrc && (s == null || !isGreen(s)),
+      hasTip: !!assets?.imgSrc && (s == null || !isGreen(s)), // ✅ baseret på normalized
     });
   }
+
   return out;
 })();
+
 
 const rowTipItems = rowPhonemeLineItems.filter((x) => x.hasTip);
 
