@@ -690,6 +690,27 @@ function playCorrectTts() {
   playTts(text, 0.98);
 }
 
+function onTryAgain() {
+  // samme target igen (siger target igen)
+  const t = String(target || "").trim();
+  if (!t) return;
+  speakSequence(t);
+}
+
+function onNext() {
+  // nyt target + luk overlay (result=null) så du er klar til at optage igen
+  const next = buildNewTarget(mode, difficulty);
+  setTarget(next);
+  setResult(null);
+  setStatus("");
+  setSelectedWordIdx(-1);
+  setExpandedPhonemeKey(null);
+  setWordsOpen(false);
+
+  speakSequence(next);
+}
+
+
   /* ---------------- styles ---------------- */
   const bigCardStyle = {
     background: LIGHT_SURFACE,
@@ -1413,7 +1434,7 @@ return rowExpandedTip ? (
 
   {/* You */}
   <div style={{ display: "grid", gap: 10 }}>
-    <div style={{ fontSize: 26, fontWeight: 950, color: "#111827" }}>You</div>
+    <div style={{ fontSize: 26, fontWeight: 950, color: "#111827", textAlign: "center" }}>You</div>
     <div style={{ display: "flex", justifyContent: "center" }}>
       <button
         type="button"
@@ -1439,7 +1460,7 @@ return rowExpandedTip ? (
 
   {/* Correct */}
   <div style={{ display: "grid", gap: 10 }}>
-    <div style={{ fontSize: 26, fontWeight: 950, color: "#111827" }}>Correct pronunciation</div>
+    <div style={{ fontSize: 26, fontWeight: 950, color: "#111827", textAlign: "center" }}>Correct pronunciation</div>
     <div style={{ display: "flex", justifyContent: "center" }}>
       <button
         type="button"
@@ -1462,6 +1483,52 @@ return rowExpandedTip ? (
       </button>
     </div>
   </div>
+  {/* divider under Correct */}
+<div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 12, marginBottom: 14 }} />
+
+{/* Try again + Next */}
+<div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+  <button
+    type="button"
+    onClick={onTryAgain}
+    disabled={isAnalyzing || isRecording || !String(target).trim()}
+    style={{
+      height: 46,
+      padding: "0 18px",
+      borderRadius: 16,
+      border: "none",
+      background: "#FF9800", // accent/orange
+      color: "white",
+      fontWeight: 950,
+      cursor: "pointer",
+      opacity: isAnalyzing || isRecording || !String(target).trim() ? 0.6 : 1,
+      minWidth: 140,
+    }}
+  >
+    Try again
+  </button>
+
+  <button
+    type="button"
+    onClick={onNext}
+    disabled={isAnalyzing || isRecording}
+    style={{
+      height: 46,
+      padding: "0 18px",
+      borderRadius: 16,
+      border: "none",
+      background: BTN_BLUE, // blue
+      color: "white",
+      fontWeight: 950,
+      cursor: "pointer",
+      opacity: isAnalyzing || isRecording ? 0.6 : 1,
+      minWidth: 140,
+    }}
+  >
+    Next
+  </button>
+</div>
+
 </div>
 
 
