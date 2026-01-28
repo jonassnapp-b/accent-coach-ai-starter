@@ -1,6 +1,6 @@
 // src/pages/Coach.jsx
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { ChevronDown, Mic, StopCircle, Volume2, AudioLines } from "lucide-react";
+import { ChevronDown, Mic, StopCircle, Volume2, Play } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 
@@ -198,121 +198,7 @@ const [recordReady, setRecordReady] = useState(false);
 
   // overlay phoneme audio player
   const overlayAudioRef = useRef(null);
-// ✅ Waveform (real animated waveform) for "You" + "Correct"
-const userWaveCanvasRef = useRef(null);
-const correctWaveCanvasRef = useRef(null);
 
-const audioCtxRef = useRef(null);
-const userAnalyserRef = useRef(null);
-const correctAnalyserRef = useRef(null);
-
-const rafUserRef = useRef(0);
-const rafCorrectRef = useRef(0);
-
-function ensureAudioCtx() {
-  if (audioCtxRef.current) return audioCtxRef.current;
-  const Ctx = window.AudioContext || window.webkitAudioContext;
-  if (!Ctx) return null;
-  audioCtxRef.current = new Ctx();
-  return audioCtxRef.current;
-}
-
-function connectAnalyserForAudio(audioEl, analyserRef) {
-  if (!audioEl) return null;
-
-  // already connected
-  if (analyserRef.current?.analyser) return analyserRef.current;
-
-  const ctx = ensureAudioCtx();
-  if (!ctx) return null;
-
-  // iOS/Safari: resume inside user gesture
-  try { if (ctx.state === "suspended") ctx.resume(); } catch {}
-
-  const analyser = ctx.createAnalyser();
-  analyser.fftSize = 256;
-
-  let source;
-  try {
-    source = ctx.createMediaElementSource(audioEl);
-  } catch (e) {
-    // MediaElementSource can only be created once per element
-    return analyserRef.current || null;
-  }
-
-  source.connect(analyser);
-  analyser.connect(ctx.destination);
-
-  const data = new Uint8Array(analyser.frequencyBinCount);
-  analyserRef.current = { analyser, data };
-  return analyserRef.current;
-}
-
-function drawWaveform(canvasRef, analyserPack) {
-  const canvas = canvasRef.current;
-  if (!canvas || !analyserPack?.analyser) return;
-
-  const { analyser, data } = analyserPack;
-
-  const ctx2d = canvas.getContext("2d");
-  if (!ctx2d) return;
-
-  analyser.getByteTimeDomainData(data);
-
-  const w = canvas.width;
-  const h = canvas.height;
-
-  ctx2d.clearRect(0, 0, w, h);
-
-  // background subtle (optional)
-  ctx2d.globalAlpha = 1;
-  ctx2d.lineWidth = 2;
-
-  // default stroke color (black) is fine; don’t hardcode palette colors
-  ctx2d.beginPath();
-
-  const slice = w / data.length;
-  let x = 0;
-
-  for (let i = 0; i < data.length; i++) {
-    const v = data[i] / 128.0;        // 0..2
-    const y = (v * h) / 2;            // 0..h
-
-    if (i === 0) ctx2d.moveTo(x, y);
-    else ctx2d.lineTo(x, y);
-
-    x += slice;
-  }
-
-  ctx2d.lineTo(w, h / 2);
-  ctx2d.stroke();
-}
-
-function stopWave(kind) {
-  if (kind === "user") {
-    if (rafUserRef.current) cancelAnimationFrame(rafUserRef.current);
-    rafUserRef.current = 0;
-  } else {
-    if (rafCorrectRef.current) cancelAnimationFrame(rafCorrectRef.current);
-    rafCorrectRef.current = 0;
-  }
-}
-
-function startWave(kind) {
-  const canvasRef = kind === "user" ? userWaveCanvasRef : correctWaveCanvasRef;
-  const analyserPack = kind === "user" ? userAnalyserRef.current : correctAnalyserRef.current;
-
-  stopWave(kind);
-
-  const tick = () => {
-    drawWaveform(canvasRef, analyserPack);
-    const id = requestAnimationFrame(tick);
-    if (kind === "user") rafUserRef.current = id;
-    else rafCorrectRef.current = id;
-  };
-
-  tick();
-}
 
   // pop effect while the target is spoken
   const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
@@ -454,22 +340,13 @@ function startWave(kind) {
 
     if (myId !== ttsPlayIdRef.current) return;
 
- // ✅ connect analyser once (Correct waveform uses the <audio ref={ttsAudioRef} /> element)
-connectAnalyserForAudio(a, correctAnalyserRef);
-
 await a.play();
-
-// ✅ start waveform when playing
-startWave("correct");
-
 await new Promise((resolve) => {
-  const done = () => {
-    stopWave("correct");
-    resolve();
-  };
+  const done = () => resolve();
   a.onended = done;
   a.onerror = done;
 });
+
 
   }
 
@@ -786,32 +663,19 @@ const expandedTip = useMemo(() => {
 }, [expandedPhonemeKey, tipItems]);
 
 
- function playOverlayAudio(src) {
+function playOverlayAudio(src) {
   if (!src) return;
 
   try {
     if (!overlayAudioRef.current) overlayAudioRef.current = new Audio();
-
     const a = overlayAudioRef.current;
-
-    // ✅ connect analyser once
-    connectAnalyserForAudio(a, userAnalyserRef);
 
     a.pause();
     a.currentTime = 0;
     a.src = src;
-
-    // keep volume rule consistent
     a.volume = settings?.soundEnabled === false ? 0 : 1;
 
-    // ✅ start/stop waveform
-    const onEnd = () => stopWave("user");
-    a.onended = onEnd;
-    a.onerror = onEnd;
-
-    a.play().then(() => {
-      startWave("user");
-    }).catch(() => {});
+    a.play().catch(() => {});
   } catch {}
 }
 
@@ -1482,50 +1346,49 @@ return rowExpandedTip ? (
       <div style={{ display: "grid", gap: 8 }}>
         <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>You</div>
         <button
-          type="button"
-          onClick={playUserRecording}
-          disabled={!result?.userAudioUrl}
-          style={{
-            height: 44,
-            borderRadius: 16,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: "#fff",
-            fontWeight: 950,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
-            opacity: result?.userAudioUrl ? 1 : 0.6,
-          }}
-        >
-          <AudioLines className="h-5 w-5" />
-          Play
-        </button>
+  type="button"
+  onClick={playUserRecording}
+  disabled={!result?.userAudioUrl}
+  title="Play"
+  style={{
+    width: 84,
+    height: 84,
+    borderRadius: 22,
+    border: `1px solid ${LIGHT_BORDER}`,
+    background: "#fff",
+    display: "grid",
+    placeItems: "center",
+    cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
+    opacity: result?.userAudioUrl ? 1 : 0.6,
+  }}
+>
+  <Play className="h-10 w-10" />
+</button>
+
       </div>
 
       <div style={{ display: "grid", gap: 8 }}>
         <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>Correct pronunciation</div>
         <button
-          type="button"
-          onClick={playCorrectTts}
-          disabled={!String(isSentence ? target : currentWordText).trim()}
-          style={{
-            height: 44,
-            borderRadius: 16,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: "#fff",
-            fontWeight: 950,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            cursor: "pointer",
-          }}
-        >
-          <AudioLines className="h-5 w-5" />
-          Play
-        </button>
+  type="button"
+  onClick={playCorrectTts}
+  disabled={!String(isSentence ? target : currentWordText).trim()}
+  title="Play"
+  style={{
+    width: 84,
+    height: 84,
+    borderRadius: 22,
+    border: `1px solid ${LIGHT_BORDER}`,
+    background: "#fff",
+    display: "grid",
+    placeItems: "center",
+    cursor: "pointer",
+    opacity: String(isSentence ? target : currentWordText).trim() ? 1 : 0.6,
+  }}
+>
+  <Play className="h-10 w-10" />
+</button>
+
       </div>
     </div>
   </>
@@ -1544,112 +1407,63 @@ return rowExpandedTip ? (
   </>
 ) : null}
 {/* ✅ Global playback (always at bottom, for both words + sentences) */}
-<div style={{ marginTop: 22, display: "grid", gap: 14 }}>
+<div style={{ marginTop: 22, display: "grid", gap: 18 }}>
   {/* divider with more breathing room */}
   <div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 10, marginBottom: 10 }} />
 
   {/* You */}
   <div style={{ display: "grid", gap: 10 }}>
-    <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>You</div>
-
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      {/* icon-only play */}
+    <div style={{ fontSize: 26, fontWeight: 950, color: "#111827" }}>You</div>
+    <div style={{ display: "flex", justifyContent: "center" }}>
       <button
         type="button"
         onClick={playUserRecording}
         disabled={!result?.userAudioUrl}
-        title="Play your recording"
+        title="Play"
         style={{
-          width: 44,
-          height: 44,
-          borderRadius: 14,
+          width: 96,
+          height: 96,
+          borderRadius: 26,
           border: `1px solid ${LIGHT_BORDER}`,
           background: "#fff",
-          fontWeight: 950,
           display: "grid",
           placeItems: "center",
           cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
           opacity: result?.userAudioUrl ? 1 : 0.6,
-          flex: "0 0 auto",
         }}
       >
-        <AudioLines className="h-5 w-5" />
+        <Play className="h-12 w-12" />
       </button>
-
-      {/* waveform to the right */}
-      <div
-        style={{
-          height: 44,
-          borderRadius: 14,
-          border: `1px solid ${LIGHT_BORDER}`,
-          background: "#fff",
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          padding: "0 12px",
-        }}
-      >
-        <canvas
-          ref={userWaveCanvasRef}
-          width={260}
-          height={28}
-          style={{ width: "100%", height: 28, display: "block" }}
-        />
-      </div>
     </div>
   </div>
 
   {/* Correct */}
   <div style={{ display: "grid", gap: 10 }}>
-    <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>Correct pronunciation</div>
-
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      {/* icon-only play */}
+    <div style={{ fontSize: 26, fontWeight: 950, color: "#111827" }}>Correct pronunciation</div>
+    <div style={{ display: "flex", justifyContent: "center" }}>
       <button
         type="button"
         onClick={playCorrectTts}
         disabled={!String(target).trim()}
-        title="Play correct pronunciation"
+        title="Play"
         style={{
-          width: 44,
-          height: 44,
-          borderRadius: 14,
+          width: 96,
+          height: 96,
+          borderRadius: 26,
           border: `1px solid ${LIGHT_BORDER}`,
           background: "#fff",
-          fontWeight: 950,
           display: "grid",
           placeItems: "center",
           cursor: "pointer",
-          flex: "0 0 auto",
           opacity: String(target).trim() ? 1 : 0.6,
         }}
       >
-        <AudioLines className="h-5 w-5" />
+        <Play className="h-12 w-12" />
       </button>
-
-      {/* waveform to the right */}
-      <div
-        style={{
-          height: 44,
-          borderRadius: 14,
-          border: `1px solid ${LIGHT_BORDER}`,
-          background: "#fff",
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          padding: "0 12px",
-        }}
-      >
-        <canvas
-          ref={correctWaveCanvasRef}
-          width={260}
-          height={28}
-          style={{ width: "100%", height: 28, display: "block" }}
-        />
-      </div>
     </div>
   </div>
 </div>
+
 
                 </div>
               </div>
