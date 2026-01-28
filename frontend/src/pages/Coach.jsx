@@ -493,7 +493,7 @@ async function speakSequence(t) {
     }
   }
 
-  async function onStart() {
+async function onStart() {
   if (isBusy) return;
 
   const t = buildNewTarget(mode, difficulty);
@@ -503,12 +503,9 @@ async function speakSequence(t) {
   setSelectedWordIdx(-1);
   setExpandedPhonemeKey(null);
 
-
-setStage("flow");
-await ensureMic();
-setRecordReady(true);
-
-
+  setStage("flow");
+  await ensureMic(); // okay at keep mic warm (valgfrit)
+  speakSequence(t);  // <- hvis du vil afspille target med det samme
 }
 
 
@@ -825,6 +822,7 @@ function onTryAgain() {
   try { if (ttsAudioRef.current) ttsAudioRef.current.pause(); } catch {}
   setIsUserPlaying(false);
   setIsCorrectPlaying(false);
+speakSequence(t);
 
   }
 
@@ -838,6 +836,7 @@ function onNext() {
   setSelectedWordIdx(-1);
   setExpandedPhonemeKey(null);
   setWordsOpen(false);
+speakSequence(next);
 
   }
 
@@ -1474,7 +1473,7 @@ return rowExpandedTip ? (
               {expandedTip.assets.audioSrc ? (
                 <button
                   type="button"
-                  onClick={() => playOverlayAudio(expandedTip.assets.audioSrc)}
+                  onClick={() => toggleOverlayAudio(expandedTip.assets.audioSrc, "phoneme")}
                   style={{
                     height: 44,
                     borderRadius: 16,
@@ -1517,9 +1516,9 @@ return rowExpandedTip ? (
 
       <div style={{ display: "grid", gap: 8 }}>
         <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>You</div>
-        <button
+       <button
   type="button"
-  onClick={playUserRecording}
+  onClick={toggleUserRecording}
   disabled={!result?.userAudioUrl}
   title="Play"
   style={{
@@ -1541,9 +1540,10 @@ return rowExpandedTip ? (
 
       <div style={{ display: "grid", gap: 8 }}>
         <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>Correct pronunciation</div>
-        <button
+      <button
   type="button"
-  onClick={playCorrectTts}
+  onClick={toggleCorrectTts}
+
   disabled={!String(isSentence ? target : currentWordText).trim()}
   title="Play"
   style={{
