@@ -102,7 +102,6 @@ function getPhonemeCode(p) {
 }
 
 function getScore(obj) {
-  // try common fields (SpeechSuper varies)
   const v =
     obj?.accuracy ??
     obj?.pronunciation ??
@@ -110,10 +109,20 @@ function getScore(obj) {
     obj?.overall ??
     obj?.overallAccuracy ??
     obj?.pronunciationAccuracy ??
-    obj?.accuracyScore;
+    obj?.accuracyScore ??
+    obj?.accuracy_score ??
+    obj?.pronunciation_score ??
+    obj?.overall_score ??
+    obj?.overall_accuracy ??
+    obj?.pronunciation_accuracy;
 
   const n = Number(v);
-  return Number.isFinite(n) ? n : null;
+  if (!Number.isFinite(n)) return null;
+
+  // normalize: if API returns 0..1, convert to 0..100
+  if (n > 0 && n <= 1) return n * 100;
+
+  return n;
 }
 
 // same simple color logic for word + phonemes
@@ -587,6 +596,9 @@ setIsCorrectPlaying(false);
       };
 
       setResult(payload);
+      setIsUserPlaying(false);
+setIsCorrectPlaying(false);
+
 setExpandedPhonemeKey(null);
 
 // ✅ if sentence: show list, but keep ALL rows collapsed
@@ -600,7 +612,21 @@ if ((mode === "sentences") || ((payload?.words?.length || 0) > 1)) {
 
 
 
-      const overall = Number(json?.overall ?? json?.overallAccuracy ?? json?.pronunciation ?? 0);
+      const rawOverall =
+  json?.overall ??
+  json?.overallAccuracy ??
+  json?.pronunciation ??
+  json?.overall_score ??
+  json?.overall_accuracy ??
+  json?.pronunciation_score ??
+  json?.pronunciation_accuracy ??
+  json?.accuracyScore ??
+  json?.accuracy_score ??
+  0;
+
+let overall = Number(rawOverall);
+if (!Number.isFinite(overall)) overall = 0;
+if (overall > 0 && overall <= 1) overall = overall * 100;
       const threshold = difficulty === "easy" ? 75 : difficulty === "medium" ? 82 : 88;
 
       if (overall >= threshold + 7) {
@@ -779,10 +805,20 @@ async function toggleCorrectTts() {
 }
 
 function onTryAgain() {
-  // samme target igen (siger target igen)
-  const t = String(target || "").trim();
-  if (!t) return;
-  speakSequence(t);
+  if (isBusy) return;
+
+  // stop any playing audio + reset icons
+  try { overlayAudioRef.current?.pause?.(); } catch {}
+  setIsUserPlaying(false);
+  setIsCorrectPlaying(false);
+
+  // close overlay and let user record again on SAME target
+  setResult(null);
+  setStatus("Try again 🔁");
+  setExpandedPhonemeKey(null);
+
+  // keep target unchanged; just show mic again
+  setRecordReady(true);
 }
 
 function onNext() {
@@ -1516,9 +1552,9 @@ return rowExpandedTip ? (
   </>
 ) : null}
 {/* ✅ Global playback (always at bottom, for both words + sentences) */}
-<div style={{ marginTop: 22, display: "grid", gap: 18 }}>
+<div style={{ marginTop: 36, display: "grid", gap: 36 }}>
   {/* divider with more breathing room */}
-  <div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 22, marginBottom: 22 }} />
+  <div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 40, marginBottom: 40 }} />
 
   {/* You */}
   <div style={{ display: "grid", gap: 10 }}>
@@ -1572,7 +1608,7 @@ return rowExpandedTip ? (
     </div>
   </div>
   {/* divider under Correct */}
-<div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 22, marginBottom: 22 }} />
+<div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 40, marginBottom: 40 }} />
 
 {/* Try again + Next */}
 <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
