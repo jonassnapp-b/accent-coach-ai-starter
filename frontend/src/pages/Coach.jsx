@@ -1164,7 +1164,7 @@ return rowExpandedTip ? (
 
     {/* Correct */}
     <div style={{ display: "grid", gap: 8 }}>
-      <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>Correct</div>
+      <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>Correct pronunciation</div>
       <button
         type="button"
         onClick={playCorrectTts}
@@ -1415,7 +1415,7 @@ return rowExpandedTip ? (
       </div>
 
       <div style={{ display: "grid", gap: 8 }}>
-        <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>Correct</div>
+        <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>Correct pronunciation</div>
         <button
           type="button"
           onClick={playCorrectTts}
