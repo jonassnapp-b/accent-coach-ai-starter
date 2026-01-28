@@ -1638,17 +1638,7 @@ onClick={async () => {
                       >
                         <div className="pf-row-top">
                           <div className="pf-row-title">{row.letters || "—"}</div>
-                          <div className="pf-phoneme-pills">
-  {row.phonemes.map((ph) => (
-    <span
-      key={`pill-${row.i}-${ph.ix}`}
-      className="pf-phoneme-pill"
-      style={{ color: scoreToColor01(ph.s01 ?? 0) }}
-    >
-      {ph.pretty}
-    </span>
-  ))}
-</div>
+               
 
                         </div>
 
@@ -1730,6 +1720,33 @@ onClick={async () => {
                             </div>
                           </div>
                         </div>
+{isOpen && (
+  <div style={{ marginTop: 10 }}>
+    <div className="phoneme-row">
+      {row.phonemes
+        .filter((ph) => assetOkByCmu?.[String(ph?.cmu || "").trim()] !== false)
+        .map((ph) => (
+          <button
+            key={`${row.i}-ph-${ph.ix}`}
+            type="button"
+            className="phoneme-chip"
+            onClick={(e) => {
+              e.stopPropagation();
+              playUserSpan(ph.startSec, ph.endSec);
+            }}
+            title={`${ph.cmu} • ${ph.pct}%`}
+            style={{
+              borderColor: "rgba(0,0,0,0.12)",
+              color: scoreToColor01((ph.pct ?? 0) / 100),
+            }}
+          >
+            <span style={{ fontWeight: 900 }}>{cmuChipLabel(ph.cmu)}</span>
+            <span style={{ opacity: 0.75, fontWeight: 800 }}>{ph.pct}%</span>
+          </button>
+        ))}
+    </div>
+  </div>
+)}
 
 
 
