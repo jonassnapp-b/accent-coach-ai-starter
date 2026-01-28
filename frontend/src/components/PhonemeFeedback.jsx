@@ -634,12 +634,10 @@ export default function PhonemeFeedback({
   result,
   embed = false,
   hideBookmark = false,
-  hideChunkCards = false, // ✅ NEW (kun brugt på Record)
   onRetry,
   mode = "full",
-  onFocus,
+  onFocus, // ✅ add back (kun callback)
 }) {
-
   const { settings } = useSettings();
   
     // --- Global volume (0..1) ---
@@ -1095,6 +1093,21 @@ async function playRecording() {
       } catch {}
     }
   }
+function playPhonemeRef(cmuRaw) {
+  const cmu = String(cmuRaw || "").trim();
+  if (!cmu) return;
+
+  const accent = getUseGB() ? "en_br" : "en_us";
+  const url = phonemeAudioUrl(cmu, accent);
+  if (!url) return;
+
+  try {
+    const a = new Audio(url);
+    a.volume = effectiveVolume;
+    const p = a.play();
+    if (p?.catch) p.catch(() => {});
+  } catch {}
+}
 
 
   const nativeReady = !!coachAudioUrl && !!coachMap?.tokens?.length && !coachLoading;
@@ -1574,28 +1587,50 @@ onClick={async () => {
                     You
                   </button>
                 </div>
-{/* ✅ Record-only: show phoneme pills instead of chunk cards */}
-{hideChunkCards && oneWord && (cmuData?.cmuTokens?.length || 0) > 0 && (
-  <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
-    {cmuData.cmuTokens.map((cmu, i) => (
-      <span
-        key={`ph-pill-${cmu}-${i}`}
-        style={{
-          padding: "8px 12px",
-          borderRadius: 999,
-          background: ui.btnBg,
-          border: `1px solid ${ui.btnBorder}`,
-          fontWeight: 900,
-          color: ui.textStrong,
-          fontSize: 13,
-        }}
-      >
-        {cmuChipLabel(cmu)}
-      </span>
-    ))}
+
+                {/* Phoneme chips (colored by score, click to play phoneme) */}
+{oneWord && (cmuData?.cmuTokens?.length || 0) > 0 && (
+  <div
+    style={{
+      marginTop: 12,
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 10,
+      justifyContent: "center",
+    }}
+  >
+    {cmuData.cmuTokens.map((cmu, i) => {
+      const s01 = (cmuData?.scoresByIdx?.[i] ?? 0);
+      const ok = assetOkByCmu?.[String(cmu || "").trim()] ?? true;
+
+      return (
+        <button
+          key={`ph-chip-${cmu}-${i}`}
+          type="button"
+          disabled={!ok}
+          onClick={(e) => {
+            e.stopPropagation(); // don't trigger hero-card click/focus
+            playPhonemeRef(cmu);
+          }}
+          title={ok ? "Play phoneme" : "Phoneme asset missing"}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 999,
+            background: ui.btnBg,
+            border: `1px solid ${ui.btnBorder}`,
+            fontWeight: 900,
+            fontSize: 13,
+            color: scoreToColor01(s01),          // ✅ score color
+            opacity: ok ? 1 : 0.35,
+            cursor: ok ? "pointer" : "not-allowed",
+          }}
+        >
+          {cmuChipLabel(cmu)}
+        </button>
+      );
+    })}
   </div>
 )}
-
 
 {/* Main overall score bar (under Coach/You) */}
 {targetScorePct != null && (
@@ -1640,7 +1675,7 @@ onClick={async () => {
 </motion.div>
 
               {/* CHUNK LIST (same width as hero) */}
-{mode === "full" && !onFocus && !hideChunkCards && chunkRows.length > 0 && (
+{mode === "full" && !onFocus && chunkRows.length > 0 && (
   <div className="pf-list" style={{ width: "100%" }}>
                   {chunkRows.map((row) => {
                     const isOpen = openChunk === row.i;
