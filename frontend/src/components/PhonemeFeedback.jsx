@@ -1275,6 +1275,43 @@ async function playRecording() {
     return rows;
   }, [oneWord, cmuData, wordText]);
   
+// ✅ 1 span per phoneme (letters colored by phoneme score), but still ONE continuous word
+const letterSegments = useMemo(() => {
+  if (!oneWord) return [];
+
+  const scores = Array.isArray(cmuData?.scoresByIdx) ? cmuData.scoresByIdx : [];
+  const lettersFromPhonics = Array.isArray(cmuData?.lettersByIdx) ? cmuData.lettersByIdx : [];
+
+  // If phonics letters missing/empty -> fallback split by phoneme count
+  const allEmpty = !lettersFromPhonics.length || lettersFromPhonics.every((s) => !String(s || "").trim());
+  const letters = allEmpty ? splitEvenly(wordText, scores.length || 1) : lettersFromPhonics;
+
+  // Merge empty segments into previous so we don't get gaps
+  const out = [];
+  for (let i = 0; i < Math.max(scores.length, letters.length); i++) {
+    const txt = String(letters[i] ?? "");
+    const s01 = typeof scores[i] === "number" ? scores[i] : 0;
+
+    if (!txt.trim() && out.length) {
+      out[out.length - 1].text += txt; // keep whitespace if any
+      continue;
+    }
+
+    out.push({ key: `ph-letter-${i}`, text: txt, s01 });
+  }
+
+  // If somehow still empty, fallback to whole word
+  if (!out.length) return [{ key: "ph-letter-0", text: wordText, s01: 0 }];
+
+  // Preserve capitalization
+  if (wordText && wordText[0] === wordText[0].toUpperCase() && out[0]?.text) {
+    out[0] = { ...out[0], text: out[0].text[0].toUpperCase() + out[0].text.slice(1) };
+  }
+
+  return out;
+}, [oneWord, wordText, cmuData]);
+
+
   useEffect(() => {
   let cancelled = false;
 
@@ -1369,49 +1406,17 @@ function WordOnly() {
   className="pf-hero-word"
   style={{
     color: ui.textStrong,
-    display: "inline-flex",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 0,
   }}
 >
-  {chunkRows?.length
-    ? chunkRows.map((row, idx) => {
-        const isActive = idx === activeChunkIdx;
-
-        return (
-          <span
-            key={`wseg-${row.i}`}
-            onClick={() => setActiveChunkIdx(idx)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setActiveChunkIdx(idx);
-              }
-            }}
-            style={{
-              color: scoreToColor01((row.pct ?? 0) / 100),
-
-              // ✅ the actual "zoom / focus" effect:
-              transform: isActive ? "scale(1.18)" : "scale(1.0)",
-              opacity: isActive ? 1 : 0.25,
-              filter: isActive ? "none" : "blur(0px)",
-
-              transformOrigin: "50% 60%",
-              transition: "transform 220ms ease, opacity 220ms ease",
-              cursor: "pointer",
-
-              // makes it feel like you're focusing a segment
-              padding: "0 1px",
-            }}
-          >
-            {row.letters}
-          </span>
-        );
-      })
+ <span style={{ display: "inline-block", whiteSpace: "nowrap" }}>
+  {letterSegments?.length
+    ? letterSegments.map((seg) => (
+        <span key={seg.key} style={{ color: scoreToColor01(seg.s01 ?? 0) }}>
+          {seg.text}
+        </span>
+      ))
     : wordText}
+</span>
 </div>
 
   );
@@ -1493,21 +1498,21 @@ function WordOnly() {
     cursor: onFocus ? "pointer" : "default",
   }}
 >
-  {chunkRows?.length
-    ? chunkRows.map((row) => (
+<span style={{ display: "inline-block", whiteSpace: "nowrap" }}>
+  {letterSegments?.length
+    ? letterSegments.map((seg) => (
         <span
-          key={`wseg-${row.i}`}
+          key={seg.key}
           style={{
-            color: scoreToColor01((row.pct ?? 0) / 100),
-            transform: "scale(1)",
-            opacity: 1,
-            transition: "none",
+            color: scoreToColor01(seg.s01 ?? 0),
           }}
         >
-          {row.letters}
+          {seg.text}
         </span>
       ))
     : wordText}
+</span>
+
 </div>
 {onFocus && (
   <div
