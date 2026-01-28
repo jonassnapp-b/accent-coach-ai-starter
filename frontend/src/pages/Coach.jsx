@@ -1088,71 +1088,92 @@ const rowTipItems = rowPhonemeLineItems.filter((x) => x.hasTip);
     </div>
   </div>
 
-  {/* Tip card for this row */}
-  {(() => {
-    const prefix = `row_${i}_`;
-    const rowExpandedLocalKey = expandedPhonemeKey?.startsWith(prefix) ? expandedPhonemeKey.slice(prefix.length) : null;
-    const rowExpandedTip = rowExpandedLocalKey ? rowTipItems.find((x) => x.key === rowExpandedLocalKey) : null;
-
-    return rowExpandedTip ? (
+{/* Tip area for this row */}
+{(() => {
+  if (!rowTipItems.length) {
+    return (
       <div
         style={{
           marginTop: 12,
           background: "#fff",
           borderRadius: 22,
-          padding: 14,
+          padding: 16,
           border: `1px solid ${LIGHT_BORDER}`,
           boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
-          display: "grid",
-          gap: 10,
+          color: LIGHT_MUTED,
+          fontWeight: 900,
+          textAlign: "center",
         }}
       >
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-          <div style={{ fontWeight: 950, fontSize: 18, color: LIGHT_TEXT }}>{rowExpandedTip.code}</div>
-          <div style={{ fontWeight: 900, fontSize: 12, color: scoreColor(rowExpandedTip.score) }}>
-            {rowExpandedTip.score == null ? "" : Math.round(rowExpandedTip.score)}
-          </div>
-        </div>
-
-        <div style={{ display: "grid", placeItems: "center" }}>
-          <img
-            src={rowExpandedTip.assets.imgSrc}
-            alt={rowExpandedTip.code}
-            style={{
-              width: "100%",
-              maxWidth: 320,
-              height: "auto",
-              borderRadius: 16,
-              border: `1px solid ${LIGHT_BORDER}`,
-              background: "#fff",
-            }}
-          />
-        </div>
-
-        {rowExpandedTip.assets.audioSrc ? (
-          <button
-            type="button"
-            onClick={() => playOverlayAudio(rowExpandedTip.assets.audioSrc)}
-            style={{
-              height: 44,
-              borderRadius: 16,
-              border: `1px solid ${LIGHT_BORDER}`,
-              background: "#fff",
-              fontWeight: 950,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              cursor: "pointer",
-            }}
-          >
-            <Volume2 className="h-5 w-5" />
-            Play sound
-          </button>
-        ) : null}
+        No tips for this word.
       </div>
-    ) : null;
-  })()}
+    );
+  }
+
+  const prefix = `row_${i}_`;
+  const rowExpandedLocalKey = expandedPhonemeKey?.startsWith(prefix) ? expandedPhonemeKey.slice(prefix.length) : null;
+  const rowExpandedTip = rowExpandedLocalKey ? rowTipItems.find((x) => x.key === rowExpandedLocalKey) : null;
+
+  return rowExpandedTip ? (
+    <div
+      style={{
+        marginTop: 12,
+        background: "#fff",
+        borderRadius: 22,
+        padding: 14,
+        border: `1px solid ${LIGHT_BORDER}`,
+        boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+        display: "grid",
+        gap: 10,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+        <div style={{ fontWeight: 950, fontSize: 18, color: LIGHT_TEXT }}>{rowExpandedTip.code}</div>
+        <div style={{ fontWeight: 900, fontSize: 12, color: scoreColor(rowExpandedTip.score) }}>
+          {rowExpandedTip.score == null ? "" : Math.round(rowExpandedTip.score)}
+        </div>
+      </div>
+
+      <div style={{ display: "grid", placeItems: "center" }}>
+        <img
+          src={rowExpandedTip.assets.imgSrc}
+          alt={rowExpandedTip.code}
+          style={{
+            width: "100%",
+            maxWidth: 320,
+            height: "auto",
+            borderRadius: 16,
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: "#fff",
+          }}
+        />
+      </div>
+
+      {rowExpandedTip.assets.audioSrc ? (
+        <button
+          type="button"
+          onClick={() => playOverlayAudio(rowExpandedTip.assets.audioSrc)}
+          style={{
+            height: 44,
+            borderRadius: 16,
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: "#fff",
+            fontWeight: 950,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            cursor: "pointer",
+          }}
+        >
+          <Volume2 className="h-5 w-5" />
+          Play sound
+        </button>
+      ) : null}
+    </div>
+  ) : null;
+})()}
+
 </div>
 
       ) : null}
@@ -1166,6 +1187,8 @@ const rowTipItems = rowPhonemeLineItems.filter((x) => x.hasTip);
   </div>
 ) : null}
 
+{!isSentence ? (
+  <>
 
                   {/* Word (colored like main) */}
                   <div
@@ -1351,6 +1374,8 @@ const rowTipItems = rowPhonemeLineItems.filter((x) => x.hasTip);
   </div>
 )}
 
+  </>
+) : null}
 
                 </div>
               </div>
