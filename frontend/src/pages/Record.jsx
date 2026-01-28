@@ -413,7 +413,7 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
 
      <div className="pf-embed-wrap" style={{ width: "100%", minWidth: 0 }}>
   <div className="pf-embed-inner">
-    <PhonemeFeedback result={result} embed={true} hideBookmark={true} />
+    <PhonemeFeedback result={result} embed={true} hideBookmark={true} hideChunkCards={true} />
   </div>
 </div>
 

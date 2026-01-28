@@ -634,10 +634,12 @@ export default function PhonemeFeedback({
   result,
   embed = false,
   hideBookmark = false,
+  hideChunkCards = false, // ✅ NEW (kun brugt på Record)
   onRetry,
   mode = "full",
-  onFocus, // ✅ add back (kun callback)
+  onFocus,
 }) {
+
   const { settings } = useSettings();
   
     // --- Global volume (0..1) ---
@@ -1572,6 +1574,29 @@ onClick={async () => {
                     You
                   </button>
                 </div>
+{/* ✅ Record-only: show phoneme pills instead of chunk cards */}
+{hideChunkCards && oneWord && (cmuData?.cmuTokens?.length || 0) > 0 && (
+  <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
+    {cmuData.cmuTokens.map((cmu, i) => (
+      <span
+        key={`ph-pill-${cmu}-${i}`}
+        style={{
+          padding: "8px 12px",
+          borderRadius: 999,
+          background: ui.btnBg,
+          border: `1px solid ${ui.btnBorder}`,
+          fontWeight: 900,
+          color: ui.textStrong,
+          fontSize: 13,
+        }}
+      >
+        {cmuChipLabel(cmu)}
+      </span>
+    ))}
+  </div>
+)}
+
+
 {/* Main overall score bar (under Coach/You) */}
 {targetScorePct != null && (
   <div style={{ marginTop: 12 }}>
@@ -1615,7 +1640,7 @@ onClick={async () => {
 </motion.div>
 
               {/* CHUNK LIST (same width as hero) */}
-{mode === "full" && !onFocus && chunkRows.length > 0 && (
+{mode === "full" && !onFocus && !hideChunkCards && chunkRows.length > 0 && (
   <div className="pf-list" style={{ width: "100%" }}>
                   {chunkRows.map((row) => {
                     const isOpen = openChunk === row.i;
