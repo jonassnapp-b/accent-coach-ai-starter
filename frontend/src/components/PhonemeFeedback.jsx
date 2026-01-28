@@ -1093,21 +1093,6 @@ async function playRecording() {
       } catch {}
     }
   }
-function playPhonemeRef(cmuRaw) {
-  const cmu = String(cmuRaw || "").trim();
-  if (!cmu) return;
-
-  const accent = getUseGB() ? "en_br" : "en_us";
-  const url = phonemeAudioUrl(cmu, accent);
-  if (!url) return;
-
-  try {
-    const a = new Audio(url);
-    a.volume = effectiveVolume;
-    const p = a.play();
-    if (p?.catch) p.catch(() => {});
-  } catch {}
-}
 
 
   const nativeReady = !!coachAudioUrl && !!coachMap?.tokens?.length && !coachLoading;
@@ -1587,51 +1572,6 @@ onClick={async () => {
                     You
                   </button>
                 </div>
-
-                {/* Phoneme chips (colored by score, click to play phoneme) */}
-{oneWord && (cmuData?.cmuTokens?.length || 0) > 0 && (
-  <div
-    style={{
-      marginTop: 12,
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 10,
-      justifyContent: "center",
-    }}
-  >
-    {cmuData.cmuTokens.map((cmu, i) => {
-      const s01 = (cmuData?.scoresByIdx?.[i] ?? 0);
-      const ok = assetOkByCmu?.[String(cmu || "").trim()] ?? true;
-
-      return (
-        <button
-          key={`ph-chip-${cmu}-${i}`}
-          type="button"
-          disabled={!ok}
-          onClick={(e) => {
-            e.stopPropagation(); // don't trigger hero-card click/focus
-            playPhonemeRef(cmu);
-          }}
-          title={ok ? "Play phoneme" : "Phoneme asset missing"}
-          style={{
-            padding: "8px 12px",
-            borderRadius: 999,
-            background: ui.btnBg,
-            border: `1px solid ${ui.btnBorder}`,
-            fontWeight: 900,
-            fontSize: 13,
-            color: scoreToColor01(s01),          // ✅ score color
-            opacity: ok ? 1 : 0.35,
-            cursor: ok ? "pointer" : "not-allowed",
-          }}
-        >
-          {cmuChipLabel(cmu)}
-        </button>
-      );
-    })}
-  </div>
-)}
-
 {/* Main overall score bar (under Coach/You) */}
 {targetScorePct != null && (
   <div style={{ marginTop: 12 }}>
@@ -1698,6 +1638,18 @@ onClick={async () => {
                       >
                         <div className="pf-row-top">
                           <div className="pf-row-title">{row.letters || "—"}</div>
+                          <div className="pf-phoneme-pills">
+  {row.phonemes.map((ph) => (
+    <span
+      key={`pill-${row.i}-${ph.ix}`}
+      className="pf-phoneme-pill"
+      style={{ color: scoreToColor01(ph.s01 ?? 0) }}
+    >
+      {ph.pretty}
+    </span>
+  ))}
+</div>
+
                         </div>
 
                         <div className="pf-row-sub">
@@ -1779,72 +1731,7 @@ onClick={async () => {
                           </div>
                         </div>
 
-                     {/* Media feedback for BAD phonemes (only if we have image+audio) */}
-<div
-  style={{
-    marginTop: 12,
-    display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: 10,
-  }}
->
-  {row.phonemes
-    .filter((ph) => (ph?.pct ?? 0) < 85) // "ikke-grøn" threshold
-    .filter((ph) => assetOkByCmu?.[String(ph?.cmu || "").trim()])
-    .map((ph) => {
-      const cmu = String(ph.cmu || "").trim();
-      const accent = getUseGB() ? "en_br" : "en_us";
-      const imgUrl = phonemeImageUrl(cmu);
-      const audUrl = phonemeAudioUrl(cmu, accent);
 
-      return (
-        <div
-          key={`media-${row.i}-${ph.ix}`}
-          style={{
-            border: "1px solid rgba(0,0,0,0.10)",
-            borderRadius: 16,
-            padding: 10,
-            background: "#fff",
-            textAlign: "center",
-          }}
-        >
-          <div style={{ fontWeight: 900, marginBottom: 8, color: ui.textStrong }}>
-            {cmu}
-          </div>
-
-          <img
-            src={imgUrl}
-            alt={cmu}
-            style={{
-              width: "100%",
-              maxWidth: 180,
-              margin: "0 auto",
-              borderRadius: 12,
-              display: "block",
-            }}
-          />
-
-          <button
-            type="button"
-            className="pf-pill"
-            style={{ marginTop: 10 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              try {
-                const a = new Audio(audUrl);
-                a.volume = effectiveVolume;
-                const p = a.play();
-                if (p?.catch) p.catch(() => {});
-              } catch {}
-            }}
-          >
-            <Volume2 className="h-4 w-4" />
-            Sound
-          </button>
-        </div>
-      );
-    })}
-</div>
 
                       </div>
                     );
