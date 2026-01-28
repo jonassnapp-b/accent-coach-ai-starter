@@ -1339,7 +1339,7 @@ return rowExpandedTip ? (
     fontWeight: 950,
     lineHeight: 1.1,
     textAlign: "center",
-    color: LIGHT_TEXT,
+color: scoreColor(currentWordScore),
   }}
 >
   {currentWordText || "—"}
