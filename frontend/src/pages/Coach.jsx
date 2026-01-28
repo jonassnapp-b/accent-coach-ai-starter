@@ -503,9 +503,10 @@ async function onStart() {
   setSelectedWordIdx(-1);
   setExpandedPhonemeKey(null);
 
-  setStage("flow");
-  await ensureMic(); // okay at keep mic warm (valgfrit)
-  speakSequence(t);  // <- hvis du vil afspille target med det samme
+ setStage("flow");
+await ensureMic(); // okay at keep mic warm (valgfrit)
+// ❌ no autoplay
+
 }
 
 
@@ -837,7 +838,6 @@ function onTryAgain() {
   try { if (ttsAudioRef.current) ttsAudioRef.current.pause(); } catch {}
   setIsUserPlaying(false);
   setIsCorrectPlaying(false);
-speakSequence(t);
 
   }
 
@@ -851,7 +851,6 @@ function onNext() {
   setSelectedWordIdx(-1);
   setExpandedPhonemeKey(null);
   setWordsOpen(false);
-speakSequence(next);
 
   }
 
