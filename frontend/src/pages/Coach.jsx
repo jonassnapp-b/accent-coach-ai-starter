@@ -1128,66 +1128,11 @@ const rowTipItems = rowPhonemeLineItems.filter((x) => x.hasTip);
 return rowExpandedTip ? (
   <div> ... tip card ... </div>
 ) : (
-  <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-    <div style={{ fontSize: 12, fontWeight: 800, color: LIGHT_MUTED }}>
-      Tap a phoneme above to see a tip.
-    </div>
-
-    {/* Divider */}
-    <div style={{ height: 1, background: LIGHT_BORDER, width: "100%" }} />
-
-    {/* You */}
-    <div style={{ display: "grid", gap: 8 }}>
-      <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>You</div>
-      <button
-        type="button"
-        onClick={playUserRecording}
-        disabled={!result?.userAudioUrl}
-        style={{
-          height: 44,
-          borderRadius: 16,
-          border: `1px solid ${LIGHT_BORDER}`,
-          background: "#fff",
-          fontWeight: 950,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 10,
-          cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
-          opacity: result?.userAudioUrl ? 1 : 0.6,
-        }}
-      >
-        <AudioLines className="h-5 w-5" />
-        Play
-      </button>
-    </div>
-
-    {/* Correct */}
-    <div style={{ display: "grid", gap: 8 }}>
-      <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>Correct pronunciation</div>
-      <button
-        type="button"
-        onClick={playCorrectTts}
-        disabled={!String(isSentence ? target : currentWordText).trim()}
-        style={{
-          height: 44,
-          borderRadius: 16,
-          border: `1px solid ${LIGHT_BORDER}`,
-          background: "#fff",
-          fontWeight: 950,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 10,
-          cursor: "pointer",
-        }}
-      >
-        <AudioLines className="h-5 w-5" />
-        Play
-      </button>
-    </div>
+  <div style={{ marginTop: 12, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED }}>
+    Tap a phoneme above to see a tip.
   </div>
 );
+
 
 
 })()}
@@ -1453,6 +1398,59 @@ return rowExpandedTip ? (
 
   </>
 ) : null}
+{/* ✅ Global playback (always at bottom, for both words + sentences) */}
+<div style={{ marginTop: 14, display: "grid", gap: 10 }}>
+  <div style={{ height: 1, background: LIGHT_BORDER, width: "100%" }} />
+
+  <div style={{ display: "grid", gap: 8 }}>
+    <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>You</div>
+    <button
+      type="button"
+      onClick={playUserRecording}
+      disabled={!result?.userAudioUrl}
+      style={{
+        height: 44,
+        borderRadius: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: "#fff",
+        fontWeight: 950,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
+        opacity: result?.userAudioUrl ? 1 : 0.6,
+      }}
+    >
+      <AudioLines className="h-5 w-5" />
+      Play
+    </button>
+  </div>
+
+  <div style={{ display: "grid", gap: 8 }}>
+    <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_TEXT }}>Correct pronunciation</div>
+    <button
+      type="button"
+      onClick={playCorrectTts}
+      disabled={!String(target).trim()}
+      style={{
+        height: 44,
+        borderRadius: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: "#fff",
+        fontWeight: 950,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        cursor: "pointer",
+      }}
+    >
+      <AudioLines className="h-5 w-5" />
+      Play
+    </button>
+  </div>
+</div>
 
                 </div>
               </div>
