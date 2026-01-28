@@ -103,27 +103,22 @@ function getPhonemeCode(p) {
 
 function getScore(obj) {
   const v =
+    obj?.accuracyScore ?? // ✅ foretræk 0–100 når den findes
+    obj?.overallAccuracy ??
     obj?.accuracy ??
     obj?.pronunciation ??
     obj?.score ??
     obj?.overall ??
-    obj?.overallAccuracy ??
     obj?.pronunciationAccuracy ??
-    obj?.accuracyScore ??
-    obj?.accuracy_score ??
-    obj?.pronunciation_score ??
-    obj?.overall_score ??
-    obj?.overall_accuracy ??
-    obj?.pronunciation_accuracy;
+    obj?.accuracyScore;
 
   const n = Number(v);
   if (!Number.isFinite(n)) return null;
 
-  // normalize: if API returns 0..1, convert to 0..100
-  if (n > 0 && n <= 1) return n * 100;
-
-  return n;
+  // ✅ hvis 0–1, gør til 0–100
+  return n <= 1 ? Math.round(n * 100) : n;
 }
+
 
 // same simple color logic for word + phonemes
 function scoreColor(score) {
@@ -805,21 +800,25 @@ async function toggleCorrectTts() {
 }
 
 function onTryAgain() {
-  if (isBusy) return;
+  const t = String(target || "").trim();
+  if (!t) return;
 
-  // stop any playing audio + reset icons
+  // ✅ luk overlay og gør klar til ny optagelse
+  setResult(null);
+  setStatus("");
+  setSelectedWordIdx(-1);
+  setExpandedPhonemeKey(null);
+  setWordsOpen(false);
+
+  // stop evt. igangværende lyd (så den ikke føles som “correct” spiller igen)
   try { overlayAudioRef.current?.pause?.(); } catch {}
+  try { if (ttsAudioRef.current) ttsAudioRef.current.pause(); } catch {}
   setIsUserPlaying(false);
   setIsCorrectPlaying(false);
 
-  // close overlay and let user record again on SAME target
-  setResult(null);
-  setStatus("Try again 🔁");
-  setExpandedPhonemeKey(null);
-
-  // keep target unchanged; just show mic again
-  setRecordReady(true);
+  speakSequence(t); // siger target igen og viser mic bagefter
 }
+
 
 function onNext() {
   // nyt target + luk overlay (result=null) så du er klar til at optage igen
@@ -1552,9 +1551,10 @@ return rowExpandedTip ? (
   </>
 ) : null}
 {/* ✅ Global playback (always at bottom, for both words + sentences) */}
-<div style={{ marginTop: 36, display: "grid", gap: 36 }}>
+<div style={{ marginTop: 36, display: "grid", gap: 28 }}>
   {/* divider with more breathing room */}
-  <div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 40, marginBottom: 40 }} />
+  <div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 30, marginBottom: 30
+ }} />
 
   {/* You */}
   <div style={{ display: "grid", gap: 10 }}>
@@ -1608,7 +1608,8 @@ return rowExpandedTip ? (
     </div>
   </div>
   {/* divider under Correct */}
-<div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 40, marginBottom: 40 }} />
+<div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 30, marginBottom: 30
+ }} />
 
 {/* Try again + Next */}
 <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
