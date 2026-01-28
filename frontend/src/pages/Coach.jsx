@@ -174,7 +174,7 @@ export default function Coach() {
   const [status, setStatus] = useState("");
 
   // overlay state (sentence dropdown)
-  const [selectedWordIdx, setSelectedWordIdx] = useState(0);
+  const [selectedWordIdx, setSelectedWordIdx] = useState(-1);
   const [expandedPhonemeKey, setExpandedPhonemeKey] = useState(null); // e.g. "UW_3"
 const [wordsOpen, setWordsOpen] = useState(false); // ✅ dropdown open/closed
 
@@ -574,15 +574,17 @@ const [recordReady, setRecordReady] = useState(false);
       };
 
       setResult(payload);
-      setSelectedWordIdx(0);
-      setExpandedPhonemeKey(null);
-// ✅ when feedback appears: open words dropdown and default to first word
+setExpandedPhonemeKey(null);
+
+// ✅ if sentence: show list, but keep ALL rows collapsed
 if ((mode === "sentences") || ((payload?.words?.length || 0) > 1)) {
-  setWordsOpen(true);
-  setSelectedWordIdx(0);
+  setWordsOpen(true);        // list visible
+  setSelectedWordIdx(-1);    // ✅ NONE opened
 } else {
-  setWordsOpen(false);
+  setWordsOpen(false);       // no list in single-word mode
+  setSelectedWordIdx(0);     // single-word mode uses currentWordObj
 }
+
 
 
       const overall = Number(json?.overall ?? json?.overallAccuracy ?? json?.pronunciation ?? 0);
@@ -986,7 +988,7 @@ const rowTipItems = rowPhonemeLineItems.filter((x) => x.hasTip);
       type="button"
       onClick={() => {
         setExpandedPhonemeKey(null);
-        setSelectedWordIdx(i);
+      setSelectedWordIdx((prev) => (prev === i ? -1 : i));
 
         // optional: toggle accordion behavior
         // setSelectedWordIdx((prev) => (prev === i ? -1 : i));
@@ -1087,6 +1089,11 @@ const rowTipItems = rowPhonemeLineItems.filter((x) => x.hasTip);
       )}
     </div>
   </div>
+{rowTipItems.length > 0 ? (
+  <div style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED }}>
+    Tips available — tap the underlined phonemes.
+  </div>
+) : null}
 
 {/* Tip area for this row */}
 {(() => {
@@ -1114,64 +1121,14 @@ const rowTipItems = rowPhonemeLineItems.filter((x) => x.hasTip);
   const rowExpandedLocalKey = expandedPhonemeKey?.startsWith(prefix) ? expandedPhonemeKey.slice(prefix.length) : null;
   const rowExpandedTip = rowExpandedLocalKey ? rowTipItems.find((x) => x.key === rowExpandedLocalKey) : null;
 
-  return rowExpandedTip ? (
-    <div
-      style={{
-        marginTop: 12,
-        background: "#fff",
-        borderRadius: 22,
-        padding: 14,
-        border: `1px solid ${LIGHT_BORDER}`,
-        boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
-        display: "grid",
-        gap: 10,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-        <div style={{ fontWeight: 950, fontSize: 18, color: LIGHT_TEXT }}>{rowExpandedTip.code}</div>
-        <div style={{ fontWeight: 900, fontSize: 12, color: scoreColor(rowExpandedTip.score) }}>
-          {rowExpandedTip.score == null ? "" : Math.round(rowExpandedTip.score)}
-        </div>
-      </div>
+return rowExpandedTip ? (
+  <div> ... tip card ... </div>
+) : (
+  <div style={{ marginTop: 12, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED }}>
+    Tap a phoneme above to see a tip.
+  </div>
+);
 
-      <div style={{ display: "grid", placeItems: "center" }}>
-        <img
-          src={rowExpandedTip.assets.imgSrc}
-          alt={rowExpandedTip.code}
-          style={{
-            width: "100%",
-            maxWidth: 320,
-            height: "auto",
-            borderRadius: 16,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: "#fff",
-          }}
-        />
-      </div>
-
-      {rowExpandedTip.assets.audioSrc ? (
-        <button
-          type="button"
-          onClick={() => playOverlayAudio(rowExpandedTip.assets.audioSrc)}
-          style={{
-            height: 44,
-            borderRadius: 16,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: "#fff",
-            fontWeight: 950,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            cursor: "pointer",
-          }}
-        >
-          <Volume2 className="h-5 w-5" />
-          Play sound
-        </button>
-      ) : null}
-    </div>
-  ) : null;
 })()}
 
 </div>
@@ -1191,6 +1148,7 @@ const rowTipItems = rowPhonemeLineItems.filter((x) => x.hasTip);
   <>
 
                   {/* Word (colored like main) */}
+                  
                   <div
                     style={{
                       fontSize: 34,
