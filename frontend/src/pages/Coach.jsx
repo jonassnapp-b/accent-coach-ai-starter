@@ -662,6 +662,21 @@ const currentWordObj = safeWordIdx >= 0 ? (words?.[safeWordIdx] || null) : null;
   currentWordObj?.word || currentWordObj?.text || currentWordObj?.name || (isSentence ? "" : target) || ""
 ).trim();
   const currentWordScore = getScore(currentWordObj);
+const wordOnlyResult = useMemo(() => {
+  if (!result || !currentWordObj) return null;
+
+  const t = String(currentWordText || "").trim();
+
+  return {
+    ...result,
+    // 👇 force it to behave like a single-word result
+    words: [currentWordObj],
+    target: t,
+    reference: t,
+    text: t,
+    refText: t,
+  };
+}, [result, currentWordObj, currentWordText]);
 
  const phonemeLineItems = useMemo(() => {
   const ps = Array.isArray(currentWordObj?.phonemes) ? currentWordObj.phonemes : [];
@@ -1221,17 +1236,6 @@ const rowTipItems = rowPhonemeLineItems.filter((x) => x.hasTip);
       {i === selectedWordIdx ? (
         <div style={{ paddingTop: 10 }}>
   {/* Word (colored) */}
-  <div
-    style={{
-      fontSize: 34,
-      fontWeight: 950,
-      lineHeight: 1.1,
-      textAlign: "left",
-      color: scoreColor(wordScore),
-    }}
-  >
-    {wordText || label || "—"}
-  </div>
 
   <div style={{ marginTop: 6, textAlign: "left", fontSize: 12, color: LIGHT_MUTED, fontWeight: 800 }}>
     {wordScore == null ? " " : `Score: ${Math.round(wordScore)}`}
@@ -1333,17 +1337,27 @@ return rowExpandedTip ? (
 
                   {/* Word (colored like main) */}
                   
-                <div
-  style={{
-    fontSize: 34,
-    fontWeight: 950,
-    lineHeight: 1.1,
-    textAlign: "center",
-color: scoreColor(currentWordScore),
-  }}
->
-  {currentWordText || "—"}
-</div>
+                {wordOnlyResult ? (
+  <PhonemeFeedback
+    result={wordOnlyResult}
+    embed={true}
+    hideBookmark={true}
+    mode="wordOnly"
+  />
+) : (
+  <div
+    style={{
+      fontSize: 34,
+      fontWeight: 950,
+      lineHeight: 1.1,
+      textAlign: "center",
+      color: scoreColor(currentWordScore),
+    }}
+  >
+    {currentWordText || "—"}
+  </div>
+)}
+
 
 
 
