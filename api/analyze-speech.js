@@ -447,7 +447,10 @@ if (!refText) {
 
     const wavBytes = await toWavPcm16Mono16k(rawBuf, mimeHint);
     const coreType = /\s/.test(refText) ? "sent.eval.promax" : "word.eval.promax";
-    const userId = "accent-coach";
+    const userId =
+  String(body.userId || "").trim() ||
+  String(req.headers["x-user-id"] || "").trim() ||
+  "local";
 
     const ss = await postSpeechSuperExact({
       host,
@@ -499,7 +502,7 @@ try {
   }
 
   if (phonemes.length) {
-    await recordSessionResult(userId, { phonemes });
+    await recordSessionResult(userId, { accent: dictDialect, phonemes });
     console.log("[WeaknessLab] saved phonemes:", phonemes.length);
   } else {
     console.log("[WeaknessLab] no phonemes to save");

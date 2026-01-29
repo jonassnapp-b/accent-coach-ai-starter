@@ -15,11 +15,19 @@ const STORAGE_KEY = "ac_psm_v3";
 const SESSION_SEED_KEY = "ac_psm_session_seed_v1";
 
 function getSessionSeed() {
+  // ✅ Works in browser AND in Node (build scripts)
   try {
-    return String(localStorage.getItem(SESSION_SEED_KEY) || "0");
-  } catch {
-    return "0";
-  }
+    if (typeof localStorage !== "undefined") {
+      return String(localStorage.getItem(SESSION_SEED_KEY) || "0");
+    }
+  } catch {}
+  // Node fallback: allow deterministic build seed via env, else "0"
+  try {
+    if (typeof process !== "undefined" && process?.env?.AC_PSM_SEED) {
+      return String(process.env.AC_PSM_SEED);
+    }
+  } catch {}
+  return "0";
 }
 
 
@@ -316,23 +324,82 @@ export function resetLevel(levelId) {
   state.byLevel[id].i = 0;
   saveState(state);
 }
+// --- Coverage bank: ensures we hit rare CMU phonemes in the build index ---
+// NOTE: These are normal words/sentences that cover uncommon phonemes like ZH, NG, OY, AW, etc.
+const COVERAGE_SENTENCES = [
+  // ZH (/ʒ/)
+  "I usually watch television in the evening.",
+  "That decision was a measure of pleasure.",
+
+  // NG
+  "I am singing and bringing something.",
+  "We were thinking about going long.",
+
+  // OY
+  "The boy enjoyed a noisy toy.",
+  "I try to avoid annoying noise.",
+
+  // AW
+  "Now I found out how it works.",
+  "A loud crowd was outside.",
+
+  // CH / SH / JH
+  "Choose a cheap chair and check it.",
+  "She should share the shiny shoes.",
+  "He jumped onto the job quickly.",
+
+  // TH / DH
+  "Think about that thing again.",
+  "These are the days that matter.",
+
+  // R / L (clusters too)
+  "Please relax and roll your tongue.",
+  "The strong string was really long.",
+
+  // AX / schwa-heavy function words
+  "I want to go to the store for a moment.",
+  "It is a bit of a problem for today.",
+
+  // UH / UW
+  "Put the book on the table.",
+  "We use two new tools.",
+
+  // AE / EH / IH / IY
+  "That cat sat on the mat.",
+  "Get the best level next.",
+  "This is a simple little fix.",
+  "We need to see the key details.",
+
+  // AA / AO (varies by dialect but still useful)
+  "The hot coffee was gone.",
+  "I saw the small ball fall.",
+
+  // ER
+  "Her first turn was perfect.",
+];
 
 // --- For build-time phoneme indexing ---
 // --- For build-time phoneme indexing (deterministic corpus) ---
+// --- For build-time phoneme indexing (deterministic corpus) ---
 export function getAllSentences({ perLevel = 1200 } = {}) {
-  // Generates a stable set of sentences per level by iterating indices.
-  // No localStorage mutation. Deterministic for a given sessionSeed.
+  // ✅ Generates a stable set of sentences per level by iterating indices.
+  // ✅ No localStorage mutation.
+  // ✅ Always includes COVERAGE_SENTENCES to guarantee rare phoneme coverage.
 
+  // In Node (build), AC_PSM_SEED can be set; otherwise "0"
   const sessionSeed = getSessionSeed();
   const out = [];
 
+  // 0) Always include coverage bank first
+  out.push(...COVERAGE_SENTENCES);
+
+  // 1) Generate deterministic template sentences
   for (const lvl of LEVELS) {
     const id = lvl.id;
 
     for (let i = 0; i < perLevel; i++) {
       const rng = rngFor(`${id}|${i}|psm_v3|${sessionSeed}`);
 
-      // generate one sentence using the same logic as getNextSentence (but without state)
       let pickedSentence = null;
 
       for (let t = 0; t < 12; t++) {
@@ -360,7 +427,7 @@ export function getAllSentences({ perLevel = 1200 } = {}) {
     }
   }
 
-  // Deduplicate while preserving order
+  // 2) Deduplicate while preserving order
   const seen = new Set();
   const deduped = [];
   for (const s of out) {
@@ -373,3 +440,4 @@ export function getAllSentences({ perLevel = 1200 } = {}) {
 
   return deduped;
 }
+

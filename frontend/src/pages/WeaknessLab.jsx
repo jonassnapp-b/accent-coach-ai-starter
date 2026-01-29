@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Trash2, Check, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
+import phonemeSentenceIndex from "../lib/phonemeSentenceIndex.json";
+import { loadLocalPhonemeStats } from "../lib/localPhonemeStats.js";
 
 
 /* ------------ API base (web + native) ------------ */
@@ -363,12 +365,56 @@ export default function WeaknessLab() {
         accent: itemAccent,
       };
     });
+    // ✅ Merge local Coach/Imitate stats so they also appear in WeaknessLab.
+    // We still only show phonemes that have attempts (>0).
+    const local = loadLocalPhonemeStats(accent);
 
-    const byAccent = mapped.filter((m) => {
-      if (!m.phoneme) return false;
-      if (!m.accent) return true;
-      return m.accent === String(accent || "").toLowerCase();
+    // Convert local stats to same shape as server items:
+    // - rawPhoneme must match your keys (no slashes)
+    const localItems = Object.entries(local || {}).map(([raw, v]) => {
+      const count = Number(v?.count) || 0;
+      const best = Number(v?.best) || 0;
+      const avg = Number(v?.avg) || 0;
+
+      // WeaknessLab uses best if present, otherwise avg
+      const usedPct = best > 0 ? best : avg;
+
+      return {
+        phoneme: formatPhoneme(raw),
+        rawPhoneme: String(raw || "").trim(),
+        pct: clamp(Number(usedPct) || 0, 0, 100),
+        count,
+        accent: String(accent || "").toLowerCase(),
+      };
     });
+
+    // Merge server + local, summing counts and keeping best score
+    const mergedMap = new Map();
+    for (const it of [...mapped, ...localItems]) {
+      const k = String(it?.rawPhoneme || "").trim();
+      if (!k) continue;
+
+      const prev = mergedMap.get(k);
+      if (!prev) {
+        mergedMap.set(k, { ...it });
+      } else {
+        mergedMap.set(k, {
+          ...prev,
+          count: (Number(prev.count) || 0) + (Number(it.count) || 0),
+          pct: Math.max(Number(prev.pct) || 0, Number(it.pct) || 0),
+        });
+      }
+    }
+
+    const merged = Array.from(mergedMap.values());
+
+  const byAccent = merged.filter((m) => {
+  if (!m.phoneme) return false;
+  if ((Number(m.count) || 0) <= 0) return false; // ✅ only phonemes with attempts
+  if (!m.accent) return true;
+  return m.accent === String(accent || "").toLowerCase();
+});
+
 
     let didAutoUnhide = false;
     const nextHidden = new Map(hiddenMap);
@@ -406,18 +452,22 @@ export default function WeaknessLab() {
 function getPracticeQueueForPhoneme(rawPhoneme) {
   const p = String(rawPhoneme || "").trim().toUpperCase().replaceAll("/", "");
 
-  const q = PRACTICE_BANK?.[p];
-  if (Array.isArray(q) && q.length) return q.slice(0, 15);
+  const indexed = phonemeSentenceIndex?.[p];
+  if (Array.isArray(indexed) && indexed.length) {
+    return indexed.slice(0, 15);
+  }
 
-  // final fallback
+  // last resort (should basically never happen if your index has all CMU phonemes)
   return [
-    "Repeat the sentence clearly.",
-    "Focus on the target sound.",
-    "Try again with a slower pace.",
-    "Now say it one more time.",
-    "Keep the sound clean and short.",
+    `Focus on ${p}. Say ${p} clearly three times.`,
+    `Repeat ${p} again, slowly.`,
+    `Keep ${p} consistent.`,
+    `Now try ${p} one more time.`,
+    `Final rep: ${p}.`,
   ];
 }
+
+
 
 
 function trainPhoneme(rawPhoneme) {

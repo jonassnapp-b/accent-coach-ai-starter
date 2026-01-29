@@ -4,6 +4,7 @@ import { ChevronDown, Mic, StopCircle, Volume2, Play, Pause } from "lucide-react
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
+import { ingestLocalPhonemeScores } from "../lib/localPhonemeStats.js";
 
 const IS_PROD = !!import.meta?.env?.PROD;
 
@@ -606,6 +607,41 @@ setIsCorrectPlaying(false);
       const r = await fetch(`${base}/api/analyze-speech`, { method: "POST", body: fd });
       const json = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
+      // ✅ Save Coach phoneme attempts locally so WeaknessLab includes them too
+      try {
+        const accentKey = accentUi === "en_br" ? "en_br" : "en_us";
+
+        // Collect phoneme scores from SpeechSuper "words[].phonemes[]"
+        const phonemePairs = [];
+        const wordsArr = Array.isArray(json?.words) ? json.words : [];
+        for (const w of wordsArr) {
+          const ps = Array.isArray(w?.phonemes) ? w.phonemes : [];
+          for (const p of ps) {
+            const code = String(p?.phoneme || p?.ipa || p?.symbol || "").trim().toUpperCase();
+            if (!code) continue;
+
+            const raw =
+              p?.accuracyScore ??
+              p?.overallAccuracy ??
+              p?.accuracy ??
+              p?.pronunciation ??
+              p?.score ??
+              p?.overall ??
+              p?.pronunciationAccuracy;
+
+            const n = Number(raw);
+            if (!Number.isFinite(n)) continue;
+
+            const pct = n <= 1 ? Math.round(n * 100) : Math.round(n);
+            phonemePairs.push({ phoneme: code, score: pct });
+          }
+        }
+
+        // Only ingest if we actually found phonemes
+        if (phonemePairs.length) ingestLocalPhonemeScores(accentKey, phonemePairs);
+      } catch {
+        // ignore
+      }
 
       const payload = {
         ...json,

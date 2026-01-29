@@ -8,13 +8,20 @@ const APP_ID = "accent-coach";
 
 async function handleOverview(req, res) {
   try {
-    const data = await getWeaknessOverview(APP_ID);
+    const accent = String(req.query.accent || "").toLowerCase(); // "en_us" | "en_br" | ""
+    const userId =
+      String(req.query.userId || "").trim() ||
+      String(req.headers["x-user-id"] || "").trim() ||
+      "local";
+
+    const data = await getWeaknessOverview(APP_ID, { userId, accent });
     return res.status(200).json(data);
   } catch (e) {
     console.error("[weakness] overview failed:", e?.message || e);
     return res.status(500).json({ error: "Weakness overview failed" });
   }
 }
+
 
 // Backwards compatible
 router.get("/weakness", handleOverview);
