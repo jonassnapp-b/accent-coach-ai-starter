@@ -441,8 +441,10 @@ export default function WeaknessLab() {
         saveHiddenMap(accent, nextHidden);
       }, 0);
     }
+// Only show weak sounds (hide green)
+const weakOnly = visible.filter((m) => (Number(m.pct) || 0) < 85);
 
-    const sorted = [...visible];
+const sorted = [...weakOnly];
     if (sortBy === "attempts") sorted.sort((a, b) => b.count - a.count || a.pct - b.pct);
     else if (sortBy === "az") sorted.sort((a, b) => a.rawPhoneme.localeCompare(b.rawPhoneme));
     else sorted.sort((a, b) => a.pct - b.pct || b.count - a.count);
@@ -579,21 +581,15 @@ function trainPhoneme(rawPhoneme) {
           </div>
         )}
 
-        {/* Empty */}
-        {!loading && !err && normalized.length === 0 && (
-          <div className="panel mt-6 text-center">
-            <div className="text-[16px] font-extrabold" style={{ color: "var(--text)" }}>
-              No data yet
-            </div>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate("/record")}
-              className="btn btn-primary mt-4"
-            >
-              Go to Record
-            </motion.button>
-          </div>
-        )}
+{/* Empty */}
+{!loading && !err && normalized.length === 0 && (
+  <div className="panel mt-6 text-center">
+    <div className="text-[16px] font-extrabold" style={{ color: "var(--text)" }}>
+      No data yet
+    </div>
+  </div>
+)}
+
 
         {/* List */}
 {!loading && !err && normalized.length > 0 && (
