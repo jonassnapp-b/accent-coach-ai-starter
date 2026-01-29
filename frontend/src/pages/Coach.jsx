@@ -879,26 +879,7 @@ function onNext() {
   setWordsOpen(false);
 
   }
-const MODE_OPTIONS = [
-  { value: "words", label: "Words" },
-  { value: "sentences", label: "Sentences" },
-];
 
-const DIFF_OPTIONS = [
-  { value: "easy", label: "Easy" },
-  { value: "medium", label: "Medium" },
-  { value: "hard", label: "Hard" },
-];
-
-const ACCENT_OPTIONS = [
-  { value: "en_us", label: "American 🇺🇸" },
-  { value: "en_br", label: "British 🇬🇧" },
-];
-
-function labelFor(value, options) {
-  const hit = options.find((o) => o.value === value);
-  return hit ? hit.label : String(value || "");
-}
 
   /* ---------------- styles ---------------- */
   const bigCardStyle = {
@@ -911,32 +892,6 @@ function labelFor(value, options) {
     maxWidth: 520,
     margin: "0 auto",
   };
-const selectWrapStyle = {
-  position: "relative",
-  width: "100%",
-};
-
-const selectStyle = {
-  height: 56,
-  width: "100%",
-  borderRadius: 16,
-  padding: "0 44px 0 16px",
-  background: LIGHT_SURFACE,
-  border: `1px solid ${LIGHT_BORDER}`,
-  color: LIGHT_TEXT,
-  fontWeight: 900,
-  outline: "none",
-  appearance: "none",
-};
-
-const chevronStyle = {
-  position: "absolute",
-  right: 16,
-  top: "50%",
-  transform: "translateY(-50%)",
-  color: LIGHT_MUTED,
-  pointerEvents: "none",
-};
 
   const stack = { display: "grid", gap: 30 };
 
@@ -1047,40 +1002,90 @@ const optionBtnStyle = {
                 style={bigCardStyle}
               >
                 <div style={stack}>
-                  <div style={selectWrapStyle}>
-                    <select aria-label="Mode" value={mode} onChange={(e) => setMode(e.target.value)} style={selectStyle}>
-                      <option value="words">Words</option>
-                      <option value="sentences">Sentences</option>
-                    </select>
-                    <ChevronDown className="h-4 w-4" style={chevronStyle} />
-                  </div>
+                  
 
-                  <div style={selectWrapStyle}>
-                    <select
-                      aria-label="Difficulty"
-                      value={difficulty}
-                      onChange={(e) => setDifficulty(e.target.value)}
-                      style={selectStyle}
-                    >
-                      <option value="easy">Easy</option>
-                      <option value="medium">Medium</option>
-                      <option value="hard">Hard</option>
-                    </select>
-                    <ChevronDown className="h-4 w-4" style={chevronStyle} />
-                  </div>
 
-                  <div style={selectWrapStyle}>
-                    <select
-                      aria-label="Accent"
-                      value={accentUi}
-                      onChange={(e) => setAccentUi(e.target.value)}
-                      style={selectStyle}
-                    >
-                      <option value="en_us">American 🇺🇸</option>
-                      <option value="en_br">British 🇬🇧</option>
-                    </select>
-                    <ChevronDown className="h-4 w-4" style={chevronStyle} />
-                  </div>
+                 {/* Mode */}
+<button type="button" onClick={() => setPickerOpen("mode")} style={rowStyle}>
+  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <div
+      style={{
+        width: 28,
+        height: 28,
+        borderRadius: 10,
+        background: "#F3F4F6",
+        display: "grid",
+        placeItems: "center",
+        fontSize: 14,
+      }}
+      aria-hidden="true"
+    >
+      🟡
+    </div>
+
+    <div style={rowLeftStyle}>
+      <div style={rowLabelStyle}>Mode</div>
+      <div style={rowValueStyle}>{labelFor(mode, MODE_OPTIONS)}</div>
+    </div>
+  </div>
+
+  <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
+</button>
+
+{/* Difficulty */}
+<button type="button" onClick={() => setPickerOpen("difficulty")} style={rowStyle}>
+  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <div
+      style={{
+        width: 28,
+        height: 28,
+        borderRadius: 10,
+        background: "#F3F4F6",
+        display: "grid",
+        placeItems: "center",
+        fontSize: 14,
+      }}
+      aria-hidden="true"
+    >
+      🟠
+    </div>
+
+    <div style={rowLeftStyle}>
+      <div style={rowLabelStyle}>Difficulty</div>
+      <div style={rowValueStyle}>{labelFor(difficulty, DIFF_OPTIONS)}</div>
+    </div>
+  </div>
+
+  <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
+</button>
+
+{/* Accent */}
+<button type="button" onClick={() => setPickerOpen("accent")} style={rowStyle}>
+  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <div
+      style={{
+        width: 28,
+        height: 28,
+        borderRadius: 10,
+        background: "#F3F4F6",
+        display: "grid",
+        placeItems: "center",
+        fontSize: 14,
+      }}
+      aria-hidden="true"
+    >
+      🟢
+    </div>
+
+    <div style={rowLeftStyle}>
+      <div style={rowLabelStyle}>Accent</div>
+      <div style={rowValueStyle}>{labelFor(accentUi, ACCENT_OPTIONS)}</div>
+    </div>
+  </div>
+
+  <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
+</button>
+
 
                   <button type="button" onClick={onStart} style={startBtnStyle}>
                     Start
