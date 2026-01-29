@@ -918,10 +918,10 @@ function onNext() {
 const rowStyle = {
   height: 56,
   width: "100%",
-  borderRadius: 16,
+  borderRadius: 14,
   padding: "0 16px",
-  background: LIGHT_SURFACE,
-  border: `1px solid ${LIGHT_BORDER}`,
+  background: "#F3F4F6",
+  border: "none",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -1043,10 +1043,11 @@ const optionBtnStyle = {
   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
 
 
-    <div style={rowLeftStyle}>
-      <div style={rowLabelStyle}>Difficulty</div>
-      <div style={rowValueStyle}>{labelFor(difficulty, DIFF_OPTIONS)}</div>
-    </div>
+ <div style={rowLeftStyle}>
+  <div style={rowValueStyle}>{labelFor(difficulty, DIFF_OPTIONS)}</div>
+</div>
+
+
   </div>
 
   <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
@@ -1055,10 +1056,10 @@ const optionBtnStyle = {
 {/* Accent */}
 <button type="button" onClick={() => setPickerOpen("accent")} style={rowStyle}>
   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-    <div style={rowLeftStyle}>
-      <div style={rowLabelStyle}>Accent</div>
-      <div style={rowValueStyle}>{labelFor(accentUi, ACCENT_OPTIONS)}</div>
-    </div>
+   <div style={rowLeftStyle}>
+  <div style={rowValueStyle}>{labelFor(accentUi, ACCENT_OPTIONS)}</div>
+</div>
+
   </div>
 
   <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
