@@ -4,7 +4,7 @@ import { Trash2, Send, Gift } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import { getReferralCode, getReferralCount, getProStatus } from "../lib/api.js";
 
-const FEEDBACK_EMAIL = "jonas@fluentup.app";
+const FEEDBACK_EMAIL = "admin@fluentup.app";
 const APP_URL = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
 
 /* ---------- UI helpers ---------- */

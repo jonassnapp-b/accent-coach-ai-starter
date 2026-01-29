@@ -1,6 +1,7 @@
 // src/pages/ProgressiveSentenceMastery.jsx
 import React, { useMemo, useEffect, useRef, useState } from "react";
 import { useSettings } from "../lib/settings-store.jsx";
+import { useLocation } from "react-router-dom";
 import {
   LEVELS,
   getLevelConfig,
@@ -159,12 +160,22 @@ function base64ToBlobUrl(b64, mime) {
 
 const CLEARS_PER_LEVEL_UP = 5;
 const CLEARS_KEY = "ac_psm_clears_in_level_v1";
+// Weakness → Practice payload (sessionStorage fallback)
+const PRACTICE_QUEUE_KEY = "ac_practice_queue_v1";      // JSON: string[]
+const PRACTICE_START_KEY = "ac_practice_start_idx_v1";  // string/number (optional)
+const WEAKNESS_PHONEME_KEY = "ac_weakness_focus_phoneme"; // already used by WeaknessLab
 
 
 /* ---------------- component ---------------- */
 
 export default function ProgressiveSentenceMastery() {
   const { settings } = useSettings();
+  const location = useLocation();
+
+// If set, we are in "Practice mode" (launched from Weakest Sounds)
+const [practiceQueue, setPracticeQueue] = useState(null); // array of sentences
+const [practiceIdx, setPracticeIdx] = useState(0);
+
   // Keep TTS <audio> volume in sync with global settings
   useEffect(() => {
     const a = ttsAudioRef.current;
@@ -834,6 +845,7 @@ const url = base64ToBlobUrl(b64, mime);
   // auto-next + auto-level-up
   useEffect(() => {
   if (!passed) return;
+  if (Array.isArray(practiceQueue) && practiceQueue.length) return;
 
   // auto-advance: same as manual next
   
@@ -1647,10 +1659,82 @@ function ProgressRingMini({ pct, color }) {
       <path d="M8 21h8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
+useEffect(() => {
+  // 1) Prefer navigation state
+  let q = location?.state?.practiceQueue;
+  let startIndex = location?.state?.startIndex;
+
+  // 2) Fallback: sessionStorage payload (WeaknessLab can store it)
+  if (!Array.isArray(q) || !q.length) {
+    try {
+      const raw = sessionStorage.getItem(PRACTICE_QUEUE_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(parsed) && parsed.length) q = parsed;
+
+      const s = sessionStorage.getItem(PRACTICE_START_KEY);
+      if (s != null && s !== "") startIndex = Number(s);
+    } catch {}
+  }
+
+  // If we still don't have a queue, do nothing (stay in normal mode)
+  if (!Array.isArray(q) || !q.length) return;
+
+  const start =
+    Number.isFinite(startIndex)
+      ? Math.max(0, Math.min(q.length - 1, startIndex))
+      : 0;
+
+  setPracticeQueue(q);
+  setPracticeIdx(start);
+
+  // reset UI state like a fresh session
+  historyRef.current = q.slice(0, start); // so "prev" works immediately
+  setPrevSentence(start > 0 ? q[start - 1] : null);
+  setNextSentence(start < q.length - 1 ? q[start + 1] : " ");
+  setCardIndex(1);
+
+  setResult(null);
+  setErr("");
+  setSelectedWordIdx(null);
+
+  setWordScores([]);
+  setTargetWordIdx(0);
+
+  setSentence(q[start]);
+
+  // optional: clear after consuming so it doesn't re-trigger forever
+  try {
+    sessionStorage.removeItem(PRACTICE_QUEUE_KEY);
+    sessionStorage.removeItem(PRACTICE_START_KEY);
+  } catch {}
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [location?.key]);
+
 
   const statusText = isRecording ? "Listening…" : loading ? "Analyzing…" : "Ready";
 function goNextManual() {
-  // allow next even if not all green
+  // PRACTICE MODE (queue)
+  if (Array.isArray(practiceQueue) && practiceQueue.length) {
+    if (practiceIdx >= practiceQueue.length - 1) return;
+
+    const nextIdx = practiceIdx + 1;
+    historyRef.current.push(sentence);
+
+    setResult(null);
+    setErr("");
+    setSelectedWordIdx(null);
+
+    setPracticeIdx(nextIdx);
+    setSentence(practiceQueue[nextIdx]);
+
+    setPrevSentence(practiceQueue[nextIdx - 1] || null);
+    setNextSentence(nextIdx < practiceQueue.length - 1 ? practiceQueue[nextIdx + 1] : " ");
+    setCardIndex(1);
+    return;
+  }
+
+  // NORMAL MODE (sentence bank)
   historyRef.current.push(sentence);
 
   advanceSentence(levelId);
@@ -1660,34 +1744,50 @@ function goNextManual() {
   setSentence(getNextSentence(levelId));
 }
 
+
 function goPrevManual() {
+  // PRACTICE MODE (queue)
+  if (Array.isArray(practiceQueue) && practiceQueue.length) {
+    if (practiceIdx <= 0) return;
+
+    const prevIdx = practiceIdx - 1;
+
+    // keep history in sync
+    historyRef.current.pop();
+
+    setResult(null);
+    setErr("");
+    setSelectedWordIdx(null);
+
+    setPracticeIdx(prevIdx);
+    setSentence(practiceQueue[prevIdx]);
+
+    setPrevSentence(prevIdx > 0 ? practiceQueue[prevIdx - 1] : null);
+    setNextSentence(practiceQueue[prevIdx + 1] || " ");
+    setCardIndex(1);
+    return;
+  }
+
+  // NORMAL MODE (sentence bank)
   if (!historyRef.current.length) return;
 
-  // move the bank pointer back
   backSentence(levelId);
 
-  // pop sentence we’re going back to
   const prev = historyRef.current.pop();
-
-  // compute what should be on the left AFTER going back
   const leftPeek =
     historyRef.current.length ? historyRef.current[historyRef.current.length - 1] : null;
 
-  // update UI state
   setResult(null);
   setErr("");
   setSelectedWordIdx(null);
 
-  // IMPORTANT: force prev peek state immediately (prevents stale left card)
   setPrevSentence(leftPeek);
-
-  // keep "Next" peek consistent
   setNextSentence(" ");
   setCardIndex(1);
 
-  // now set the sentence
   setSentence(prev);
 }
+
 
 
 function onCardPointerDown(e) {
@@ -2163,7 +2263,9 @@ WebkitUserDrag: "none",
   >
     <div style={{ fontSize: 13, fontWeight: 900, color: "rgba(0,0,0,0.35)" }}>Next</div>
     <div style={{ marginTop: 18, fontSize: 22, fontWeight: 900, color: "rgba(17,24,39,0.70)" }}>
-  Next →
+  {Array.isArray(practiceQueue) && practiceQueue.length
+  ? (practiceQueue[practiceIdx + 1] || "Next →")
+  : "Next →"}
 </div>
 
     <div style={{ marginTop: 14, fontSize: 12, fontWeight: 800, color: "rgba(0,0,0,0.35)" }}>

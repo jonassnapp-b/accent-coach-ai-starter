@@ -76,8 +76,7 @@ function PracticeGate() {
 const TABS = [
   { path: "/coach",  label: "Talk",     Icon: MessageCircle, element: <Coach /> },
   { path: "/record", label: "Practice", Icon: Mic, element: <PracticeGate /> },
-  { path: "/imitate",  label: "Coach",     Icon: AudioWaveform,  element: <ProgressiveSentenceMastery /> },
-  { path: "/weakness", label: "Weakness",  Icon: Target,    element: <WeaknessLab /> },
+    { path: "/weakness", label: "Weakness",  Icon: Target,    element: <WeaknessLab /> },
   { path: "/settings", label: "Settings",  Icon: SettingsIcon, element: <Settings /> },
 ];
 
@@ -203,6 +202,8 @@ function AppInner() {
 {TABS.map((t) => (
   <Route key={t.path} path={t.path} element={t.element} />
 ))}
+{/* Hidden route (NOT a tab) */}
+<Route path="/imitate" element={<ProgressiveSentenceMastery />} />
 
 {/* Feedback (NOT a tab) */}
 <Route path="/feedback" element={<Feedback />} />
@@ -227,9 +228,9 @@ function AppInner() {
               onTouchStart={() => prefetchRoute(t.path)}
               // 👇 NYT: stempler et "user gesture" tidspunkt for Imitate/Speak
               onClick={() => {
-                if (t.path === "/imitate" || t.path === "/coach") {
-                  sessionStorage.setItem("ac_last_nav_click", String(Date.now()));
-                }
+              if (t.path === "/coach") {
+  sessionStorage.setItem("ac_last_nav_click", String(Date.now()));
+}
               }}
               className={({ isActive }) => "tabbtn" + (isActive ? " active" : "")}
             >

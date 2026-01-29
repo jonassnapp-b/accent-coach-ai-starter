@@ -63,6 +63,73 @@ function phonemeColor(pct) {
   if (v >= 65) return "rgba(255,152,0,0.95)";
   return "rgba(211,47,47,0.92)";
 }
+// -------- Practice sentence bank (temporary local) --------
+// Key format: raw phoneme like "TH", "R", "AE", "JH" (no slashes)
+const PRACTICE_BANK = {
+  TH: [
+    "I think this is the best thing to do.",
+    "Thank you for thinking about it.",
+    "Three things are worth thinking through.",
+    "The thought of it makes me smile.",
+    "They threw the thing into the trash.",
+    "This theory is tough to explain.",
+    "I thought they were there already.",
+    "That was the third time this month.",
+    "I think the truth is out there.",
+    "They thanked me for the thoughtful gift.",
+  ],
+  DH: [
+    "This is the one that they chose.",
+    "Those are the things that matter.",
+    "They were there the whole time.",
+    "That’s the idea they had.",
+    "These are the days that feel long.",
+    "I know that they did their best.",
+    "Those people were there too.",
+    "This is the way they do it.",
+  ],
+  R: [
+    "I really want to improve my pronunciation.",
+    "The red car is parked right there.",
+    "Try to relax your tongue and breathe.",
+    "The room is ready for recording.",
+    "I heard the right word clearly.",
+    "Bring the paper over here.",
+  ],
+  L: [
+    "I like learning languages a lot.",
+    "Please listen closely and repeat.",
+    "Let’s look at the last line.",
+    "I will follow the plan carefully.",
+    "The little details matter.",
+  ],
+  AE: [
+    "The cat sat back on the mat.",
+    "That habit can happen fast.",
+    "I had a bad day and felt sad.",
+    "Pack the bag and catch the cab.",
+    "The app had a crash and lagged.",
+  ],
+  IH: [
+    "This is a bit tricky at first.",
+    "I will sit and listen again.",
+    "It fits in the middle of the sentence.",
+    "Pick a simple sentence and repeat it.",
+    "This is the tip I needed.",
+  ],
+  IY: [
+    "I need to see the details clearly.",
+    "Please repeat the key piece slowly.",
+    "We keep the beat even and steady.",
+    "Feel the vowel and keep it clean.",
+  ],
+  JH: [
+    "I just joined a new project.",
+    "John and Jane jumped in.",
+    "The joke was gentle and short.",
+    "I enjoy learning pronunciation.",
+  ],
+};
 
 /* ------------ minimal ring (theme-safe) ------------ */
 function Ring({ value = 0, size = 34, stroke = 6 }) {
@@ -335,13 +402,38 @@ export default function WeaknessLab() {
 
     return sorted.slice(0, 40);
   }, [items, accent, hiddenMap, sortBy]);
+function getPracticeQueueForPhoneme(rawPhoneme) {
+  const p = String(rawPhoneme || "").trim().toUpperCase().replaceAll("/", "");
+  const q = PRACTICE_BANK[p];
+  if (Array.isArray(q) && q.length) return q;
 
-  function trainPhoneme(rawPhoneme) {
-    try {
-      sessionStorage.setItem("ac_weakness_focus_phoneme", String(rawPhoneme || ""));
-    } catch {}
-    navigate("/record", { state: { seedText: "" } });
-  }
+  // fallback if no bank exists yet
+  return [
+    "I hear this ending.",
+    "Repeat the sentence clearly.",
+    "Focus on the target sound.",
+    "Try again with a slower pace.",
+    "Now say it one more time.",
+  ];
+}
+
+function trainPhoneme(rawPhoneme) {
+  const queue = getPracticeQueueForPhoneme(rawPhoneme);
+
+  // Optional: keep for debugging/analytics
+  try {
+    sessionStorage.setItem("ac_weakness_focus_phoneme", String(rawPhoneme || ""));
+  } catch {}
+
+  navigate("/imitate", {
+    state: {
+      practiceQueue: queue,
+      startIndex: 0,
+      focusPhoneme: String(rawPhoneme || ""),
+      accent,
+    },
+  });
+}
 
   function hidePhoneme(rawPhoneme, countNow = 0, pctNow = 0) {
     const p = String(rawPhoneme || "").trim();
@@ -520,10 +612,11 @@ export default function WeaknessLab() {
                 background: "var(--primary)",
                 color: "white",
               }}
-              title="Train"
-            >
-              Train
-            </motion.button>
+           title="Practice"
+>
+  Practice
+</motion.button>
+
           </div>
         </div>
       </button>
