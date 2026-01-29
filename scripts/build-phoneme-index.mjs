@@ -139,12 +139,16 @@ function buildIndexFromSentences(sentences) {
 
   const out = {};
   for (const [ph, m] of phonemeToSentenceScore.entries()) {
-    const arr = Array.from(m.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, MAX_PER_PHONEME)
-      .map(([sentence]) => sentence);
+   const arr = Array.from(m.entries())
+  // 🔴 KRAV: mindst 3 forekomster af phonemet
+  .filter(([, count]) => count >= 3)
+  // 🔴 SORTÉR hårdest først
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, MAX_PER_PHONEME)
+  .map(([sentence]) => sentence);
 
-    out[ph] = arr;
+out[ph] = arr;
+
   }
 
   return out;
