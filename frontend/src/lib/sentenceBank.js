@@ -316,3 +316,60 @@ export function resetLevel(levelId) {
   state.byLevel[id].i = 0;
   saveState(state);
 }
+
+// --- For build-time phoneme indexing ---
+// --- For build-time phoneme indexing (deterministic corpus) ---
+export function getAllSentences({ perLevel = 1200 } = {}) {
+  // Generates a stable set of sentences per level by iterating indices.
+  // No localStorage mutation. Deterministic for a given sessionSeed.
+
+  const sessionSeed = getSessionSeed();
+  const out = [];
+
+  for (const lvl of LEVELS) {
+    const id = lvl.id;
+
+    for (let i = 0; i < perLevel; i++) {
+      const rng = rngFor(`${id}|${i}|psm_v3|${sessionSeed}`);
+
+      // generate one sentence using the same logic as getNextSentence (but without state)
+      let pickedSentence = null;
+
+      for (let t = 0; t < 12; t++) {
+        const group = pick(rng, lvl.mix);
+        const tpl = pick(rng, TEMPLATES[group] || TEMPLATES.basic);
+        const s = fill(rng, tpl);
+
+        const [minW, maxW] = lvl.targetLen;
+        const words = wc(s);
+
+        if (/\bthis\s+this\b/i.test(s)) continue;
+        if (/\byou're\s+wanna\b/i.test(s)) continue;
+
+        if (words >= minW && words <= maxW) {
+          pickedSentence = s;
+          break;
+        }
+      }
+
+      if (!pickedSentence) {
+        pickedSentence = fill(rng, pick(rng, TEMPLATES.basic));
+      }
+
+      out.push(pickedSentence);
+    }
+  }
+
+  // Deduplicate while preserving order
+  const seen = new Set();
+  const deduped = [];
+  for (const s of out) {
+    const k = String(s).trim();
+    if (!k) continue;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    deduped.push(k);
+  }
+
+  return deduped;
+}

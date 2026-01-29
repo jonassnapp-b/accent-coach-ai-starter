@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Trash2, Check, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
+import phonemeSentenceIndex from "../lib/phonemeSentenceIndex.json";
+
 
 /* ------------ API base (web + native) ------------ */
 function isNative() {
@@ -404,16 +406,26 @@ export default function WeaknessLab() {
   }, [items, accent, hiddenMap, sortBy]);
 function getPracticeQueueForPhoneme(rawPhoneme) {
   const p = String(rawPhoneme || "").trim().toUpperCase().replaceAll("/", "");
-  const q = PRACTICE_BANK[p];
-  if (Array.isArray(q) && q.length) return q;
 
-  // fallback if no bank exists yet
+  // 1) BEST: use precomputed index (heavy-phoneme sentences)
+  const indexed = phonemeSentenceIndex?.[p];
+  if (Array.isArray(indexed) && indexed.length) {
+    // “best but not slow”: 15 sentences feels strong without dragging
+    const shuffled = [...indexed].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 15);
+  }
+
+  // 2) fallback: your small local bank (if you keep it)
+  const q = PRACTICE_BANK?.[p];
+  if (Array.isArray(q) && q.length) return q.slice(0, 15);
+
+  // 3) final fallback
   return [
-    "I hear this ending.",
     "Repeat the sentence clearly.",
     "Focus on the target sound.",
     "Try again with a slower pace.",
     "Now say it one more time.",
+    "Keep the sound clean and short.",
   ];
 }
 

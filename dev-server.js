@@ -3,8 +3,26 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
+import { spawn } from "child_process";
+
+function run(cmd, args, opts = {}) {
+  return new Promise((resolve, reject) => {
+    const p = spawn(cmd, args, { stdio: "inherit", ...opts });
+    p.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`${cmd} exited ${code}`))));
+  });
+}
+
 
 dotenv.config();
+// Build phoneme -> sentence index before starting the server
+try {
+  await run("node", ["scripts/build-phoneme-index.mjs"]);
+  console.log("✅ phonemeSentenceIndex.json generated");
+} catch (e) {
+  console.error("❌ build-phoneme-index failed:", e?.message || e);
+  // If you want to allow dev-server to start even if the index build fails, comment out next line.
+  process.exit(1);
+}
 
 const app = express();
 app.use(cors());
