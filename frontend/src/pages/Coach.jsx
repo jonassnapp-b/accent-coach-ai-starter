@@ -162,6 +162,26 @@ function normalizeWordsFromResult(result, fallbackText) {
   const parts = text.split(/\s+/g).filter(Boolean);
   return parts.map((w) => ({ word: w, phonemes: [] }));
 }
+const MODE_OPTIONS = [
+  { value: "words", label: "Words" },
+  { value: "sentences", label: "Sentences" },
+];
+
+const DIFF_OPTIONS = [
+  { value: "easy", label: "Easy" },
+  { value: "medium", label: "Medium" },
+  { value: "hard", label: "Hard" },
+];
+
+const ACCENT_OPTIONS = [
+  { value: "en_us", label: "American 🇺🇸" },
+  { value: "en_br", label: "British 🇬🇧" },
+];
+
+function labelFor(value, options) {
+  const hit = (options || []).find((o) => o.value === value);
+  return hit ? hit.label : String(value || "");
+}
 
 /* ---------------- page ---------------- */
 export default function Coach() {
