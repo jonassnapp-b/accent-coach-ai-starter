@@ -911,6 +911,32 @@ function labelFor(value, options) {
     maxWidth: 520,
     margin: "0 auto",
   };
+const selectWrapStyle = {
+  position: "relative",
+  width: "100%",
+};
+
+const selectStyle = {
+  height: 56,
+  width: "100%",
+  borderRadius: 16,
+  padding: "0 44px 0 16px",
+  background: LIGHT_SURFACE,
+  border: `1px solid ${LIGHT_BORDER}`,
+  color: LIGHT_TEXT,
+  fontWeight: 900,
+  outline: "none",
+  appearance: "none",
+};
+
+const chevronStyle = {
+  position: "absolute",
+  right: 16,
+  top: "50%",
+  transform: "translateY(-50%)",
+  color: LIGHT_MUTED,
+  pointerEvents: "none",
+};
 
   const stack = { display: "grid", gap: 30 };
 
