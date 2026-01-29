@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { Trash2, Check, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
-import phonemeSentenceIndex from "../lib/phonemeSentenceIndex.json";
 
 
 /* ------------ API base (web + native) ------------ */
