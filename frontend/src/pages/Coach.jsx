@@ -901,6 +901,33 @@ function onNext() {
 
 
   /* ---------------- styles ---------------- */
+  const listRowStyle = {
+  position: "relative",
+  height: 52,
+  borderRadius: 12,
+  background: "#F3F4F6", // 🔴 matcher billedet
+  padding: "0 16px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  fontWeight: 900,
+  color: "rgba(17,24,39,0.9)",
+};
+
+const nativeOverlaySelect = {
+  position: "absolute",
+  inset: 0,
+  width: "100%",
+  height: "100%",
+  opacity: 0,
+  cursor: "pointer",
+  border: "none",
+  background: "transparent",
+  appearance: "none",
+  WebkitAppearance: "none",
+  MozAppearance: "none",
+};
+
   const bigCardStyle = {
     background: LIGHT_SURFACE,
     border: `1px solid ${LIGHT_BORDER}`,
@@ -1054,143 +1081,55 @@ const optionBtnStyle = {
       transition={{ duration: 0.18 }}
       style={bigCardStyle}
     >
-      <div style={stack}>
-      <AnimatePresence mode="wait">
-  {stage === "setup" ? (
-    <motion.div
-      key="setup"
-      initial={{ opacity: 0, y: 10, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -8, scale: 0.98 }}
-      transition={{ duration: 0.18 }}
-      style={bigCardStyle}
+    <div style={{ display: "grid", gap: 12 }}>
+  {/* Mode */}
+  <div style={listRowStyle}>
+    <span>{labelFor(mode, MODE_OPTIONS)}</span>
+    <ChevronDown size={18} />
+    <select
+      value={mode}
+      onChange={(e) => setMode(e.target.value)}
+      style={nativeOverlaySelect}
     >
-      <div style={stack}>
-        {/* Row 1: Mode (looks like button row, opens native select) */}
-        <div style={{ ...rowStyle, position: "relative" }}>
-          <div style={{ fontWeight: 900, color: LIGHT_TEXT, fontSize: 14 }}>
-            {labelFor(mode, MODE_OPTIONS)}
-          </div>
+      <option value="words">Words</option>
+      <option value="sentences">Sentences</option>
+    </select>
+  </div>
 
-          <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
-
-          <select
-            aria-label="Mode"
-            value={mode}
-            onChange={(e) => setMode(e.target.value)}
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              opacity: 0,
-              cursor: "pointer",
-              border: "none",
-              background: "transparent",
-              appearance: "none",
-              WebkitAppearance: "none",
-              MozAppearance: "none",
-            }}
-          >
-            <option value="words">Words</option>
-            <option value="sentences">Sentences</option>
-          </select>
-        </div>
-
-        {/* Row 2: Difficulty */}
-        <div style={{ ...rowStyle, position: "relative" }}>
-          <div style={{ fontWeight: 900, color: LIGHT_TEXT, fontSize: 14 }}>
-            {labelFor(difficulty, DIFF_OPTIONS)}
-          </div>
-
-          <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
-
-          <select
-            aria-label="Difficulty"
-            value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value)}
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              opacity: 0,
-              cursor: "pointer",
-              border: "none",
-              background: "transparent",
-              appearance: "none",
-              WebkitAppearance: "none",
-              MozAppearance: "none",
-            }}
-          >
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-          </select>
-        </div>
-
-        {/* Row 3: Accent */}
-        <div style={{ ...rowStyle, position: "relative" }}>
-          <div style={{ fontWeight: 900, color: LIGHT_TEXT, fontSize: 14 }}>
-            {labelFor(accentUi, ACCENT_OPTIONS)}
-          </div>
-
-          <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
-
-          <select
-            aria-label="Accent"
-            value={accentUi}
-            onChange={(e) => setAccentUi(e.target.value)}
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              opacity: 0,
-              cursor: "pointer",
-              border: "none",
-              background: "transparent",
-              appearance: "none",
-              WebkitAppearance: "none",
-              MozAppearance: "none",
-            }}
-          >
-            <option value="en_us">American 🇺🇸</option>
-            <option value="en_br">British 🇬🇧</option>
-          </select>
-        </div>
-
-        <button type="button" onClick={onStart} style={startBtnStyle}>
-          Start
-        </button>
-      </div>
-    </motion.div>
-  ) : (
-    <motion.div
-      key="flow"
-      initial={{ opacity: 0, y: 10, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -8, scale: 0.98 }}
-      transition={{ duration: 0.18 }}
-      style={{
-        background: LIGHT_SURFACE,
-        border: `1px solid ${LIGHT_BORDER}`,
-        borderRadius: 22,
-        boxShadow: LIGHT_SHADOW,
-        padding: 18,
-      }}
+  {/* Difficulty */}
+  <div style={listRowStyle}>
+    <span>{labelFor(difficulty, DIFF_OPTIONS)}</span>
+    <ChevronDown size={18} />
+    <select
+      value={difficulty}
+      onChange={(e) => setDifficulty(e.target.value)}
+      style={nativeOverlaySelect}
     >
-      {/* (din flow UI fortsætter her – behold resten som det er) */}
-      ...
-    </motion.div>
-  )}
-</AnimatePresence>
+      <option value="easy">Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+  </div>
 
+  {/* Accent */}
+  <div style={listRowStyle}>
+    <span>{labelFor(accentUi, ACCENT_OPTIONS)}</span>
+    <ChevronDown size={18} />
+    <select
+      value={accentUi}
+      onChange={(e) => setAccentUi(e.target.value)}
+      style={nativeOverlaySelect}
+    >
+      <option value="en_us">American 🇺🇸</option>
+      <option value="en_br">British 🇬🇧</option>
+    </select>
+  </div>
 
-        <button type="button" onClick={onStart} style={startBtnStyle}>
-          Start
-        </button>
-      </div>
+  <button type="button" onClick={onStart} style={startBtnStyle}>
+    Start
+  </button>
+</div>
+
     </motion.div>
   ) : (
     <motion.div
