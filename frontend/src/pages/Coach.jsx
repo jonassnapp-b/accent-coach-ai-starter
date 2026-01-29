@@ -182,6 +182,7 @@ export default function Coach() {
   const [mode, setMode] = useState("words"); // words | sentences
   const [difficulty, setDifficulty] = useState("easy"); // easy | medium | hard
   const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
+const [pickerOpen, setPickerOpen] = useState(null); // "mode" | "difficulty" | "accent" | null
 
   useEffect(() => {
     setAccentUi(settings?.accentDefault || "en_us");
@@ -878,7 +879,26 @@ function onNext() {
   setWordsOpen(false);
 
   }
+const MODE_OPTIONS = [
+  { value: "words", label: "Words" },
+  { value: "sentences", label: "Sentences" },
+];
 
+const DIFF_OPTIONS = [
+  { value: "easy", label: "Easy" },
+  { value: "medium", label: "Medium" },
+  { value: "hard", label: "Hard" },
+];
+
+const ACCENT_OPTIONS = [
+  { value: "en_us", label: "American 🇺🇸" },
+  { value: "en_br", label: "British 🇬🇧" },
+];
+
+function labelFor(value, options) {
+  const hit = options.find((o) => o.value === value);
+  return hit ? hit.label : String(value || "");
+}
 
   /* ---------------- styles ---------------- */
   const bigCardStyle = {
@@ -894,31 +914,65 @@ function onNext() {
 
   const stack = { display: "grid", gap: 30 };
 
-  const selectWrapStyle = { position: "relative", width: "100%" };
+const rowStyle = {
+  height: 56,
+  width: "100%",
+  borderRadius: 16,
+  padding: "0 16px",
+  background: LIGHT_SURFACE,
+  border: `1px solid ${LIGHT_BORDER}`,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  cursor: "pointer",
+};
 
-  const selectStyle = {
-    height: 48,
-    borderRadius: 16,
-    padding: "0 14px",
-    fontWeight: 900,
-    color: LIGHT_TEXT,
-    background: LIGHT_SURFACE,
-    border: `1px solid ${LIGHT_BORDER}`,
-    outline: "none",
-    cursor: "pointer",
-    appearance: "none",
-    paddingRight: 40,
-    width: "100%",
-  };
+const rowLeftStyle = { display: "grid", gap: 2 };
+const rowLabelStyle = { fontWeight: 950, color: LIGHT_TEXT, fontSize: 14 };
+const rowValueStyle = { fontWeight: 900, color: LIGHT_MUTED, fontSize: 12 };
 
-  const chevronStyle = {
-    position: "absolute",
-    right: 12,
-    top: "50%",
-    transform: "translateY(-50%)",
-    color: LIGHT_MUTED,
-    pointerEvents: "none",
-  };
+const sheetOverlayStyle = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.22)",
+  zIndex: 10000,
+  display: "grid",
+  alignItems: "end",
+};
+
+const sheetStyle = {
+  background: "#fff",
+  borderTopLeftRadius: 22,
+  borderTopRightRadius: 22,
+  border: `1px solid ${LIGHT_BORDER}`,
+  boxShadow: "0 -10px 24px rgba(0,0,0,0.10)",
+  padding: 14,
+  paddingBottom: 18,
+};
+
+const sheetTitleStyle = {
+  fontWeight: 950,
+  color: LIGHT_TEXT,
+  fontSize: 14,
+  textAlign: "center",
+  padding: "8px 0",
+};
+
+const optionBtnStyle = {
+  width: "100%",
+  height: 52,
+  borderRadius: 16,
+  border: `1px solid ${LIGHT_BORDER}`,
+  background: "#fff",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: "0 14px",
+  fontWeight: 950,
+  cursor: "pointer",
+};
+
 
   const startBtnStyle = {
     height: 46,
@@ -1005,6 +1059,81 @@ function onNext() {
                   <button type="button" onClick={onStart} style={startBtnStyle}>
                     Start
                   </button>
+                  <AnimatePresence>
+  {pickerOpen ? (
+    <motion.div
+      key="pickerOverlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      style={sheetOverlayStyle}
+      onClick={() => setPickerOpen(null)}
+    >
+      <motion.div
+        key="pickerSheet"
+        initial={{ y: 28, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 28, opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        style={sheetStyle}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={sheetTitleStyle}>
+          {pickerOpen === "mode" ? "Mode" : pickerOpen === "difficulty" ? "Difficulty" : "Accent"}
+        </div>
+
+        <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+          {(pickerOpen === "mode"
+            ? MODE_OPTIONS
+            : pickerOpen === "difficulty"
+            ? DIFF_OPTIONS
+            : ACCENT_OPTIONS
+          ).map((opt) => {
+            const isSelected =
+              (pickerOpen === "mode" && opt.value === mode) ||
+              (pickerOpen === "difficulty" && opt.value === difficulty) ||
+              (pickerOpen === "accent" && opt.value === accentUi);
+
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  if (pickerOpen === "mode") setMode(opt.value);
+                  if (pickerOpen === "difficulty") setDifficulty(opt.value);
+                  if (pickerOpen === "accent") setAccentUi(opt.value);
+                  setPickerOpen(null);
+                }}
+                style={optionBtnStyle}
+              >
+                <span>{opt.label}</span>
+                <span style={{ color: isSelected ? "#2196F3" : "transparent", fontWeight: 950 }}>✓</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setPickerOpen(null)}
+          style={{
+            marginTop: 12,
+            height: 46,
+            width: "100%",
+            borderRadius: 16,
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: "#fff",
+            fontWeight: 950,
+            cursor: "pointer",
+          }}
+        >
+          Cancel
+        </button>
+      </motion.div>
+    </motion.div>
+  ) : null}
+</AnimatePresence>
+
                 </div>
               </motion.div>
             ) : (
