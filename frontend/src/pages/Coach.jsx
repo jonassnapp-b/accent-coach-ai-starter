@@ -1055,48 +1055,137 @@ const optionBtnStyle = {
       style={bigCardStyle}
     >
       <div style={stack}>
-        {/* Mode */}
-        <div style={selectWrapStyle}>
+      <AnimatePresence mode="wait">
+  {stage === "setup" ? (
+    <motion.div
+      key="setup"
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.98 }}
+      transition={{ duration: 0.18 }}
+      style={bigCardStyle}
+    >
+      <div style={stack}>
+        {/* Row 1: Mode (looks like button row, opens native select) */}
+        <div style={{ ...rowStyle, position: "relative" }}>
+          <div style={{ fontWeight: 900, color: LIGHT_TEXT, fontSize: 14 }}>
+            {labelFor(mode, MODE_OPTIONS)}
+          </div>
+
+          <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
+
           <select
             aria-label="Mode"
             value={mode}
             onChange={(e) => setMode(e.target.value)}
-            style={selectStyle}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              opacity: 0,
+              cursor: "pointer",
+              border: "none",
+              background: "transparent",
+              appearance: "none",
+              WebkitAppearance: "none",
+              MozAppearance: "none",
+            }}
           >
             <option value="words">Words</option>
             <option value="sentences">Sentences</option>
           </select>
-          <ChevronDown className="h-4 w-4" style={chevronStyle} />
         </div>
 
-        {/* Difficulty */}
-        <div style={selectWrapStyle}>
+        {/* Row 2: Difficulty */}
+        <div style={{ ...rowStyle, position: "relative" }}>
+          <div style={{ fontWeight: 900, color: LIGHT_TEXT, fontSize: 14 }}>
+            {labelFor(difficulty, DIFF_OPTIONS)}
+          </div>
+
+          <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
+
           <select
             aria-label="Difficulty"
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
-            style={selectStyle}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              opacity: 0,
+              cursor: "pointer",
+              border: "none",
+              background: "transparent",
+              appearance: "none",
+              WebkitAppearance: "none",
+              MozAppearance: "none",
+            }}
           >
             <option value="easy">Easy</option>
             <option value="medium">Medium</option>
             <option value="hard">Hard</option>
           </select>
-          <ChevronDown className="h-4 w-4" style={chevronStyle} />
         </div>
 
-        {/* Accent */}
-        <div style={selectWrapStyle}>
+        {/* Row 3: Accent */}
+        <div style={{ ...rowStyle, position: "relative" }}>
+          <div style={{ fontWeight: 900, color: LIGHT_TEXT, fontSize: 14 }}>
+            {labelFor(accentUi, ACCENT_OPTIONS)}
+          </div>
+
+          <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
+
           <select
             aria-label="Accent"
             value={accentUi}
             onChange={(e) => setAccentUi(e.target.value)}
-            style={selectStyle}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              opacity: 0,
+              cursor: "pointer",
+              border: "none",
+              background: "transparent",
+              appearance: "none",
+              WebkitAppearance: "none",
+              MozAppearance: "none",
+            }}
           >
             <option value="en_us">American 🇺🇸</option>
             <option value="en_br">British 🇬🇧</option>
           </select>
-          <ChevronDown className="h-4 w-4" style={chevronStyle} />
         </div>
+
+        <button type="button" onClick={onStart} style={startBtnStyle}>
+          Start
+        </button>
+      </div>
+    </motion.div>
+  ) : (
+    <motion.div
+      key="flow"
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.98 }}
+      transition={{ duration: 0.18 }}
+      style={{
+        background: LIGHT_SURFACE,
+        border: `1px solid ${LIGHT_BORDER}`,
+        borderRadius: 22,
+        boxShadow: LIGHT_SHADOW,
+        padding: 18,
+      }}
+    >
+      {/* (din flow UI fortsætter her – behold resten som det er) */}
+      ...
+    </motion.div>
+  )}
+</AnimatePresence>
+
 
         <button type="button" onClick={onStart} style={startBtnStyle}>
           Start
