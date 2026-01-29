@@ -284,9 +284,42 @@ else setErr("Microphone access is blocked. Please allow it and try again.");
       fd.append("refText", text);
       fd.append("accent", accentUi === "en_br" ? "en_br" : "en_us");
 
-      const r = await fetch(`${base}/api/analyze-speech`, { method: "POST", body: fd });
-      const json = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
+      // ✅ HARD TIMEOUT so App Review never sees “infinite loading”
+const controller = new AbortController();
+const timeoutMs = 12000; // 12s (just enough for first-run, but prevents “indefinite”)
+const t = setTimeout(() => controller.abort(), timeoutMs);
+
+let r;
+let json = {};
+
+try {
+  r = await fetch(`${base}/api/analyze-speech`, {
+    method: "POST",
+    body: fd,
+    signal: controller.signal,
+  });
+
+  // IMPORTANT: always clear timeout once we got a response
+  clearTimeout(t);
+
+  // Guard: server might return non-JSON on error
+  const ct = r.headers?.get("content-type") || "";
+  if (ct.includes("application/json")) {
+    json = await r.json().catch(() => ({}));
+  } else {
+    const txt = await r.text().catch(() => "");
+    json = txt ? { error: txt } : {};
+  }
+
+  if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
+} catch (e) {
+  clearTimeout(t);
+
+  if (e?.name === "AbortError") {
+    throw new Error("Analysis timed out. Please try again.");
+  }
+  throw e;
+}
 
       // streak + confetti/sfx (kept)
       try {
@@ -596,7 +629,7 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
               fontSize: 12,
             }}
           >
-            {isRecording ? "Recording…" : isAnalyzing ? "Analyzing…" : " "}
+            {isRecording ? "Recording…" : isAnalyzing ? "Analyzing… (first run may take up to 15 seconds)" : " "}
           </div>
         </div>
       </div>
