@@ -938,7 +938,7 @@ function onNext() {
     padding: "0 14px",
     fontWeight: 900,
     color: LIGHT_TEXT,
-    background: LIGHT_SURFACE,
+    background: "rgba(17,24,39,0.04)",
     border: `1px solid ${LIGHT_BORDER}`,
     outline: "none",
     cursor: "pointer",
