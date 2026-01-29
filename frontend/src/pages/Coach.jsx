@@ -162,26 +162,6 @@ function normalizeWordsFromResult(result, fallbackText) {
   const parts = text.split(/\s+/g).filter(Boolean);
   return parts.map((w) => ({ word: w, phonemes: [] }));
 }
-const MODE_OPTIONS = [
-  { value: "words", label: "Words" },
-  { value: "sentences", label: "Sentences" },
-];
-
-const DIFF_OPTIONS = [
-  { value: "easy", label: "Easy" },
-  { value: "medium", label: "Medium" },
-  { value: "hard", label: "Hard" },
-];
-
-const ACCENT_OPTIONS = [
-  { value: "en_us", label: "American 🇺🇸" },
-  { value: "en_br", label: "British 🇬🇧" },
-];
-
-function labelFor(value, options) {
-  const hit = (options || []).find((o) => o.value === value);
-  return hit ? hit.label : String(value || "");
-}
 
 /* ---------------- page ---------------- */
 export default function Coach() {
@@ -202,6 +182,7 @@ export default function Coach() {
   const [mode, setMode] = useState("words"); // words | sentences
   const [difficulty, setDifficulty] = useState("easy"); // easy | medium | hard
   const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
+const [pickerOpen, setPickerOpen] = useState(null); // "mode" | "difficulty" | "accent" | null
 
   useEffect(() => {
     setAccentUi(settings?.accentDefault || "en_us");
@@ -901,33 +882,6 @@ function onNext() {
 
 
   /* ---------------- styles ---------------- */
-  const listRowStyle = {
-  position: "relative",
-  height: 52,
-  borderRadius: 12,
-  background: "#F3F4F6", // 🔴 matcher billedet
-  padding: "0 16px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  fontWeight: 900,
-  color: "rgba(17,24,39,0.9)",
-};
-
-const nativeOverlaySelect = {
-  position: "absolute",
-  inset: 0,
-  width: "100%",
-  height: "100%",
-  opacity: 0,
-  cursor: "pointer",
-  border: "none",
-  background: "transparent",
-  appearance: "none",
-  WebkitAppearance: "none",
-  MozAppearance: "none",
-};
-
   const bigCardStyle = {
     background: LIGHT_SURFACE,
     border: `1px solid ${LIGHT_BORDER}`,
@@ -940,40 +894,6 @@ const nativeOverlaySelect = {
   };
 
   const stack = { display: "grid", gap: 30 };
-  const selectWrapStyle = {
-  position: "relative",
-  height: 56,
-  width: "100%",
-  borderRadius: 16,
-  background: LIGHT_SURFACE,
-  border: `1px solid ${LIGHT_BORDER}`,
-  display: "flex",
-  alignItems: "center",
-};
-
-const selectStyle = {
-  appearance: "none",
-  WebkitAppearance: "none",
-  MozAppearance: "none",
-  width: "100%",
-  height: "100%",
-  border: "none",
-  outline: "none",
-  background: "transparent",
-  padding: "0 44px 0 16px",
-  fontWeight: 900,
-  color: LIGHT_TEXT,
-  fontSize: 14,
-  cursor: "pointer",
-};
-
-const chevronStyle = {
-  position: "absolute",
-  right: 14,
-  pointerEvents: "none",
-  color: LIGHT_MUTED,
-};
-
 
 const rowStyle = {
   height: 56,
@@ -1072,108 +992,269 @@ const optionBtnStyle = {
       >
         <LayoutGroup>
           <AnimatePresence mode="wait">
-  {stage === "setup" ? (
+            {stage === "setup" ? (
+              <motion.div
+                key="setup"
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ duration: 0.18 }}
+                style={bigCardStyle}
+              >
+                <div style={stack}>
+                  
+
+
+                 {/* Mode */}
+<button type="button" onClick={() => setPickerOpen("mode")} style={rowStyle}>
+  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+   
+
+    <div style={rowLeftStyle}>
+            <div style={rowValueStyle}>{labelFor(mode, MODE_OPTIONS)}</div>
+    </div>
+  </div>
+
+  <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
+</button>
+
+{/* Difficulty */}
+<button type="button" onClick={() => setPickerOpen("difficulty")} style={rowStyle}>
+  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+
+
+    <div style={rowLeftStyle}>
+      <div style={rowLabelStyle}>Difficulty</div>
+      <div style={rowValueStyle}>{labelFor(difficulty, DIFF_OPTIONS)}</div>
+    </div>
+  </div>
+
+  <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
+</button>
+
+{/* Accent */}
+<button type="button" onClick={() => setPickerOpen("accent")} style={rowStyle}>
+  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <div style={rowLeftStyle}>
+      <div style={rowLabelStyle}>Accent</div>
+      <div style={rowValueStyle}>{labelFor(accentUi, ACCENT_OPTIONS)}</div>
+    </div>
+  </div>
+
+  <ChevronDown className="h-5 w-5" style={{ color: LIGHT_MUTED, transform: "rotate(-90deg)" }} />
+</button>
+
+
+                  <button type="button" onClick={onStart} style={startBtnStyle}>
+                    Start
+                  </button>
+                  <AnimatePresence>
+  {pickerOpen ? (
     <motion.div
-      key="setup"
-      initial={{ opacity: 0, y: 10, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -8, scale: 0.98 }}
-      transition={{ duration: 0.18 }}
-      style={bigCardStyle}
+      key="pickerOverlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      style={sheetOverlayStyle}
+      onClick={() => setPickerOpen(null)}
     >
-    <div style={{ display: "grid", gap: 12 }}>
-  {/* Mode */}
-  <div style={listRowStyle}>
-    <span>{labelFor(mode, MODE_OPTIONS)}</span>
-    <ChevronDown size={18} />
-    <select
-      value={mode}
-      onChange={(e) => setMode(e.target.value)}
-      style={nativeOverlaySelect}
-    >
-      <option value="words">Words</option>
-      <option value="sentences">Sentences</option>
-    </select>
-  </div>
+      <motion.div
+        key="pickerSheet"
+        initial={{ y: 28, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 28, opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        style={sheetStyle}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={sheetTitleStyle}>
+          {pickerOpen === "mode" ? "Mode" : pickerOpen === "difficulty" ? "Difficulty" : "Accent"}
+        </div>
 
-  {/* Difficulty */}
-  <div style={listRowStyle}>
-    <span>{labelFor(difficulty, DIFF_OPTIONS)}</span>
-    <ChevronDown size={18} />
-    <select
-      value={difficulty}
-      onChange={(e) => setDifficulty(e.target.value)}
-      style={nativeOverlaySelect}
-    >
-      <option value="easy">Easy</option>
-      <option value="medium">Medium</option>
-      <option value="hard">Hard</option>
-    </select>
-  </div>
+        <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+          {(pickerOpen === "mode"
+            ? MODE_OPTIONS
+            : pickerOpen === "difficulty"
+            ? DIFF_OPTIONS
+            : ACCENT_OPTIONS
+          ).map((opt) => {
+            const isSelected =
+              (pickerOpen === "mode" && opt.value === mode) ||
+              (pickerOpen === "difficulty" && opt.value === difficulty) ||
+              (pickerOpen === "accent" && opt.value === accentUi);
 
-  {/* Accent */}
-  <div style={listRowStyle}>
-    <span>{labelFor(accentUi, ACCENT_OPTIONS)}</span>
-    <ChevronDown size={18} />
-    <select
-      value={accentUi}
-      onChange={(e) => setAccentUi(e.target.value)}
-      style={nativeOverlaySelect}
-    >
-      <option value="en_us">American 🇺🇸</option>
-      <option value="en_br">British 🇬🇧</option>
-    </select>
-  </div>
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  if (pickerOpen === "mode") setMode(opt.value);
+                  if (pickerOpen === "difficulty") setDifficulty(opt.value);
+                  if (pickerOpen === "accent") setAccentUi(opt.value);
+                  setPickerOpen(null);
+                }}
+                style={optionBtnStyle}
+              >
+                <span>{opt.label}</span>
+                <span style={{ color: isSelected ? "#2196F3" : "transparent", fontWeight: 950 }}>✓</span>
+              </button>
+            );
+          })}
+        </div>
 
-  <button type="button" onClick={onStart} style={startBtnStyle}>
-    Start
-  </button>
-</div>
-
-    </motion.div>
-  ) : (
-    <motion.div
-      key="flow"
-      initial={{ opacity: 0, y: 10, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -8, scale: 0.98 }}
-      transition={{ duration: 0.18 }}
-      style={{
-        background: LIGHT_SURFACE,
-        border: `1px solid ${LIGHT_BORDER}`,
-        borderRadius: 22,
-        boxShadow: LIGHT_SHADOW,
-        padding: 18,
-      }}
-    >
-      {/* 👇 ALT dit nuværende "flow"-indhold skal blive her, uændret */}
-      {/* Start med Back-knappen og resten af flow UI */}
-      <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10 }}>
         <button
           type="button"
-          onClick={onBack}
-          disabled={isBusy}
+          onClick={() => setPickerOpen(null)}
           style={{
-            height: 38,
-            padding: "0 12px",
-            borderRadius: 14,
+            marginTop: 12,
+            height: 46,
+            width: "100%",
+            borderRadius: 16,
             border: `1px solid ${LIGHT_BORDER}`,
-            background: LIGHT_SURFACE,
-            fontWeight: 900,
-            color: LIGHT_TEXT,
-            cursor: isBusy ? "not-allowed" : "pointer",
-            opacity: isBusy ? 0.6 : 1,
+            background: "#fff",
+            fontWeight: 950,
+            cursor: "pointer",
           }}
         >
-          Back
+          Cancel
         </button>
-      </div>
-
-      {/* ... resten af din flow JSX (target, mic, status osv.) ... */}
+      </motion.div>
     </motion.div>
-  )}
+  ) : null}
 </AnimatePresence>
 
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="flow"
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ duration: 0.18 }}
+                style={{
+                  background: LIGHT_SURFACE,
+                  border: `1px solid ${LIGHT_BORDER}`,
+                  borderRadius: 22,
+                  boxShadow: LIGHT_SHADOW,
+                  padding: 18,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10 }}>
+                  <button
+                    type="button"
+                    onClick={onBack}
+                    disabled={isBusy}
+                    style={{
+                      height: 38,
+                      padding: "0 12px",
+                      borderRadius: 14,
+                      border: `1px solid ${LIGHT_BORDER}`,
+                      background: LIGHT_SURFACE,
+                      fontWeight: 900,
+                      color: LIGHT_TEXT,
+                      cursor: isBusy ? "not-allowed" : "pointer",
+                      opacity: isBusy ? 0.6 : 1,
+                    }}
+                  >
+                    Back
+                  </button>
+                </div>
+
+                <motion.div
+                  style={{ textAlign: "center", fontWeight: 900, fontSize: 22 }}
+                  animate={isSpeakingTarget ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+                  transition={isSpeakingTarget ? { duration: 0.55, ease: "easeOut" } : { duration: 0.12 }}
+                >
+                  <span style={{ position: "relative", display: "inline-block", padding: "2px 10px", borderRadius: 14 }}>
+                    {isSpeakingTarget ? (
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          position: "absolute",
+                          inset: -12,
+                          borderRadius: 18,
+                          background: "rgba(33,150,243,0.14)",
+                          filter: "blur(12px)",
+                          zIndex: 0,
+                        }}
+                      />
+                    ) : null}
+                    <span
+  style={{
+    position: "relative",
+    zIndex: 1,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 10,
+  }}
+>
+  <span>{target || "—"}</span>
+
+  <button
+    type="button"
+    onClick={toggleCorrectTts}
+    disabled={!String(target).trim()}
+    title="Play pronunciation"
+    style={{
+      width: 34,
+      height: 34,
+      borderRadius: 12,
+      border: `1px solid ${LIGHT_BORDER}`,
+      background: "#fff",
+      display: "grid",
+      placeItems: "center",
+      cursor: String(target).trim() ? "pointer" : "not-allowed",
+      opacity: String(target).trim() ? 1 : 0.6,
+    }}
+  >
+    <Volume2 className="h-5 w-5" />
+  </button>
+</span>
+                  </span>
+                </motion.div>
+
+                <div style={{ display: "grid", placeItems: "center", marginTop: 52 }}>
+                <motion.div
+  key="mic"
+  initial={{ opacity: 0, y: 6, scale: 0.98 }}
+  animate={{ opacity: 1, y: 0, scale: 1 }}
+  transition={{ duration: 0.18 }}
+>
+  <button
+    type="button"
+    onClick={toggleRecord}
+    disabled={isAnalyzing || !target}
+    title={isRecording ? "Stop" : "Record"}
+    style={{
+      width: 52,
+      height: 52,
+      borderRadius: 18,
+      border: "none",
+      background: isRecording ? "#111827" : BTN_BLUE,
+      display: "grid",
+      placeItems: "center",
+      cursor: isAnalyzing ? "not-allowed" : "pointer",
+      opacity: isAnalyzing ? 0.6 : 1,
+    }}
+  >
+    {isRecording ? (
+      <StopCircle className="h-6 w-6" style={{ color: "white" }} />
+    ) : (
+      <Mic className="h-6 w-6" style={{ color: "white" }} />
+    )}
+  </button>
+</motion.div>
+
+
+
+                  <div style={{ marginTop: 10, minHeight: 18, color: LIGHT_MUTED, fontWeight: 800, fontSize: 12 }}>
+                    {isRecording ? "Recording…" : isAnalyzing ? "Analyzing…" : status || " "}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* ✅ Overlay-only: appears after we have result */}
           {stage === "flow" && result ? (
