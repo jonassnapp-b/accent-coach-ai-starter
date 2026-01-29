@@ -406,19 +406,10 @@ export default function WeaknessLab() {
 function getPracticeQueueForPhoneme(rawPhoneme) {
   const p = String(rawPhoneme || "").trim().toUpperCase().replaceAll("/", "");
 
-  // 1) BEST: use precomputed index (heavy-phoneme sentences)
-  const indexed = phonemeSentenceIndex?.[p];
-  if (Array.isArray(indexed) && indexed.length) {
-    // “best but not slow”: 15 sentences feels strong without dragging
-    const shuffled = [...indexed].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 15);
-  }
-
-  // 2) fallback: your small local bank (if you keep it)
   const q = PRACTICE_BANK?.[p];
   if (Array.isArray(q) && q.length) return q.slice(0, 15);
 
-  // 3) final fallback
+  // final fallback
   return [
     "Repeat the sentence clearly.",
     "Focus on the target sound.",
@@ -427,6 +418,7 @@ function getPracticeQueueForPhoneme(rawPhoneme) {
     "Keep the sound clean and short.",
   ];
 }
+
 
 function trainPhoneme(rawPhoneme) {
   const queue = getPracticeQueueForPhoneme(rawPhoneme);
