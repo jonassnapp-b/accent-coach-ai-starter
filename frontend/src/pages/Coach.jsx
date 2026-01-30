@@ -248,16 +248,6 @@ const correctTextRef = useRef("");
   // pop effect while the target is spoken
   const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
 
-useEffect(() => {
-  if (!expandedTip?.code) return;
-
-  const words = getExamplesForPhoneme(expandedTip.code);
-  if (!words.length) return;
-
-  // ✅ Prefetch the first N example words so first click is instant
-  prefetchExampleTts(words.slice(0, 10));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [expandedTip?.code, accentUi]);
 
 
   useEffect(() => {
