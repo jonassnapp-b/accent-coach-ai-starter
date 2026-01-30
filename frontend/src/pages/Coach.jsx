@@ -1175,17 +1175,21 @@ function renderTipCard(tip) {
           type="button"
           onClick={() => toggleOverlayAudio(tip.assets.audioSrc, "phoneme")}
           style={{
-            height: 44,
-            borderRadius: 16,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: "#fff",
-            fontWeight: 950,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            cursor: "pointer",
-          }}
+  height: 44,
+  width: "100%",          // ✅ gør den lang
+  padding: "0 14px",      // ✅ samme feel som før
+  borderRadius: 16,
+  border: `1px solid ${LIGHT_BORDER}`,
+  background: "#fff",
+  fontWeight: 950,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 10,
+  cursor: "pointer",
+}}
+
+
         >
           <Volume2 className="h-5 w-5" />
           Play sound
