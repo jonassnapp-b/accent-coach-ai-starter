@@ -233,6 +233,9 @@ const micStreamRef = useRef(null);
 
   // overlay phoneme audio player
   const overlayAudioRef = useRef(null);
+  const exampleAudioRef = useRef(null);
+const exampleUrlRef = useRef(null);
+
 // play/pause state for the big play buttons
 const [isUserPlaying, setIsUserPlaying] = useState(false);
 const [isCorrectPlaying, setIsCorrectPlaying] = useState(false);
@@ -889,6 +892,48 @@ async function toggleCorrectTts() {
 
     a.play().catch(() => {});
   } catch {}
+}
+async function playExampleTts(word) {
+  const w = String(word || "").trim();
+  if (!w) return;
+
+  try {
+    // stop previous example audio
+    if (!exampleAudioRef.current) exampleAudioRef.current = new Audio();
+    const a = exampleAudioRef.current;
+
+    try { a.pause(); } catch {}
+    try { a.currentTime = 0; } catch {}
+
+    // cleanup old object url
+    try {
+      if (exampleUrlRef.current) URL.revokeObjectURL(exampleUrlRef.current);
+    } catch {}
+    exampleUrlRef.current = null;
+
+    const base = getApiBase();
+    const r = await fetch(`${base}/api/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: w, accent: accentUi, rate: 1.0 })
+    });
+    if (!r.ok) return;
+
+    const buf = await r.arrayBuffer();
+    const blob = new Blob([buf], { type: "audio/wav" });
+    const url = URL.createObjectURL(blob);
+    exampleUrlRef.current = url;
+
+    a.src = url;
+    a.volume = settings?.soundEnabled === false ? 0 : 1;
+    a.play().catch(() => {});
+  } catch {}
+}
+
+function getExamplesForPhoneme(code) {
+  const c = String(code || "").trim().toUpperCase();
+  const arr = PHONEME_EXAMPLES?.[c];
+  return Array.isArray(arr) ? arr : [];
 }
 
 function onTryAgain() {
@@ -1581,38 +1626,36 @@ return rowExpandedTip ? (
                   Play sound
                 </button>
               ) : null}
-              {PHONEME_EXAMPLES[expandedTip.code]?.length ? (
-  <div style={{ marginTop: 10, textAlign: "center" }}>
-    <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_MUTED }}>
-      Example words
-    </div>
+  {getExamplesForPhoneme(expandedTip.code).length ? (
+  <div style={{ marginTop: 14 }}>
+    <div style={{ fontWeight: 950, fontSize: 14, color: LIGHT_TEXT }}>Examples</div>
 
-    <div
-      style={{
-        marginTop: 6,
-        display: "flex",
-        justifyContent: "center",
-        gap: 10,
-        flexWrap: "wrap",
-        fontWeight: 900,
-        fontSize: 14,
-      }}
-    >
-      {PHONEME_EXAMPLES[expandedTip.code].map((w) => (
-        <span
-          key={w}
+    <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+      {getExamplesForPhoneme(expandedTip.code).map((w) => (
+        <button
+          key={`${expandedTip.code}_${w}`}
+          type="button"
+          onClick={() => playExampleTts(w)}
           style={{
-            padding: "6px 10px",
-            borderRadius: 999,
-            background: "rgba(17,24,39,0.06)",
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: "#fff",
+            borderRadius: 14,
+            padding: "10px 12px",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            cursor: "pointer",
+            textAlign: "left",
           }}
         >
-          {w}
-        </span>
+          <Volume2 className="h-5 w-5" />
+          <span style={{ fontWeight: 900 }}>{w}</span>
+        </button>
       ))}
     </div>
   </div>
 ) : null}
+
 
             </div>
           ) : null}
