@@ -5,6 +5,7 @@ import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 import { ingestLocalPhonemeScores } from "../lib/localPhonemeStats.js";
+import PHONEME_EXAMPLES from "../data/phonemeExamples.json";
 
 const IS_PROD = !!import.meta?.env?.PROD;
 
@@ -1580,6 +1581,39 @@ return rowExpandedTip ? (
                   Play sound
                 </button>
               ) : null}
+              {PHONEME_EXAMPLES[expandedTip.code]?.length ? (
+  <div style={{ marginTop: 10, textAlign: "center" }}>
+    <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_MUTED }}>
+      Example words
+    </div>
+
+    <div
+      style={{
+        marginTop: 6,
+        display: "flex",
+        justifyContent: "center",
+        gap: 10,
+        flexWrap: "wrap",
+        fontWeight: 900,
+        fontSize: 14,
+      }}
+    >
+      {PHONEME_EXAMPLES[expandedTip.code].map((w) => (
+        <span
+          key={w}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 999,
+            background: "rgba(17,24,39,0.06)",
+          }}
+        >
+          {w}
+        </span>
+      ))}
+    </div>
+  </div>
+) : null}
+
             </div>
           ) : null}
         </div>
