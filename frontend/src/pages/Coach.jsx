@@ -159,6 +159,27 @@ function getPhonemeCode(p) {
   return String(p?.phoneme || p?.ipa || p?.symbol || "").trim().toUpperCase();
 }
 
+function getPhonemeLetters(p) {
+  // Only use what SpeechSuper actually provides — no guessing.
+  const v =
+    p?.letters ??
+    p?.grapheme ??
+    p?.graphemes ??
+    p?.text ??
+    p?.token ??
+    p?.char ??
+    p?.chars;
+
+  if (Array.isArray(v)) {
+    const s = v.map((x) => String(x || "").trim()).filter(Boolean).join("");
+    return s || null;
+  }
+
+  const s = String(v || "").trim();
+  return s || null;
+}
+
+
 function getScore(obj) {
   const v =
     obj?.accuracyScore ?? // ✅ foretræk 0–100 når den findes
@@ -885,15 +906,17 @@ const phonemeLineItems = useMemo(() => {
 
     const assets = resolvePhonemeAssets(code, accentUi);
 
-    out.push({
-      key: `${code}_${i}`,
-      code,
-      score: s,          // ✅ normalized (kun til farve/visuelt)
-      rawScore: raw,     // (hvis du senere vil bruge den)
-      assets,
-      hasImage: !!assets?.imgSrc,
-      hasTip: !!assets?.imgSrc && (s == null || !isGreen(s)), // ✅ baseret på normalized
-    });
+   out.push({
+  key: `${code}_${i}`,
+  code,
+  score: s,
+  rawScore: raw,
+  letters: getPhonemeLetters(p), // ✅ only if provided by API
+  assets,
+  hasImage: !!assets?.imgSrc,
+  hasTip: !!assets?.imgSrc && (s == null || !isGreen(s)),
+});
+
   }
 
   return out;
@@ -1260,6 +1283,39 @@ function renderTipCard(tip) {
           </button>
         </div>
       ) : null}
+
+            {/* Primary focus (weakest phoneme in the word) */}
+      {primaryWeakPhoneme && primaryTip ? (
+        <div
+          style={{
+            marginTop: 12,
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: "#fff",
+            borderRadius: 16,
+            padding: "10px 12px",
+            textAlign: "left",
+          }}
+        >
+          <div style={{ fontWeight: 950, fontSize: 13, color: "#111827" }}>
+            Primary focus:{" "}
+            <span style={{ color: scoreColor(primaryWeakPhoneme.score) }}>{primaryWeakPhoneme.code}</span>
+            {Number.isFinite(primaryWeakPhoneme.rawScore) ? (
+              <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}> · {Math.round(primaryWeakPhoneme.rawScore)}%</span>
+            ) : null}
+            {primaryWeakPhoneme.letters ? (
+              <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}>
+                {" "}
+                · from “{primaryWeakPhoneme.letters}”
+              </span>
+            ) : null}
+          </div>
+
+          <div style={{ marginTop: 6, fontSize: 13, fontWeight: 900, color: "rgba(17,24,39,0.80)" }}>
+            Try this: “{primaryTip.tryThis}”
+          </div>
+        </div>
+      ) : null}
+
 
 
       {getExamplesForPhoneme(tip.code).length ? (
@@ -1789,9 +1845,7 @@ function onNext() {
       Try this: “{primaryTip.tryThis}”
     </div>
 
-    <div style={{ marginTop: 6, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED }}>
-      (This is technique for the weakest phoneme — it doesn’t guess your exact mistake.)
-    </div>
+   
   </div>
 ) : null}
 
