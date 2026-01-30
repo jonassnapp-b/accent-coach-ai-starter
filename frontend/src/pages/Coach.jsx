@@ -1720,13 +1720,12 @@ function onNext() {
             </div>
           </div>
 
-          {!expandedTip ? (
-            <div style={{ marginTop: 10, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, textAlign: "center" }}>
-              Tap a phoneme above to see a tip.
-            </div>
-          ) : null}
+         <div style={{ marginTop: 10, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, textAlign: "center" }}>
+  Tap a phoneme above to see a tip.
+</div>
 
-          {expandedTip ? renderTipCard(expandedTip) : null}
+{expandedTip ? renderTipCard(expandedTip) : null}
+
         </>
       ) : (
         <div style={{ textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>
