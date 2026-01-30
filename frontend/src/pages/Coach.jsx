@@ -1573,11 +1573,17 @@ function onNext() {
               >
         
 
-{/* ---------- 3-card slider ---------- */}
+{/* ---------- 3-card slider (INNER CARD WRAPPER) ---------- */}
 <div
-  style={{ background: "transparent", border: "none", boxShadow: "none", padding: 0, borderRadius: 0 }}
-
+  style={{
+    background: "#fff",
+    borderRadius: 22,
+    padding: 16,
+    border: `1px solid ${LIGHT_BORDER}`,
+    boxShadow: LIGHT_SHADOW,
+  }}
 >
+
 
 
 
