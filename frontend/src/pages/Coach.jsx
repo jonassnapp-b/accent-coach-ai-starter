@@ -1672,25 +1672,38 @@ function onNext() {
   </div>
 )}
 
+/* ✅ CLOSE HEADER CARD HERE */
+</div>
+
+{/* ---------- 3-card slider ---------- */}
+<div
+  style={{
+    marginTop: 18,
+    background: "#fff",
+    borderRadius: 22,
+    padding: 16,
+    border: `1px solid ${LIGHT_BORDER}`,
+    boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+    display: "grid",
+    gap: 12,
+  }}
+>
+
+
+
 {/* ---------- 3-card slider ---------- */}
 <div style={{ marginTop: 18, display: "grid", gap: 12 }}>
   {/* Card content */}
   <AnimatePresence mode="wait">
 {overlayCardIdx === 0 ? (
-  <motion.div
-    key="card_tips"
-    initial={{ opacity: 0, x: 10, scale: 0.99 }}
-    animate={{ opacity: 1, x: 0, scale: 1 }}
-    exit={{ opacity: 0, x: -10, scale: 0.99 }}
-    transition={{ duration: 0.18 }}
-    style={{
-      background: "#fff",
-      borderRadius: 22,
-      padding: 16,
-      border: `1px solid ${LIGHT_BORDER}`,
-      boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
-    }}
-  >
+<motion.div
+  key="card_tips"
+  initial={{ opacity: 0, x: 10, scale: 0.99 }}
+  animate={{ opacity: 1, x: 0, scale: 1 }}
+  exit={{ opacity: 0, x: -10, scale: 0.99 }}
+  transition={{ duration: 0.18 }}
+>
+
     {/* Card 1: Tips (uses currentWordObj for BOTH words + sentences) */}
     {!currentWordObj ? (
       <div style={{ textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>
@@ -1767,20 +1780,14 @@ function onNext() {
 
 
     {overlayCardIdx === 1 ? (
-      <motion.div
-        key="card_playback"
-        initial={{ opacity: 0, x: 10, scale: 0.99 }}
-        animate={{ opacity: 1, x: 0, scale: 1 }}
-        exit={{ opacity: 0, x: -10, scale: 0.99 }}
-        transition={{ duration: 0.18 }}
-        style={{
-          background: "#fff",
-          borderRadius: 22,
-          padding: 16,
-          border: `1px solid ${LIGHT_BORDER}`,
-          boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
-        }}
-      >
+     <motion.div
+  key="card_playback"
+  initial={{ opacity: 0, x: 10, scale: 0.99 }}
+  animate={{ opacity: 1, x: 0, scale: 1 }}
+  exit={{ opacity: 0, x: -10, scale: 0.99 }}
+  transition={{ duration: 0.18 }}
+>
+
         {/* Card 2: You / Correct pronunciation */}
         <div style={{ display: "grid", gap: 28 }}>
           <div style={{ display: "grid", gap: 10 }}>
