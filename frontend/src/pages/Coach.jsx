@@ -1605,75 +1605,84 @@ function onNext() {
       <>
   {/* ✅ SENTENCE WORD LIST (borderless, colored by score; when opened -> hide other words) */}
 {isSentence ? (
-  <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
-    {(wordsOpen && safeWordIdx >= 0 ? [words[safeWordIdx]] : words).map((w, idx) => {
-      const realIdx = wordsOpen && safeWordIdx >= 0 ? safeWordIdx : idx;
+  <motion.div
+    layout
+    style={{ display: "grid", gap: 8, marginBottom: 10 }}
+  >
+    <AnimatePresence initial={false}>
+      {words.map((w, i) => {
+        const label = String(w?.word || w?.text || w?.name || "").trim();
+        if (!label) return null;
 
-      const label = String(w?.word || w?.text || w?.name || "").trim();
-      if (!label) return null;
+        const score = getScore(w);
+        const active = safeWordIdx === i;
 
-      const s = getScore(w);
-      const active = safeWordIdx === realIdx;
+        // ✅ when a word is open: only keep the selected one visible
+        const visible = !wordsOpen || active;
 
-      return (
-        <button
-          key={`sent_word_${realIdx}_${label}`}
-          type="button"
-          onClick={() => {
-            // toggle behavior:
-            // - if clicking active while open -> close list
-            // - else -> open this word and show feedback under it
-            if (wordsOpen && active) {
-              setWordsOpen(false);
-              setSelectedWordIdx(-1);
-              setExpandedPhonemeKey(null);
-              return;
-            }
+        if (!visible) return null;
 
-            setSelectedWordIdx(realIdx);
-            setWordsOpen(true);
+        return (
+          <motion.button
+            key={`sent_word_${i}_${label}`}
+            layout
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.18 }}
+            type="button"
+            onClick={() => {
+              // ✅ toggle open/close on same word
+              if (active && wordsOpen) {
+                setWordsOpen(false);
+                setSelectedWordIdx(-1);
+                setExpandedPhonemeKey(null);
+                return;
+              }
 
-            const firstTipKey = getFirstTipKeyForWord(w);
-            setExpandedPhonemeKey(firstTipKey || null);
-          }}
-          style={{
-            width: "100%",
-            border: "none",              // ✅ no border (screenshot 3)
-            background: "transparent",    // ✅ no card background
-            padding: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            cursor: "pointer",
-          }}
-        >
-          <span
+              setSelectedWordIdx(i);
+              setWordsOpen(true);
+
+              const firstTipKey = getFirstTipKeyForWord(w);
+              setExpandedPhonemeKey(firstTipKey || null);
+            }}
             style={{
-              fontSize: 44,
-              lineHeight: 1.05,
-              fontWeight: 900,
-              color: s == null ? "rgba(17,24,39,0.35)" : scoreColor(s), // ✅ colored by word score
-              opacity: active || !wordsOpen ? 1 : 0.6,
-              textAlign: "left",
+              width: "100%",
+              border: "none",             // ✅ no border
+              background: "transparent",   // ✅ no card background
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              cursor: "pointer",
+              overflow: "hidden",
             }}
           >
-            {label}
-          </span>
+            <span
+              style={{
+                fontSize: 44,
+                lineHeight: 1.05,
+                fontWeight: 900,
+                color: active ? scoreColor(score) : "rgba(17,24,39,0.45)",
+                textAlign: "left",
+              }}
+            >
+              {label}
+            </span>
 
-          <ChevronDown
-            className="h-5 w-5"
-            style={{
-              color: "rgba(17,24,39,0.35)",
-              transform: wordsOpen && active ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "transform 0.12s ease",
-              flex: "0 0 auto",
-            }}
-          />
-        </button>
-      );
-    })}
-  </div>
+            <motion.div
+              animate={{ rotate: active && wordsOpen ? 180 : 0 }}
+              transition={{ duration: 0.12 }}
+              style={{ flex: "0 0 auto", color: "rgba(17,24,39,0.45)" }}
+            >
+              <ChevronDown className="h-5 w-5" />
+            </motion.div>
+          </motion.button>
+        );
+      })}
+    </AnimatePresence>
+  </motion.div>
 ) : null}
 
 
@@ -1683,7 +1692,13 @@ function onNext() {
   <>
     {/* Word score (compact) */}
     {wordOnlyResult ? (
-      <PhonemeFeedback result={wordOnlyResult} embed={true} hideBookmark={true} mode="wordOnly" />
+      <PhonemeFeedback
+  result={wordOnlyResult}
+  embed={true}
+  hideBookmark={true}
+  mode="wordOnly"
+  hidePhonemeHeader={true}
+/>
     ) : null}
 
     {/* Phonemes */}
