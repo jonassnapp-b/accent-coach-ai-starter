@@ -733,32 +733,23 @@ setOverlayCardIdx(0);
 setIsUserPlaying(false);
 setIsCorrectPlaying(false);
 
-// ✅ default: auto-open first tip (words + sentences)
 const wordsArr = Array.isArray(payload?.words) ? payload.words : [];
 const sentenceLike = (mode === "sentences") || (wordsArr.length > 1);
 
 if (sentenceLike) {
-  setWordsOpen(true);
-
-  // ✅ open first word automatically
-  setSelectedWordIdx(0);
-
-  // ✅ auto-expand first tip in first word (if any)
-  const firstWord = wordsArr[0];
-  const firstTipKey = getFirstTipKeyForWord(firstWord);
-  setExpandedPhonemeKey(firstTipKey || null);
+  // ✅ Start as list (like screenshot 3): show all words, no feedback yet
+  setWordsOpen(false);
+  setSelectedWordIdx(-1);
+  setExpandedPhonemeKey(null);
 } else {
+  // single word mode: keep showing tips UI
   setWordsOpen(false);
   setSelectedWordIdx(0);
 
-  // ✅ auto-expand first tip in single word (if any)
   const onlyWord = wordsArr[0] || null;
   const firstTipKey = getFirstTipKeyForWord(onlyWord);
   setExpandedPhonemeKey(firstTipKey || null);
 }
-
-
-
 
       const rawOverall =
   json?.overall ??
@@ -1612,21 +1603,34 @@ function onNext() {
       </div>
     ) : (
       <>
-      {/* ✅ SENTENCE WORD LIST (restore old sentences UI like screenshot 4) */}
+  {/* ✅ SENTENCE WORD LIST (borderless, colored by score; when opened -> hide other words) */}
 {isSentence ? (
   <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
-    {words.map((w, i) => {
+    {(wordsOpen && safeWordIdx >= 0 ? [words[safeWordIdx]] : words).map((w, idx) => {
+      const realIdx = wordsOpen && safeWordIdx >= 0 ? safeWordIdx : idx;
+
       const label = String(w?.word || w?.text || w?.name || "").trim();
       if (!label) return null;
 
-      const active = safeWordIdx === i;
+      const s = getScore(w);
+      const active = safeWordIdx === realIdx;
 
       return (
         <button
-          key={`sent_word_${i}_${label}`}
+          key={`sent_word_${realIdx}_${label}`}
           type="button"
           onClick={() => {
-            setSelectedWordIdx(i);
+            // toggle behavior:
+            // - if clicking active while open -> close list
+            // - else -> open this word and show feedback under it
+            if (wordsOpen && active) {
+              setWordsOpen(false);
+              setSelectedWordIdx(-1);
+              setExpandedPhonemeKey(null);
+              return;
+            }
+
+            setSelectedWordIdx(realIdx);
             setWordsOpen(true);
 
             const firstTipKey = getFirstTipKeyForWord(w);
@@ -1634,10 +1638,9 @@ function onNext() {
           }}
           style={{
             width: "100%",
-            borderRadius: 18,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: "#fff",
-            padding: "14px 14px",
+            border: "none",              // ✅ no border (screenshot 3)
+            background: "transparent",    // ✅ no card background
+            padding: 0,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -1647,10 +1650,11 @@ function onNext() {
         >
           <span
             style={{
-              fontSize: 44,            // ✅ big words like screenshot 4
+              fontSize: 44,
               lineHeight: 1.05,
               fontWeight: 900,
-              color: active ? "#111827" : "rgba(17,24,39,0.45)",
+              color: s == null ? "rgba(17,24,39,0.35)" : scoreColor(s), // ✅ colored by word score
+              opacity: active || !wordsOpen ? 1 : 0.6,
               textAlign: "left",
             }}
           >
@@ -1660,8 +1664,8 @@ function onNext() {
           <ChevronDown
             className="h-5 w-5"
             style={{
-              color: "rgba(17,24,39,0.45)",
-              transform: active ? "rotate(180deg)" : "rotate(0deg)",
+              color: "rgba(17,24,39,0.35)",
+              transform: wordsOpen && active ? "rotate(180deg)" : "rotate(0deg)",
               transition: "transform 0.12s ease",
               flex: "0 0 auto",
             }}
@@ -1671,6 +1675,7 @@ function onNext() {
     })}
   </div>
 ) : null}
+
 
         {/* Word score (compact) */}
        {/* ✅ Only show tips UI when: words mode OR user selected a word in sentences */}
@@ -1728,16 +1733,16 @@ function onNext() {
       </div>
     </div>
 
-    {/* Tip area */}
-    {tipItems.length ? (
-      expandedTip ? (
-        renderTipCard(expandedTip)
-      ) : (
-        <div style={{ marginTop: 12, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, textAlign: "center" }}>
-          Tap a phoneme above to see a tip.
-        </div>
-      )
-    ) : null}
+{/* ✅ Hint always directly under phoneme line (words + sentences) */}
+{!expandedTip ? (
+  <div style={{ marginTop: 10, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, textAlign: "center" }}>
+    Tap a phoneme above to see a tip.
+  </div>
+) : null}
+
+{/* Tip card */}
+{expandedTip ? renderTipCard(expandedTip) : null}
+
   </>
 ) : (
   <div style={{ textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>
