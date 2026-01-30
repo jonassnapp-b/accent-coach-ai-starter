@@ -1597,176 +1597,152 @@ function onNext() {
 >
 
     {/* Card 1: Tips (uses currentWordObj for BOTH words + sentences) */}
-    {!currentWordObj ? (
-      <div style={{ textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>
-        {isSentence ? "Select a word above to see tips." : "No data."}
-      </div>
-    ) : (
-      <>
-  {/* ✅ SENTENCE WORD LIST (borderless, colored by score; when opened -> hide other words) */}
-{isSentence ? (
-  <motion.div
-    layout
-    style={{ display: "grid", gap: 8, marginBottom: 10 }}
-  >
-    <AnimatePresence initial={false}>
-      {words.map((w, i) => {
-        const label = String(w?.word || w?.text || w?.name || "").trim();
-        if (!label) return null;
+{/* Card 1: Tips */}
+<>
+  {/* ✅ sentence word list ALWAYS visible */}
+  {isSentence ? (
+    <motion.div layout style={{ display: "grid", gap: 8, marginBottom: 10 }}>
+      <AnimatePresence initial={false}>
+        {words.map((w, i) => {
+          const label = String(w?.word || w?.text || w?.name || "").trim();
+          if (!label) return null;
 
-        const score = getScore(w);
-        const active = safeWordIdx === i;
+          const score = getScore(w);
+          const active = safeWordIdx === i;
+          const visible = !wordsOpen || active;
+          if (!visible) return null;
 
-        // ✅ when a word is open: only keep the selected one visible
-        const visible = !wordsOpen || active;
-
-        if (!visible) return null;
-
-        return (
-          <motion.button
-            key={`sent_word_${i}_${label}`}
-            layout
-            initial={{ opacity: 0, height: 0, marginTop: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.18 }}
-            type="button"
-            onClick={() => {
-              // ✅ toggle open/close on same word
-              if (active && wordsOpen) {
-                setWordsOpen(false);
-                setSelectedWordIdx(-1);
-                setExpandedPhonemeKey(null);
-                return;
-              }
-
-              setSelectedWordIdx(i);
-              setWordsOpen(true);
-
-              const firstTipKey = getFirstTipKeyForWord(w);
-              setExpandedPhonemeKey(firstTipKey || null);
-            }}
-            style={{
-              width: "100%",
-              border: "none",             // ✅ no border
-              background: "transparent",   // ✅ no card background
-              padding: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              cursor: "pointer",
-              overflow: "hidden",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 44,
-                lineHeight: 1.05,
-                fontWeight: 900,
-                color: active ? scoreColor(score) : "rgba(17,24,39,0.45)",
-                textAlign: "left",
-              }}
-            >
-              {label}
-            </span>
-
-            <motion.div
-              animate={{ rotate: active && wordsOpen ? 180 : 0 }}
-              transition={{ duration: 0.12 }}
-              style={{ flex: "0 0 auto", color: "rgba(17,24,39,0.45)" }}
-            >
-              <ChevronDown className="h-5 w-5" />
-            </motion.div>
-          </motion.button>
-        );
-      })}
-    </AnimatePresence>
-  </motion.div>
-) : null}
-
-
-        {/* Word score (compact) */}
-       {/* ✅ Only show tips UI when: words mode OR user selected a word in sentences */}
-{(!isSentence || wordsOpen) ? (
-  <>
-    {/* Word score (compact) */}
-    {wordOnlyResult ? (
-      <PhonemeFeedback
-  result={wordOnlyResult}
-  embed={true}
-  hideBookmark={true}
-  mode="wordOnly"
-  hidePhonemeHeader={true}
-/>
-    ) : null}
-
-    {/* Phonemes */}
-    <div style={{ marginTop: 12, textAlign: "center" }}>
-      <div
-        style={{
-          display: "inline-flex",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          gap: 10,
-          alignItems: "baseline",
-        }}
-      >
-        <span style={{ fontSize: 20, fontWeight: 950, color: "#111827", marginRight: 6 }}>Phonemes:</span>
-
-        {phonemeLineItems.length ? (
-          phonemeLineItems.map((it) => (
-            <button
-              key={`tip_ph_${it.key}`}
+          return (
+            <motion.button
+              key={`sent_word_${i}_${label}`}
+              layout
+              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.18 }}
               type="button"
               onClick={() => {
-                if (it.hasTip) setExpandedPhonemeKey(it.key);
-                else setExpandedPhonemeKey(null);
+                if (active && wordsOpen) {
+                  setWordsOpen(false);
+                  setSelectedWordIdx(-1);
+                  setExpandedPhonemeKey(null);
+                  return;
+                }
+                setSelectedWordIdx(i);
+                setWordsOpen(true);
+                const firstTipKey = getFirstTipKeyForWord(w);
+                setExpandedPhonemeKey(firstTipKey || null);
               }}
-              disabled={!it.hasTip}
-              title={it.hasTip ? "Select for tip" : it.hasImage ? "No tip needed (green)" : "No image available"}
               style={{
+                width: "100%",
                 border: "none",
                 background: "transparent",
                 padding: 0,
-                cursor: it.hasTip ? "pointer" : "default",
-                fontSize: 20,
-                fontWeight: 950,
-                color: scoreColor(it.score),
-                textDecoration: it.hasImage ? "underline" : "none",
-                textUnderlineOffset: 6,
-                textDecorationThickness: 3,
-                opacity: it.hasTip ? 1 : 0.65,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                cursor: "pointer",
+                overflow: "hidden",
               }}
             >
-              {it.code}
-            </button>
-          ))
-        ) : (
-          <span style={{ fontSize: 20, fontWeight: 900, color: LIGHT_MUTED }}>—</span>
-        )}
-      </div>
-    </div>
+              <span
+                style={{
+                  fontSize: 44,
+                  lineHeight: 1.05,
+                  fontWeight: 900,
+                  color: active ? scoreColor(score) : "rgba(17,24,39,0.45)",
+                  textAlign: "left",
+                }}
+              >
+                {label}
+              </span>
 
-{/* ✅ Hint always directly under phoneme line (words + sentences) */}
-{!expandedTip ? (
-  <div style={{ marginTop: 10, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, textAlign: "center" }}>
-    Tap a phoneme above to see a tip.
-  </div>
-) : null}
+              <motion.div
+                animate={{ rotate: active && wordsOpen ? 180 : 0 }}
+                transition={{ duration: 0.12 }}
+                style={{ flex: "0 0 auto", color: "rgba(17,24,39,0.45)" }}
+              >
+                <ChevronDown className="h-5 w-5" />
+              </motion.div>
+            </motion.button>
+          );
+        })}
+      </AnimatePresence>
+    </motion.div>
+  ) : null}
 
-{/* Tip card */}
-{expandedTip ? renderTipCard(expandedTip) : null}
+  {/* ✅ If no selected word yet (sentences), show nothing (NOT the message) */}
+  {!currentWordObj ? (
+    isSentence ? null : (
+      <div style={{ textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>No data.</div>
+    )
+  ) : (
+    <>
+      {(!isSentence || wordsOpen) ? (
+        <>
+          {wordOnlyResult ? (
+            <PhonemeFeedback
+              result={wordOnlyResult}
+              embed={true}
+              hideBookmark={true}
+              mode="wordOnly"
+            />
+          ) : null}
 
-  </>
-) : (
-  <div style={{ textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>
-    Select a word above to see tips.
-  </div>
-)}
+          {/* Phonemes */}
+          <div style={{ marginTop: 12, textAlign: "center" }}>
+            <div style={{ display: "inline-flex", flexWrap: "wrap", justifyContent: "center", gap: 10, alignItems: "baseline" }}>
+              <span style={{ fontSize: 20, fontWeight: 950, color: "#111827", marginRight: 6 }}>Phonemes:</span>
 
-      </>
-    )}
+              {phonemeLineItems.length ? (
+                phonemeLineItems.map((it) => (
+                  <button
+                    key={`tip_ph_${it.key}`}
+                    type="button"
+                    onClick={() => setExpandedPhonemeKey(it.hasTip ? it.key : null)}
+                    disabled={!it.hasTip}
+                    title={it.hasTip ? "Select for tip" : it.hasImage ? "No tip needed (green)" : "No image available"}
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      padding: 0,
+                      cursor: it.hasTip ? "pointer" : "default",
+                      fontSize: 20,
+                      fontWeight: 950,
+                      color: scoreColor(it.score),
+                      textDecoration: it.hasImage ? "underline" : "none",
+                      textUnderlineOffset: 6,
+                      textDecorationThickness: 3,
+                      opacity: it.hasTip ? 1 : 0.65,
+                    }}
+                  >
+                    {it.code}
+                  </button>
+                ))
+              ) : (
+                <span style={{ fontSize: 20, fontWeight: 900, color: LIGHT_MUTED }}>—</span>
+              )}
+            </div>
+          </div>
+
+          {!expandedTip ? (
+            <div style={{ marginTop: 10, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, textAlign: "center" }}>
+              Tap a phoneme above to see a tip.
+            </div>
+          ) : null}
+
+          {expandedTip ? renderTipCard(expandedTip) : null}
+        </>
+      ) : (
+        <div style={{ textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>
+          Select a word above to see tips.
+        </div>
+      )}
+    </>
+  )}
+</>
+
   </motion.div>
 ) : null}
 
