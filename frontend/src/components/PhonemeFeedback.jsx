@@ -634,10 +634,12 @@ export default function PhonemeFeedback({
   result,
   embed = false,
   hideBookmark = false,
+  hideWordHeader = false, // ✅ NEW (default false)
   onRetry,
   mode = "full",
   onFocus, // ✅ add back (kun callback)
 }) {
+
   const { settings } = useSettings();
   
     // --- Global volume (0..1) ---
@@ -1401,25 +1403,25 @@ useEffect(() => {
 
 
 function WordOnly() {
-  return (
-   <div
-  className="pf-hero-word"
-  style={{
-    color: ui.textStrong,
-  }}
->
- <span style={{ display: "inline-block", whiteSpace: "nowrap" }}>
-  {letterSegments?.length
-    ? letterSegments.map((seg) => (
-        <span key={seg.key} style={{ color: scoreToColor01(seg.s01 ?? 0) }}>
-          {seg.text}
-        </span>
-      ))
-    : wordText}
-</span>
-</div>
-
+return (
+    <div
+      className="pf-hero-word"
+      style={{
+        color: ui.textStrong,
+      }}
+    >
+      <span style={{ display: "inline-block", whiteSpace: "nowrap" }}>
+        {letterSegments?.length
+          ? letterSegments.map((seg) => (
+              <span key={seg.key} style={{ color: scoreToColor01(seg.s01 ?? 0) }}>
+                {seg.text}
+              </span>
+            ))
+          : wordText}
+      </span>
+    </div>
   );
+
 }
 
 

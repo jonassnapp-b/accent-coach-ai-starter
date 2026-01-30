@@ -1138,7 +1138,7 @@ function renderTipCard(tip) {
     <div
       style={{ background: "transparent", border: "none", boxShadow: "none", padding: 0, borderRadius: 0 }}
     >
-      <div style={{ display: "grid", placeItems: "center" }}>
+      <div style={{ display: "grid", placeItems: "center", marginTop: 16 }}>
         <img
           src={tip.assets.imgSrc}
           alt={tip.code}
@@ -1675,12 +1675,14 @@ function onNext() {
       {(!isSentence || wordsOpen) ? (
         <>
           {wordOnlyResult ? (
-            <PhonemeFeedback
-              result={wordOnlyResult}
-              embed={true}
-              hideBookmark={true}
-              mode="wordOnly"
-            />
+          <PhonemeFeedback
+  result={wordOnlyResult}
+  embed={true}
+  hideBookmark={true}
+  mode="wordOnly"
+  hideWordHeader={isSentence}   // ✅ skjul kun i sentences
+/>
+
           ) : null}
 
           {/* Phonemes */}
