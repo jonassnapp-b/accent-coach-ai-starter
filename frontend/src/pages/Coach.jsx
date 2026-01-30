@@ -808,6 +808,15 @@ const expandedTip = useMemo(() => {
   return tipItems.find((x) => x.key === expandedPhonemeKey) || null;
 }, [expandedPhonemeKey, tipItems]);
 
+useEffect(() => {
+  if (!expandedTip?.code) return;
+
+  const words = getExamplesForPhoneme(expandedTip.code);
+  if (!words.length) return;
+
+  prefetchExampleTts(words.slice(0, 10));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [expandedTip?.code, accentUi]);
 
 function toggleOverlayAudio(src, kind) {
   if (!src) return;
