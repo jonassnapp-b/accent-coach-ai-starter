@@ -59,7 +59,7 @@ function pickRandom(arr) {
  */
 const AVAILABLE_IMAGES = new Set([
   // vowels (as per your images folder)
-  "AA", "AH", "AO", "AX", "AY", "EH", "EY", "IH", "IX", "IY", "OH", "OY", "UH", "UW", "UX",
+  "AA", "AH", "AO", "AX", "EH", "EY", "IH", "IX", "IY", "OH", "OY", "UH", "UW", "UX",
 
   // consonants (as per your images folder)
   "B", "CH", "D", "DH", "F", "G", "HH", "JH", "K", "L", "M", "N", "P", "R", "SH", "T", "TH", "V", "W", "ZH",
@@ -67,7 +67,7 @@ const AVAILABLE_IMAGES = new Set([
 
 const AVAILABLE_AUDIO_BR = new Set([
   // vowels (as per your en_br audio folder)
-  "AA", "AH", "AO", "AX", "AY", "EH", "EY", "IH", "IX", "IY", "OH", "OY", "UH", "UW", "UX",
+  "AA", "AH", "AO", "AX", "EH", "EY", "IH", "IX", "IY", "OH", "OY", "UH", "UW", "UX",
 
   // consonants (as per your en_br audio folder)
   "B", "CH", "D", "F", "G", "HH", "JH", "K", "L", "M", "N", "P", "R", "SH", "T", "TH", "V", "W", "ZH",
@@ -1169,32 +1169,33 @@ function renderTipCard(tip) {
           }}
         />
       </div>
+{tip.assets.audioSrc ? (
+  <div style={{ width: "100%" }}>
+    <button
+      type="button"
+      onClick={() => toggleOverlayAudio(tip.assets.audioSrc, "phoneme")}
+      style={{
+        marginTop: 12,
+        height: 44,
+        width: "100%",
+        padding: "0 14px",
+        borderRadius: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: "#fff",
+        fontWeight: 950,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        cursor: "pointer",
+      }}
+    >
+      <Volume2 className="h-5 w-5" />
+      Play sound
+    </button>
+  </div>
+) : null}
 
-      {tip.assets.audioSrc ? (
-        <button
-          type="button"
-          onClick={() => toggleOverlayAudio(tip.assets.audioSrc, "phoneme")}
-          style={{
-  height: 44,
-  width: "100%",          // ✅ gør den lang
-  padding: "0 14px",      // ✅ samme feel som før
-  borderRadius: 16,
-  border: `1px solid ${LIGHT_BORDER}`,
-  background: "#fff",
-  fontWeight: 950,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 10,
-  cursor: "pointer",
-}}
-
-
-        >
-          <Volume2 className="h-5 w-5" />
-          Play sound
-        </button>
-      ) : null}
 
       {getExamplesForPhoneme(tip.code).length ? (
         <div style={{ marginTop: 14 }}>
@@ -1611,7 +1612,88 @@ function onNext() {
       </div>
     ) : (
       <>
+      {/* ✅ SENTENCE WORD LIST (restore old sentences UI like screenshot 4) */}
+{isSentence ? (
+  <div style={{ display: "grid", gap: 10, marginBottom: 14 }}>
+    {words.map((w, i) => {
+      const label = String(w?.word || w?.text || w?.name || "").trim();
+      if (!label) return null;
+
+      const active = safeWordIdx === i;
+
+      return (
+        <button
+          key={`sent_word_${i}_${label}`}
+          type="button"
+          onClick={() => {
+            setSelectedWordIdx(i);
+            setWordsOpen(true);
+
+            const firstTipKey = getFirstTipKeyForWord(w);
+            setExpandedPhonemeKey(firstTipKey || null);
+          }}
+          style={{
+            width: "100%",
+            borderRadius: 18,
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: "#fff",
+            padding: "14px 14px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            cursor: "pointer",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 44,            // ✅ big words like screenshot 4
+              lineHeight: 1.05,
+              fontWeight: 900,
+              color: active ? "#111827" : "rgba(17,24,39,0.45)",
+              textAlign: "left",
+            }}
+          >
+            {label}
+          </span>
+
+          <ChevronDown
+            className="h-5 w-5"
+            style={{
+              color: "rgba(17,24,39,0.45)",
+              transform: active ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 0.12s ease",
+              flex: "0 0 auto",
+            }}
+          />
+        </button>
+      );
+    })}
+  </div>
+) : null}
+
         {/* Word score (compact) */}
+        {(!isSentence || wordsOpen) ? (
+  <>
+    {/* Word score (compact) */}
+    {wordOnlyResult ? (
+      <PhonemeFeedback result={wordOnlyResult} embed={true} hideBookmark={true} mode="wordOnly" />
+    ) : null}
+
+    {/* Phonemes */}
+    <div style={{ marginTop: 12, textAlign: "center" }}>
+      ...
+    </div>
+
+    {/* Tip area */}
+    ...
+  </>
+) : (
+  <div style={{ textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>
+    Select a word above to see tips.
+  </div>
+)}
+
         {wordOnlyResult ? (
           <PhonemeFeedback result={wordOnlyResult} embed={true} hideBookmark={true} mode="wordOnly" />
         ) : null}
