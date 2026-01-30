@@ -1674,16 +1674,15 @@ function onNext() {
     <>
       {(!isSentence || wordsOpen) ? (
         <>
-          {wordOnlyResult ? (
-          <PhonemeFeedback
-  result={wordOnlyResult}
-  embed={true}
-  hideBookmark={true}
-  mode="wordOnly"
-  hideWordHeader={isSentence}   // ✅ skjul kun i sentences
-/>
+        {!isSentence && wordOnlyResult ? (
+  <PhonemeFeedback
+    result={wordOnlyResult}
+    embed={true}
+    hideBookmark={true}
+    mode="wordOnly"
+  />
+) : null}
 
-          ) : null}
 
           {/* Phonemes */}
           <div style={{ marginTop: 12, textAlign: "center" }}>
