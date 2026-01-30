@@ -235,6 +235,7 @@ const micStreamRef = useRef(null);
   const overlayAudioRef = useRef(null);
   const exampleAudioRef = useRef(null);
 const exampleUrlRef = useRef(null);
+const exampleTtsCacheRef = useRef(new Map()); // key: `${accentUi}|${word}` -> objectURL
 
 // play/pause state for the big play buttons
 const [isUserPlaying, setIsUserPlaying] = useState(false);
@@ -254,6 +255,17 @@ const correctTextRef = useRef("");
       prewarmUrlRef.current = null;
       setPrewarmReady(false);
     }
+      // ✅ clear example TTS cache when accent changes
+  try {
+    const cache = exampleTtsCacheRef.current;
+    if (cache && cache.size) {
+      for (const url of cache.values()) {
+        try { URL.revokeObjectURL(url); } catch {}
+      }
+      cache.clear();
+    }
+  } catch {}
+
       // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accentUi]);
 
@@ -897,38 +909,55 @@ async function playExampleTts(word) {
   const w = String(word || "").trim();
   if (!w) return;
 
+  const key = `${accentUi}|${w}`;
+  const cache = exampleTtsCacheRef.current;
+
   try {
-    // stop previous example audio
     if (!exampleAudioRef.current) exampleAudioRef.current = new Audio();
     const a = exampleAudioRef.current;
 
+    // stop current
     try { a.pause(); } catch {}
     try { a.currentTime = 0; } catch {}
 
-    // cleanup old object url
+    // ✅ if cached -> play instantly
+    const cachedUrl = cache.get(key);
+    if (cachedUrl) {
+      a.src = cachedUrl;
+      a.volume = settings?.soundEnabled === false ? 0 : 1;
+      a.play().catch(() => {});
+      return;
+    }
+
+    // cleanup previous (single) url ref (keep it if you want; not required anymore)
     try {
       if (exampleUrlRef.current) URL.revokeObjectURL(exampleUrlRef.current);
     } catch {}
     exampleUrlRef.current = null;
 
+    // fetch TTS once
     const base = getApiBase();
     const r = await fetch(`${base}/api/tts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: w, accent: accentUi, rate: 1.0 })
+      body: JSON.stringify({ text: w, accent: accentUi, rate: 1.0 }),
     });
     if (!r.ok) return;
 
     const buf = await r.arrayBuffer();
     const blob = new Blob([buf], { type: "audio/wav" });
     const url = URL.createObjectURL(blob);
-    exampleUrlRef.current = url;
 
+    // ✅ store in cache
+    cache.set(key, url);
+
+    // play
     a.src = url;
     a.volume = settings?.soundEnabled === false ? 0 : 1;
     a.play().catch(() => {});
   } catch {}
 }
+
 
 function getExamplesForPhoneme(code) {
   const c = String(code || "").trim().toUpperCase();
