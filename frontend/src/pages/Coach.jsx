@@ -1137,15 +1137,7 @@ function renderTipCard(tip) {
   return (
     <div
       style={{ background: "transparent", border: "none", boxShadow: "none", padding: 0, borderRadius: 0 }}
-
     >
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-        <div style={{ fontWeight: 950, fontSize: 18, color: LIGHT_TEXT }}>{tip.code}</div>
-        <div style={{ fontWeight: 900, fontSize: 12, color: scoreColor(tip.score) }}>
-          {tip.score == null ? "" : Math.round(tip.score)}
-        </div>
-      </div>
-
       <div style={{ display: "grid", placeItems: "center" }}>
         <img
           src={tip.assets.imgSrc}
@@ -1160,32 +1152,33 @@ function renderTipCard(tip) {
           }}
         />
       </div>
-{tip.assets.audioSrc ? (
-  <div style={{ width: "100%" }}>
-    <button
-      type="button"
-      onClick={() => toggleOverlayAudio(tip.assets.audioSrc, "phoneme")}
-      style={{
-        marginTop: 12,
-        height: 44,
-        width: "100%",
-        padding: "0 14px",
-        borderRadius: 16,
-        border: `1px solid ${LIGHT_BORDER}`,
-        background: "#fff",
-        fontWeight: 950,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 10,
-        cursor: "pointer",
-      }}
-    >
-      <Volume2 className="h-5 w-5" />
-      Play sound
-    </button>
-  </div>
-) : null}
+
+      {tip.assets.audioSrc ? (
+        <div style={{ width: "100%" }}>
+          <button
+            type="button"
+            onClick={() => toggleOverlayAudio(tip.assets.audioSrc, "phoneme")}
+            style={{
+              marginTop: 12,
+              height: 44,
+              width: "100%",
+              padding: "0 14px",
+              borderRadius: 16,
+              border: `1px solid ${LIGHT_BORDER}`,
+              background: "#fff",
+              fontWeight: 950,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              cursor: "pointer",
+            }}
+          >
+            <Volume2 className="h-5 w-5" />
+            Play sound
+          </button>
+        </div>
+      ) : null}
 
 
       {getExamplesForPhoneme(tip.code).length ? (
