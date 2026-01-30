@@ -57,19 +57,26 @@ function pickRandom(arr) {
  * If missing -> we skip feedback for that phoneme (as requested).
  */
 const AVAILABLE_IMAGES = new Set([
-  "AH", "AO", "AX", "CH", "DH", "EH", "EY", "IH", "IX", "IY", "JH", "OH", "OY", "SH", "TH", "UH", "UW", "UX", "ZH", "AA",
+  // vowels (as per your images folder)
+  "AA", "AH", "AO", "AX", "AY", "EH", "EY", "IH", "IX", "IY", "OH", "OY", "UH", "UW", "UX",
+
+  // consonants (as per your images folder)
+  "B", "CH", "D", "DH", "F", "G", "HH", "JH", "K", "L", "M", "N", "P", "R", "SH", "T", "TH", "V", "W", "Y", "ZH",
 ]);
 
 const AVAILABLE_AUDIO_BR = new Set([
-  "AH", "AO", "AX", "EH", "EY", "IH", "IX", "IY", "JH", "OH", "OY", "SH", "TH", "UH", "UW", "UX", "ZH", "AA",
-  // NOTE: CH is .ogg in din mappe -> iOS problem -> vi skipper, indtil du har CH.mp3
-  // NOTE: DH.mp3 er ikke i dit screenshot -> hvis du har den, så tilføj "DH" her
+  // vowels (as per your en_br audio folder)
+  "AA", "AH", "AO", "AX", "AY", "EH", "EY", "IH", "IX", "IY", "OH", "OY", "UH", "UW", "UX",
+
+  // consonants (as per your en_br audio folder)
+  "B", "CH", "D", "F", "G", "HH", "JH", "K", "L", "M", "N", "P", "R", "SH", "T", "TH", "V", "W", "Y", "ZH",
 ]);
 
 const AVAILABLE_AUDIO_US = new Set([
-  // i dit screenshot har du kun AO_us.mp3 i en_us
+  // you only have AO_us.mp3 in en_us
   "AO",
 ]);
+
 
 function resolvePhonemeAssets(code, accentUi) {
   const c = String(code || "").trim().toUpperCase();
