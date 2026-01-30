@@ -1267,6 +1267,40 @@ function renderTipCard(tip) {
           </button>
         </div>
       ) : null}
+{/* Primary focus (weakest phoneme in the current word) */}
+{primaryWeakPhoneme && primaryTip ? (
+  <div
+    style={{
+      marginTop: 12,
+      border: `1px solid ${LIGHT_BORDER}`,
+      background: "#fff",
+      borderRadius: 16,
+      padding: "10px 12px",
+      textAlign: "left",
+    }}
+  >
+    <div style={{ fontWeight: 950, fontSize: 13, color: "#111827" }}>
+      Primary focus:{" "}
+      <span style={{ color: scoreColor(primaryWeakPhoneme.score) }}>{primaryWeakPhoneme.code}</span>
+      {Number.isFinite(primaryWeakPhoneme.rawScore) ? (
+        <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}>
+          {" "}
+          · {Math.round(primaryWeakPhoneme.rawScore)}%
+        </span>
+      ) : null}
+      {primaryWeakPhoneme.letters ? (
+        <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}>
+          {" "}
+          · from “{primaryWeakPhoneme.letters}”
+        </span>
+      ) : null}
+    </div>
+
+    <div style={{ marginTop: 6, fontSize: 13, fontWeight: 900, color: "rgba(17,24,39,0.80)" }}>
+      Try this: “{primaryTip.tryThis}”
+    </div>
+  </div>
+) : null}
 
      
 {/* Selected phoneme: one actionable instruction */}
