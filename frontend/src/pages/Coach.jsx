@@ -1675,9 +1675,226 @@ function onNext() {
 
 {/* ---------- 3-card slider (NOT inside header card) ---------- */}
 <div style={{ marginTop: 18, display: "grid", gap: 12 }}>
-  <AnimatePresence mode="wait">
-    {/* Card 1 / 2 / 3 goes here */}
-  </AnimatePresence>
+<AnimatePresence mode="wait">
+  {overlayCardIdx === 0 ? (
+    <motion.div
+      key="overlay_card_playback"
+      initial={{ opacity: 0, y: 10, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.985 }}
+      transition={{ duration: 0.18 }}
+      style={{
+        background: "#fff",
+        borderRadius: 22,
+        padding: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        boxShadow: LIGHT_SHADOW,
+        display: "grid",
+        gap: 14,
+      }}
+    >
+      <div style={{ fontWeight: 950, fontSize: 14, color: LIGHT_MUTED, textAlign: "center" }}>Playback</div>
+
+      <div
+        style={{
+          background: "rgba(17,24,39,0.03)",
+          border: `1px solid ${LIGHT_BORDER}`,
+          borderRadius: 18,
+          padding: 14,
+          display: "grid",
+          gap: 14,
+        }}
+      >
+        <div style={{ display: "grid", gap: 10, justifyItems: "center" }}>
+          <div style={{ fontWeight: 950, fontSize: 18, color: LIGHT_TEXT }}>You</div>
+
+          <button
+            type="button"
+            onClick={toggleUserRecording}
+            disabled={!result?.userAudioUrl}
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 22,
+              border: `1px solid ${LIGHT_BORDER}`,
+              background: "#fff",
+              display: "grid",
+              placeItems: "center",
+              cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
+              opacity: result?.userAudioUrl ? 1 : 0.45,
+            }}
+            title="Play your recording"
+          >
+            {isUserPlaying ? <Pause className="h-7 w-7" /> : <Play className="h-7 w-7" />}
+          </button>
+        </div>
+
+        <div style={{ height: 1, background: `rgba(0,0,0,0.06)` }} />
+
+        <div style={{ display: "grid", gap: 10, justifyItems: "center" }}>
+          <div style={{ fontWeight: 950, fontSize: 18, color: LIGHT_TEXT }}>Correct pronunciation</div>
+
+          <button
+            type="button"
+            onClick={toggleCorrectTts}
+            disabled={!String(isSentence ? target : currentWordText).trim()}
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 22,
+              border: `1px solid ${LIGHT_BORDER}`,
+              background: "#fff",
+              display: "grid",
+              placeItems: "center",
+              cursor: String(isSentence ? target : currentWordText).trim() ? "pointer" : "not-allowed",
+              opacity: String(isSentence ? target : currentWordText).trim() ? 1 : 0.45,
+            }}
+            title="Play correct pronunciation"
+          >
+            {isCorrectPlaying ? <Pause className="h-7 w-7" /> : <Play className="h-7 w-7" />}
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  ) : null}
+
+  {overlayCardIdx === 1 ? (
+    <motion.div
+      key="overlay_card_tips"
+      initial={{ opacity: 0, y: 10, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.985 }}
+      transition={{ duration: 0.18 }}
+      style={{
+        background: "#fff",
+        borderRadius: 22,
+        padding: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        boxShadow: LIGHT_SHADOW,
+        display: "grid",
+        gap: 12,
+      }}
+    >
+      <div style={{ fontWeight: 950, fontSize: 14, color: LIGHT_MUTED, textAlign: "center" }}>Tips</div>
+
+      {!tipItems.length ? (
+        <div
+          style={{
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: "rgba(17,24,39,0.03)",
+            borderRadius: 18,
+            padding: 14,
+            fontWeight: 900,
+            color: LIGHT_MUTED,
+            textAlign: "center",
+          }}
+        >
+          No tips for this word.
+        </div>
+      ) : (
+        <>
+          <div style={{ display: "grid", gap: 10 }}>
+            {tipItems.map((t) => {
+              const isOpen = expandedPhonemeKey === t.key;
+
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setExpandedPhonemeKey((v) => (v === t.key ? null : t.key))}
+                  style={{
+                    border: `1px solid ${LIGHT_BORDER}`,
+                    background: "#fff",
+                    borderRadius: 16,
+                    padding: "12px 14px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    cursor: "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <span style={{ fontWeight: 950, fontSize: 18, color: LIGHT_TEXT }}>{t.code}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontWeight: 900, fontSize: 12, color: scoreColor(t.score) }}>
+                      {t.score == null ? "" : Math.round(t.score)}
+                    </span>
+                    <ChevronDown
+                      className="h-5 w-5"
+                      style={{
+                        transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 160ms ease",
+                        color: LIGHT_MUTED,
+                      }}
+                    />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {expandedTip ? renderTipCard(expandedTip) : null}
+        </>
+      )}
+    </motion.div>
+  ) : null}
+
+  {overlayCardIdx === 2 ? (
+    <motion.div
+      key="overlay_card_actions"
+      initial={{ opacity: 0, y: 10, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.985 }}
+      transition={{ duration: 0.18 }}
+      style={{
+        background: "#fff",
+        borderRadius: 22,
+        padding: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        boxShadow: LIGHT_SHADOW,
+        display: "grid",
+        gap: 12,
+      }}
+    >
+      <div style={{ fontWeight: 950, fontSize: 14, color: LIGHT_MUTED, textAlign: "center" }}>Actions</div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <button
+          type="button"
+          onClick={onTryAgain}
+          style={{
+            height: 46,
+            borderRadius: 16,
+            border: "none",
+            background: "#FF9800",
+            color: "white",
+            fontWeight: 950,
+            cursor: "pointer",
+          }}
+        >
+          Try again
+        </button>
+
+        <button
+          type="button"
+          onClick={onNext}
+          style={{
+            height: 46,
+            borderRadius: 16,
+            border: "none",
+            background: BTN_BLUE,
+            color: "white",
+            fontWeight: 950,
+            cursor: "pointer",
+          }}
+        >
+          Next
+        </button>
+      </div>
+    </motion.div>
+  ) : null}
+</AnimatePresence>
+
 
   {/* Nav row (chevrons) */}
   <div
