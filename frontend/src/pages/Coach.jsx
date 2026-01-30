@@ -6,6 +6,54 @@ import { useSettings } from "../lib/settings-store.jsx";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 import { ingestLocalPhonemeScores } from "../lib/localPhonemeStats.js";
 import PHONEME_EXAMPLES from "../data/phonemeExamples.json";
+// -------- Phoneme coaching tips (deterministic, not guessing) --------
+// We only show tips for phonemes we have assets for (you already gate that).
+// This does NOT claim what the user did wrong — it gives the best known technique
+// for the primary weak phoneme (lowest score) and the selected phoneme.
+const PHONEME_TIPS = {
+  // vowels
+  AA: { tryThis: "Open the jaw more and keep the tongue low and relaxed." },
+  AH: { tryThis: "Keep the tongue central and relaxed; avoid over-rounding the lips." },
+  AO: { tryThis: "Round the lips slightly and keep the tongue back; don’t spread into a smile." },
+  AX: { tryThis: "Make it quick and relaxed (schwa) — don’t fully form a strong vowel." },
+  EH: { tryThis: "Tongue mid-front and jaw slightly open; avoid sliding toward AY." },
+  EY: { tryThis: "Start at EH and glide slightly upward; keep it controlled, not too long." },
+  IH: { tryThis: "Tongue high-front but relaxed; don’t tense into IY." },
+  IX: { tryThis: "Keep it very relaxed (like a reduced IH); avoid full vowel shaping." },
+  IY: { tryThis: "Smile slightly and lift tongue high-front; keep it steady, not diphthong." },
+  OH: { tryThis: "Round lips and keep tongue mid-back; avoid turning it into OW glide." },
+  OY: { tryThis: "Start rounded (O) then glide to IY; keep the glide clear." },
+  UH: { tryThis: "Keep lips relaxed and tongue high-back; don’t round too much." },
+  UW: { tryThis: "Round lips more and keep tongue high-back; avoid fronting into 'oo' too forward." },
+  UX: { tryThis: "Short, reduced UW — keep it quick and not fully rounded." },
+
+  // consonants
+  B: { tryThis: "Close both lips fully, build pressure, then release cleanly." },
+  CH: { tryThis: "Start like T (stop), then release into SH — keep it crisp." },
+  D: { tryThis: "Tongue tip to the ridge behind top teeth, then release quickly." },
+  DH: { tryThis: "Place tongue lightly between teeth; keep voicing on (buzz)." },
+  F: { tryThis: "Top teeth lightly on lower lip; push air continuously (no voicing)." },
+  G: { tryThis: "Back of tongue to soft palate, build pressure, release cleanly." },
+  HH: { tryThis: "Just airflow from the throat; don’t add a vowel before it." },
+  JH: { tryThis: "Like CH but voiced — keep a gentle buzz while releasing." },
+  K: { tryThis: "Back of tongue seals at soft palate; release with a clean burst of air." },
+  L: { tryThis: "Tongue tip up to ridge; keep airflow around sides (don’t stop airflow)." },
+  M: { tryThis: "Close lips and keep voicing; feel vibration in the nose." },
+  N: { tryThis: "Tongue tip up; keep voicing and let air go through the nose." },
+  P: { tryThis: "Close lips fully, build pressure, release with a stronger puff (aspiration)." },
+  R: { tryThis: "Curl or bunch tongue without touching; keep lips slightly rounded." },
+  SH: { tryThis: "Tongue slightly back with a narrow groove; steady airflow (no voicing)." },
+  T: { tryThis: "Tongue tip to ridge; release cleanly with a light puff (especially in stressed syllables)." },
+  TH: { tryThis: "Tongue between teeth; steady airflow; no voicing (unlike DH)." },
+  V: { tryThis: "Top teeth on lower lip with voicing (buzz) — keep airflow continuous." },
+  W: { tryThis: "Round lips and move quickly into the next vowel; don’t hold it too long." },
+  ZH: { tryThis: "Like SH but voiced — keep a gentle buzz with steady airflow." },
+};
+
+function getPhonemeTip(code) {
+  const c = String(code || "").trim().toUpperCase();
+  return PHONEME_TIPS[c] || null;
+}
 
 const IS_PROD = !!import.meta?.env?.PROD;
 
@@ -853,6 +901,20 @@ const phonemeLineItems = useMemo(() => {
 
 
 const tipItems = useMemo(() => phonemeLineItems.filter((x) => x.hasTip), [phonemeLineItems]);
+const primaryWeakPhoneme = useMemo(() => {
+  // pick lowest RAW score (more honest than normalized)
+  const scored = phonemeLineItems
+    .filter((x) => Number.isFinite(x.rawScore))
+    .slice()
+    .sort((a, b) => (a.rawScore ?? 999) - (b.rawScore ?? 999));
+
+  return scored[0] || null;
+}, [phonemeLineItems]);
+
+const primaryTip = useMemo(() => {
+  if (!primaryWeakPhoneme?.code) return null;
+  return getPhonemeTip(primaryWeakPhoneme.code);
+}, [primaryWeakPhoneme?.code]);
 
 const expandedTip = useMemo(() => {
   if (!expandedPhonemeKey) return null;
@@ -1151,6 +1213,25 @@ function renderTipCard(tip) {
             background: "#fff",
           }}
         />
+              {/* One actionable instruction for this phoneme (not guessing; technique-based) */}
+      {getPhonemeTip(tip.code)?.tryThis ? (
+        <div
+          style={{
+            marginTop: 12,
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: "#fff",
+            borderRadius: 16,
+            padding: "10px 12px",
+            fontSize: 13,
+            fontWeight: 900,
+            color: "rgba(17,24,39,0.82)",
+          }}
+        >
+          <div style={{ fontWeight: 950, color: "#111827", marginBottom: 4 }}>Try this</div>
+          “{getPhonemeTip(tip.code).tryThis}”
+        </div>
+      ) : null}
+
       </div>
 
       {tip.assets.audioSrc ? (
@@ -1685,40 +1766,35 @@ function onNext() {
 
 
           {/* Phonemes */}
-          <div style={{ marginTop: 12, textAlign: "center" }}>
-            <div style={{ display: "inline-flex", flexWrap: "wrap", justifyContent: "center", gap: 10, alignItems: "baseline" }}>
-              <span style={{ fontSize: 20, fontWeight: 950, color: "#111827", marginRight: 6 }}>Phonemes:</span>
+       {/* Primary focus (honest: lowest phoneme score, plus known technique) */}
+{primaryWeakPhoneme && primaryTip ? (
+  <div
+    style={{
+      marginTop: 10,
+      border: `1px solid ${LIGHT_BORDER}`,
+      background: "#fff",
+      borderRadius: 16,
+      padding: "10px 12px",
+      textAlign: "left",
+    }}
+  >
+    <div style={{ fontWeight: 950, fontSize: 13, color: "#111827" }}>
+      Primary focus: <span style={{ color: scoreColor(primaryWeakPhoneme.score) }}>{primaryWeakPhoneme.code}</span>
+      {Number.isFinite(primaryWeakPhoneme.rawScore) ? (
+        <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}> · {Math.round(primaryWeakPhoneme.rawScore)}%</span>
+      ) : null}
+    </div>
 
-              {phonemeLineItems.length ? (
-                phonemeLineItems.map((it) => (
-                  <button
-                    key={`tip_ph_${it.key}`}
-                    type="button"
-                    onClick={() => setExpandedPhonemeKey(it.hasTip ? it.key : null)}
-                    disabled={!it.hasTip}
-                    title={it.hasTip ? "Select for tip" : it.hasImage ? "No tip needed (green)" : "No image available"}
-                    style={{
-                      border: "none",
-                      background: "transparent",
-                      padding: 0,
-                      cursor: it.hasTip ? "pointer" : "default",
-                      fontSize: 20,
-                      fontWeight: 950,
-                      color: scoreColor(it.score),
-                      textDecoration: it.hasImage ? "underline" : "none",
-                      textUnderlineOffset: 6,
-                      textDecorationThickness: 3,
-                      opacity: it.hasTip ? 1 : 0.65,
-                    }}
-                  >
-                    {it.code}
-                  </button>
-                ))
-              ) : (
-                <span style={{ fontSize: 20, fontWeight: 900, color: LIGHT_MUTED }}>—</span>
-              )}
-            </div>
-          </div>
+    <div style={{ marginTop: 6, fontSize: 13, fontWeight: 900, color: "rgba(17,24,39,0.80)" }}>
+      Try this: “{primaryTip.tryThis}”
+    </div>
+
+    <div style={{ marginTop: 6, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED }}>
+      (This is technique for the weakest phoneme — it doesn’t guess your exact mistake.)
+    </div>
+  </div>
+) : null}
+
 
          <div style={{ marginTop: 10, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, textAlign: "center" }}>
   Tap a phoneme above to see a tip.
