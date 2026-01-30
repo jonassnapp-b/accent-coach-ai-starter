@@ -248,6 +248,18 @@ const correctTextRef = useRef("");
   // pop effect while the target is spoken
   const [isSpeakingTarget, setIsSpeakingTarget] = useState(false);
 
+useEffect(() => {
+  if (!expandedTip?.code) return;
+
+  const words = getExamplesForPhoneme(expandedTip.code);
+  if (!words.length) return;
+
+  // ✅ Prefetch the first N example words so first click is instant
+  prefetchExampleTts(words.slice(0, 10));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [expandedTip?.code, accentUi]);
+
+
   useEffect(() => {
     // ✅ reset prewarm when accent changes (so voice can change)
     if (prewarmUrlRef.current) {
@@ -956,6 +968,38 @@ async function playExampleTts(word) {
     a.volume = settings?.soundEnabled === false ? 0 : 1;
     a.play().catch(() => {});
   } catch {}
+}
+async function prefetchExampleTts(words) {
+  const list = Array.isArray(words) ? words : [];
+  if (!list.length) return;
+
+  const cache = exampleTtsCacheRef.current;
+  const base = getApiBase();
+
+  for (const w0 of list) {
+    const w = String(w0 || "").trim();
+    if (!w) continue;
+
+    const key = `${accentUi}|${w}`;
+    if (cache.has(key)) continue;
+
+    try {
+      const r = await fetch(`${base}/api/tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: w, accent: accentUi, rate: 1.0 }),
+      });
+      if (!r.ok) continue;
+
+      const buf = await r.arrayBuffer();
+      const blob = new Blob([buf], { type: "audio/wav" });
+      const url = URL.createObjectURL(blob);
+
+      cache.set(key, url);
+    } catch {
+      // ignore single failures
+    }
+  }
 }
 
 
