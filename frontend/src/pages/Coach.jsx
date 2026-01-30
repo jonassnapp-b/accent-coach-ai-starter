@@ -1237,23 +1237,7 @@ function renderTipCard(tip) {
           }}
         />
               {/* One actionable instruction for this phoneme (not guessing; technique-based) */}
-      {getPhonemeTip(tip.code)?.tryThis ? (
-        <div
-          style={{
-            marginTop: 12,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: "#fff",
-            borderRadius: 16,
-            padding: "10px 12px",
-            fontSize: 13,
-            fontWeight: 900,
-            color: "rgba(17,24,39,0.82)",
-          }}
-        >
-          <div style={{ fontWeight: 950, color: "#111827", marginBottom: 4 }}>Try this</div>
-          “{getPhonemeTip(tip.code).tryThis}”
-        </div>
-      ) : null}
+  
 
       </div>
 
@@ -1284,37 +1268,27 @@ function renderTipCard(tip) {
         </div>
       ) : null}
 
-            {/* Primary focus (weakest phoneme in the word) */}
-      {primaryWeakPhoneme && primaryTip ? (
-        <div
-          style={{
-            marginTop: 12,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: "#fff",
-            borderRadius: 16,
-            padding: "10px 12px",
-            textAlign: "left",
-          }}
-        >
-          <div style={{ fontWeight: 950, fontSize: 13, color: "#111827" }}>
-            Primary focus:{" "}
-            <span style={{ color: scoreColor(primaryWeakPhoneme.score) }}>{primaryWeakPhoneme.code}</span>
-            {Number.isFinite(primaryWeakPhoneme.rawScore) ? (
-              <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}> · {Math.round(primaryWeakPhoneme.rawScore)}%</span>
-            ) : null}
-            {primaryWeakPhoneme.letters ? (
-              <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}>
-                {" "}
-                · from “{primaryWeakPhoneme.letters}”
-              </span>
-            ) : null}
-          </div>
-
-          <div style={{ marginTop: 6, fontSize: 13, fontWeight: 900, color: "rgba(17,24,39,0.80)" }}>
-            Try this: “{primaryTip.tryThis}”
-          </div>
-        </div>
-      ) : null}
+     
+{/* Selected phoneme: one actionable instruction */}
+{getPhonemeTip(tip.code)?.tryThis ? (
+  <div
+    style={{
+      marginTop: 12,
+      border: `1px solid ${LIGHT_BORDER}`,
+      background: "#fff",
+      borderRadius: 16,
+      padding: "10px 12px",
+      textAlign: "left",
+    }}
+  >
+    <div style={{ fontWeight: 950, fontSize: 13, color: "#111827", marginBottom: 4 }}>
+      Try this
+    </div>
+    <div style={{ fontSize: 13, fontWeight: 900, color: "rgba(17,24,39,0.82)" }}>
+      “{getPhonemeTip(tip.code).tryThis}”
+    </div>
+  </div>
+) : null}
 
 
 
@@ -1821,40 +1795,56 @@ function onNext() {
 ) : null}
 
 
-          {/* Phonemes */}
-       {/* Primary focus (honest: lowest phoneme score, plus known technique) */}
-{primaryWeakPhoneme && primaryTip ? (
+         {/* Phonemes (clickable) */}
+<div style={{ marginTop: 12, textAlign: "center" }}>
   <div
     style={{
-      marginTop: 10,
-      border: `1px solid ${LIGHT_BORDER}`,
-      background: "#fff",
-      borderRadius: 16,
-      padding: "10px 12px",
-      textAlign: "left",
+      display: "inline-flex",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      gap: 10,
+      alignItems: "baseline",
     }}
   >
-    <div style={{ fontWeight: 950, fontSize: 13, color: "#111827" }}>
-      Primary focus: <span style={{ color: scoreColor(primaryWeakPhoneme.score) }}>{primaryWeakPhoneme.code}</span>
-      {Number.isFinite(primaryWeakPhoneme.rawScore) ? (
-        <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}> · {Math.round(primaryWeakPhoneme.rawScore)}%</span>
-      ) : null}
-    </div>
+    <span style={{ fontSize: 20, fontWeight: 950, color: "#111827", marginRight: 6 }}>Phonemes:</span>
 
-    <div style={{ marginTop: 6, fontSize: 13, fontWeight: 900, color: "rgba(17,24,39,0.80)" }}>
-      Try this: “{primaryTip.tryThis}”
-    </div>
-
-   
+    {phonemeLineItems.length ? (
+      phonemeLineItems.map((it) => (
+        <button
+          key={`tip_ph_${it.key}`}
+          type="button"
+          onClick={() => setExpandedPhonemeKey(it.hasTip ? it.key : null)}
+          disabled={!it.hasTip}
+          title={it.hasTip ? "Select for tip" : it.hasImage ? "No tip needed (green)" : "No image available"}
+          style={{
+            border: "none",
+            background: "transparent",
+            padding: 0,
+            cursor: it.hasTip ? "pointer" : "default",
+            fontSize: 20,
+            fontWeight: 950,
+            color: scoreColor(it.score),
+            textDecoration: it.hasImage ? "underline" : "none",
+            textUnderlineOffset: 6,
+            textDecorationThickness: 3,
+            opacity: it.hasTip ? 1 : 0.65,
+          }}
+        >
+          {it.code}
+        </button>
+      ))
+    ) : (
+      <span style={{ fontSize: 20, fontWeight: 900, color: LIGHT_MUTED }}>—</span>
+    )}
   </div>
-) : null}
+</div>
 
-
-         <div style={{ marginTop: 10, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, textAlign: "center" }}>
+<div style={{ marginTop: 10, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, textAlign: "center" }}>
   Tap a phoneme above to see a tip.
 </div>
 
 {expandedTip ? renderTipCard(expandedTip) : null}
+
 
         </>
       ) : (
