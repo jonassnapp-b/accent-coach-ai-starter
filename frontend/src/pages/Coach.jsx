@@ -1,6 +1,6 @@
 // src/pages/Coach.jsx
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { ChevronDown, Mic, StopCircle, Volume2, Play, Pause } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Mic, StopCircle, Volume2, Play, Pause } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
@@ -229,6 +229,7 @@ useEffect(() => {
   const [selectedWordIdx, setSelectedWordIdx] = useState(-1);
   const [expandedPhonemeKey, setExpandedPhonemeKey] = useState(null); // e.g. "UW_3"
 const [wordsOpen, setWordsOpen] = useState(false); // ✅ dropdown open/closed
+const [overlayCardIdx, setOverlayCardIdx] = useState(0); // 0=Tips, 1=Playback, 2=Actions
 
   // recording
   const [isRecording, setIsRecording] = useState(false);
@@ -624,6 +625,30 @@ await ensureMic(); // okay at keep mic warm (valgfrit)
     setExpandedPhonemeKey(null);
 setIsUserPlaying(false);
 setIsCorrectPlaying(false);
+function onBack() {
+  if (isBusy) return;
+  stopTtsNow();
+  
+  try {
+    if (lastUrl) URL.revokeObjectURL(lastUrl);
+  } catch {}
+  setLastUrl(null);
+
+  disposeRecorder();
+  setIsRecording(false);
+  setIsAnalyzing(false);
+
+  setTarget("");
+  setResult(null);
+  setStatus("");
+  setStage("setup");
+  setSelectedWordIdx(-1);
+  setExpandedPhonemeKey(null);
+  setIsUserPlaying(false);
+  setIsCorrectPlaying(false);
+
+  setOverlayCardIdx(0); // ✅ ADD THIS LINE HERE
+}
 
   }
 
@@ -725,6 +750,8 @@ setIsCorrectPlaying(false);
       };
 
       setResult(payload);
+      setOverlayCardIdx(0);
+
       setIsUserPlaying(false);
 setIsCorrectPlaying(false);
 
@@ -1138,6 +1165,8 @@ function onTryAgain() {
   setSelectedWordIdx(-1);
   setExpandedPhonemeKey(null);
   setWordsOpen(false);
+  setOverlayCardIdx(0);
+
 
   // stop evt. igangværende lyd (så den ikke føles som “correct” spiller igen)
   try { overlayAudioRef.current?.pause?.(); } catch {}
@@ -1157,6 +1186,8 @@ function onNext() {
   setSelectedWordIdx(-1);
   setExpandedPhonemeKey(null);
   setWordsOpen(false);
+  setOverlayCardIdx(0);
+
 
   }
 
@@ -1936,111 +1967,224 @@ return rowExpandedTip ? (
 
   </>
 ) : null}
-{/* ✅ Global playback (always at bottom, for both words + sentences) */}
-<div style={{ marginTop: 36, display: "grid", gap: 28 }}>
-  {/* divider with more breathing room */}
-  <div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 30, marginBottom: 30
- }} />
-
-  {/* You */}
-  <div style={{ display: "grid", gap: 10 }}>
-    <div style={{ fontSize: 26, fontWeight: 950, color: "#111827", textAlign: "center" }}>You</div>
-    <div style={{ display: "flex", justifyContent: "center" }}>
-      <button
-        type="button"
-        onClick={toggleUserRecording}
-        disabled={!result?.userAudioUrl}
-        title="Play"
+{/* ---------- 3-card slider ---------- */}
+<div style={{ marginTop: 18, display: "grid", gap: 12 }}>
+  {/* Card content */}
+  <AnimatePresence mode="wait">
+    {overlayCardIdx === 0 ? (
+      <motion.div
+        key="card_tips"
+        initial={{ opacity: 0, x: 10, scale: 0.99 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        exit={{ opacity: 0, x: -10, scale: 0.99 }}
+        transition={{ duration: 0.18 }}
         style={{
-          width: 96,
-          height: 96,
-          borderRadius: 26,
-          border: `1px solid ${LIGHT_BORDER}`,
           background: "#fff",
-          display: "grid",
-          placeItems: "center",
-          cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
-          opacity: result?.userAudioUrl ? 1 : 0.6,
+          borderRadius: 22,
+          padding: 16,
+          border: `1px solid ${LIGHT_BORDER}`,
+          boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
         }}
       >
-{isUserPlaying ? <Pause className="h-12 w-12" /> : <Play className="h-12 w-12" />}
-      </button>
-    </div>
-  </div>
+        {/* Card 1: Phoneme tip + examples (din eksisterende tip-UI) */}
+        {/* NOTE: Flyt KUN indholdet du allerede har for tip + examples herind.
+            Dvs. den del der viser phonemes + tip + examples. */}
+        
+        {/* START: (indsæt din eksisterende “tip+examples” del her) */}
+        {/* ... */}
+        {/* END */}
+      </motion.div>
+    ) : null}
 
-  {/* Correct */}
-  <div style={{ display: "grid", gap: 10 }}>
-    <div style={{ fontSize: 26, fontWeight: 950, color: "#111827", textAlign: "center" }}>Correct pronunciation</div>
-    <div style={{ display: "flex", justifyContent: "center" }}>
-      <button
-        type="button"
-        onClick={toggleCorrectTts}
-        disabled={!String(target).trim()}
-        title="Play"
+    {overlayCardIdx === 1 ? (
+      <motion.div
+        key="card_playback"
+        initial={{ opacity: 0, x: 10, scale: 0.99 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        exit={{ opacity: 0, x: -10, scale: 0.99 }}
+        transition={{ duration: 0.18 }}
         style={{
-          width: 96,
-          height: 96,
-          borderRadius: 26,
-          border: `1px solid ${LIGHT_BORDER}`,
           background: "#fff",
-          display: "grid",
-          placeItems: "center",
-          cursor: "pointer",
-          opacity: String(target).trim() ? 1 : 0.6,
+          borderRadius: 22,
+          padding: 16,
+          border: `1px solid ${LIGHT_BORDER}`,
+          boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
         }}
       >
-{isCorrectPlaying ? <Pause className="h-12 w-12" /> : <Play className="h-12 w-12" />}
-      </button>
+        {/* Card 2: You / Correct pronunciation */}
+        <div style={{ display: "grid", gap: 28 }}>
+          <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ fontSize: 26, fontWeight: 950, color: "#111827", textAlign: "center" }}>You</div>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={toggleUserRecording}
+                disabled={!result?.userAudioUrl}
+                title="Play"
+                style={{
+                  width: 96,
+                  height: 96,
+                  borderRadius: 26,
+                  border: `1px solid ${LIGHT_BORDER}`,
+                  background: "#fff",
+                  display: "grid",
+                  placeItems: "center",
+                  cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
+                  opacity: result?.userAudioUrl ? 1 : 0.6,
+                }}
+              >
+                {isUserPlaying ? <Pause className="h-12 w-12" /> : <Play className="h-12 w-12" />}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ fontSize: 26, fontWeight: 950, color: "#111827", textAlign: "center" }}>
+              Correct pronunciation
+            </div>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={toggleCorrectTts}
+                disabled={!String(target).trim()}
+                title="Play"
+                style={{
+                  width: 96,
+                  height: 96,
+                  borderRadius: 26,
+                  border: `1px solid ${LIGHT_BORDER}`,
+                  background: "#fff",
+                  display: "grid",
+                  placeItems: "center",
+                  cursor: "pointer",
+                  opacity: String(target).trim() ? 1 : 0.6,
+                }}
+              >
+                {isCorrectPlaying ? <Pause className="h-12 w-12" /> : <Play className="h-12 w-12" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    ) : null}
+
+    {overlayCardIdx === 2 ? (
+      <motion.div
+        key="card_actions"
+        initial={{ opacity: 0, x: 10, scale: 0.99 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        exit={{ opacity: 0, x: -10, scale: 0.99 }}
+        transition={{ duration: 0.18 }}
+        style={{
+          background: "#fff",
+          borderRadius: 22,
+          padding: 16,
+          border: `1px solid ${LIGHT_BORDER}`,
+          boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+        }}
+      >
+        {/* Card 3: Try again / Next */}
+        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+          <button
+            type="button"
+            onClick={onTryAgain}
+            disabled={isAnalyzing || isRecording || !String(target).trim()}
+            style={{
+              height: 46,
+              padding: "0 18px",
+              borderRadius: 16,
+              border: "none",
+              background: "#FF9800",
+              color: "white",
+              fontWeight: 950,
+              cursor: "pointer",
+              opacity: isAnalyzing || isRecording || !String(target).trim() ? 0.6 : 1,
+              minWidth: 140,
+            }}
+          >
+            Try again
+          </button>
+
+          <button
+            type="button"
+            onClick={onNext}
+            disabled={isAnalyzing || isRecording}
+            style={{
+              height: 46,
+              padding: "0 18px",
+              borderRadius: 16,
+              border: "none",
+              background: BTN_BLUE,
+              color: "white",
+              fontWeight: 950,
+              cursor: "pointer",
+              opacity: isAnalyzing || isRecording ? 0.6 : 1,
+              minWidth: 140,
+            }}
+          >
+            Next
+          </button>
+        </div>
+      </motion.div>
+    ) : null}
+  </AnimatePresence>
+
+  {/* Nav row (chevrons) */}
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+      marginTop: 2,
+    }}
+  >
+    <button
+      type="button"
+      onClick={() => setOverlayCardIdx((v) => Math.max(0, v - 1))}
+      disabled={overlayCardIdx === 0}
+      style={{
+        width: 46,
+        height: 46,
+        borderRadius: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: "#fff",
+        display: "grid",
+        placeItems: "center",
+        cursor: overlayCardIdx === 0 ? "not-allowed" : "pointer",
+        opacity: overlayCardIdx === 0 ? 0.45 : 1,
+      }}
+      title="Back"
+    >
+      <ChevronLeft className="h-6 w-6" />
+    </button>
+
+    <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_MUTED }}>
+      {overlayCardIdx + 1} / 3
     </div>
+
+    <button
+      type="button"
+      onClick={() => setOverlayCardIdx((v) => Math.min(2, v + 1))}
+      disabled={overlayCardIdx === 2}
+      style={{
+        width: 46,
+        height: 46,
+        borderRadius: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: "#fff",
+        display: "grid",
+        placeItems: "center",
+        cursor: overlayCardIdx === 2 ? "not-allowed" : "pointer",
+        opacity: overlayCardIdx === 2 ? 0.45 : 1,
+      }}
+      title="Next"
+    >
+      <ChevronRight className="h-6 w-6" />
+    </button>
   </div>
-  {/* divider under Correct */}
-<div style={{ height: 1, background: LIGHT_BORDER, width: "100%", marginTop: 30, marginBottom: 30
- }} />
-
-{/* Try again + Next */}
-<div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-  <button
-    type="button"
-    onClick={onTryAgain}
-    disabled={isAnalyzing || isRecording || !String(target).trim()}
-    style={{
-      height: 46,
-      padding: "0 18px",
-      borderRadius: 16,
-      border: "none",
-      background: "#FF9800", // accent/orange
-      color: "white",
-      fontWeight: 950,
-      cursor: "pointer",
-      opacity: isAnalyzing || isRecording || !String(target).trim() ? 0.6 : 1,
-      minWidth: 140,
-    }}
-  >
-    Try again
-  </button>
-
-  <button
-    type="button"
-    onClick={onNext}
-    disabled={isAnalyzing || isRecording}
-    style={{
-      height: 46,
-      padding: "0 18px",
-      borderRadius: 16,
-      border: "none",
-      background: BTN_BLUE, // blue
-      color: "white",
-      fontWeight: 950,
-      cursor: "pointer",
-      opacity: isAnalyzing || isRecording ? 0.6 : 1,
-      minWidth: 140,
-    }}
-  >
-    Next
-  </button>
 </div>
 
-</div>
 
 
                 </div>
