@@ -934,10 +934,7 @@ const primaryWeakPhoneme = useMemo(() => {
   return scored[0] || null;
 }, [phonemeLineItems]);
 
-const primaryTip = useMemo(() => {
-  if (!primaryWeakPhoneme?.code) return null;
-  return getPhonemeTip(primaryWeakPhoneme.code);
-}, [primaryWeakPhoneme?.code]);
+
 
 const expandedTip = useMemo(() => {
   if (!expandedPhonemeKey) return null;
@@ -1268,7 +1265,7 @@ function renderTipCard(tip) {
         </div>
       ) : null}
 {/* Primary focus (weakest phoneme in the current word) */}
-{primaryWeakPhoneme && primaryTip ? (
+{primaryWeakPhoneme ? (
   <div
     style={{
       marginTop: 12,
@@ -1295,12 +1292,9 @@ function renderTipCard(tip) {
         </span>
       ) : null}
     </div>
-
-    <div style={{ marginTop: 6, fontSize: 13, fontWeight: 900, color: "rgba(17,24,39,0.80)" }}>
-      Try this: “{primaryTip.tryThis}”
-    </div>
   </div>
 ) : null}
+
 
      
 {/* Selected phoneme: one actionable instruction */}
