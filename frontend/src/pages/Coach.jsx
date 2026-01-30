@@ -1265,58 +1265,53 @@ function renderTipCard(tip) {
         </div>
       ) : null}
 {/* Primary focus (weakest phoneme in the current word) */}
-{primaryWeakPhoneme ? (
-  <div
-    style={{
-      marginTop: 12,
-      border: `1px solid ${LIGHT_BORDER}`,
-      background: "#fff",
-      borderRadius: 16,
-      padding: "10px 12px",
-      textAlign: "left",
-    }}
-  >
-    <div style={{ fontWeight: 950, fontSize: 13, color: "#111827" }}>
-      Primary focus:{" "}
-      <span style={{ color: scoreColor(primaryWeakPhoneme.score) }}>{primaryWeakPhoneme.code}</span>
-      {Number.isFinite(primaryWeakPhoneme.rawScore) ? (
-        <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}>
-          {" "}
-          · {Math.round(primaryWeakPhoneme.rawScore)}%
-        </span>
-      ) : null}
-      {primaryWeakPhoneme.letters ? (
-        <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}>
-          {" "}
-          · from “{primaryWeakPhoneme.letters}”
-        </span>
-      ) : null}
+{/* Primary focus (single help card) */}
+{(() => {
+  const focusCode = primaryWeakPhoneme?.code || tip?.code || null;
+  if (!focusCode) return null;
+
+  const focusTip = getPhonemeTip(focusCode);
+  if (!focusTip?.tryThis) return null;
+
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: "#fff",
+        borderRadius: 16,
+        padding: "10px 12px",
+        textAlign: "left",
+      }}
+    >
+      <div style={{ fontWeight: 950, fontSize: 13, color: "#111827", marginBottom: 6 }}>
+        Primary focus:{" "}
+        <span style={{ color: scoreColor(primaryWeakPhoneme?.score) }}>{focusCode}</span>
+        {primaryWeakPhoneme && Number.isFinite(primaryWeakPhoneme.rawScore) ? (
+          <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}>
+            {" "}
+            · {Math.round(primaryWeakPhoneme.rawScore)}%
+          </span>
+        ) : null}
+        {primaryWeakPhoneme?.letters ? (
+          <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}>
+            {" "}
+            · from “{primaryWeakPhoneme.letters}”
+          </span>
+        ) : null}
+      </div>
+
+      <div style={{ fontSize: 13, fontWeight: 900, color: "rgba(17,24,39,0.82)" }}>
+        “{focusTip.tryThis}”
+      </div>
     </div>
-  </div>
-) : null}
+  );
+})()}
+
 
 
      
-{/* Selected phoneme: one actionable instruction */}
-{getPhonemeTip(tip.code)?.tryThis ? (
-  <div
-    style={{
-      marginTop: 12,
-      border: `1px solid ${LIGHT_BORDER}`,
-      background: "#fff",
-      borderRadius: 16,
-      padding: "10px 12px",
-      textAlign: "left",
-    }}
-  >
-    <div style={{ fontWeight: 950, fontSize: 13, color: "#111827", marginBottom: 4 }}>
-      Try this
-    </div>
-    <div style={{ fontSize: 13, fontWeight: 900, color: "rgba(17,24,39,0.82)" }}>
-      “{getPhonemeTip(tip.code).tryThis}”
-    </div>
-  </div>
-) : null}
+
 
 
 
