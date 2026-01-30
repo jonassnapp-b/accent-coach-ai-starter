@@ -195,6 +195,24 @@ export default function Coach() {
   useEffect(() => {
     setAccentUi(settings?.accentDefault || "en_us");
   }, [settings?.accentDefault]);
+  // ✅ Prefetch as soon as Coach page opens (so first click is fast)
+useEffect(() => {
+  const warm = [
+    "Repeat after me.",
+    ...WORDS.easy,
+    ...WORDS.medium,
+    ...SENTENCES.easy.slice(0, 2),
+  ];
+
+  // fire-and-forget, and don't block initial render
+  setTimeout(() => {
+    prefetchTtsBatch(warm, 0.98);
+  }, 0);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [accentUi]);
+
+
 
   // ✅ stages: setup -> intro (speaking) -> flow
   const [stage, setStage] = useState("setup"); // setup | intro | flow
@@ -236,6 +254,8 @@ const micStreamRef = useRef(null);
   const exampleAudioRef = useRef(null);
 const exampleUrlRef = useRef(null);
 const exampleTtsCacheRef = useRef(new Map()); // key: `${accentUi}|${word}` -> objectURL
+// ✅ Cache for "Correct pronunciation" (and any other TTS prefetch)
+const ttsCacheRef = useRef(new Map()); // key: `${accentUi}|${rate}|${text}` -> objectURL
 
 // play/pause state for the big play buttons
 const [isUserPlaying, setIsUserPlaying] = useState(false);
@@ -267,6 +287,17 @@ const correctTextRef = useRef("");
       cache.clear();
     }
   } catch {}
+    // ✅ clear main TTS cache when accent changes (so we don't play wrong accent)
+  try {
+    const cache = ttsCacheRef.current;
+    if (cache && cache.size) {
+      for (const url of cache.values()) {
+        try { URL.revokeObjectURL(url); } catch {}
+      }
+      cache.clear();
+    }
+  } catch {}
+
 
       // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accentUi]);
@@ -315,6 +346,15 @@ micStreamRef.current = stream;
     const pool = nextMode === "sentences" ? (SENTENCES[nextDiff] || []) : (WORDS[nextDiff] || []);
     return pickRandom(pool);
   }
+  function isUrlInTtsCache(url) {
+    if (!url) return false;
+    const cache = ttsCacheRef.current;
+    if (!cache || !cache.size) return false;
+    for (const v of cache.values()) {
+      if (v === url) return true;
+    }
+    return false;
+  }
 
   function stopTtsNow() {
     ttsPlayIdRef.current += 1;
@@ -330,8 +370,13 @@ micStreamRef.current = stream;
       }
     } catch {}
 
-    try { if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current); } catch {}
+     try {
+      if (ttsUrlRef.current && !isUrlInTtsCache(ttsUrlRef.current)) {
+        URL.revokeObjectURL(ttsUrlRef.current);
+      }
+    } catch {}
     ttsUrlRef.current = null;
+
 
     setIsSpeaking(false);
     setIsSpeakingTarget(false);
@@ -544,6 +589,8 @@ async function onStart() {
 
   const t = buildNewTarget(mode, difficulty);
   setTarget(t);
+    // ✅ prefetch correct pronunciation for this target immediately
+  prefetchTtsText(t, 0.98);
   setResult(null);
   setStatus("");
   setSelectedWordIdx(-1);
@@ -715,11 +762,15 @@ if (overall > 0 && overall <= 1) overall = overall * 100;
   setStatus("Well done ✅");
   const next = buildNewTarget(mode, difficulty);
   setTarget(next);
+    prefetchTtsText(next, 0.98);
+
   // don't auto-speak
 } else if (overall >= threshold) {
   setStatus("That’s alright — next 👌");
   const next = buildNewTarget(mode, difficulty);
   setTarget(next);
+    prefetchTtsText(next, 0.98);
+
   // don't auto-speak
 } else {
   setStatus("Try again (listen to the feedback) 🔁");
@@ -885,6 +936,32 @@ async function toggleCorrectTts() {
   try {
     setIsCorrectPlaying(false);
     correctTextRef.current = text;
+    // ✅ If we already prefetched it, play instantly
+const ttsCacheKey = `${accentUi}|${0.98}|${text}`;
+const cachedUrl = ttsCacheRef.current.get(ttsCacheKey);
+    if (cachedUrl) {
+  // cleanup old url ref, but DO NOT revoke cached URLs
+  try {
+    if (ttsUrlRef.current && ttsUrlRef.current !== cachedUrl && !isUrlInTtsCache(ttsUrlRef.current)) {
+      URL.revokeObjectURL(ttsUrlRef.current);
+    }
+  } catch {}
+  ttsUrlRef.current = cachedUrl;
+
+
+      a.pause();
+      a.currentTime = 0;
+      a.src = cachedUrl;
+      a.volume = settings?.soundEnabled === false ? 0 : 1;
+
+      a.onplay = () => setIsCorrectPlaying(true);
+      a.onpause = () => setIsCorrectPlaying(false);
+      a.onended = () => setIsCorrectPlaying(false);
+      a.onerror = () => setIsCorrectPlaying(false);
+
+      a.play().catch(() => {});
+      return;
+    }
 
     const base = getApiBase();
     const r = await fetch(`${base}/api/tts`, {
@@ -902,6 +979,8 @@ async function toggleCorrectTts() {
     // cleanup old url
     try { if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current); } catch {}
     ttsUrlRef.current = url;
+    // ✅ store in cache so next time is instant
+ttsCacheRef.current.set(ttsCacheKey, url);
 
     a.pause();
     a.currentTime = 0;
@@ -998,6 +1077,47 @@ async function prefetchExampleTts(words) {
     } catch {
       // ignore single failures
     }
+  }
+}
+async function prefetchTtsText(text, rate = 0.98) {
+  const t = String(text || "").trim();
+  if (!t) return;
+
+  const key = `${accentUi}|${rate}|${t}`;
+  const cache = ttsCacheRef.current;
+  if (cache.has(key)) return;
+
+  let base = "";
+  try {
+    base = getApiBase();
+  } catch {
+    return;
+  }
+
+  try {
+    const r = await fetch(`${base}/api/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: t, accent: accentUi, rate }),
+    });
+    if (!r.ok) return;
+
+    const buf = await r.arrayBuffer();
+    const blob = new Blob([buf], { type: "audio/wav" });
+    const url = URL.createObjectURL(blob);
+
+    cache.set(key, url);
+  } catch {
+    // ignore
+  }
+}
+
+async function prefetchTtsBatch(texts, rate = 0.98) {
+  const arr = Array.isArray(texts) ? texts : [];
+  for (const t of arr) {
+    // sequential on purpose (avoid spamming your server)
+    // eslint-disable-next-line no-await-in-loop
+    await prefetchTtsText(t, rate);
   }
 }
 
