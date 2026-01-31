@@ -399,6 +399,21 @@ useEffect(() => {
 }, [loopOn]);
 
 useEffect(() => {
+  // When you leave/enter slides, stop looping
+  disableLoopNow();
+
+  // Also stop any running audio so it doesn't keep looping in background
+  stopABNow();
+  try { overlayAudioRef.current?.pause?.(); } catch {}
+  try { ttsAudioRef.current?.pause?.(); } catch {}
+  setIsUserPlaying(false);
+  setIsCorrectPlaying(false);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [overlayCardIdx]);
+
+
+useEffect(() => {
   // apply to currently used players (if any)
   try { applyPlaybackSettings(overlayAudioRef.current); } catch {}
   try { applyPlaybackSettings(ttsAudioRef.current); } catch {}
@@ -552,6 +567,12 @@ function stopABNow() {
     }
   } catch {}
 }
+
+function disableLoopNow() {
+  loopOnRef.current = false; // stop instantly (no waiting for React state)
+  setLoopOn(false);
+}
+
 
 function applyPlaybackSettings(a) {
   if (!a) return;
@@ -1140,11 +1161,13 @@ function toggleOverlayAudio(src, kind) {
     const isSameSrc = userSrcRef.current === src;
 
     // If same src and currently playing -> pause
-    if (isSameSrc && !a.paused && !a.ended) {
-      a.pause();
-      if (kind === "user") setIsUserPlaying(false);
-      return;
-    }
+   if (isSameSrc && !a.paused && !a.ended) {
+  disableLoopNow();          // ✅ stop loop when user presses pause
+  a.pause();
+  if (kind === "user") setIsUserPlaying(false);
+  return;
+}
+
 
     // Otherwise: load and play
     a.pause();
@@ -1325,9 +1348,16 @@ async function toggleCorrectTts() {
   // If same text and currently playing -> pause
 if (sameText && a.src) {
   try {
-    a.pause();
-    a.currentTime = 0;
+    if (!a.paused && !a.ended) {
+      // ✅ Pause = stop loop + pause
+      disableLoopNow();
+      a.pause();
+      a.currentTime = 0;
+      setIsCorrectPlaying(false);
+      return;
+    }
 
+    // ✅ If not playing, play
     applyPlaybackSettings(a);
     attachLoopHandler(a);
     if (loopOnRef.current) enableLoopWindow(a);
@@ -1336,6 +1366,7 @@ if (sameText && a.src) {
   } catch {}
   return;
 }
+
 
 
   // If same text and we already have src -> just play
