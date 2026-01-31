@@ -50,6 +50,54 @@ const PHONEME_TIPS = {
   ZH: { tryThis: "Like SH but voiced — keep a gentle buzz with steady airflow." },
 };
 
+// -------- What to listen for (NOT repeating tips) --------
+// Short acoustic cues (not articulation instructions).
+const PHONEME_LISTEN_FOR = {
+  // vowels
+  AA: "a wide open, steady vowel (no glide).",
+  AH: "a relaxed, neutral vowel (not too bright).",
+  AO: "rounded vowel quality (darker tone).",
+  AX: "very quick, reduced vowel (don’t hold it).",
+  EH: "clean mid-front vowel (avoid drifting into AY).",
+  EY: "a clear glide: EH → higher (don’t flatten).",
+  IH: "short, slightly relaxed vowel (not IY).",
+  IX: "very reduced/quick version of IH.",
+  IY: "bright, steady vowel (don’t diphthong).",
+  OH: "rounded vowel with a stable center (no OW glide).",
+  OY: "distinct two-part glide (O → IY).",
+  UH: "short back-ish vowel (not fully rounded).",
+  UW: "rounded ‘oo’ with a darker tone (not fronted).",
+  UX: "quick reduced UW (very short).",
+
+  // consonants
+  B: "a clean stop release with voicing (no extra vowel).",
+  CH: "a crisp ‘tch’ burst (not SH).",
+  D: "a clean release (no added schwa).",
+  DH: "a voiced ‘th’ buzz (not D).",
+  F: "clean air noise (no voicing buzz).",
+  G: "a firm back-stop release (clean burst).",
+  HH: "pure breathy onset (no vowel before it).",
+  JH: "a voiced ‘j’ quality (buzz + crisp release).",
+  K: "a clean burst (avoid a harsh extra vowel).",
+  L: "a clear L tone (not swallowed).",
+  M: "a steady nasal hum (no stop).",
+  N: "a steady nasal tone (don’t turn into D).",
+  P: "a strong puff of air (aspiration).",
+  R: "a smooth ‘r’ color (no L-like sound).",
+  SH: "smooth, steady hiss (not CH).",
+  T: "a clean ‘t’ burst (avoid extra vowel).",
+  TH: "unvoiced ‘th’ air (no buzz).",
+  V: "voiced buzz + friction (not F).",
+  W: "rounded onset that quickly blends into the vowel.",
+  ZH: "voiced ‘zh’ buzz (like ‘vision’).",
+};
+
+function getListenFor(code) {
+  const c = String(code || "").trim().toUpperCase();
+  return PHONEME_LISTEN_FOR[c] || null;
+}
+
+
 function getPhonemeTip(code) {
   const c = String(code || "").trim().toUpperCase();
   return PHONEME_TIPS[c] || null;
@@ -330,6 +378,25 @@ const ttsCacheRef = useRef(new Map()); // key: `${accentUi}|${rate}|${text}` -> 
 // play/pause state for the big play buttons
 const [isUserPlaying, setIsUserPlaying] = useState(false);
 const [isCorrectPlaying, setIsCorrectPlaying] = useState(false);
+// ---- Playback helpers (Slide 2) ----
+const LOOP_WINDOW_SEC = 2.5;
+
+const [playbackRate, setPlaybackRate] = useState(1.0); // 1.0 | 0.85 | 0.75
+const [loopOn, setLoopOn] = useState(false);
+const [isABPlaying, setIsABPlaying] = useState(false);
+
+const playbackRateRef = useRef(1.0);
+const loopOnRef = useRef(false);
+const abAudioRef = useRef(null);
+const abTokenRef = useRef(0);
+
+useEffect(() => {
+  playbackRateRef.current = playbackRate;
+}, [playbackRate]);
+
+useEffect(() => {
+  loopOnRef.current = loopOn;
+}, [loopOn]);
 
 const userSrcRef = useRef("");
 const correctTextRef = useRef("");
@@ -454,6 +521,50 @@ micStreamRef.current = stream;
 
   }
 
+function stopABNow() {
+  abTokenRef.current += 1;
+  setIsABPlaying(false);
+  try {
+    const a = abAudioRef.current;
+    if (a) {
+      a.pause();
+      a.currentTime = 0;
+      a.src = "";
+    }
+  } catch {}
+}
+
+function applyPlaybackSettings(a) {
+  if (!a) return;
+  try {
+    a.playbackRate = playbackRateRef.current || 1.0;
+    a.volume = settings?.soundEnabled === false ? 0 : 1;
+  } catch {}
+}
+
+function enableLoopWindow(a) {
+  if (!a) return;
+  // Loop first ~2.5s from 0 (simple + consistent)
+  try {
+    a.__loopStart = 0;
+    a.__loopEnd = LOOP_WINDOW_SEC;
+    a.currentTime = 0;
+  } catch {}
+}
+
+function attachLoopHandler(a) {
+  if (!a) return;
+  a.ontimeupdate = () => {
+    try {
+      if (!loopOnRef.current) return;
+      const start = Number(a.__loopStart ?? 0);
+      const end = Number(a.__loopEnd ?? LOOP_WINDOW_SEC);
+      if (a.currentTime >= end) a.currentTime = start;
+    } catch {}
+  };
+}
+
+  
   async function playTts(text, rate = 1.0) {
     const t = String(text || "").trim();
     if (!t) return;
@@ -676,6 +787,7 @@ await ensureMic(); // okay at keep mic warm (valgfrit)
 function onBack() {
   if (isBusy) return;
   stopTtsNow();
+  stopABNow();
 
   try {
     if (lastUrl) URL.revokeObjectURL(lastUrl);
@@ -988,6 +1100,12 @@ function toggleOverlayAudio(src, kind) {
     a.onerror = () => {
       if (kind === "user") setIsUserPlaying(false);
     };
+    // stop AB compare if user manually plays something
+    stopABNow();
+
+    applyPlaybackSettings(a);
+    attachLoopHandler(a);
+    if (loopOnRef.current) enableLoopWindow(a);
 
     a.play().catch(() => {});
   } catch {}
@@ -998,9 +1116,139 @@ function toggleUserRecording() {
   toggleOverlayAudio(result.userAudioUrl, "user");
 }
 
+async function ensureCorrectTtsUrlForAB(text) {
+  const t = String(text || "").trim();
+  if (!t) return null;
+
+  const key = `${accentUi}|${0.98}|${t}`;
+  const cached = ttsCacheRef.current.get(key);
+  if (cached) return cached;
+
+  let base = "";
+  try {
+    base = getApiBase();
+  } catch {
+    return null;
+  }
+
+  try {
+    const r = await fetch(`${base}/api/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: t, accent: accentUi, rate: 0.98 }),
+    });
+    if (!r.ok) return null;
+
+    const buf = await r.arrayBuffer();
+    const blob = new Blob([buf], { type: "audio/wav" });
+    const url = URL.createObjectURL(blob);
+    ttsCacheRef.current.set(key, url);
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function wait(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function playSegment(a, src, token) {
+  if (!a || !src) return;
+  if (token !== abTokenRef.current) return;
+
+  try {
+    a.pause();
+    a.currentTime = 0;
+  } catch {}
+
+  a.src = src;
+  applyPlaybackSettings(a);
+  attachLoopHandler(a);
+
+  if (loopOnRef.current) enableLoopWindow(a);
+
+  let ended = false;
+
+  const onEnded = () => { ended = true; };
+  a.onended = onEnded;
+
+  try {
+    await a.play();
+  } catch {}
+
+  // If loop is ON: play for window length then switch
+  if (loopOnRef.current) {
+    const ms = Math.round(LOOP_WINDOW_SEC * 1000);
+    await wait(ms);
+    try { a.pause(); } catch {}
+    return;
+  }
+
+  // Otherwise: wait for natural end (poll)
+  while (!ended && token === abTokenRef.current) {
+    // small poll to avoid complex event cleanup
+    // eslint-disable-next-line no-await-in-loop
+    await wait(80);
+  }
+}
+
+async function toggleABCompare() {
+  // If already running -> stop
+  if (isABPlaying) {
+    stopABNow();
+    return;
+  }
+
+  const userUrl = result?.userAudioUrl;
+  const text = String(isSentence ? target : currentWordText).trim();
+  if (!userUrl || !text) return;
+
+  // stop other audio
+  stopTtsNow();
+  try { overlayAudioRef.current?.pause?.(); } catch {}
+
+  const correctUrl = await ensureCorrectTtsUrlForAB(text);
+  if (!correctUrl) return;
+
+  if (!abAudioRef.current) abAudioRef.current = new Audio();
+
+  const a = abAudioRef.current;
+  setIsABPlaying(true);
+
+  // new run token
+  abTokenRef.current += 1;
+  const token = abTokenRef.current;
+
+  // Loop A->B until stopped
+  while (token === abTokenRef.current) {
+    // A = You
+    // eslint-disable-next-line no-await-in-loop
+    await playSegment(a, userUrl, token);
+    if (token !== abTokenRef.current) break;
+
+    // short gap
+    // eslint-disable-next-line no-await-in-loop
+    await wait(180);
+    if (token !== abTokenRef.current) break;
+
+    // B = Correct
+    // eslint-disable-next-line no-await-in-loop
+    await playSegment(a, correctUrl, token);
+    if (token !== abTokenRef.current) break;
+
+    // short gap
+    // eslint-disable-next-line no-await-in-loop
+    await wait(180);
+  }
+}
+
+
 async function toggleCorrectTts() {
   const text = String(isSentence ? target : currentWordText).trim();
   if (!text) return;
+  // stop AB compare if user manually plays something
+  stopABNow();
 
   const a = ttsAudioRef.current;
   if (!a) return;
@@ -1376,6 +1624,8 @@ function getExamplesForPhoneme(code) {
 }
 
 function onTryAgain() {
+    stopABNow();
+
   const t = String(target || "").trim();
   if (!t) return;
 
@@ -1398,6 +1648,8 @@ function onTryAgain() {
 
 
 function onNext() {
+    stopABNow();
+
   // nyt target + luk overlay (result=null) så du er klar til at optage igen
   const next = buildNewTarget(mode, difficulty);
   setTarget(next);
@@ -1946,6 +2198,119 @@ disabled={!String(isSentence ? target : currentWordText).trim()}
             </div>
           </div>
         </div>
+                {/* Playback tools: Loop / Slow / A-B */}
+        <div style={{ marginTop: 18, display: "grid", gap: 10 }}>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => setLoopOn((v) => !v)}
+              style={{
+                height: 40,
+                padding: "0 14px",
+                borderRadius: 14,
+                border: `1px solid ${LIGHT_BORDER}`,
+                background: loopOn ? "rgba(33,150,243,0.12)" : "#fff",
+                fontWeight: 950,
+                cursor: "pointer",
+              }}
+            >
+              Loop {loopOn ? "On" : "Off"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPlaybackRate(1.0)}
+              style={{
+                height: 40,
+                padding: "0 14px",
+                borderRadius: 14,
+                border: `1px solid ${LIGHT_BORDER}`,
+                background: playbackRate === 1.0 ? "rgba(33,150,243,0.12)" : "#fff",
+                fontWeight: 950,
+                cursor: "pointer",
+              }}
+            >
+              1.0x
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPlaybackRate(0.85)}
+              style={{
+                height: 40,
+                padding: "0 14px",
+                borderRadius: 14,
+                border: `1px solid ${LIGHT_BORDER}`,
+                background: playbackRate === 0.85 ? "rgba(33,150,243,0.12)" : "#fff",
+                fontWeight: 950,
+                cursor: "pointer",
+              }}
+            >
+              0.85x
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPlaybackRate(0.75)}
+              style={{
+                height: 40,
+                padding: "0 14px",
+                borderRadius: 14,
+                border: `1px solid ${LIGHT_BORDER}`,
+                background: playbackRate === 0.75 ? "rgba(33,150,243,0.12)" : "#fff",
+                fontWeight: 950,
+                cursor: "pointer",
+              }}
+            >
+              0.75x
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleABCompare}
+              disabled={!result?.userAudioUrl || !String(isSentence ? target : currentWordText).trim()}
+              style={{
+                height: 40,
+                padding: "0 14px",
+                borderRadius: 14,
+                border: "none",
+                background: isABPlaying ? "#111827" : "#FF9800",
+                color: "white",
+                fontWeight: 950,
+                cursor: "pointer",
+                opacity: !result?.userAudioUrl || !String(isSentence ? target : currentWordText).trim() ? 0.6 : 1,
+              }}
+              title="Play A then B"
+            >
+              {isABPlaying ? "Stop A/B" : "Play A → B"}
+            </button>
+          </div>
+
+          {/* What to listen for (single short line, not repeating tips) */}
+          {(() => {
+            const focusCode = primaryWeakPhoneme?.code || null;
+            const cue = focusCode ? getListenFor(focusCode) : null;
+            if (!focusCode || !cue) return null;
+
+            return (
+              <div
+                style={{
+                  marginTop: 2,
+                  textAlign: "center",
+                  fontWeight: 900,
+                  fontSize: 13,
+                  color: "rgba(17,24,39,0.78)",
+                }}
+              >
+                <span style={{ color: "rgba(17,24,39,0.55)", fontWeight: 950 }}>What to listen for:</span>{" "}
+                <span>
+                  {focusCode}: {cue}
+                </span>
+              </div>
+            );
+          })()}
+        </div>
+
       </motion.div>
     ) : null}
 
