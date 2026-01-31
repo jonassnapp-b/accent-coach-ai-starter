@@ -563,25 +563,73 @@ function applyPlaybackSettings(a) {
 
 function enableLoopWindow(a) {
   if (!a) return;
-  // Loop first ~2.5s from 0 (simple + consistent)
+
   try {
     a.__loopStart = 0;
-    a.__loopEnd = LOOP_WINDOW_SEC;
-    a.currentTime = 0;
+
+    // If duration is known, don't set loopEnd beyond duration (or it will just end and never loop)
+    const dur = Number.isFinite(a.duration) && a.duration > 0 ? a.duration : null;
+
+    // keep a tiny safety margin so we don't seek to exactly the end
+    const safeEnd = dur ? Math.max(0.15, dur - 0.05) : LOOP_WINDOW_SEC;
+
+    a.__loopEnd = Math.min(LOOP_WINDOW_SEC, safeEnd);
+
+    // snap into loop window
+    if (a.currentTime < a.__loopStart || a.currentTime >= a.__loopEnd) {
+      a.currentTime = a.__loopStart;
+    }
   } catch {}
 }
 
 function attachLoopHandler(a) {
   if (!a) return;
-  a.ontimeupdate = () => {
+
+  // attach once per element/object (prevents overwriting other onended/onplay handlers)
+  if (a.__loopHandlersAttached) return;
+  a.__loopHandlersAttached = true;
+
+  const onLoadedMeta = () => {
+    // When metadata loads, we can clamp loopEnd to duration
+    try {
+      if (!loopOnRef.current) return;
+      enableLoopWindow(a);
+    } catch {}
+  };
+
+  const onTimeUpdate = () => {
     try {
       if (!loopOnRef.current) return;
       const start = Number(a.__loopStart ?? 0);
       const end = Number(a.__loopEnd ?? LOOP_WINDOW_SEC);
-      if (a.currentTime >= end) a.currentTime = start;
+
+      if (a.currentTime >= end) {
+        a.currentTime = start;
+        // If the browser paused at the boundary, force continue
+        if (a.paused) a.play().catch(() => {});
+      }
     } catch {}
   };
+
+  const onEnded = () => {
+    try {
+      if (!loopOnRef.current) return;
+      const start = Number(a.__loopStart ?? 0);
+      a.currentTime = start;
+      a.play().catch(() => {});
+    } catch {}
+  };
+
+  // store refs (optional, but nice for debugging)
+  a.__onLoopLoadedMeta = onLoadedMeta;
+  a.__onLoopTimeUpdate = onTimeUpdate;
+  a.__onLoopEnded = onEnded;
+
+  a.addEventListener("loadedmetadata", onLoadedMeta);
+  a.addEventListener("timeupdate", onTimeUpdate);
+  a.addEventListener("ended", onEnded);
 }
+
 
   
   async function playTts(text, rate = 1.0) {
@@ -2295,25 +2343,7 @@ disabled={!String(isSentence ? target : currentWordText).trim()}
               0.75x
             </button>
 
-            <button
-              type="button"
-              onClick={toggleABCompare}
-              disabled={!result?.userAudioUrl || !String(isSentence ? target : currentWordText).trim()}
-              style={{
-                height: 40,
-                padding: "0 14px",
-                borderRadius: 14,
-                border: "none",
-                background: isABPlaying ? "#111827" : "#FF9800",
-                color: "white",
-                fontWeight: 950,
-                cursor: "pointer",
-                opacity: !result?.userAudioUrl || !String(isSentence ? target : currentWordText).trim() ? 0.6 : 1,
-              }}
-              title="Play A then B"
-            >
-              {isABPlaying ? "Stop A/B" : "Play A → B"}
-            </button>
+          
           </div>
 
           {/* What to listen for (single short line, not repeating tips) */}
