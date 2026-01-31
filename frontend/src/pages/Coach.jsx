@@ -398,6 +398,25 @@ useEffect(() => {
   loopOnRef.current = loopOn;
 }, [loopOn]);
 
+useEffect(() => {
+  // apply to currently used players (if any)
+  try { applyPlaybackSettings(overlayAudioRef.current); } catch {}
+  try { applyPlaybackSettings(ttsAudioRef.current); } catch {}
+  try { applyPlaybackSettings(abAudioRef.current); } catch {}
+
+  try {
+    attachLoopHandler(overlayAudioRef.current);
+    attachLoopHandler(ttsAudioRef.current);
+    attachLoopHandler(abAudioRef.current);
+
+    if (loopOn) {
+      enableLoopWindow(overlayAudioRef.current);
+      enableLoopWindow(ttsAudioRef.current);
+      enableLoopWindow(abAudioRef.current);
+    }
+  } catch {}
+}, [playbackRate, loopOn]);
+
 const userSrcRef = useRef("");
 const correctTextRef = useRef("");
 
@@ -1256,15 +1275,20 @@ async function toggleCorrectTts() {
   const sameText = correctTextRef.current === text;
 
   // If same text and currently playing -> pause
- if (sameText && a.src) {
-  // restart immediately (even mid-play)
+if (sameText && a.src) {
   try {
     a.pause();
     a.currentTime = 0;
+
+    applyPlaybackSettings(a);
+    attachLoopHandler(a);
+    if (loopOnRef.current) enableLoopWindow(a);
+
     a.play().catch(() => {});
   } catch {}
   return;
 }
+
 
   // If same text and we already have src -> just play
   if (sameText && a.src) {
@@ -1293,6 +1317,9 @@ const cachedUrl = ttsCacheRef.current.get(ttsCacheKey);
       a.currentTime = 0;
       a.src = cachedUrl;
       a.volume = settings?.soundEnabled === false ? 0 : 1;
+applyPlaybackSettings(a);
+attachLoopHandler(a);
+if (loopOnRef.current) enableLoopWindow(a);
 
       a.onplay = () => setIsCorrectPlaying(true);
       a.onpause = () => setIsCorrectPlaying(false);
@@ -1326,6 +1353,9 @@ ttsCacheRef.current.set(ttsCacheKey, url);
     a.currentTime = 0;
     a.src = url;
     a.volume = settings?.soundEnabled === false ? 0 : 1;
+applyPlaybackSettings(a);
+attachLoopHandler(a);
+if (loopOnRef.current) enableLoopWindow(a);
 
     a.onplay = () => setIsCorrectPlaying(true);
     a.onpause = () => setIsCorrectPlaying(false);
