@@ -396,7 +396,11 @@ function renderScoredLine(text, wordScoreMap) {
 const wordScoreMap = buildWordScoreMap(json?.words);
 
       // 3) Append the user message (we show the expected reply text as what user intended to say)
-      const userText = targetLine;
+      // 3) Append the user message (score the line that was visible when recording started)
+const userText = String(targetLine || "").trim();
+
+// Immediately hide the "Your turn" bubble so it doesn't repeat the same line under the scored message
+setTargetLine("");
 
   setMessages((prev) => [
   ...prev,
@@ -423,16 +427,28 @@ const wordScoreMap = buildWordScoreMap(json?.words);
         }),
       }).then((x) => x.json().catch(() => null));
 
-      if (ai?.assistantText) {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", speaker: scenario.partnerName || "AI Partner", text: ai.assistantText },
-        ]);
-      }
-
-  if (ai?.nextUserLine) {
-  setTargetLine(String(ai.nextUserLine).trim() || "");
+     if (ai?.assistantText) {
+  setMessages((prev) => {
+    const aiCount = prev.filter((x) => x.role === "assistant").length;
+    if (aiCount >= MAX_AI_MESSAGES) {
+      // End scenario: no more turns
+      setTargetLine("");
+      return prev;
+    }
+    return [
+      ...prev,
+      { role: "assistant", speaker: scenario.partnerName || "AI Partner", text: ai.assistantText },
+    ];
+  });
 }
+
+
+if (ai?.nextUserLine) {
+  const nextLine = String(ai.nextUserLine).trim();
+  // Don't show the same line again
+  setTargetLine(nextLine && nextLine !== userText ? nextLine : "");
+}
+
 
 
       // progress +1 (real counter)
@@ -680,13 +696,13 @@ const wordScoreMap = buildWordScoreMap(json?.words);
     {/* Right-shifted “your turn” bubble */}
    <div
   style={{
-    width: "min(560px, 88%)",     // lidt bredere, men mindre % så den ikke ryger ud
+width: "min(460px, 84%)",   // mindre bubble
     maxWidth: "100%",
     boxSizing: "border-box",
 
-    marginLeft: "auto",
-    marginRight: 0,
-    transform: "translateX(22px)",
+   marginLeft: "auto",
+marginRight: 0,
+transform: "translateX(8px)", // lidt til højre, men ikke så meget at den cutter
 
     background: "rgba(255,255,255,0.06)",
     border: "1px solid rgba(255,255,255,0.10)",
