@@ -22,6 +22,7 @@ const WeaknessLab = lazy(() => import("./pages/WeaknessLab.jsx"));
 const Settings   = lazy(() => import("./pages/Settings.jsx"));
 const Bookmarks  = lazy(() => import("./pages/Bookmarks.jsx"));
 const Coach = lazy(() => import("./pages/Coach.jsx"));
+const AiChat = lazy(() => import("./pages/AiChat.jsx"));
 
 
 import { submitReferralOpen } from "./lib/api.js";
@@ -35,6 +36,7 @@ import "./styles.css";
 /* ---------------- Prefetch helpers (route-level) ---------------- */
 const routePrefetch = {
     "/coach":     () => import("./pages/Coach.jsx"),
+      "/ai-chat":   () => import("./pages/AiChat.jsx"),
   "/imitate":    () => import("./pages/ProgressiveSentenceMastery.jsx"),
   "/weakness":   () => import("./pages/WeaknessLab.jsx"),
   "/settings":   () => import("./pages/Settings.jsx"),
@@ -74,11 +76,13 @@ function PracticeGate() {
 /* ---------------- Tabs ---------------- */
 /* ---------------- Tabs ---------------- */
 const TABS = [
-  { path: "/coach",  label: "Talk",     Icon: MessageCircle, element: <Coach /> },
-  { path: "/record", label: "Practice", Icon: Mic, element: <PracticeGate /> },
-    { path: "/weakness", label: "Weakness",  Icon: Target,    element: <WeaknessLab /> },
-  { path: "/settings", label: "Settings",  Icon: SettingsIcon, element: <Settings /> },
+  { path: "/ai-chat", label: "AI Chat",  Icon: MessageCircle, element: <AiChat /> },
+  { path: "/coach",   label: "Talk",     Icon: AudioWaveform, element: <Coach /> },
+  { path: "/record",  label: "Practice", Icon: Mic,           element: <PracticeGate /> },
+  { path: "/weakness",label: "Weakness", Icon: Target,        element: <WeaknessLab /> },
+  { path: "/settings",label: "Settings", Icon: SettingsIcon,  element: <Settings /> },
 ];
+
 
 
 
@@ -135,6 +139,8 @@ function AppInner() {
     const idle = (cb) =>
       (window.requestIdleCallback ? window.requestIdleCallback(cb) : setTimeout(cb, 350));
     idle(() => {
+        prefetchRoute("/ai-chat");
+
         prefetchRoute("/coach");
   prefetchRoute("/imitate");
   prefetchRoute("/weakness");
@@ -195,7 +201,7 @@ function AppInner() {
             {/* Onboarding always reachable */}
             
             {/* Default route */}
-           <Route path="/" element={<Navigate to="/coach" replace />} />
+           <Route path="/" element={<Navigate to="/ai-chat" replace />} />
 
 
             {/* Tabs */}
