@@ -272,6 +272,8 @@ function renderScoredLine(text, wordScoreMap) {
 
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzeStatus, setAnalyzeStatus] = useState("");
+
   const mediaRecRef = useRef(null);
   const chunksRef = useRef([]);
   const micStreamRef = useRef(null);
@@ -323,6 +325,8 @@ function renderScoredLine(text, wordScoreMap) {
     chunksRef.current = [];
     mediaRecRef.current.start();
     setIsRecording(true);
+    setAnalyzeStatus("");
+
   }
 
   function stopRecording() {
@@ -345,6 +349,18 @@ function renderScoredLine(text, wordScoreMap) {
     const blob = new Blob(chunks, { type });
 
     setIsAnalyzing(true);
+    setAnalyzeStatus("Analyzing…");
+
+// Hide the “Your turn” bubble while we analyze (prevents duplicate line)
+const spokenText = targetLine; // snapshot of the prompt you just spoke
+
+setTargetLine("");
+
+const controller = new AbortController();
+const timeoutId = setTimeout(() => {
+  try { controller.abort(); } catch {}
+}, 8000);
+
     try {
       // 1) score pronunciation via SpeechSuper (same endpoint as Coach/Record)
       const base = getApiBase();
@@ -352,11 +368,15 @@ function renderScoredLine(text, wordScoreMap) {
       fd.append("audio", blob, "clip.webm");
 
       // IMPORTANT: we score against AI’s "expected short reply"
-      fd.append("refText", targetLine);
+      fd.append("refText", spokenText);
 
       fd.append("accent", accentUi === "en_br" ? "en_br" : "en_us");
 
-      const r = await fetch(`${base}/api/analyze-speech`, { method: "POST", body: fd });
+      const r = await fetch(`${base}/api/analyze-speech`, {
+  method: "POST",
+  body: fd,
+  signal: controller.signal,
+});
       const json = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
 
@@ -397,10 +417,8 @@ const wordScoreMap = buildWordScoreMap(json?.words);
 
       // 3) Append the user message (we show the expected reply text as what user intended to say)
       // 3) Append the user message (score the line that was visible when recording started)
-const userText = String(targetLine || "").trim();
+const userText = String(spokenText || "").trim();
 
-// Immediately hide the "Your turn" bubble so it doesn't repeat the same line under the scored message
-setTargetLine("");
 
   setMessages((prev) => [
   ...prev,
@@ -456,10 +474,18 @@ if (ai?.nextUserLine) {
       writeProgress(next);
     } catch (e) {
       // if you want: show error as system message
+      if (String(e?.name || "").includes("Abort")) {
+  setAnalyzeStatus("Took too long — try again.");
+} else {
+  setAnalyzeStatus("Analyze failed — try again.");
+}
+
       setMessages((prev) => [...prev, { role: "system", speaker: "System", text: String(e?.message || e) }]);
-    } finally {
-      setIsAnalyzing(false);
-    }
+   } finally {
+  clearTimeout(timeoutId);
+  setIsAnalyzing(false);
+}
+
   }
 
   const { LIGHT_TEXT, LIGHT_MUTED, LIGHT_BORDER, CARD, CARD2 } = theme;
@@ -798,9 +824,8 @@ top: 14,
             {isRecording ? <StopCircle className="h-10 w-10" style={{ color: "white" }} /> : <Mic className="h-10 w-10" style={{ color: "white" }} />}
           </button>
 
-          <div style={{ marginTop: 10, fontWeight: 900, color: "rgba(255,255,255,0.55)" }}>
-            {isRecording ? "Recording…" : isAnalyzing ? "Analyzing…" : " "}
-          </div>
+        {isRecording ? "Recording…" : isAnalyzing ? (analyzeStatus || "Analyzing…") : (analyzeStatus || " ")}
+
         </div>
       </div>
     </motion.div>

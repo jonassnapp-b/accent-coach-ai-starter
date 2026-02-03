@@ -1,121 +1,352 @@
 // src/data/aiChatScenarios.js
 
 export const AI_CHAT_LEVELS = [
-  {
+  
+      {
     level: 1,
     scenarios: [
       {
         id: "l1_coffee_order",
         title: "Coffee Order",
         subtitle: "Order politely, handle a follow-up question",
-        total: 13,
+        total: 5,
         emoji: "☕️",
         partnerName: "Mia",
         partnerTitle: "your Barista",
         opening: "Hi there! What can I get started for you today?",
         firstUserLine: "Hi — can I get a cappuccino, please?",
+        turns: [
+          {
+            assistantText: "Sure! What size would you like — small, medium, or large?",
+            nextUserLine: "A medium, please.",
+          },
+          {
+            assistantText: "Great. Would you like it here or to go?",
+            nextUserLine: "To go, please.",
+          },
+          {
+            assistantText: "No problem. Any sugar or extra shot?",
+            nextUserLine: "No sugar — and no extra shot, thanks.",
+          },
+          {
+            assistantText: "Perfect. That’ll be $4.50. How would you like to pay?",
+            nextUserLine: "By card, please.",
+          },
+          {
+            assistantText: "All set — it’ll be ready at the end of the counter. Have a great day!",
+            nextUserLine: "",
+          },
+        ],
       },
+
       {
         id: "l1_smalltalk_neighbor",
         title: "Neighbor Small Talk",
         subtitle: "Keep it friendly and natural in the hallway",
-        total: 13,
+        total: 5,
         emoji: "🏠",
         partnerName: "Daniel",
         partnerTitle: "your Neighbor",
         opening: "Oh hey! Long time no see — how’s it going?",
         firstUserLine: "Hey! Pretty good — just got back from work. How about you?",
+        turns: [
+          {
+            assistantText: "Not bad — just keeping busy. How was work today?",
+            nextUserLine: "It was pretty busy, but it went well.",
+          },
+          {
+            assistantText: "Nice. Anything fun planned for tonight?",
+            nextUserLine: "Not really — probably just dinner and relaxing.",
+          },
+          {
+            assistantText: "Sounds good. By the way, did you get the building email about the water shut-off?",
+            nextUserLine: "Yeah, I saw it — it’s tomorrow morning, right?",
+          },
+          {
+            assistantText: "Exactly. I’m going to fill a few bottles tonight just in case.",
+            nextUserLine: "Good idea — I’ll do that too.",
+          },
+          {
+            assistantText: "Cool. Alright — good seeing you. Have a nice evening!",
+            nextUserLine: "",
+          },
+        ],
       },
+
       {
         id: "l1_store_return",
         title: "Return at a Store",
         subtitle: "Explain why you’re returning an item",
-        total: 13,
+        total: 5,
         emoji: "🛍️",
         partnerName: "Sofia",
         partnerTitle: "Store Assistant",
         opening: "Hi! How can I help you today?",
         firstUserLine: "Hi — I’d like to return this, please.",
+        turns: [
+          {
+            assistantText: "Of course. What’s the reason for the return?",
+            nextUserLine: "It doesn’t fit — it’s a bit too small.",
+          },
+          {
+            assistantText: "No worries. Do you have the receipt or order email?",
+            nextUserLine: "Yes — I have the order email on my phone.",
+          },
+          {
+            assistantText: "Great. Would you like a refund or an exchange?",
+            nextUserLine: "A refund, please.",
+          },
+          {
+            assistantText: "Sure. We’ll refund it to the original payment method — it usually takes 2–3 days.",
+            nextUserLine: "Perfect — thank you.",
+          },
+          {
+            assistantText: "You’re welcome. Anything else I can help you with today?",
+            nextUserLine: "",
+          },
+        ],
       },
+
       {
         id: "l1_ask_directions",
         title: "Ask for Directions",
         subtitle: "Ask and confirm you understood correctly",
-        total: 13,
+        total: 5,
         emoji: "🗺️",
         partnerName: "Noah",
         partnerTitle: "a Local",
         opening: "Hi! You look a bit lost — can I help?",
         firstUserLine: "Yes, please — how do I get to the train station from here?",
+        turns: [
+          {
+            assistantText: "Sure. Walk straight for two blocks, then turn left at the traffic light.",
+            nextUserLine: "Okay — straight two blocks, then left at the light.",
+          },
+          {
+            assistantText: "Right. After that, you’ll see a big supermarket on your right — the station is just behind it.",
+            nextUserLine: "Got it. About how long does it take to walk?",
+          },
+          {
+            assistantText: "Around 8 to 10 minutes.",
+            nextUserLine: "Perfect — thanks a lot.",
+          },
+          {
+            assistantText: "No problem. Do you need the entrance for tickets or the platforms?",
+            nextUserLine: "The entrance for tickets, please.",
+          },
+          {
+            assistantText: "Then go to the main entrance on the front side — you’ll see the ticket machines right inside.",
+            nextUserLine: "",
+          },
+        ],
       },
+
       {
         id: "l1_gym_checkin",
         title: "Gym Check-in",
         subtitle: "Solve a simple membership/check-in issue",
-        total: 13,
+        total: 5,
         emoji: "🏋️‍♂️",
         partnerName: "Emma",
         partnerTitle: "Front Desk",
         opening: "Hi! Welcome in — checking in today?",
         firstUserLine: "Hi — yes, but my membership isn’t showing up when I scan.",
+        turns: [
+          {
+            assistantText: "No problem — can I see your membership email or your phone number?",
+            nextUserLine: "Sure — it’s under my phone number.",
+          },
+          {
+            assistantText: "Thanks. What’s the number?",
+            nextUserLine: "It’s 12 34 56 78.",
+          },
+          {
+            assistantText: "Got it — I see your account. Looks like the app didn’t sync. Let’s refresh it.",
+            nextUserLine: "Okay — what should I do?",
+          },
+          {
+            assistantText: "Close the app полностью and open it again — then try scanning.",
+            nextUserLine: "Alright — I’ll try now.",
+          },
+          {
+            assistantText: "Perfect — you’re checked in. Have a great workout!",
+            nextUserLine: "",
+          },
+        ],
       },
+
       {
         id: "l1_food_allergy",
         title: "Food Allergy",
         subtitle: "Ask about ingredients and alternatives",
-        total: 13,
+        total: 5,
         emoji: "🥗",
         partnerName: "Luca",
         partnerTitle: "Waiter",
         opening: "Good evening! Are you ready to order?",
         firstUserLine: "Almost — I have a nut allergy. Does this dish contain any nuts?",
+        turns: [
+          {
+            assistantText: "Thanks for telling me. That dish has a pesto topping — it may contain pine nuts.",
+            nextUserLine: "Okay — is there a safe alternative you recommend?",
+          },
+          {
+            assistantText: "Yes — the grilled chicken salad is nut-free, and we can keep the dressing simple.",
+            nextUserLine: "Great — I’ll take the grilled chicken salad, please.",
+          },
+          {
+            assistantText: "Of course. Any other allergies I should know about?",
+            nextUserLine: "No — just nuts.",
+          },
+          {
+            assistantText: "Perfect. Would you like sparkling or still water?",
+            nextUserLine: "Still water, please.",
+          },
+          {
+            assistantText: "Great — I’ll bring that right out. Thank you!",
+            nextUserLine: "",
+          },
+        ],
       },
+
       {
         id: "l1_book_appointment",
         title: "Book an Appointment",
         subtitle: "Choose time, confirm details, ask one question",
-        total: 13,
+        total: 5,
         emoji: "📅",
         partnerName: "Nina",
         partnerTitle: "Receptionist",
         opening: "Hi! How can I help you today?",
         firstUserLine: "Hi — I’d like to book an appointment for next week, if possible.",
+        turns: [
+          {
+            assistantText: "Sure. What day works best for you — Monday to Thursday?",
+            nextUserLine: "Tuesday would be great, if you have availability.",
+          },
+          {
+            assistantText: "We have Tuesday at 10:30 or 14:00. Which do you prefer?",
+            nextUserLine: "14:00, please.",
+          },
+          {
+            assistantText: "Perfect. Can I get your full name and phone number?",
+            nextUserLine: "Yes — it’s Jonas, and my number is 12 34 56 78.",
+          },
+          {
+            assistantText: "Great — you’re booked for Tuesday at 14:00. Would you like a confirmation by SMS?",
+            nextUserLine: "Yes, please — that would be helpful.",
+          },
+          {
+            assistantText: "Done. See you next week — have a nice day!",
+            nextUserLine: "",
+          },
+        ],
       },
+
       {
         id: "l1_ride_smalltalk",
         title: "Ride Small Talk",
         subtitle: "Light conversation during a short ride",
-        total: 13,
+        total: 5,
         emoji: "🚗",
         partnerName: "Omar",
         partnerTitle: "Driver",
         opening: "Hi! How’s your day going so far?",
         firstUserLine: "Pretty good, thanks — just heading home after a busy day.",
+        turns: [
+          {
+            assistantText: "I know that feeling. What do you do for work?",
+            nextUserLine: "I work in finance — mostly analysis and reporting.",
+          },
+          {
+            assistantText: "Nice. Do you enjoy it?",
+            nextUserLine: "Yeah — I like it, especially when it’s challenging.",
+          },
+          {
+            assistantText: "That’s good. By the way, traffic is a bit heavy — are you in a rush?",
+            nextUserLine: "Not really — it’s fine.",
+          },
+          {
+            assistantText: "Perfect. Want the route with fewer stops, or the fastest one?",
+            nextUserLine: "The fastest one, please.",
+          },
+          {
+            assistantText: "Got it. We’ll be there in about 12 minutes.",
+            nextUserLine: "",
+          },
+        ],
       },
+
       {
         id: "l1_friend_plans",
         title: "Weekend Plans",
         subtitle: "Make plans and suggest an activity",
-        total: 13,
+        total: 5,
         emoji: "🎉",
         partnerName: "Rachel",
         partnerTitle: "your Best Friend",
         opening: "Hey! Any plans for the weekend?",
         firstUserLine: "Not yet — I’m free. Do you want to do something?",
+        turns: [
+          {
+            assistantText: "Yeah! I was thinking brunch or a movie. What do you feel like?",
+            nextUserLine: "Brunch sounds nice — I’m down for that.",
+          },
+          {
+            assistantText: "Perfect. Saturday or Sunday?",
+            nextUserLine: "Saturday works best for me.",
+          },
+          {
+            assistantText: "Cool. Morning or afternoon?",
+            nextUserLine: "Late morning — like around 11?",
+          },
+          {
+            assistantText: "11 is great. Want to try that new café downtown?",
+            nextUserLine: "Yes — let’s do it. Send me the address.",
+          },
+          {
+            assistantText: "Awesome. See you Saturday!",
+            nextUserLine: "",
+          },
+        ],
       },
+
       {
         id: "l1_phone_call_intro",
         title: "Quick Phone Intro",
         subtitle: "Introduce yourself and state your purpose",
-        total: 13,
+        total: 5,
         emoji: "📞",
         partnerName: "Alex",
         partnerTitle: "Support Agent",
         opening: "Thanks for calling — how can I help today?",
         firstUserLine: "Hi Alex — I’m calling because I can’t log into my account.",
+        turns: [
+          {
+            assistantText: "I can help. Are you getting an error message, or does it just not accept the password?",
+            nextUserLine: "It says my password is incorrect, even though I’m sure it’s right.",
+          },
+          {
+            assistantText: "Okay. Have you tried resetting your password?",
+            nextUserLine: "Not yet — can you guide me through it?",
+          },
+          {
+            assistantText: "Absolutely. Do you have access to the email connected to the account?",
+            nextUserLine: "Yes — I can open that email right now.",
+          },
+          {
+            assistantText: "Great. Click “Forgot password,” then tell me when you see the reset email.",
+            nextUserLine: "Okay — I see it. I’m opening it now.",
+          },
+          {
+            assistantText: "Perfect. Create a new password and try logging in again — that should fix it.",
+            nextUserLine: "",
+          },
+        ],
       },
     ],
   },
+
 
   {
     level: 2,
