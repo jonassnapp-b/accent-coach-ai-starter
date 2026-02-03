@@ -3,6 +3,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, StopCircle, X, ChevronRight } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
+import { AI_CHAT_LEVELS } from "../data/aiChatScenarios.js";
 
 function isNative() {
   return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
@@ -25,15 +26,6 @@ function getApiBase() {
  */
 const LEVELS = Array.from({ length: 10 }).map((_, levelIdx) => {
   const level = levelIdx + 1;
-  const scenarios = [
-    { id: `lvl${level}_interview`, title: "First-Round Interview", subtitle: "Discuss your background and professional goals", total: 13 },
-    { id: `lvl${level}_workouts`, title: "Workouts", subtitle: "Start your strength training program", total: 13 },
-    { id: `lvl${level}_taxi`, title: "A Taxi Ride", subtitle: "Chat with the driver about the city", total: 13 },
-    { id: `lvl${level}_schedule`, title: "Work Schedule", subtitle: "Discuss the changes to your company's policies", total: 13 },
-    { id: `lvl${level}_date`, title: "First Date", subtitle: "Are you a match?", total: 13 },
-  ];
-  return { level, scenarios };
-});
 
 function lsKeyProgress(scenarioId) {
   return `ai_chat_progress_v1:${scenarioId}`;
@@ -66,14 +58,10 @@ export default function AiChat() {
   const CARD = "rgba(255,255,255,0.06)";
   const CARD2 = "rgba(255,255,255,0.08)";
 
-  // top toggle Role-Play / Topic (like screenshot)
-  const [mode, setMode] = useState("roleplay"); // roleplay | topic
-
   // selected scenario modal
   const [activeScenario, setActiveScenario] = useState(null);
 
-  const levels = useMemo(() => LEVELS, []);
-
+  
   return (
     <div
       style={{
@@ -86,66 +74,8 @@ export default function AiChat() {
       {/* Header */}
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "16px 14px 10px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{
-                display: "inline-flex",
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.10)",
-                borderRadius: 999,
-                padding: 4,
-                gap: 4,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setMode("roleplay")}
-                style={{
-                  height: 34,
-                  padding: "0 16px",
-                  borderRadius: 999,
-                  border: "none",
-                  background: mode === "roleplay" ? "rgba(99,102,241,0.85)" : "transparent",
-                  color: "white",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                Role-Play
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("topic")}
-                style={{
-                  height: 34,
-                  padding: "0 16px",
-                  borderRadius: 999,
-                  border: "none",
-                  background: mode === "topic" ? "rgba(99,102,241,0.85)" : "transparent",
-                  color: "rgba(255,255,255,0.75)",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                Topic
-              </button>
-            </div>
+          <div />
 
-            <button
-              type="button"
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 14,
-                border: "1px solid rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.06)",
-                color: "rgba(255,255,255,0.8)",
-              }}
-              title="Locked"
-            >
-              🔒
-            </button>
-          </div>
 
           <button
             type="button"
@@ -212,7 +142,7 @@ export default function AiChat() {
                             fontSize: 26,
                           }}
                         >
-                          {idx === 0 ? "📅" : idx === 1 ? "🏋️" : idx === 2 ? "🚕" : idx === 3 ? "🏢" : "❤️"}
+                          {s.emoji}
                         </div>
 
                         {/* small lock */}
@@ -282,7 +212,7 @@ function ScenarioChatModal({ scenario, accentUi, onClose, readProgress, writePro
   const [messages, setMessages] = useState(() => [
     {
       role: "assistant",
-      speaker: "Kai",
+      speaker: scenario.partnerName || "AI Partner",
       text: "Nice to meet you! What do you do?",
     },
   ]);
@@ -439,7 +369,7 @@ function ScenarioChatModal({ scenario, accentUi, onClose, readProgress, writePro
       if (ai?.assistantText) {
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", speaker: "Kai", text: ai.assistantText },
+          { role: "assistant", speaker: scenario.partnerName || "AI Partner", text: ai.assistantText },
         ]);
       }
 
@@ -512,7 +442,7 @@ function ScenarioChatModal({ scenario, accentUi, onClose, readProgress, writePro
                 🙂
               </div>
               <div>
-                <div style={{ fontWeight: 950, fontSize: 14, color: "rgba(255,255,255,0.85)" }}>AI Partner</div>
+                <div style={{ fontWeight: 950, fontSize: 14, color: "rgba(255,255,255,0.85)" }}>{scenario.partnerName} — {scenario.partnerTitle}</div>
                 <div style={{ fontWeight: 900, fontSize: 12, color: "rgba(255,255,255,0.50)" }}>{scenario.title}</div>
               </div>
             </div>
