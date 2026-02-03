@@ -133,8 +133,9 @@ export default function AiChat() {
                               idx % 2 === 0
                                 ? "radial-gradient(circle at 30% 30%, rgba(99,102,241,0.9), rgba(236,72,153,0.45) 55%, rgba(255,255,255,0.06) 75%)"
                                 : "radial-gradient(circle at 30% 30%, rgba(34,197,94,0.65), rgba(99,102,241,0.35) 55%, rgba(255,255,255,0.06) 75%)",
-                            border: "2px solid rgba(255,255,255,0.10)",
-                            boxShadow: "0 16px 40px rgba(0,0,0,0.35)",
+                           border: "2px solid rgba(255,255,255,0.16)",
+boxShadow: "0 16px 40px rgba(0,0,0,0.28)",
+
                             display: "grid",
                             placeItems: "center",
                            color: "rgba(255,255,255,0.92)",
@@ -145,24 +146,7 @@ fontSize: 30,
                           {s.emoji}
                         </div>
 
-                        {/* small lock */}
-                        <div
-                          style={{
-                            position: "absolute",
-                            left: -6,
-                            bottom: -6,
-                            width: 34,
-                            height: 34,
-                            borderRadius: 999,
-                            background: "rgba(15,17,25,0.85)",
-                            border: "1px solid rgba(255,255,255,0.10)",
-                            display: "grid",
-                            placeItems: "center",
-                            fontSize: 16,
-                          }}
-                        >
-                          🔒
-                        </div>
+                       
                       </div>
 
                       {/* right text */}
@@ -694,20 +678,28 @@ const wordScoreMap = buildWordScoreMap(json?.words);
     </div>
 
     {/* Right-shifted “your turn” bubble */}
-    <div
-      style={{
-        width: "min(520px, 92%)",
-        marginLeft: "auto",
-        marginRight: 0,
-        transform: "translateX(16px)", // more to the right vs your normal user bubble
-        background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.10)",
-        borderRadius: 22,
-        padding: "12px 16px 14px",
-        position: "relative",
-        boxShadow: "0 22px 60px rgba(0,0,0,0.35)",
-      }}
-    >
+   <div
+  style={{
+    width: "min(560px, 88%)",     // lidt bredere, men mindre % så den ikke ryger ud
+    maxWidth: "100%",
+    boxSizing: "border-box",
+
+    marginLeft: "auto",
+    marginRight: 0,
+    transform: "translateX(22px)",
+
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    borderRadius: 22,
+
+    padding: "12px 16px 14px",
+    paddingRight: 72,            // IMPORTANT: plads til speaker-knappen
+
+    position: "relative",
+    boxShadow: "0 22px 60px rgba(0,0,0,0.35)",
+  }}
+>
+
       <div
         style={{
           fontWeight: 950,
@@ -740,8 +732,9 @@ const wordScoreMap = buildWordScoreMap(json?.words);
         onClick={speakTarget}
         style={{
           position: "absolute",
-          right: 10,
-          top: 10,
+          right: 14,
+top: 14,
+
           width: 40,
           height: 40,
           borderRadius: 999,
