@@ -24,8 +24,7 @@ function getApiBase() {
  * Placeholder: 10 levels, each with X scenarios.
  * Progress "0/13" is stored per scenario so it can be real later.
  */
-const LEVELS = Array.from({ length: 10 }).map((_, levelIdx) => {
-  const level = levelIdx + 1;
+
 
 function lsKeyProgress(scenarioId) {
   return `ai_chat_progress_v1:${scenarioId}`;
@@ -60,6 +59,7 @@ export default function AiChat() {
 
   // selected scenario modal
   const [activeScenario, setActiveScenario] = useState(null);
+  const levels = useMemo(() => AI_CHAT_LEVELS, []);
 
   
   return (
