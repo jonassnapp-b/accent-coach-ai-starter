@@ -1,7 +1,7 @@
 // src/pages/AiChat.jsx
 import React, { useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, StopCircle, X, ChevronRight } from "lucide-react";
+import { Mic, StopCircle, X, ChevronRight, Volume2 } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import { AI_CHAT_LEVELS } from "../data/aiChatScenarios.js";
 
@@ -209,16 +209,31 @@ export default function AiChat() {
 function ScenarioChatModal({ scenario, accentUi, onClose, readProgress, writeProgress, theme }) {
   const { settings } = useSettings();
 
-  const [messages, setMessages] = useState(() => [
-    {
-      role: "assistant",
-      speaker: scenario.partnerName || "AI Partner",
-      text: "Nice to meet you! What do you do?",
-    },
-  ]);
+const [messages, setMessages] = useState(() => [
+  {
+    role: "assistant",
+    speaker: scenario.partnerName || "AI Partner",
+    text: scenario.opening || "Hi! Ready to start?",
+  },
+]);
+
 
   // AI returns an "expected short reply" that you score against
-  const expectedReplyRef = useRef("Hey! I’m in sales.");
+  const [targetLine, setTargetLine] = useState(() => scenario.firstUserLine || "");
+function speakTarget() {
+  try {
+    const txt = String(targetLine || "").trim();
+    if (!txt) return;
+
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(txt);
+      // accent mapping (simple)
+      u.lang = accentUi === "en_br" ? "en-GB" : "en-US";
+      window.speechSynthesis.speak(u);
+    }
+  } catch {}
+}
 
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -302,7 +317,7 @@ function ScenarioChatModal({ scenario, accentUi, onClose, readProgress, writePro
       fd.append("audio", blob, "clip.webm");
 
       // IMPORTANT: we score against AI’s "expected short reply"
-      fd.append("refText", expectedReplyRef.current);
+      fd.append("refText", targetLine);
 
       fd.append("accent", accentUi === "en_br" ? "en_br" : "en_us");
 
@@ -345,7 +360,7 @@ function ScenarioChatModal({ scenario, accentUi, onClose, readProgress, writePro
       } catch {}
 
       // 3) Append the user message (we show the expected reply text as what user intended to say)
-      const userText = expectedReplyRef.current;
+      const userText = targetLine;
 
       setMessages((prev) => [
         ...prev,
@@ -373,9 +388,10 @@ function ScenarioChatModal({ scenario, accentUi, onClose, readProgress, writePro
         ]);
       }
 
-      if (ai?.expectedUserReply) {
-        expectedReplyRef.current = String(ai.expectedUserReply).trim() || expectedReplyRef.current;
-      }
+  if (ai?.nextUserLine) {
+  setTargetLine(String(ai.nextUserLine).trim() || "");
+}
+
 
       // progress +1 (real counter)
       const next = Math.min((readProgress() || 0) + 1, scenario.total || 999);
@@ -449,10 +465,12 @@ function ScenarioChatModal({ scenario, accentUi, onClose, readProgress, writePro
 
             <button
               type="button"
-              onClick={() => {
-                stopAll();
-                onClose();
-              }}
+            onClick={() => {
+  try { window?.speechSynthesis?.cancel?.(); } catch {}
+  stopAll();
+  onClose();
+}}
+
               style={{
                 width: 42,
                 height: 42,
@@ -599,6 +617,52 @@ function ScenarioChatModal({ scenario, accentUi, onClose, readProgress, writePro
             })}
           </div>
         </div>
+{/* Next line to say */}
+{targetLine ? (
+  <div
+    style={{
+      margin: "0 auto",
+      width: "min(520px, 92%)",
+      background: "rgba(255,255,255,0.06)",
+      border: "1px solid rgba(255,255,255,0.10)",
+      borderRadius: 22,
+      padding: "14px 16px",
+      boxShadow: "0 22px 60px rgba(0,0,0,0.35)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+    }}
+  >
+    <div style={{ fontWeight: 950, fontSize: 18, color: "rgba(255,255,255,0.85)" }}>
+      Say this next:
+      <div style={{ marginTop: 8, fontWeight: 900, fontSize: 20, color: "rgba(255,255,255,0.95)" }}>
+        {targetLine}
+      </div>
+    </div>
+
+    <button
+      type="button"
+      onClick={speakTarget}
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 999,
+        border: "1px solid rgba(255,255,255,0.12)",
+        background: "rgba(255,255,255,0.08)",
+        color: "rgba(255,255,255,0.9)",
+        display: "grid",
+        placeItems: "center",
+        cursor: "pointer",
+        flex: "0 0 auto",
+      }}
+      title="Play"
+    >
+      <Volume2 className="h-5 w-5" />
+    </button>
+  </div>
+) : null}
+
 
         {/* Mic */}
         <div style={{ display: "grid", placeItems: "center", paddingBottom: 6 }}>
