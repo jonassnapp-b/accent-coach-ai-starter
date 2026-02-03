@@ -228,12 +228,63 @@ function speakTarget() {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(txt);
-      // accent mapping (simple)
       u.lang = accentUi === "en_br" ? "en-GB" : "en-US";
       window.speechSynthesis.speak(u);
     }
   } catch {}
 }
+
+// Word-level coloring from SpeechSuper words[] (best-effort)
+function buildWordScoreMap(wordsArr) {
+  const m = new Map();
+  const ws = Array.isArray(wordsArr) ? wordsArr : [];
+  for (const w of ws) {
+    const rawWord = String(w?.word || "").trim();
+    if (!rawWord) continue;
+
+    const sc = Number(w?.accuracyScore ?? w?.overallAccuracy ?? w?.score ?? w?.accuracy ?? NaN);
+    if (!Number.isFinite(sc)) continue;
+
+    const pct = sc <= 1 ? Math.round(sc * 100) : Math.round(sc);
+    // keep the worst score if duplicated
+    const key = rawWord.toLowerCase();
+    const prev = m.get(key);
+    if (prev == null || pct < prev) m.set(key, pct);
+  }
+  return m;
+}
+
+// Split text into tokens while preserving spaces/punctuation
+function tokenizeWithSeparators(text) {
+  return String(text || "").match(/(\s+|[^\s]+)/g) || [];
+}
+
+function colorForPct(pct) {
+  // Tune thresholds to match your look
+  if (pct >= 85) return "rgba(34,197,94,0.95)";   // green
+  if (pct >= 70) return "rgba(245,158,11,0.95)";  // orange
+  return "rgba(239,68,68,0.95)";                  // red
+}
+
+function renderScoredLine(text, wordScoreMap) {
+  const tokens = tokenizeWithSeparators(text);
+  return tokens.map((tok, i) => {
+    // keep whitespace as-is
+    if (/^\s+$/.test(tok)) return <span key={`t_${i}`}>{tok}</span>;
+
+    // strip punctuation for lookup, but keep original token
+    const cleaned = tok.replace(/^[^\w']+|[^\w']+$/g, "");
+    const pct = cleaned ? wordScoreMap.get(cleaned.toLowerCase()) : null;
+
+    const style = pct == null ? { color: "rgba(255,255,255,0.92)" } : { color: colorForPct(pct) };
+    return (
+      <span key={`t_${i}`} style={style}>
+        {tok}
+      </span>
+    );
+  });
+}
+
 
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -358,14 +409,21 @@ function speakTarget() {
         }
         if (worst) setImproveWord(worst);
       } catch {}
+const wordScoreMap = buildWordScoreMap(json?.words);
 
       // 3) Append the user message (we show the expected reply text as what user intended to say)
       const userText = targetLine;
 
-      setMessages((prev) => [
-        ...prev,
-        { role: "user", speaker: "You", text: userText, score: Math.round(overall) },
-      ]);
+  setMessages((prev) => [
+  ...prev,
+  {
+    role: "user",
+    speaker: "You",
+    text: userText,
+    score: Math.round(overall),
+    wordScores: Array.from(wordScoreMap.entries()), // serializeable
+  },
+]);
 
       // 4) Get real AI partner reply + next expected reply
       const ai = await fetch(`${base}/api/ai-chat-turn`, {
@@ -538,7 +596,14 @@ function speakTarget() {
                       }}
                     >
                       <div style={{ fontWeight: 950, fontSize: 28, lineHeight: 1.06 }}>
-                        <span style={{ color: "rgba(34,197,94,0.95)" }}>{m.text}</span>
+                        {m.wordScores ? (
+  renderScoredLine(
+    m.text,
+    new Map(m.wordScores) // rebuild Map
+  )
+) : (
+  <span style={{ color: "rgba(34,197,94,0.95)" }}>{m.text}</span>
+)}
                       </div>
 
                       {Number.isFinite(m.score) ? (
@@ -615,53 +680,56 @@ function speakTarget() {
                 </div>
               );
             })}
-          </div>
-        </div>
-{/* Next line to say */}
-{targetLine ? (
-  <div
-    style={{
-      margin: "0 auto",
-      width: "min(520px, 92%)",
-      background: "rgba(255,255,255,0.06)",
-      border: "1px solid rgba(255,255,255,0.10)",
-      borderRadius: 22,
-      padding: "14px 16px",
-      boxShadow: "0 22px 60px rgba(0,0,0,0.35)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: 12,
-    }}
-  >
-    <div style={{ fontWeight: 950, fontSize: 18, color: "rgba(255,255,255,0.85)" }}>
-      Say this next:
-      <div style={{ marginTop: 8, fontWeight: 900, fontSize: 20, color: "rgba(255,255,255,0.95)" }}>
-        {targetLine}
-      </div>
+            {targetLine ? (
+  <div style={{ display: "grid", gap: 10 }}>
+    <div style={{ textAlign: "center", color: "rgba(255,255,255,0.35)", fontWeight: 900, fontSize: 12 }}>
+      You
     </div>
 
-    <button
-      type="button"
-      onClick={speakTarget}
+    <div
       style={{
-        width: 44,
-        height: 44,
-        borderRadius: 999,
-        border: "1px solid rgba(255,255,255,0.12)",
-        background: "rgba(255,255,255,0.08)",
-        color: "rgba(255,255,255,0.9)",
-        display: "grid",
-        placeItems: "center",
-        cursor: "pointer",
-        flex: "0 0 auto",
+        margin: "0 auto",
+        width: "min(520px, 92%)",
+        background: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        borderRadius: 22,
+        padding: "14px 16px",
+        position: "relative",
+        boxShadow: "0 22px 60px rgba(0,0,0,0.35)",
       }}
-      title="Play"
     >
-      <Volume2 className="h-5 w-5" />
-    </button>
+      <div style={{ fontWeight: 950, fontSize: 28, lineHeight: 1.06 }}>
+        <span style={{ color: "rgba(255,255,255,0.92)" }}>{targetLine}</span>
+      </div>
+
+      <button
+        type="button"
+        onClick={speakTarget}
+        style={{
+          position: "absolute",
+          right: 10,
+          top: 10,
+          width: 40,
+          height: 40,
+          borderRadius: 999,
+          border: "1px solid rgba(255,255,255,0.12)",
+          background: "rgba(255,255,255,0.08)",
+          color: "rgba(255,255,255,0.9)",
+          display: "grid",
+          placeItems: "center",
+          cursor: "pointer",
+        }}
+        title="Play"
+      >
+        <Volume2 className="h-5 w-5" />
+      </button>
+    </div>
   </div>
 ) : null}
+
+          </div>
+        </div>
+
 
 
         {/* Mic */}
