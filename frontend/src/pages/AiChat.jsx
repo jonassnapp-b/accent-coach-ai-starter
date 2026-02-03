@@ -108,8 +108,7 @@ export default function AiChat() {
             <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
               {lvl.scenarios.map((s, idx) => {
                 const done = readProgress(s.id);
-                const locked = idx > 0; // placeholder lock visuals like screenshot
-                return (
+                                return (
                   <button
                     key={s.id}
                     type="button"
@@ -138,8 +137,9 @@ export default function AiChat() {
                             boxShadow: "0 16px 40px rgba(0,0,0,0.35)",
                             display: "grid",
                             placeItems: "center",
-                            color: "rgba(255,255,255,0.65)",
-                            fontSize: 26,
+                           color: "rgba(255,255,255,0.92)",
+fontSize: 30,
+
                           }}
                         >
                           {s.emoji}
@@ -681,25 +681,58 @@ const wordScoreMap = buildWordScoreMap(json?.words);
               );
             })}
             {targetLine ? (
-  <div style={{ display: "grid", gap: 10 }}>
-    <div style={{ textAlign: "center", color: "rgba(255,255,255,0.35)", fontWeight: 900, fontSize: 12 }}>
+  <div key="target_line" style={{ display: "grid", gap: 10 }}>
+    <div
+      style={{
+        textAlign: "center",
+        color: "rgba(255,255,255,0.35)",
+        fontWeight: 900,
+        fontSize: 12,
+      }}
+    >
       You
     </div>
 
+    {/* Right-shifted “your turn” bubble */}
     <div
       style={{
-        margin: "0 auto",
         width: "min(520px, 92%)",
+        marginLeft: "auto",
+        marginRight: 0,
+        transform: "translateX(16px)", // more to the right vs your normal user bubble
         background: "rgba(255,255,255,0.06)",
         border: "1px solid rgba(255,255,255,0.10)",
         borderRadius: 22,
-        padding: "14px 16px",
+        padding: "12px 16px 14px",
         position: "relative",
         boxShadow: "0 22px 60px rgba(0,0,0,0.35)",
       }}
     >
+      <div
+        style={{
+          fontWeight: 950,
+          fontSize: 12,
+          letterSpacing: 0.2,
+          color: "rgba(255,255,255,0.55)",
+          marginBottom: 8,
+        }}
+      >
+        Your turn — say this out loud
+      </div>
+
       <div style={{ fontWeight: 950, fontSize: 28, lineHeight: 1.06 }}>
         <span style={{ color: "rgba(255,255,255,0.92)" }}>{targetLine}</span>
+      </div>
+
+      <div
+        style={{
+          marginTop: 8,
+          fontWeight: 900,
+          fontSize: 12,
+          color: "rgba(255,255,255,0.40)",
+        }}
+      >
+        Tap the speaker, then record it
       </div>
 
       <button
@@ -726,6 +759,7 @@ const wordScoreMap = buildWordScoreMap(json?.words);
     </div>
   </div>
 ) : null}
+
 
           </div>
         </div>
