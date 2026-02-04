@@ -2260,26 +2260,7 @@ style={{
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
 
-          {/* avatars (top-left) */}
-          <div style={{ position: "absolute", left: 12, top: 12, display: "flex", alignItems: "center", gap: 8 }}>
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 999,
-                background: "rgba(255,255,255,0.18)",
-              }}
-            />
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 999,
-                border: "3px solid rgba(255,105,180,0.85)",
-                background: "rgba(255,255,255,0.18)",
-              }}
-            />
-          </div>
+         
 
           {/* mute icon (top-right) */}
           <button

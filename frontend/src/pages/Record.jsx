@@ -29,6 +29,57 @@ const LAST_RESULT_KEY = "ac_last_result_v1";
 const FEEDBACK_KEY = "ac_feedback_result_v1";
 const INTRO_KEY = "ac_record_intro_v1";
 
+function clamp01(v) {
+  const n = Number(v);
+  if (!isFinite(n)) return null;
+  return n <= 1 ? Math.max(0, Math.min(1, n)) : Math.max(0, Math.min(1, n / 100));
+}
+
+// PSM-style: duration-weighted phoneme score -> word score (0-100)
+function wordScore100LikePSM(wordObj) {
+  const phs = Array.isArray(wordObj?.phonemes) ? wordObj.phonemes : [];
+  if (!phs.length) return null;
+
+  let num = 0;
+  let den = 0;
+
+  for (const ph of phs) {
+    const s01 = clamp01(
+      ph.pronunciation ??
+        ph.accuracy_score ??
+        ph.pronunciation_score ??
+        ph.score ??
+        ph.accuracy ??
+        ph.accuracyScore
+    );
+    if (s01 == null) continue;
+
+    const span = ph.span || ph.time || null;
+    const start10 = span?.start ?? span?.s ?? null;
+    const end10 = span?.end ?? span?.e ?? null;
+
+    const dur =
+      typeof start10 === "number" && typeof end10 === "number" && end10 > start10
+        ? (end10 - start10) * 0.01
+        : 1;
+
+    num += s01 * dur;
+    den += dur;
+  }
+
+  if (!den) return null;
+  return Math.round((num / den) * 100);
+}
+
+// PSM-style: sentence score = avg of word scores (ignore nulls)
+function psmSentenceScoreFromApi(json) {
+  const apiWords = Array.isArray(json?.words) ? json.words : [];
+  const wordScores = apiWords.map((w) => wordScore100LikePSM(w)).filter((v) => Number.isFinite(v));
+  const overall = wordScores.length ? Math.round(wordScores.reduce((a, b) => a + b, 0) / wordScores.length) : 0;
+  return { overall, wordScores };
+}
+
+
 /* ---------------- small helpers ---------------- */
 function pickFeedback(json) {
   const overall = Number(json?.overall ?? json?.pronunciation ?? json?.overallAccuracy ?? 0);
@@ -88,11 +139,12 @@ const [showIntro, setShowIntro] = useState(() => {
   // ✅ full feedback shown on SAME page
   const [result, setResult] = useState(null);
 
-  function sanitizeWord(raw) {
-    const s = String(raw || "").trim();
-    // take only the first token (no spaces)
-    return s.split(/\s+/)[0] || "";
-  }
+function sanitizeText(raw) {
+  // allow sentences, but normalize whitespace
+  const s = String(raw || "").replace(/\s+/g, " ").trim();
+  return s;
+}
+
 function closeIntro() {
   setShowIntro(false);
   try {
@@ -136,7 +188,7 @@ function refreshSuggestions() {
       const raw = sessionStorage.getItem(STATE_KEY);
       if (raw) {
   const saved = JSON.parse(raw);
-  if (typeof saved.refText === "string") setRefText(sanitizeWord(saved.refText));
+  if (typeof saved.refText === "string") setRefText(sanitizeText(saved.refText));
   // ❌ do NOT restore accentUi (must follow settings)
 }
     } catch {}
@@ -168,7 +220,7 @@ try {
 
 // seedText via route state (bookmarks handoff)
 if (seedFromState) {
-  setRefText(sanitizeWord(seedFromState));
+  setRefText(sanitizeText(seedFromState));
   setErr("");
 }
 
@@ -312,6 +364,13 @@ try {
   }
 
   if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
+  // ✅ PSM-style scoring (word-avg) for Practice my text
+const psm = psmSentenceScoreFromApi(json);
+
+// overwrite the numbers the rest of this page uses
+// (so pickFeedback + sfx thresholds match PSM)
+json = { ...json, overall: psm.overall, pronunciation: psm.overall, overallAccuracy: psm.overall };
+
 } catch (e) {
   clearTimeout(t);
 
@@ -326,7 +385,8 @@ try {
         const s = updateStreak();
         setStreak(s);
 
-        const overall = Number(json?.overall ?? json?.overallAccuracy ?? json?.pronunciation ?? 0);
+const overall = Number(psm?.overall ?? 0);
+
         
                 if (canPlaySfx) {
           if (overall >= 90) sfx.success({ strength: 2 });
@@ -335,15 +395,25 @@ try {
 
       } catch {}
 
-     const payload = {
+const payload = {
   ...json,
+
+  // ✅ force PSM score everywhere (top score, messages, etc.)
+  overall: Number(psm?.overall ?? json?.overall ?? 0),
+  pronunciation: Number(psm?.overall ?? json?.pronunciation ?? 0),
+  overallAccuracy: Number(psm?.overall ?? json?.overallAccuracy ?? 0),
+
+  // optional debug/use later
+  psmWordScores: Array.isArray(psm?.wordScores) ? psm.wordScores : [],
+
   userAudioUrl: localUrl,
-  userAudioBlob: audioBlob, // ✅ add this
+  userAudioBlob: audioBlob,
   refText: text,
   accent: accentUi,
-  inlineMsg: pickFeedback(json),
+  inlineMsg: pickFeedback({ ...json, overall: Number(psm?.overall ?? 0) }),
   createdAt: Date.now(),
 };
+
 
 
       setResult(payload);
@@ -405,7 +475,7 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
     justifySelf: "center",
   }}
 >
-  Practice a Word
+  Practice my text
 </div>
 
           <Link
@@ -439,7 +509,7 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
          {!result ? (
   <div style={{ display: "grid", gap: 8, justifyItems: "center", textAlign: "center" }}>
     <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>
-      Type something below — then tap the purple button to record it.
+      Type text below — then tap the purple button to record it.
     </div>
   </div>
 ) : (
@@ -521,27 +591,15 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
                             <input
                 className="placeholder:text-[rgba(17,24,39,0.45)]"
                 value={refText}
-                onChange={(e) => setRefText(sanitizeWord(e.target.value))}
-                onKeyDown={(e) => {
-                  if (e.key === " ") e.preventDefault(); // block space
-                }}
-                onPaste={(e) => {
-                  e.preventDefault();
-                  const pasted = e.clipboardData?.getData("text") || "";
-                  setRefText(sanitizeWord(pasted));
-                }}
-                placeholder="Type a word…"
-                style={{
-                  flex: 1,
-                    minWidth: 0,
-                  background: "transparent",
-                  border: "none",
-                  outline: "none",
-                  color: LIGHT_TEXT,
-                  fontWeight: 800,
-                  fontSize: 16,
-                }}
-                maxLength={64}
+             onChange={(e) => setRefText(sanitizeText(e.target.value))}
+onPaste={(e) => {
+  e.preventDefault();
+  const pasted = e.clipboardData?.getData("text") || "";
+  setRefText(sanitizeText(pasted));
+}}
+placeholder="Type text…"
+maxLength={220}
+
                 disabled={isBusy}
               />
 

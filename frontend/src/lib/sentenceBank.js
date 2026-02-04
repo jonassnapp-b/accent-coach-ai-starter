@@ -54,7 +54,7 @@ const V = {
   subj: ["I", "We", "You", "They"],
 
   verbs_easy: ["want", "need", "like", "hate", "remember", "forget", "say", "hear"],
-  verbs_mid: ["keep", "try", "start", "stop", "sound", "feel", "notice", "repeat"],
+  verbs_mid: ["try", "start", "stop", "sound", "feel", "notice", "repeat"],
   // spoken helpers (use only in templates designed for them)
   wannaVerbs: ["say it", "sound natural", "say this word", "say it fast", "say it clearly"],
   gonnaPhrases: ["do it again", "slow it down", "speed it up", "fix the ending", "relax my mouth"],
