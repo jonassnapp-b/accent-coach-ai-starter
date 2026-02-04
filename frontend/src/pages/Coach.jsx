@@ -1177,23 +1177,6 @@ const primaryWeakPhoneme = useMemo(() => {
   return scored[0] || null;
 }, [phonemeLineItems]);
 
-
-
-const expandedTip = useMemo(() => {
-  if (!expandedPhonemeKey) return null;
-  return tipItems.find((x) => x.key === expandedPhonemeKey) || null;
-}, [expandedPhonemeKey, tipItems]);
-
-useEffect(() => {
-  if (!expandedTip?.code) return;
-
-  const words = getExamplesForPhoneme(expandedTip.code);
-  if (!words.length) return;
-
-  prefetchExampleTts(words.slice(0, 10));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [expandedTip?.code, accentUi]);
-
 function toggleOverlayAudio(src, kind) {
   if (!src) return;
 
@@ -1626,9 +1609,9 @@ function getFirstTipKeyForWord(wordObj) {
 
     const raw = getScore(p);
     const s = normalizePhonemeScore(raw, wordScore, rawScores);
-    const assets = resolvePhonemeAssets(code, accentUi);
+const assets = resolvePhonemeVideo(code);
+const hasTip = !!assets?.videoSrc && (s == null || !isGreen(s));
 
-    const hasTip = !!assets?.imgSrc && (s == null || !isGreen(s));
     if (hasTip) return `${code}_${i}`;
   }
 
@@ -2447,53 +2430,7 @@ style={{
 ) : null}
 
 
-         {/* Phonemes (clickable) */}
-<div style={{ marginTop: 12, textAlign: "center" }}>
-  <div
-    style={{
-      display: "inline-flex",
-      flexWrap: "wrap",
-      justifyContent: "center",
-      gap: 10,
-      alignItems: "baseline",
-    }}
-  >
-    <span style={{ fontSize: 20, fontWeight: 950, color: "#111827", marginRight: 6 }}>Phonemes:</span>
 
-    {phonemeLineItems.length ? (
-      phonemeLineItems.map((it) => (
-        <button
-          key={`tip_ph_${it.key}`}
-          type="button"
-          onClick={() => setExpandedPhonemeKey(it.hasTip ? it.key : null)}
-          disabled={!it.hasTip}
-          title={it.hasTip ? "Select for tip" : it.hasImage ? "No tip needed (green)" : "No image available"}
-          style={{
-            border: "none",
-            background: "transparent",
-            padding: 0,
-            cursor: it.hasTip ? "pointer" : "default",
-            fontSize: 20,
-            fontWeight: 950,
-            color: scoreColor(it.score),
-            textDecoration: it.hasImage ? "underline" : "none",
-            textUnderlineOffset: 6,
-            textDecorationThickness: 3,
-            opacity: it.hasTip ? 1 : 0.65,
-          }}
-        >
-          {it.code}
-        </button>
-      ))
-    ) : (
-      <span style={{ fontSize: 20, fontWeight: 900, color: LIGHT_MUTED }}>—</span>
-    )}
-  </div>
-</div>
-
-<div style={{ marginTop: 10, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, textAlign: "center" }}>
-  Tap a phoneme above to see a tip.
-</div>
 
 {expandedTip ? renderTipCard(expandedTip) : null}
 
