@@ -308,6 +308,20 @@ export default function Coach() {
   const [mode, setMode] = useState("words"); // words | sentences
   const [difficulty, setDifficulty] = useState("easy"); // easy | medium | hard
   const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
+const MODE_OPTIONS = ["words", "sentences"];
+const MODE_LABEL = { words: "Words", sentences: "Sentences" };
+
+const DIFF_OPTIONS = ["easy", "medium", "hard"];
+const DIFF_LABEL = { easy: "Easy", medium: "Medium", hard: "Hard" };
+
+const ACCENT_OPTIONS = ["en_us", "en_br"];
+const ACCENT_LABEL = { en_us: "American 🇺🇸", en_br: "British 🇬🇧" };
+
+function cycleValue(options, current, dir) {
+  const i = Math.max(0, options.indexOf(current));
+  const next = (i + dir + options.length) % options.length;
+  return options[next];
+}
 
   useEffect(() => {
     setAccentUi(settings?.accentDefault || "en_us");
@@ -1786,6 +1800,31 @@ function onNext() {
   };
 
   const stack = { display: "grid", gap: 30 };
+const pickerRow = {
+  display: "grid",
+  gridTemplateColumns: "56px 1fr 56px",
+  alignItems: "center",
+  gap: 10,
+};
+
+const pickerBtn = {
+  width: 56,
+  height: 56,
+  borderRadius: 18,
+  border: `1px solid ${LIGHT_BORDER}`,
+  background: "transparent",
+  display: "grid",
+  placeItems: "center",
+  cursor: "pointer",
+};
+
+const pickerCenter = {
+  textAlign: "center",
+  fontWeight: 950,
+  fontSize: 28, // ✅ meget større
+  color: LIGHT_TEXT,
+  lineHeight: 1.05,
+};
 
   const selectWrapStyle = { position: "relative", width: "100%" };
 
@@ -1857,43 +1896,80 @@ function onNext() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.98 }}
                 transition={{ duration: 0.18 }}
-                style={bigCardStyle}
+style={{
+  background: "transparent",
+  border: "none",
+  boxShadow: "none",
+  padding: 0,
+}}
               >
                 <div style={stack}>
-                  <div style={selectWrapStyle}>
-                    <select aria-label="Mode" value={mode} onChange={(e) => setMode(e.target.value)} style={selectStyle}>
-                      <option value="words">Words</option>
-                      <option value="sentences">Sentences</option>
-                    </select>
-                    <ChevronDown className="h-4 w-4" style={chevronStyle} />
-                  </div>
+                 <div style={pickerRow}>
+  <button
+    type="button"
+    onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, -1))}
+    style={pickerBtn}
+    aria-label="Previous mode"
+  >
+    <ChevronLeft className="h-7 w-7" />
+  </button>
 
-                  <div style={selectWrapStyle}>
-                    <select
-                      aria-label="Difficulty"
-                      value={difficulty}
-                      onChange={(e) => setDifficulty(e.target.value)}
-                      style={selectStyle}
-                    >
-                      <option value="easy">Easy</option>
-                      <option value="medium">Medium</option>
-                      <option value="hard">Hard</option>
-                    </select>
-                    <ChevronDown className="h-4 w-4" style={chevronStyle} />
-                  </div>
+  <div style={pickerCenter}>{MODE_LABEL[mode] || "—"}</div>
 
-                  <div style={selectWrapStyle}>
-                    <select
-                      aria-label="Accent"
-                      value={accentUi}
-                      onChange={(e) => setAccentUi(e.target.value)}
-                      style={selectStyle}
-                    >
-                      <option value="en_us">American 🇺🇸</option>
-                      <option value="en_br">British 🇬🇧</option>
-                    </select>
-                    <ChevronDown className="h-4 w-4" style={chevronStyle} />
-                  </div>
+  <button
+    type="button"
+    onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, 1))}
+    style={pickerBtn}
+    aria-label="Next mode"
+  >
+    <ChevronRight className="h-7 w-7" />
+  </button>
+</div>
+
+<div style={pickerRow}>
+  <button
+    type="button"
+    onClick={() => setDifficulty((v) => cycleValue(DIFF_OPTIONS, v, -1))}
+    style={pickerBtn}
+    aria-label="Previous difficulty"
+  >
+    <ChevronLeft className="h-7 w-7" />
+  </button>
+
+  <div style={pickerCenter}>{DIFF_LABEL[difficulty] || "—"}</div>
+
+  <button
+    type="button"
+    onClick={() => setDifficulty((v) => cycleValue(DIFF_OPTIONS, v, 1))}
+    style={pickerBtn}
+    aria-label="Next difficulty"
+  >
+    <ChevronRight className="h-7 w-7" />
+  </button>
+</div>
+
+<div style={pickerRow}>
+  <button
+    type="button"
+    onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, -1))}
+    style={pickerBtn}
+    aria-label="Previous accent"
+  >
+    <ChevronLeft className="h-7 w-7" />
+  </button>
+
+  <div style={pickerCenter}>{ACCENT_LABEL[accentUi] || "—"}</div>
+
+  <button
+    type="button"
+    onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, 1))}
+    style={pickerBtn}
+    aria-label="Next accent"
+  >
+    <ChevronRight className="h-7 w-7" />
+  </button>
+</div>
+
 
                   <button type="button" onClick={onStart} style={startBtnStyle}>
                     Start
@@ -1907,13 +1983,13 @@ function onNext() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.98 }}
                 transition={{ duration: 0.18 }}
-                style={{
-                  background: LIGHT_SURFACE,
-                  border: `1px solid ${LIGHT_BORDER}`,
-                  borderRadius: 22,
-                  boxShadow: LIGHT_SHADOW,
-                  padding: 18,
-                }}
+               style={{
+  background: "transparent",
+  border: "none",
+  boxShadow: "none",
+  padding: 0,
+}}
+
               >
                 <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10 }}>
                   <button
@@ -2059,13 +2135,14 @@ function onNext() {
 
 {/* ---------- 3-card slider (INNER CARD WRAPPER) ---------- */}
 <div
-  style={{
-    background: "#fff",
-    borderRadius: 22,
-    padding: 16,
-    border: `1px solid ${LIGHT_BORDER}`,
-    boxShadow: LIGHT_SHADOW,
-  }}
+style={{
+  background: "transparent",
+  border: "none",
+  boxShadow: "none",
+  padding: 0,
+  borderRadius: 0,
+}}
+
 >
 
 
