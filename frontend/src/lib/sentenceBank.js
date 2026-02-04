@@ -10,7 +10,7 @@
  * - Levels actually change: length + template mix + spoken reductions/linking/fillers
  */
 
-const STORAGE_KEY = "ac_psm_v3";
+const STORAGE_KEY = "ac_psm_v4";
 
 const SESSION_SEED_KEY = "ac_psm_session_seed_v1";
 
@@ -33,20 +33,16 @@ function getSessionSeed() {
 
 /* ---------------- Difficulty ladder (5 levels) ---------------- */
 export const LEVELS = [
-  // short + super clean
-  { id: "l01", passAllGreenPct: 85, targetLen: [3, 7], mix: ["basic"] },
+{ id: "l01", passAllGreenPct: 85, targetLen: [3, 7], mix: ["basic", "clarification"] },
 
-  // slightly longer + rhythm/stress cues
-  { id: "l02", passAllGreenPct: 86, targetLen: [5, 10], mix: ["basic", "rhythm"] },
+{ id: "l02", passAllGreenPct: 86, targetLen: [5, 10], mix: ["basic", "rhythm", "everyday"] },
 
-  // reductions + linking (everyday fast speech)
-  { id: "l03", passAllGreenPct: 87, targetLen: [7, 14], mix: ["reduction", "linking"] },
+{ id: "l03", passAllGreenPct: 87, targetLen: [7, 14], mix: ["reduction", "linking", "everyday"] },
 
-  // stress shift / contrast / emphasis
-  { id: "l04", passAllGreenPct: 88, targetLen: [9, 18], mix: ["stress_shift", "linking"] },
+{ id: "l04", passAllGreenPct: 88, targetLen: [9, 18], mix: ["stress_shift", "linking", "everyday", "smalltalk"] },
 
-  // fastest speech + natural fillers + longer sentences
-  { id: "l05", passAllGreenPct: 90, targetLen: [12, 26], mix: ["fast_speech", "natural_fillers"] },
+{ id: "l05", passAllGreenPct: 90, targetLen: [12, 26], mix: ["fast_speech", "natural_fillers", "everyday", "smalltalk"] },
+
 ];
 
 /* ---------------- Spoken vocab pools ---------------- */
@@ -61,6 +57,84 @@ const V = {
   gottaPhrases: ["focus on the vowel", "hit the ending", "link the words", "stress the right part"],
 
   noun: ["sound", "word", "sentence", "vowel", "ending", "part", "stress"],
+    // Real-life topics (more meaning)
+  topics: [
+    "my meeting",
+    "your message",
+    "the address",
+    "the schedule",
+    "the plan",
+    "the price",
+    "the ticket",
+    "the email",
+    "the timing",
+    "the checkout",
+    "the login",
+    "the update",
+    "the interview",
+    "the commute",
+    "the gym",
+    "the weather",
+    "the weekend",
+  ],
+
+  places: [
+    "at home",
+    "at work",
+    "at the gym",
+    "on the train",
+    "in the car",
+    "in a meeting",
+    "at the airport",
+    "in the kitchen",
+    "in town",
+  ],
+
+  people: ["my friend", "my boss", "my teammate", "my partner", "the barista", "the receptionist"],
+
+  actions: [
+    "send a message",
+    "call them back",
+    "book a table",
+    "place an order",
+    "ask a question",
+    "check the details",
+    "double-check the time",
+    "make a quick change",
+    "explain it clearly",
+    "say it out loud",
+  ],
+
+  polite: [
+    "Could you say that again?",
+    "Can you repeat that?",
+    "Sorry, what was that?",
+    "Give me a second.",
+    "Let me think.",
+    "That makes sense.",
+    "I’m not sure about that.",
+    "That’s a good point.",
+  ],
+
+  feelings: [
+    "a bit nervous",
+    "pretty confident",
+    "kind of stressed",
+    "a little rushed",
+    "not fully sure",
+    "totally fine",
+  ],
+
+  // Replace/extend reasons with more normal human lines
+  reasons2: [
+    "I’m rushing it",
+    "I’m skipping the ending",
+    "my tongue feels tense",
+    "I’m overthinking it",
+    "I’m not hearing the stress",
+    "it sounds unclear to me",
+  ],
+
   determiner: ["this", "that", "the"],
 
   time: ["today", "right now", "these days"],
@@ -84,7 +158,29 @@ const TEMPLATES = {
     "{S} {VE} {DET} {N}.",
     "{S} {VE} {DET} {N} again.",
     "{S} {VE} how {DET} {N} sounds.",
-    "{S} {VE} {DET} {N} part.",
+    "{S} {VE} the tricky part.",
+  ],
+
+    everyday: [
+    "{S} {VM} {ACT} {T}.",
+    "{S} {VM} {ACT} {PL}.",
+    "{S} {VM} to talk about {TOP} {T}.",
+    "{S} {VM} what {PER} meant {T}.",
+    "{S} {VM} to keep it short and clear.",
+  ],
+
+  clarification: [
+    "{POL}",
+    "{POL} {S} {VM} it {T}.",
+    "{S} {VM} it again, but slower {T}.",
+    "{S} {VM} to say it clearly, not too fast.",
+  ],
+
+  smalltalk: [
+    "{F}, I’m {FEEL} {T}.",
+    "{F}, how’s {TOP} going {T}?",
+    "{F}, I’ll {ACT} and then I’m free.",
+    "{F}, I’m heading out {T}.",
   ],
 
   // rhythm + stress timing
@@ -100,7 +196,7 @@ const TEMPLATES = {
     "{S} {VM} {DET} {N}, but it comes out too strong.",
     "{S} {VM} to relax a bit.",
     "{S} {VM} it kind of fast, and {R}.",
-    "{S} {VM} to keep it light, not heavy.",
+    "{S} {VM} to keep it relaxed, not forced.",
   ],
 
   // linking: connecting words, smooth transitions
@@ -200,6 +296,14 @@ function fill(rng, tpl) {
   const G = pick(rng, V.gonnaPhrases);
   const GT = pick(rng, V.gottaPhrases);
 
+    const TOP = pick(rng, V.topics);
+  const PL = pick(rng, V.places);
+  const PER = pick(rng, V.people);
+  const ACT = pick(rng, V.actions);
+  const POL = pick(rng, V.polite);
+  const FEEL = pick(rng, V.feelings);
+  const R2 = pick(rng, V.reasons2);
+
   return tpl
     .replaceAll("{S}", S)
     .replaceAll("{VE}", VE)
@@ -212,7 +316,15 @@ function fill(rng, tpl) {
     .replaceAll("{R}", R)
     .replaceAll("{W}", W)
     .replaceAll("{G}", G)
-    .replaceAll("{GT}", GT);
+    .replaceAll("{GT}", GT)
+    .replaceAll("{TOP}", TOP)
+    .replaceAll("{PL}", PL)
+    .replaceAll("{PER}", PER)
+    .replaceAll("{ACT}", ACT)
+    .replaceAll("{POL}", POL)
+    .replaceAll("{FEEL}", FEEL)
+    .replaceAll("{R2}", R2);
+
 }
 
 /* ---------------- Persistence ---------------- */
