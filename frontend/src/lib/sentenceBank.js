@@ -116,7 +116,7 @@ const TEMPLATES = {
     "{S} {VM} {DET} {N}, but the stress moves.",
     "{S} {VM} the wrong part, and it changes the meaning.",
     "{S} {VM} to stress this instead, not that.",
-    "{S} {VM} to keep the emphasis in the right place.",
+    "{S} try to keep the emphasis in the right place.",
   ],
 
   // fast speech: longer + still everyday
@@ -255,6 +255,32 @@ function normalizeLevelId(levelId) {
   return LEVELS.some((l) => l.id === levelId) ? levelId : LEVELS[0].id;
 }
 
+function isGoodSentence(s) {
+  const t = String(s || "").trim();
+  if (t.length < 12 || t.length > 160) return false;
+
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length < 4) return false;
+  if (!/[A-Za-z]/.test(t)) return false;
+
+  // reject immediate repeated words: "to to", "the the", etc.
+  for (let i = 1; i < words.length; i++) {
+    const a = words[i - 1].toLowerCase().replace(/[^a-z']/g, "");
+    const b = words[i].toLowerCase().replace(/[^a-z']/g, "");
+    if (a && b && a === b) return false;
+  }
+
+  // reject "X to X" pattern: "keep to keep", "go to go"
+  if (/\b([a-z']+)\s+to\s+\1\b/i.test(t)) return false;
+
+  // keep your existing sanity rules too
+  if (/\bthis\s+this\b/i.test(t)) return false;
+  if (/\byou're\s+wanna\b/i.test(t)) return false;
+
+  return true;
+}
+
+
 /* ---------------- Public API ---------------- */
 export function getLevelConfig(levelId) {
   return LEVELS.find((l) => l.id === levelId) || LEVELS[0];
@@ -293,10 +319,11 @@ const rng = rngFor(`${id}|${slot.i}|psm_v3|${sessionSeed}`);
     if (/\bthis\s+this\b/i.test(s)) continue;
     if (/\byou're\s+wanna\b/i.test(s)) continue;
 
-    if (words >= minW && words <= maxW) {
-      saveState(state);
-      return s;
-    }
+    if (words >= minW && words <= maxW && isGoodSentence(s)) {
+  saveState(state);
+  return s;
+}
+
   }
 
   const fallback = fill(rng, pick(rng, TEMPLATES.basic));
@@ -413,15 +440,19 @@ export function getAllSentences({ perLevel = 1200 } = {}) {
         if (/\bthis\s+this\b/i.test(s)) continue;
         if (/\byou're\s+wanna\b/i.test(s)) continue;
 
-        if (words >= minW && words <= maxW) {
-          pickedSentence = s;
-          break;
-        }
+        if (words >= minW && words <= maxW && isGoodSentence(s)) {
+  pickedSentence = s;
+  break;
+}
+
       }
 
       if (!pickedSentence) {
         pickedSentence = fill(rng, pick(rng, TEMPLATES.basic));
       }
+if (!isGoodSentence(pickedSentence)) {
+  pickedSentence = "I want to say it clearly.";
+}
 
       out.push(pickedSentence);
     }
