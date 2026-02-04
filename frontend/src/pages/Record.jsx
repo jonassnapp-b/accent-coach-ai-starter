@@ -193,7 +193,7 @@ function refreshSuggestions() {
       const raw = sessionStorage.getItem(STATE_KEY);
       if (raw) {
   const saved = JSON.parse(raw);
-  if (typeof saved.refText === "string") setRefText(sanitizeText(saved.refText));
+  if (typeof saved.refText === "string") setRefText(saved.refText);
   // ❌ do NOT restore accentUi (must follow settings)
 }
     } catch {}
@@ -225,7 +225,7 @@ try {
 
 // seedText via route state (bookmarks handoff)
 if (seedFromState) {
-  setRefText(sanitizeText(seedFromState));
+  setRefText(seedFromState);
   setErr("");
 }
 
@@ -348,6 +348,8 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
 
 let r;
 let json = {};
+let psm = null; // ✅ IMPORTANT: available after the inner try/catch
+
 
 try {
   r = await fetch(`${base}/api/analyze-speech`, {
@@ -370,7 +372,7 @@ try {
 
   if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
   // ✅ PSM-style scoring (word-avg) for Practice my text
-const psm = psmSentenceScoreFromApi(json);
+psm = psmSentenceScoreFromApi(json);
 
 // overwrite the numbers the rest of this page uses
 // (so pickFeedback + sfx thresholds match PSM)
@@ -390,7 +392,7 @@ json = { ...json, overall: psm.overall, pronunciation: psm.overall, overallAccur
         const s = updateStreak();
         setStreak(s);
 
-const overall = Number(psm?.overall ?? 0);
+const overall = Number(psm?.overall ?? json?.overall ?? 0);
 
         
                 if (canPlaySfx) {
