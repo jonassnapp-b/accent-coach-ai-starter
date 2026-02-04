@@ -2432,7 +2432,6 @@ style={{
 
 
 
-{expandedTip ? renderTipCard(expandedTip) : null}
 
 
         </>
