@@ -138,6 +138,9 @@ const [showIntro, setShowIntro] = useState(() => {
 
   // ✅ full feedback shown on SAME page
   const [result, setResult] = useState(null);
+    const [isExpanded, setIsExpanded] = useState(false);
+  const blurTimerRef = useRef(null);
+
 
 function sanitizeTextForSubmit(raw) {
   // normalize whitespace, trim only when we actually submit
@@ -462,66 +465,78 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
 
   return (
     <div className="page" style={{ minHeight: "100vh", background: "#fff", color: LIGHT_TEXT }}>
-      {/* Top header */}
-      <div className="mx-auto w-full" style={{ maxWidth: 720, padding: "14px 12px 8px" }}>
-        <div style={{
-  display: "grid",
-  gridTemplateColumns: "1fr auto 1fr",
-  alignItems: "center",
-  gap: 12,
-}}
->
-          <div />
-         <div
-  style={{
-    textAlign: "center",
-    fontWeight: 900,
-    fontSize: 18,
-    color: LIGHT_TEXT,
-    pointerEvents: "none",
-    justifySelf: "center",
-  }}
->
-  Practice my text
-</div>
+      {/* Top header (hidden when expanded) */}
+      <AnimatePresence initial={false}>
+        {!isExpanded && (
+          <motion.div
+            className="mx-auto w-full"
+            style={{ maxWidth: 720, padding: "14px 12px 8px" }}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }} // ✅ much slower
+          >
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto 1fr",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <div />
+              <div
+                style={{
+                  textAlign: "center",
+                  fontWeight: 900,
+                  fontSize: 18,
+                  color: LIGHT_TEXT,
+                  pointerEvents: "none",
+                  justifySelf: "center",
+                }}
+              >
+                Practice my text
+              </div>
 
-         <button
-  type="button"
-  onClick={() => navigate(-1)}
-  aria-label="Back"
-  title="Back"
-  style={{
-    justifySelf: "end",
-    width: 44,
-    height: 44,
-    borderRadius: 999,
-    background: LIGHT_SURFACE,
-    border: `1px solid ${LIGHT_BORDER}`,
-    boxShadow: LIGHT_SHADOW,
-    display: "grid",
-    placeItems: "center",
-    cursor: "pointer",
-  }}
->
-  <ChevronDown className="h-5 w-5" style={{ color: LIGHT_TEXT }} />
-</button>
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                aria-label="Back"
+                title="Back"
+                style={{
+                  justifySelf: "end",
+                  width: 44,
+                  height: 44,
+                  borderRadius: 999,
+                  background: LIGHT_SURFACE,
+                  border: `1px solid ${LIGHT_BORDER}`,
+                  boxShadow: LIGHT_SHADOW,
+                  display: "grid",
+                  placeItems: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <ChevronDown className="h-5 w-5" style={{ color: LIGHT_TEXT }} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
 
+       {/* Main content area */}
+      <motion.div
+        className="mx-auto w-full"
+        style={{
+          maxWidth: 720,
+          padding: "18px 16px",
+          paddingBottom: `calc(${TABBAR_OFFSET}px + 170px + ${SAFE_BOTTOM})`,
+          overflowX: "hidden",
+        }}
+        animate={{ paddingTop: isExpanded ? 6 : 18 }} // ✅ expands upward into header space
+        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }} // ✅ much slower
+      >
 
-
-        </div>
-      </div>
-
-      {/* Main content area */}
-      <div
-  className="mx-auto w-full"
-  style={{
-    maxWidth: 720,
-    padding: "18px 16px",
-    paddingBottom: `calc(${TABBAR_OFFSET}px + 170px + ${SAFE_BOTTOM})`,
-    overflowX: "hidden",  // ✅ extra safety for this page
-  }}
->
         <div style={{ minHeight: "52vh", display: "grid", placeItems: "center", width: "100%", minWidth: 0 }}>
          {!result ? (
   <div style={{ display: "grid", gap: 8, justifyItems: "center", textAlign: "center" }}>
@@ -545,7 +560,7 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
             {err}
           </div>
         ) : null}
-      </div>    
+      </motion.div>
 
       {/* Bottom composer */}
       <div
@@ -606,15 +621,22 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
                 gap: 10,
               }}
             >
-                            <input
+                         <input
   className="placeholder:text-[rgba(17,24,39,0.45)]"
   value={refText}
   onChange={(e) => setRefText(e.target.value)}
+  onFocus={() => {
+    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    setIsExpanded(true);
+  }}
+  onBlur={() => {
+    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    blurTimerRef.current = setTimeout(() => setIsExpanded(false), 220);
+  }}
   onKeyDown={(e) => {
     if (e.key === "Enter") {
-      e.preventDefault();       // stop submit/navigation
-      e.stopPropagation();      // ekstra safety hvis en parent lytter
-      // (valgfrit) start recording på Enter:
+      e.preventDefault();
+      e.stopPropagation();
       if (showIntro) closeIntro();
       if (!isBusy && refText.trim()) togglePronunciationRecord();
     }
@@ -636,6 +658,7 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
   }}
   disabled={isBusy}
 />
+
 
 
 
