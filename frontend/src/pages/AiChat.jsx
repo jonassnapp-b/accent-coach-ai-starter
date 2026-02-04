@@ -99,15 +99,33 @@ export default function AiChat() {
 
       {/* Content */}
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "8px 14px" }}>
-        {levels.map((lvl) => (
+        {levels.map((lvl) => {
+  const completedInLevel = lvl.scenarios.filter((s) => readProgress(s.id) >= s.total).length;
+  const totalInLevel = lvl.scenarios.length;
+
+  return (
           <div key={`lvl_${lvl.level}`} style={{ marginTop: 18 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontSize: 40, fontWeight: 950, letterSpacing: -0.6 }}>Level {lvl.level}</div>
-            </div>
+  <div style={{ fontSize: 40, fontWeight: 950, letterSpacing: -0.6 }}>
+    Level {lvl.level}
+  </div>
+
+  <div
+    style={{
+      fontSize: 16,
+      fontWeight: 900,
+      color: "rgba(255,255,255,0.55)",
+    }}
+  >
+    {completedInLevel}/{totalInLevel}
+  </div>
+</div>
+
 
             <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
               {lvl.scenarios.map((s, idx) => {
                 const done = readProgress(s.id);
+                
                                 return (
                   <button
                     key={s.id}
@@ -160,16 +178,15 @@ fontSize: 30,
                       </div>
 
                       {/* progress */}
-                      <div style={{ flex: "0 0 auto", color: "rgba(255,255,255,0.55)", fontWeight: 900 }}>
-                        {done}/{s.total}
-                      </div>
+                   
                     </div>
                   </button>
                 );
               })}
             </div>
           </div>
-        ))}
+        );
+      })}
       </div>
 
       {/* Scenario modal (chat screen) */}
@@ -582,228 +599,248 @@ if (ai?.nextUserLine) {
         {/* Messages */}
         <div style={{ overflowY: "auto", padding: "6px 4px" }}>
           <div style={{ display: "grid", gap: 8 }}>
-            {messages.map((m, idx) => {
-              if (m.role === "assistant") {
-                return (
-                  <div key={`m_${idx}`} style={{ display: "grid", gap: 4 }}>
-                    <div style={{ textAlign: "center", color: "rgba(255,255,255,0.40)", fontWeight: 900, fontSize: 12 }}>
-                      {m.speaker}
-                    </div>
-                  <div
-  style={{
-    width: "min(360px, 78%)",
-marginLeft: 40,
-marginRight: "auto",
-transform: "none",
+          <AnimatePresence initial={false}>
+  {messages.map((m, idx) => {
+    const k = `${m.role}_${idx}`;
 
-    background: "rgba(59,130,246,0.85)",
-   borderRadius: 16,
-padding: "10px 12px",
-    fontWeight: 900,
-    fontSize: 18,
-    lineHeight: 1.18,
-    boxShadow: "0 18px 46px rgba(0,0,0,0.32)",
-  }}
->
-                      {m.text}
-                    </div>
-                  </div>
-                );
-              }
+    if (m.role === "assistant") {
+      return (
+        <motion.div
+          key={k}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          style={{ display: "grid", gap: 4 }}
+        >
+          <div style={{ textAlign: "center", color: "rgba(255,255,255,0.40)", fontWeight: 900, fontSize: 12 }}>
+            {m.speaker}
+          </div>
 
-              if (m.role === "user") {
-                return (
-                  <div key={`m_${idx}`} style={{ display: "grid", gap: 6 }}>
-                    <div style={{ textAlign: "center", color: "rgba(255,255,255,0.35)", fontWeight: 900, fontSize: 12 }}>
-                      You
-                    </div>
+          <div
+            style={{
+              width: "min(360px, 78%)",
+              marginLeft: 40,
+              marginRight: "auto",
+              transform: "none",
+              background: "rgba(59,130,246,0.85)",
+              borderRadius: 16,
+              padding: "10px 12px",
+              fontWeight: 900,
+              fontSize: 18,
+              lineHeight: 1.18,
+              boxShadow: "0 18px 46px rgba(0,0,0,0.32)",
+            }}
+          >
+            {m.text}
+          </div>
+        </motion.div>
+      );
+    }
 
-                 <div
-  style={{
-width: "min(360px, 78%)",
-marginLeft: "auto",
-marginRight: 40,
-transform: "none",
+    if (m.role === "user") {
+      return (
+        <motion.div
+          key={k}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          style={{ display: "grid", gap: 6 }}
+        >
+          <div style={{ textAlign: "center", color: "rgba(255,255,255,0.35)", fontWeight: 900, fontSize: 12 }}>
+            You
+          </div>
 
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.10)",
-    borderRadius: 16,
-padding: "10px 12px",
-    position: "relative",
-    boxShadow: "0 18px 46px rgba(0,0,0,0.32)",
-  }}
->
+          <div
+            style={{
+              width: "min(360px, 78%)",
+              marginLeft: "auto",
+              marginRight: 40,
+              transform: "none",
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.10)",
+              borderRadius: 16,
+              padding: "10px 12px",
+              position: "relative",
+              boxShadow: "0 18px 46px rgba(0,0,0,0.32)",
+            }}
+          >
+            <div style={{ fontWeight: 850, fontSize: 16, lineHeight: 1.22 }}>
+              {m.wordScores ? renderScoredLine(m.text, new Map(m.wordScores)) : (
+                <span style={{ color: "rgba(34,197,94,0.95)" }}>{m.text}</span>
+              )}
+            </div>
 
-<div style={{ fontWeight: 850, fontSize: 16, lineHeight: 1.22 }}>
-                        {m.wordScores ? (
-  renderScoredLine(
-    m.text,
-    new Map(m.wordScores) // rebuild Map
-  )
-) : (
-  <span style={{ color: "rgba(34,197,94,0.95)" }}>{m.text}</span>
-)}
-                      </div>
+            {Number.isFinite(m.score) ? (
+              <div
+                style={{
+                  position: "absolute",
+                  right: 10,
+                  top: 10,
+                  background: "rgba(34,197,94,0.95)",
+                  color: "#04110A",
+                  fontWeight: 950,
+                  borderRadius: 10,
+                  padding: "6px 10px",
+                  fontSize: 14,
+                }}
+              >
+                {Math.round(m.score)}%
+              </div>
+            ) : null}
+          </div>
 
-                      {Number.isFinite(m.score) ? (
-                        <div
-                          style={{
-                            position: "absolute",
-                            right: 10,
-                            top: 10,
-                            background: "rgba(34,197,94,0.95)",
-                            color: "#04110A",
-                            fontWeight: 950,
-                            borderRadius: 10,
-                            padding: "6px 10px",
-                            fontSize: 14,
-                          }}
-                        >
-                          {Math.round(m.score)}%
-                        </div>
-                      ) : null}
-                    </div>
+          {/* Improve bar like screenshot */}
+          <div
+            style={{
+              marginTop: -2,
+              margin: "0 auto",
+              width: "min(360px, 78%)",
+              marginLeft: "auto",
+              marginRight: 0,
+              transform: "translateX(14px)",
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.10)",
+              borderRadius: 18,
+              padding: "12px 12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                }}
+              />
+              <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.85)" }}>You can improve</div>
+            </div>
 
-                    {/* Improve bar like screenshot */}
-                    <div
-                      style={{
-                        marginTop: -2,
-                        margin: "0 auto",
-width: "min(360px, 78%)",
-marginLeft: "auto",
-marginRight: 0,
-transform: "translateX(14px)",
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: "rgba(255,255,255,0.10)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 999,
+                padding: "8px 12px",
+                fontWeight: 950,
+              }}
+            >
+              <span style={{ color: "rgba(255,255,255,0.85)" }}>{improveWord.word}</span>
+              <span style={{ color: "rgba(245,158,11,0.95)" }}>{improveWord.pct}%</span>
+              <ChevronRight className="h-4 w-4" style={{ color: "rgba(255,255,255,0.65)" }} />
+            </div>
+          </div>
+        </motion.div>
+      );
+    }
 
-                        background: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.10)",
-                        borderRadius: 18,
-                        padding: "12px 12px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 10,
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                        <div
-                          style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 999,
-                            background: "rgba(255,255,255,0.08)",
-                            border: "1px solid rgba(255,255,255,0.10)",
-                          }}
-                        />
-                        <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.85)" }}>You can improve</div>
-                      </div>
+    // system / fallback
+    return (
+      <motion.div
+        key={k}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
+        style={{ textAlign: "center", color: "rgba(255,255,255,0.50)", fontWeight: 900 }}
+      >
+        {m.text}
+      </motion.div>
+    );
+  })}
+</AnimatePresence>
 
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 8,
-                          background: "rgba(255,255,255,0.10)",
-                          border: "1px solid rgba(255,255,255,0.12)",
-                          borderRadius: 999,
-                          padding: "8px 12px",
-                          fontWeight: 950,
-                        }}
-                      >
-                        <span style={{ color: "rgba(255,255,255,0.85)" }}>{improveWord.word}</span>
-                        <span style={{ color: "rgba(245,158,11,0.95)" }}>{improveWord.pct}%</span>
-                        <ChevronRight className="h-4 w-4" style={{ color: "rgba(255,255,255,0.65)" }} />
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div key={`m_${idx}`} style={{ textAlign: "center", color: "rgba(255,255,255,0.50)", fontWeight: 900 }}>
-                  {m.text}
-                </div>
-              );
-            })}
-            {targetLine ? (
-  <div key="target_line" style={{ display: "grid", gap: 10 }}>
-    <div
-      style={{
-        textAlign: "center",
-        color: "rgba(255,255,255,0.35)",
-        fontWeight: 900,
-        fontSize: 12,
-      }}
+        <AnimatePresence initial={false}>
+  {targetLine ? (
+    <motion.div
+      key="target_line"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      style={{ display: "grid", gap: 10 }}
     >
-      You
-    </div>
-
-    {/* Right-shifted “your turn” bubble */}
-   <div
-  style={{
-width: "min(360px, 78%)",
-   // mindre bubble
-    maxWidth: "100%",
-    boxSizing: "border-box",
-
-   marginLeft: "auto",
-marginRight: 0,
-transform: "translateX(8px)", // lidt til højre, men ikke så meget at den cutter
-
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.10)",
-    borderRadius: 22,
-
-    padding: "12px 16px 14px",
-    paddingRight: 72,            // IMPORTANT: plads til speaker-knappen
-
-    position: "relative",
-    boxShadow: "0 22px 60px rgba(0,0,0,0.35)",
-  }}
->
-
       <div
         style={{
-          fontWeight: 950,
+          textAlign: "center",
+          color: "rgba(255,255,255,0.35)",
+          fontWeight: 900,
           fontSize: 12,
-          letterSpacing: 0.2,
-          color: "rgba(255,255,255,0.55)",
-          marginBottom: 8,
         }}
       >
-        Your turn — say this out loud
+        You
       </div>
 
-      <div style={{ fontWeight: 850, fontSize: 16, lineHeight: 1.22 }}>
-        <span style={{ color: "rgba(255,255,255,0.92)" }}>{targetLine}</span>
-      </div>
-
-     
-
-      <button
-        type="button"
-        onClick={speakTarget}
+      {/* Right-shifted “your turn” bubble */}
+      <div
         style={{
-          position: "absolute",
-          right: 14,
-top: 14,
-
-          width: 40,
-          height: 40,
-          borderRadius: 999,
-          border: "1px solid rgba(255,255,255,0.12)",
-          background: "rgba(255,255,255,0.08)",
-          color: "rgba(255,255,255,0.9)",
-          display: "grid",
-          placeItems: "center",
-          cursor: "pointer",
+          width: "min(360px, 78%)",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+          marginLeft: "auto",
+          marginRight: 0,
+          transform: "translateX(8px)",
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          borderRadius: 22,
+          padding: "12px 16px 14px",
+          paddingRight: 72,
+          position: "relative",
+          boxShadow: "0 22px 60px rgba(0,0,0,0.35)",
         }}
-        title="Play"
       >
-        <Volume2 className="h-5 w-5" />
-      </button>
-    </div>
-  </div>
-) : null}
+        <div
+          style={{
+            fontWeight: 950,
+            fontSize: 12,
+            letterSpacing: 0.2,
+            color: "rgba(255,255,255,0.55)",
+            marginBottom: 8,
+          }}
+        >
+          Your turn — say this out loud
+        </div>
+
+        <div style={{ fontWeight: 850, fontSize: 16, lineHeight: 1.22 }}>
+          <span style={{ color: "rgba(255,255,255,0.92)" }}>{targetLine}</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={speakTarget}
+          style={{
+            position: "absolute",
+            right: 14,
+            top: 14,
+            width: 40,
+            height: 40,
+            borderRadius: 999,
+            border: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(255,255,255,0.08)",
+            color: "rgba(255,255,255,0.9)",
+            display: "grid",
+            placeItems: "center",
+            cursor: "pointer",
+          }}
+          title="Play"
+        >
+          <Volume2 className="h-5 w-5" />
+        </button>
+      </div>
+    </motion.div>
+  ) : null}
+</AnimatePresence>
+
 
 
           </div>
