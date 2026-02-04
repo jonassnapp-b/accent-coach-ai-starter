@@ -23,6 +23,7 @@ const Settings   = lazy(() => import("./pages/Settings.jsx"));
 const Bookmarks  = lazy(() => import("./pages/Bookmarks.jsx"));
 const Coach = lazy(() => import("./pages/Coach.jsx"));
 const AiChat = lazy(() => import("./pages/AiChat.jsx"));
+const Practice = lazy(() => import("./pages/Practice.jsx"));
 
 
 import { submitReferralOpen } from "./lib/api.js";
@@ -35,13 +36,15 @@ import "./styles.css";
 
 /* ---------------- Prefetch helpers (route-level) ---------------- */
 const routePrefetch = {
-    "/coach":     () => import("./pages/Coach.jsx"),
-      "/ai-chat":   () => import("./pages/AiChat.jsx"),
-  "/imitate":    () => import("./pages/ProgressiveSentenceMastery.jsx"),
-  "/weakness":   () => import("./pages/WeaknessLab.jsx"),
-  "/settings":   () => import("./pages/Settings.jsx"),
-  "/bookmarks":  () => import("./pages/Bookmarks.jsx"),
-  };
+  "/ai-chat":   () => import("./pages/AiChat.jsx"),
+  "/coach":     () => import("./pages/Coach.jsx"),
+  "/practice":  () => import("./pages/Practice.jsx"),
+  "/imitate":   () => import("./pages/ProgressiveSentenceMastery.jsx"),
+  "/weakness":  () => import("./pages/WeaknessLab.jsx"),
+  "/bookmarks": () => import("./pages/Bookmarks.jsx"),
+  "/settings":  () => import("./pages/Settings.jsx"),
+};
+
 
 function prefetchRoute(path) {
   try { routePrefetch[path]?.(); } catch {}
@@ -76,12 +79,12 @@ function PracticeGate() {
 /* ---------------- Tabs ---------------- */
 /* ---------------- Tabs ---------------- */
 const TABS = [
-  { path: "/ai-chat", label: "AI Chat",  Icon: MessageCircle, element: <AiChat /> },
-  { path: "/coach",   label: "Talk",     Icon: AudioWaveform, element: <Coach /> },
-  { path: "/record",  label: "Practice", Icon: Mic,           element: <PracticeGate /> },
-  { path: "/weakness",label: "Weakness", Icon: Target,        element: <WeaknessLab /> },
-  { path: "/settings",label: "Settings", Icon: SettingsIcon,  element: <Settings /> },
+  { path: "/ai-chat",  label: "AI Chat",  Icon: MessageCircle, element: <AiChat /> },
+  { path: "/coach",    label: "Talk",     Icon: AudioWaveform, element: <Coach /> },
+  { path: "/practice", label: "Practice", Icon: Mic,           element: <Practice /> },
+  { path: "/settings", label: "Settings", Icon: SettingsIcon,  element: <Settings /> },
 ];
+
 
 
 
@@ -213,7 +216,9 @@ function AppInner() {
 
 {/* Feedback (NOT a tab) */}
 <Route path="/feedback" element={<Feedback />} />
-
+{/* Hidden routes (NOT tabs) */}
+<Route path="/record" element={<PracticeGate />} />
+<Route path="/weakness" element={<WeaknessLab />} />
 <Route path="/bookmarks" element={<Bookmarks />} />
 
 
