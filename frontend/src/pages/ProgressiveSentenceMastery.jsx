@@ -12,6 +12,8 @@ import {
   getLevel,
   setLevel,
 } from "../lib/sentenceBank.js";
+import phonemeSentenceIndex from "../data/phonemeSentenceIndex.json";
+
 
 
 /* ---------------- helpers ---------------- */
@@ -1676,8 +1678,47 @@ useEffect(() => {
     } catch {}
   }
 
+  // 3) Fallback: build queue from WEAKNESS_PHONEME_KEY (enforce ">= 3 hits" when possible)
+  if (!Array.isArray(q) || !q.length) {
+    try {
+      const focusRaw =
+        sessionStorage.getItem(WEAKNESS_PHONEME_KEY) ||
+        localStorage.getItem(WEAKNESS_PHONEME_KEY) ||
+        "";
+
+      const focus = String(focusRaw || "").trim().toUpperCase();
+      const entry = focus ? phonemeSentenceIndex?.[focus] : null;
+
+      if (Array.isArray(entry) && entry.length) {
+        // Accept both shapes: ["sentence", ...] OR [{ sentence, count }, ...]
+        const normalized = entry
+          .map((x) => {
+            if (typeof x === "string") return { sentence: x, count: null };
+            const sentence = x?.sentence ?? x?.text ?? x?.s ?? "";
+            const count = x?.count ?? x?.n ?? x?.hits ?? null;
+            return { sentence, count };
+          })
+          .filter((x) => String(x.sentence || "").trim());
+
+        // Prefer >=3 if counts exist, otherwise just use all
+        const withCounts = normalized.some((x) => Number.isFinite(Number(x.count)));
+        const filtered = withCounts
+          ? normalized.filter((x) => Number(x.count) >= 3)
+          : normalized;
+
+        const sentences = (filtered.length ? filtered : normalized).map((x) => x.sentence);
+
+        if (sentences.length) {
+          q = sentences;
+          startIndex = 0;
+        }
+      }
+    } catch {}
+  }
+
   // If we still don't have a queue, do nothing (stay in normal mode)
   if (!Array.isArray(q) || !q.length) return;
+
 
   const start =
     Number.isFinite(startIndex)

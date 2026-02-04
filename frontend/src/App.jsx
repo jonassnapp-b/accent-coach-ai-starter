@@ -223,7 +223,7 @@ function AppInner() {
 
 
             {/* Catch-alls */}
-            <Route path="*" element={<Navigate to="/record" replace />} />
+            <Route path="*" element={<Navigate to="/practice" replace />} />
           </Routes>
         </Suspense>
       </main>
