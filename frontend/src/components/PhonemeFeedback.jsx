@@ -1469,297 +1469,362 @@ return (
       )}
 
             <div className={embed ? "" : "px-5 pb-6"}>
-        {oneWord && (
-          <div className="mt-0">
-            {/* ONE shared width wrapper for BOTH cards */}
-            <div style={{ width: "100%", maxWidth: 420, margin: "0 auto" }}>
-              {/* HERO CARD */}
-            <motion.div
-  layoutId="pf-hero-card"
-  key={shineKey}
-  className={`pf-surface pf-hero-card ${(targetScorePct ?? 0) >= 85 ? "pf-hero-shine" : ""}`}
-  style={{ width: "100%" }}
->
-              <div
-  className="pf-hero-word"
-  role={onFocus ? "button" : undefined}
-  tabIndex={onFocus ? 0 : undefined}
-  onClick={() => {
-    if (!onFocus) return;
-    fireFocus(activeChunkIdx); // reopen overlay on current chunk
-  }}
-  onKeyDown={(e) => {
-    if (!onFocus) return;
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      fireFocus(activeChunkIdx);
-    }
-  }}
-  style={{
-    color: ui.textStrong,
-    cursor: onFocus ? "pointer" : "default",
-  }}
->
-<span style={{ display: "inline-block", whiteSpace: "nowrap" }}>
-  {letterSegments?.length
-    ? letterSegments.map((seg) => (
-        <span
-          key={seg.key}
+        {oneWord ? (
+  <div className="mt-0">
+    {/* ONE shared width wrapper for BOTH cards */}
+    <div style={{ width: "100%", maxWidth: 420, margin: "0 auto" }}>
+      {/* HERO CARD */}
+      <motion.div
+        layoutId="pf-hero-card"
+        key={shineKey}
+        className={`pf-surface pf-hero-card ${(targetScorePct ?? 0) >= 85 ? "pf-hero-shine" : ""}`}
+        style={{ width: "100%" }}
+      >
+        <div
+          className="pf-hero-word"
+          role={onFocus ? "button" : undefined}
+          tabIndex={onFocus ? 0 : undefined}
+          onClick={() => {
+            if (!onFocus) return;
+            fireFocus(activeChunkIdx);
+          }}
+          onKeyDown={(e) => {
+            if (!onFocus) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              fireFocus(activeChunkIdx);
+            }
+          }}
           style={{
-            color: scoreToColor01(seg.s01 ?? 0),
+            color: ui.textStrong,
+            cursor: onFocus ? "pointer" : "default",
           }}
         >
-          {seg.text}
-        </span>
-      ))
-    : wordText}
-</span>
-
-</div>
-{onFocus && (
-  <div
-    style={{
-      marginTop: 8,
-      fontSize: 12,
-      fontWeight: 700,
-      textAlign: "center",
-      color: "rgba(17,24,39,0.55)",
-    }}
-  >
-    Tap the word to zoom in and review pronunciation
-  </div>
-)}
-
-
-                <div className="flex items-center justify-center gap-3">
-                  <button
-                    type="button"
-                    className="pf-pill"
-                    onClick={() => {
-                      if (!nativeReady) return;
-                      playCoachFull(1.0);
+          <span style={{ display: "inline-block", whiteSpace: "nowrap" }}>
+            {letterSegments?.length
+              ? letterSegments.map((seg) => (
+                  <span
+                    key={seg.key}
+                    style={{
+                      color: scoreToColor01(seg.s01 ?? 0),
                     }}
-                    disabled={!nativeReady}
-                    title={nativeReady ? "Play coach" : "Coach not ready yet"}
                   >
-                    <Volume2 className="h-4 w-4" />
-                    Coach
-                  </button>
+                    {seg.text}
+                  </span>
+                ))
+              : wordText}
+          </span>
+        </div>
 
-                  <button
-                    type="button"
-                    className="pf-pill"
-onClick={async () => {
-  if (!userAudioUrl) return;
-
-  // 1) cut via chunkRows span (samme spans som virker for chunks)
-  if (heroWordSpan) {
-    await playUserSpan(heroWordSpan.startSec, heroWordSpan.endSec);
-    return;
-  }
-
-  // 2) fallback: prøv SpeechSuper word span helper
-  const ok = await playTrimmedUserWord(result, 0, { volume: effectiveVolume });
-  if (ok) return;
-
-  // 3) fallback: full
-  playRecording();
-}}
-
-
-                    disabled={!userAudioUrl}
-                    title={userAudioUrl ? "Play your recording" : "No recording available"}
-                  >
-                    <Volume2 className="h-4 w-4" />
-                    You
-                  </button>
-                </div>
-{/* Main overall score bar (under Coach/You) */}
-{targetScorePct != null && (
-  <div style={{ marginTop: 12 }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-      <div style={{ fontSize: 12, fontWeight: 900, color: ui.textMuted }}>
-        Overall score
-      </div>
-      <div style={{ fontSize: 12, fontWeight: 900, color: ui.text }}>
-        {animatedOverallPct}%
-      </div>
-    </div>
-
-    <div
-      style={{
-        marginTop: 8,
-        height: 12,
-        borderRadius: 999,
-        background: "rgba(0,0,0,0.10)",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          height: "100%",
-          width: `${animatedOverallPct}%`,
-          borderRadius: 999,
-          background: scoreToColor01(animatedOverallPct / 100), // ✅ smooth fade (78% ~ greenish)
-          transition: "width 60ms linear",
-        }}
-      />
-    </div>
-  </div>
-)}
-
-                {!!coachErr && !IS_PROD && (
-  <div className="mt-3" style={{ color: "#e5484d", fontSize: 13 }}>
-    Coach: {coachErr}
-  </div>
-)}
-
-</motion.div>
-
-              {/* CHUNK LIST (same width as hero) */}
-{mode === "full" && !onFocus && chunkRows.length > 0 && (
-  <div className="pf-list" style={{ width: "100%" }}>
-                  {chunkRows.map((row) => {
-                    const isOpen = openChunk === row.i;
-                    const badgePct = Math.max(0, Math.min(100, Number(row.pct) || 0));
-
-                    return (
-                      <div
-                        key={`chunkcard-${row.i}`}
-                        className="pf-row-card"
-                        style={{ width: "100%" }}
-                        onClick={() => setOpenChunk((v) => (v === row.i ? null : row.i))}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setOpenChunk((v) => (v === row.i ? null : row.i));
-                          }
-                        }}
-                      >
-                        <div className="pf-row-top">
-                          <div className="pf-row-title">{row.letters || "—"}</div>
-               
-
-                        </div>
-
-                        <div className="pf-row-sub">
-                          <div className="pf-seg">
-                            <button
-                              type="button"
-                              className="pf-seg-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                cycleCoachTtsRate();
-                              }}
-                              title="Change Native tempo (Azure TTS)"
-                            >
-                              {coachTtsRate.toFixed(2)}
-                            </button>
-
-                            <button
-                              type="button"
-                              className="pf-seg-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (!nativeReady) return;
-                                playCoachSpan(row.coachStartSec, row.coachEndSec, 1.0);
-                              }}
-                              disabled={!nativeReady}
-                              title={nativeReady ? "Play native (this part)" : "Native not ready yet"}
-                            >
-                              <Volume2 className="h-4 w-4" />
-                              Native
-                            </button>
-                          </div>
-
-                          <div className="pf-row-right">
-                            <button
-                              type="button"
-                            className="pf-pill pf-you-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                playUserSpan(row.startSec, row.endSec);
-                              }}
-                              title="Play your recording (this part)"
-                            >
-                              <Volume2 className="h-4 w-4" />
-                              You
-                            </button>
-
-                            <div className="pf-row-actions">
-                              <ProgressRing pct={badgePct} />
-
-                             <button
-  type="button"
-  className="pf-chevron"
-  onClick={(e) => {
-    e.stopPropagation();
-    setOpenChunk((v) => (v === row.i ? null : row.i));
-  }}
-  aria-label="Toggle details"
-  style={{
-    width: 36,
-    height: 36,
-    flex: "0 0 36px",
-    display: "grid",
-    placeItems: "center",
-    padding: 0,
-  }}
->
-  <ChevronRight
-    className="h-5 w-5"
-    style={{
-      transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
-      transformOrigin: "50% 50%",
-      transition: "transform 160ms ease",
-      display: "block",
-    }}
-  />
-</button>
-
-                            </div>
-                          </div>
-                        </div>
-{isOpen && (
-  <div style={{ marginTop: 10 }}>
-    <div className="phoneme-row">
-      {row.phonemes
-        .filter((ph) => assetOkByCmu?.[String(ph?.cmu || "").trim()] !== false)
-        .map((ph) => (
-          <button
-            key={`${row.i}-ph-${ph.ix}`}
-            type="button"
-            className="phoneme-chip"
-            onClick={(e) => {
-              e.stopPropagation();
-              playUserSpan(ph.startSec, ph.endSec);
-            }}
-            title={`${ph.cmu} • ${ph.pct}%`}
+        {onFocus && (
+          <div
             style={{
-              borderColor: "rgba(0,0,0,0.12)",
-              color: scoreToColor01((ph.pct ?? 0) / 100),
+              marginTop: 8,
+              fontSize: 12,
+              fontWeight: 700,
+              textAlign: "center",
+              color: "rgba(17,24,39,0.55)",
             }}
           >
-            <span style={{ fontWeight: 900 }}>{cmuChipLabel(ph.cmu)}</span>
-            <span style={{ opacity: 0.75, fontWeight: 800 }}>{ph.pct}%</span>
+            Tap the word to zoom in and review pronunciation
+          </div>
+        )}
+
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            className="pf-pill"
+            onClick={() => {
+              if (!nativeReady) return;
+              playCoachFull(1.0);
+            }}
+            disabled={!nativeReady}
+            title={nativeReady ? "Play coach" : "Coach not ready yet"}
+          >
+            <Volume2 className="h-4 w-4" />
+            Coach
           </button>
-        ))}
-    </div>
-  </div>
-)}
 
+          <button
+            type="button"
+            className="pf-pill"
+            onClick={async () => {
+              if (!userAudioUrl) return;
 
+              if (heroWordSpan) {
+                await playUserSpan(heroWordSpan.startSec, heroWordSpan.endSec);
+                return;
+              }
 
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              const ok = await playTrimmedUserWord(result, 0, { volume: effectiveVolume });
+              if (ok) return;
+
+              playRecording();
+            }}
+            disabled={!userAudioUrl}
+            title={userAudioUrl ? "Play your recording" : "No recording available"}
+          >
+            <Volume2 className="h-4 w-4" />
+            You
+          </button>
+        </div>
+
+        {/* Main overall score bar */}
+        {targetScorePct != null && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div style={{ fontSize: 12, fontWeight: 900, color: ui.textMuted }}>Overall score</div>
+              <div style={{ fontSize: 12, fontWeight: 900, color: ui.text }}>{animatedOverallPct}%</div>
+            </div>
+
+            <div
+              style={{
+                marginTop: 8,
+                height: 12,
+                borderRadius: 999,
+                background: "rgba(0,0,0,0.10)",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${animatedOverallPct}%`,
+                  borderRadius: 999,
+                  background: scoreToColor01(animatedOverallPct / 100),
+                  transition: "width 60ms linear",
+                }}
+              />
             </div>
           </div>
         )}
+
+        {!!coachErr && !IS_PROD && (
+          <div className="mt-3" style={{ color: "#e5484d", fontSize: 13 }}>
+            Coach: {coachErr}
+          </div>
+        )}
+      </motion.div>
+
+      {/* CHUNK LIST */}
+      {mode === "full" && !onFocus && chunkRows.length > 0 && (
+        <div className="pf-list" style={{ width: "100%" }}>
+          {chunkRows.map((row) => {
+            const isOpen = openChunk === row.i;
+            const badgePct = Math.max(0, Math.min(100, Number(row.pct) || 0));
+
+            return (
+              <div
+                key={`chunkcard-${row.i}`}
+                className="pf-row-card"
+                style={{ width: "100%" }}
+                onClick={() => setOpenChunk((v) => (v === row.i ? null : row.i))}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setOpenChunk((v) => (v === row.i ? null : row.i));
+                  }
+                }}
+              >
+                <div className="pf-row-top">
+                  <div className="pf-row-title">{row.letters || "—"}</div>
+                </div>
+
+                <div className="pf-row-sub">
+                  <div className="pf-seg">
+                    <button
+                      type="button"
+                      className="pf-seg-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        cycleCoachTtsRate();
+                      }}
+                      title="Change Native tempo (Azure TTS)"
+                    >
+                      {coachTtsRate.toFixed(2)}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="pf-seg-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!nativeReady) return;
+                        playCoachSpan(row.coachStartSec, row.coachEndSec, 1.0);
+                      }}
+                      disabled={!nativeReady}
+                      title={nativeReady ? "Play native (this part)" : "Native not ready yet"}
+                    >
+                      <Volume2 className="h-4 w-4" />
+                      Native
+                    </button>
+                  </div>
+
+                  <div className="pf-row-right">
+                    <button
+                      type="button"
+                      className="pf-pill pf-you-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playUserSpan(row.startSec, row.endSec);
+                      }}
+                      title="Play your recording (this part)"
+                    >
+                      <Volume2 className="h-4 w-4" />
+                      You
+                    </button>
+
+                    <div className="pf-row-actions">
+                      <ProgressRing pct={badgePct} />
+
+                      <button
+                        type="button"
+                        className="pf-chevron"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenChunk((v) => (v === row.i ? null : row.i));
+                        }}
+                        aria-label="Toggle details"
+                        style={{
+                          width: 36,
+                          height: 36,
+                          flex: "0 0 36px",
+                          display: "grid",
+                          placeItems: "center",
+                          padding: 0,
+                        }}
+                      >
+                        <ChevronRight
+                          className="h-5 w-5"
+                          style={{
+                            transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                            transformOrigin: "50% 50%",
+                            transition: "transform 160ms ease",
+                            display: "block",
+                          }}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {isOpen && (
+                  <div style={{ marginTop: 10 }}>
+                    <div className="phoneme-row">
+                      {row.phonemes
+                        .filter((ph) => assetOkByCmu?.[String(ph?.cmu || "").trim()] !== false)
+                        .map((ph) => (
+                          <button
+                            key={`${row.i}-ph-${ph.ix}`}
+                            type="button"
+                            className="phoneme-chip"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playUserSpan(ph.startSec, ph.endSec);
+                            }}
+                            title={`${ph.cmu} • ${ph.pct}%`}
+                            style={{
+                              borderColor: "rgba(0,0,0,0.12)",
+                              color: scoreToColor01((ph.pct ?? 0) / 100),
+                            }}
+                          >
+                            <span style={{ fontWeight: 900 }}>{cmuChipLabel(ph.cmu)}</span>
+                            <span style={{ opacity: 0.75, fontWeight: 800 }}>{ph.pct}%</span>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  </div>
+) : (
+  // ✅ SENTENCE UI (words.length > 1)
+  <div className="mt-0">
+    <div style={{ width: "100%", maxWidth: 560, margin: "0 auto" }}>
+      <div
+        className="pf-surface"
+        style={{
+          width: "100%",
+          background: ui.cardBg,
+          border: `1px solid ${ui.cardBorder}`,
+          boxShadow: ui.cardShadow,
+          borderRadius: 22,
+          padding: 18,
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <SentenceHeroWord words={words} ui={ui} />
+        </div>
+
+        <div className="flex items-center justify-center gap-3" style={{ marginTop: 12 }}>
+          <button
+            type="button"
+            className="pf-pill"
+            onClick={() => {
+              if (!nativeReady) return;
+              playCoachs = playCoachFull(1.0);
+            }}
+            disabled={!nativeReady}
+            title={nativeReady ? "Play coach" : "Coach not ready yet"}
+          >
+            <Volume2 className="h-4 w-4" />
+            Coach
+          </button>
+
+          <button
+            type="button"
+            className="pf-pill"
+            onClick={() => playRecording()}
+            disabled={!userAudioUrl}
+            title={userAudioUrl ? "Play your recording" : "No recording available"}
+          >
+            <Volume2 className="h-4 w-4" />
+            You
+          </button>
+        </div>
+
+        {/* sentence overall */}
+        {overall01 != null && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div style={{ fontSize: 12, fontWeight: 900, color: ui.textMuted }}>Overall score</div>
+              <div style={{ fontSize: 12, fontWeight: 900, color: ui.text }}>
+                {Math.round(overall01 * 100)}%
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: 8,
+                height: 12,
+                borderRadius: 999,
+                background: "rgba(0,0,0,0.10)",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${Math.round(overall01 * 100)}%`,
+                  borderRadius: 999,
+                  background: scoreToColor01(overall01),
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
       </div>
     </div>
   );
