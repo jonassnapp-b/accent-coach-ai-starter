@@ -1,8 +1,8 @@
 // src/pages/Record.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bookmark as BookmarkIcon, StopCircle, ChevronDown, ArrowUp } from "lucide-react";
+import { StopCircle, ChevronDown, ArrowUp } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import { updateStreak, readStreak } from "../lib/streak.js";
 import * as sfx from "../lib/sfx.js";
@@ -97,7 +97,7 @@ function pickFeedback(json) {
 }
 
 export default function Record() {
-  const location = useLocation();
+  const navigate = useNavigate();
   const { settings } = useSettings();
 
     // keep SFX volume synced with settings (0 = mute)
@@ -485,17 +485,27 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
   Practice my text
 </div>
 
-          <Link
-  to="/bookmarks"
-  className="pw-bookmarksBtn"
-  title="Bookmarks"
+         <button
+  type="button"
+  onClick={() => navigate(-1)}
+  aria-label="Back"
+  title="Back"
   style={{
     justifySelf: "end",
-    marginRight: 0,      // ✅ ryk lidt mere mod højre
+    width: 44,
+    height: 44,
+    borderRadius: 999,
+    background: LIGHT_SURFACE,
+    border: `1px solid ${LIGHT_BORDER}`,
+    boxShadow: LIGHT_SHADOW,
+    display: "grid",
+    placeItems: "center",
+    cursor: "pointer",
   }}
 >
-  <BookmarkIcon className="pw-bookmarksIcon" />
-</Link>
+  <ChevronDown className="h-5 w-5" style={{ color: LIGHT_TEXT }} />
+</button>
+
 
 
 
