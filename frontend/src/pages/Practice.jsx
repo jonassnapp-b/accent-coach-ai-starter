@@ -84,6 +84,8 @@ useEffect(() => {
 
   const safeBottom = "var(--safe-bottom)";
   const safeTop = "var(--safe-top)";
+const clampedLen = Math.min(text.length, MAX_LEN);
+const progressDeg = (clampedLen / MAX_LEN) * 360;
 
 
   const cards = useMemo(() => {
@@ -131,12 +133,17 @@ return (
           {/* Practice My Text card (special because it has the collapsed input) */}
          <motion.div
   layoutId="practice-mytext-card"
+  layout
+
   onClick={() => {
     if (!expanded) setExpanded(true);
   }}
   role="button"
   tabIndex={0}
-  transition={{ type: "spring", stiffness: 520, damping: 42 }}
+transition={{
+  layout: { type: "spring", stiffness: 220, damping: 30, mass: 1.25 },
+  default: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+}}
   style={{
     borderRadius: expanded ? 26 : 22,
     background: "var(--panel-bg)",
@@ -171,8 +178,7 @@ return (
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.2 }}>Practice My Text</div>
-          <div style={{ marginTop: 2, color: "var(--muted)", fontWeight: 700 }}>Type or paste your own text</div>
-        </div>
+          
       </div>
 
       <div
@@ -201,33 +207,32 @@ return (
           }}
         >
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <div
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: 999,
-                border: `3px solid rgba(139,92,246,0.25)`,
-                borderTopColor: "rgba(139,92,246,0.95)",
-              }}
-            />
+          <div
+  style={{
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    background: `conic-gradient(#2196f3 ${progressDeg}deg, rgba(33,150,243,0.18) 0deg)`,
+    padding: 3,
+    flex: "0 0 auto",
+  }}
+>
+  <div
+    style={{
+      width: "100%",
+      height: "100%",
+      borderRadius: 999,
+      background: "var(--panel-bg)",
+    }}
+  />
+</div>
+
             <div>
               {Math.min(text.length, MAX_LEN)} / {MAX_LEN}
             </div>
           </div>
 
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 999,
-              background: "rgba(17,24,39,0.06)",
-              border: `1px solid rgba(0,0,0,0.10)`,
-              display: "grid",
-              placeItems: "center",
-            }}
-          >
-            <div style={{ width: 18, height: 12, borderRadius: 3, border: `2px solid rgba(17,24,39,0.35)` }} />
-          </div>
+        
         </div>
       </div>
     </>
@@ -292,18 +297,7 @@ return (
               padding: 18,
             }}
           >
-            <div
-              style={{
-                fontSize: 28,
-                fontWeight: 900,
-                letterSpacing: -0.4,
-                lineHeight: 1.12,
-                marginBottom: 14,
-                color: "var(--text)",
-              }}
-            >
-              Type or paste your own word or text. You can use this to practice a speech, presentation, or whatever you like!
-            </div>
+         
 
             <textarea
               autoFocus
@@ -327,14 +321,25 @@ return (
 
             <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, color: "var(--muted)", fontWeight: 900 }}>
               <div
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 999,
-                  border: `3px solid rgba(139,92,246,0.25)`,
-                  borderTopColor: "rgba(139,92,246,0.95)",
-                }}
-              />
+  style={{
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    background: `conic-gradient(#2196f3 ${progressDeg}deg, rgba(33,150,243,0.18) 0deg)`,
+    padding: 3,
+    flex: "0 0 auto",
+  }}
+>
+  <div
+    style={{
+      width: "100%",
+      height: "100%",
+      borderRadius: 999,
+      background: "var(--panel-bg)",
+    }}
+  />
+</div>
+
               <div>
                 {Math.min(text.length, MAX_LEN)} / {MAX_LEN}
               </div>
@@ -359,9 +364,8 @@ return (
                 fontWeight: 900,
                 fontSize: 18,
                 color: "white",
-                background:
-                  "linear-gradient(90deg, rgba(239,68,68,0.95), rgba(168,85,247,0.95), rgba(59,130,246,0.95))",
-                boxShadow: "0 14px 28px rgba(0,0,0,0.12)",
+               background: "#2196f3",
+  boxShadow: "0 14px 28px rgba(0,0,0,0.12)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
