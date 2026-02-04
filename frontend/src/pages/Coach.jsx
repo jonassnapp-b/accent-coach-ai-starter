@@ -326,14 +326,16 @@ export default function Coach() {
   const LIGHT_BG = "#EEF5FF";
   const BTN_BLUE = "#2196F3";
 
-  const TABBAR_OFFSET = 64;
+const TABBAR_OFFSET = 64;
+const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
 
   // dropdown state
-  const [mode, setMode] = useState("words"); // words | sentences
+  const mode = "words"; // locked (sentences hidden)
   const [difficulty, setDifficulty] = useState("easy"); // easy | medium | hard
   const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
-const MODE_OPTIONS = ["words", "sentences"];
-const MODE_LABEL = { words: "Words", sentences: "Sentences" };
+// const MODE_OPTIONS = ["words", "sentences"];
+// const MODE_LABEL = { words: "Words", sentences: "Sentences" };
+
 
 const DIFF_OPTIONS = ["easy", "medium", "hard"];
 const DIFF_LABEL = { easy: "Easy", medium: "Medium", hard: "Hard" };
@@ -1788,7 +1790,7 @@ const pickerCenter = {
         style={{
           maxWidth: 720,
           padding: "12px 12px",
-          paddingBottom: `calc(${TABBAR_OFFSET}px + 24px)`,
+          paddingBottom: `calc(${TABBAR_OFFSET}px + 24px + ${SAFE_BOTTOM})`,
         }}
       >
         <LayoutGroup>
@@ -1808,27 +1810,7 @@ style={{
 }}
               >
                 <div style={stack}>
-                 <div style={pickerRow}>
-  <button
-    type="button"
-    onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, -1))}
-    style={pickerBtn}
-    aria-label="Previous mode"
-  >
-    <ChevronLeft className="h-7 w-7" />
-  </button>
-
-  <div style={pickerCenter}>{MODE_LABEL[mode] || "—"}</div>
-
-  <button
-    type="button"
-    onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, 1))}
-    style={pickerBtn}
-    aria-label="Next mode"
-  >
-    <ChevronRight className="h-7 w-7" />
-  </button>
-</div>
+                 
 
 <div style={pickerRow}>
   <button
@@ -2019,7 +2001,8 @@ style={{
   top: 0,
   left: 0,
   right: 0,
-  bottom: TABBAR_OFFSET, // ✅ efterlader plads til tabbar
+  bottom: `calc(${TABBAR_OFFSET}px + ${SAFE_BOTTOM})`,
+ // ✅ efterlader plads til tabbar
   zIndex: 9999,
   background: LIGHT_BG,
   overflowY: "auto",

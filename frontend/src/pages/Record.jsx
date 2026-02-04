@@ -98,7 +98,9 @@ function pickFeedback(json) {
 
 export default function Record() {
   const navigate = useNavigate();
+  const location = useLocation(); // ✅ needed for nav("/record", { state: { seedText } })
   const { settings } = useSettings();
+
 
     // keep SFX volume synced with settings (0 = mute)
   useEffect(() => {
