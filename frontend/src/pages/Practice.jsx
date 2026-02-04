@@ -176,10 +176,13 @@ transition={{
           <Mic style={{ width: 22, height: 22, color: "rgba(139,92,246,0.95)" }} />
         </div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.2 }}>Practice My Text</div>
-          
-      </div>
+       <div style={{ flex: 1, minWidth: 0 }}>
+  <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.2 }}>
+    Practice My Text
+  </div>
+</div>
+</div>
+
 
       <div
         style={{
