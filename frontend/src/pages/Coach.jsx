@@ -220,6 +220,11 @@ function resolvePhonemeVideo(code) {
   return { videoSrc: `/phonemes/Videos/${c}.mp4` };
 }
 
+function resolvePhonemeDiagramImage(code) {
+  const c = String(code || "").trim().toUpperCase();
+  if (!c) return null;
+  return `/phonemes/images/${c}.png`; // public/phonemes/images/<CODE>.png
+}
 
 /* ---------------- SpeechSuper parsing helpers ---------------- */
 function getPhonemeCode(p) {
@@ -2080,76 +2085,55 @@ style={{
         }}
         style={{ marginTop: 8 }}
       >
-     {activeTab?.type === "overview" ? (
-  <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
-    <div
-      style={{
-        borderRadius: 22,
-        border: `1px solid ${LIGHT_BORDER}`,
-        background: LIGHT_SURFACE,
-        boxShadow: LIGHT_SHADOW,
-        padding: 14,
-        display: "grid",
-        gap: 10,
-      }}
-    >
-      <div style={{ fontWeight: 950, fontSize: 14 }}>Words</div>
+{activeTab?.type === "overview" ? (
+  <div style={{ marginTop: 12, display: "grid", gap: 14 }}>
+    <div style={{ fontWeight: 950, fontSize: 14, color: LIGHT_MUTED }}>Words</div>
 
-      {words?.length ? (
-        <div style={{ display: "grid", gap: 8 }}>
-          {words.map((w, idx) => {
-            const t = String(w?.word || w?.text || "").trim();
-            const s = getScore(w);
-            const active = idx === safeWordIdx;
+    {words?.length ? (
+      <div style={{ display: "grid", gap: 10 }}>
+        {words.map((w, idx) => {
+          const t = String(w?.word || w?.text || "").trim();
+          const s = getScore(w);
+          const active = idx === safeWordIdx;
 
-            return (
-              <button
-                key={`${t}_${idx}`}
-                type="button"
-                onClick={() => {
-                  setSelectedWordIdx(idx);
-                  setActiveTabIdx(0); // stay on overview, but select word
-                }}
-                style={{
-                  width: "100%",
-                  textAlign: "left",
-                  borderRadius: 16,
-                  border: `1px solid ${LIGHT_BORDER}`,
-                  background: active ? "rgba(33,150,243,0.10)" : "rgba(17,24,39,0.04)",
-                  padding: "10px 12px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 10,
-                }}
-              >
-                <span style={{ fontWeight: 900 }}>{t || `Word ${idx + 1}`}</span>
-                <span style={{ fontWeight: 950, color: scoreColor(s) }}>{s == null ? "—" : Math.round(s)}</span>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>No data yet.</div>
-      )}
-    </div>
+          return (
+            <button
+              key={`${t}_${idx}`}
+              type="button"
+              onClick={() => {
+                setSelectedWordIdx(idx);
+                setActiveTabIdx(0);
+              }}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                border: "none",
+                background: active ? "rgba(33,150,243,0.10)" : "transparent",
+                padding: "12px 12px",
+                borderRadius: 16,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <span style={{ fontWeight: 950, color: LIGHT_TEXT }}>{t || `Word ${idx + 1}`}</span>
+              <span style={{ fontWeight: 950, color: scoreColor(s) }}>{s == null ? "—" : Math.round(s)}</span>
+            </button>
+          );
+        })}
+      </div>
+    ) : (
+      <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>No data yet.</div>
+    )}
 
-    {/* Show selected word phoneme list (only when a word is selected) */}
+    <div style={{ height: 1, background: "rgba(0,0,0,0.06)", marginTop: 6 }} />
+
     {currentWordObj ? (
-      <div
-        style={{
-          borderRadius: 22,
-          border: `1px solid ${LIGHT_BORDER}`,
-          background: LIGHT_SURFACE,
-          boxShadow: LIGHT_SHADOW,
-          padding: 14,
-          display: "grid",
-          gap: 10,
-        }}
-      >
+      <div style={{ display: "grid", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-          <div style={{ fontWeight: 950, fontSize: 14 }}>
+          <div style={{ fontWeight: 950, fontSize: 14, color: LIGHT_TEXT }}>
             Selected: <span style={{ fontWeight: 950 }}>{currentWordText || "—"}</span>
           </div>
           <div style={{ fontWeight: 950, color: scoreColor(currentWordScore) }}>
@@ -2158,26 +2142,29 @@ style={{
         </div>
 
         {weakItems?.length ? (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
             {weakItems.map((it) => (
               <button
                 key={it.key}
                 type="button"
                 onClick={() => {
-                  // jump directly to that phoneme tab
                   const idx = overlayTabs.findIndex((t) => t.key === it.key);
                   if (idx >= 0) setActiveTabIdx(idx);
                 }}
                 style={{
+                  border: "none",
+                  background: "rgba(17,24,39,0.06)",
+                  padding: "10px 12px",
                   borderRadius: 999,
-                  border: `1px solid ${LIGHT_BORDER}`,
-                  background: "rgba(17,24,39,0.04)",
-                  padding: "8px 10px",
                   fontWeight: 950,
                   cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
                 }}
               >
-                {it.code} <span style={{ color: scoreColor(it.score) }}>{it.score == null ? "—" : Math.round(it.score)}</span>
+                <span>{it.code}</span>
+                <span style={{ color: scoreColor(it.score) }}>{it.score == null ? "—" : Math.round(it.score)}</span>
               </button>
             ))}
           </div>
@@ -2191,17 +2178,17 @@ style={{
   </div>
 ) : null}
 
+
 {activeTab?.type === "phoneme" ? (
   !activeWeakItem ? (
     <div style={{ marginTop: 12, color: LIGHT_MUTED, fontWeight: 800 }}>No data for this phoneme.</div>
   ) : (
     <div
       style={{
-        marginTop: 12,
+        marginTop: 10,
         background: "#0B1220",
         borderRadius: 28,
         padding: 18,
-        minHeight: 520,
         color: "white",
         position: "relative",
         overflow: "hidden",
@@ -2243,15 +2230,15 @@ style={{
         ×
       </button>
 
-      {/* Title + desc (like screenshot 2) */}
+      {/* Title + desc */}
       <div style={{ paddingRight: 60 }}>
-        <div style={{ fontSize: 36, fontWeight: 950, letterSpacing: -0.5 }}>
+        <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5 }}>
           {getPhonemeUiCopy(activeWeakItem.code).title}
         </div>
         <div
           style={{
             marginTop: 10,
-            fontSize: 16,
+            fontSize: 15.5,
             lineHeight: 1.35,
             color: "rgba(255,255,255,0.72)",
             fontWeight: 650,
@@ -2261,16 +2248,8 @@ style={{
         </div>
       </div>
 
-      {/* Video area */}
-      <div
-        style={{
-          marginTop: 18,
-          borderRadius: 22,
-          background: "rgba(255,255,255,0.06)",
-          overflow: "hidden",
-          position: "relative",
-        }}
-      >
+      {/* Video */}
+      <div style={{ marginTop: 16, borderRadius: 22, overflow: "hidden", position: "relative", background: "black" }}>
         <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10" }}>
           <video
             ref={videoRef}
@@ -2278,48 +2257,31 @@ style={{
             playsInline
             muted={videoMuted}
             preload="auto"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-              background: "black",
-            }}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
 
-          {/* Play button (center) */}
-          <button
-            type="button"
-            onClick={() => {
-              const v = videoRef.current;
-              if (!v) return;
-              try {
-                v.muted = false;
-                setVideoMuted(false);
-                v.currentTime = 0;
-                v.play().catch(() => {});
-              } catch {}
-            }}
-            aria-label="Play"
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "50%",
-              transform: "translate(-50%, -50%)",
-              width: 74,
-              height: 74,
-              borderRadius: 37,
-              border: "none",
-              background: "rgba(255,255,255,0.92)",
-              display: "grid",
-              placeItems: "center",
-              cursor: "pointer",
-            }}
-          >
-            <Play className="h-8 w-8" style={{ color: "#0B1220" }} />
-          </button>
+          {/* avatars (top-left) */}
+          <div style={{ position: "absolute", left: 12, top: 12, display: "flex", alignItems: "center", gap: 8 }}>
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.18)",
+              }}
+            />
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 999,
+                border: "3px solid rgba(255,105,180,0.85)",
+                background: "rgba(255,255,255,0.18)",
+              }}
+            />
+          </div>
 
-          {/* Mute toggle (top-right on video) */}
+          {/* mute icon (top-right) */}
           <button
             type="button"
             onClick={() => {
@@ -2350,45 +2312,95 @@ style={{
           >
             <Volume2 className="h-5 w-5" />
           </button>
-        </div>
 
-        {/* Bottom row: phoneme label + deep dive button */}
-        <div
-          style={{
-            padding: "12px 14px 14px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 10,
-          }}
-        >
-          <div style={{ fontSize: 26, fontWeight: 950, letterSpacing: -0.3 }}>
-            {String(activeWeakItem.code || "").toUpperCase()}
-          </div>
-
+          {/* play (center) */}
           <button
             type="button"
-            onClick={() => setDeepDiveOpen(true)}
+            onClick={() => {
+              const v = videoRef.current;
+              if (!v) return;
+              try {
+                v.muted = false;
+                setVideoMuted(false);
+                v.currentTime = 0;
+                v.play().catch(() => {});
+              } catch {}
+            }}
+            aria-label="Play"
             style={{
-              height: 46,
-              padding: "0 18px",
-              borderRadius: 18,
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              width: 78,
+              height: 78,
+              borderRadius: 39,
               border: "none",
-              background: "rgba(255,255,255,0.12)",
-              color: "white",
-              fontWeight: 900,
+              background: "rgba(255,255,255,0.95)",
+              display: "grid",
+              placeItems: "center",
               cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 10,
             }}
           >
-            Watch Deep Dive <span style={{ fontSize: 18, lineHeight: 1 }}>→</span>
+            <Play className="h-8 w-8" style={{ color: "#0B1220" }} />
           </button>
+        </div>
+
+        {/* Diagram section (below video) */}
+        <div style={{ background: "rgba(255,255,255,0.06)", padding: 14 }}>
+          <div style={{ width: "100%", borderRadius: 18, overflow: "hidden", background: "rgba(0,0,0,0.22)" }}>
+            <img
+              src={resolvePhonemeDiagramImage(activeWeakItem.code) || ""}
+              alt=""
+              style={{ width: "100%", display: "block", objectFit: "cover" }}
+            />
+          </div>
+
+          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                background: "rgba(255,255,255,0.10)",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 950,
+              }}
+            >
+              i
+            </div>
+            <div style={{ fontWeight: 950, fontSize: 28, letterSpacing: -0.2 }}>
+              {String(activeWeakItem.code || "").toUpperCase()}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Deep Dive modal */}
+      {/* ONLY card/pill allowed: Watch Deep Dive */}
+      <button
+        type="button"
+        onClick={() => setDeepDiveOpen(true)}
+        style={{
+          marginTop: 16,
+          width: "100%",
+          height: 56,
+          borderRadius: 999,
+          border: "none",
+          background: "rgba(255,255,255,0.14)",
+          color: "white",
+          fontWeight: 950,
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+        }}
+      >
+        Watch Deep Dive <span style={{ fontSize: 18, lineHeight: 1 }}>→</span>
+      </button>
+
+      {/* Deep Dive modal (samme som før) */}
       {deepDiveOpen ? (
         <div
           style={{
@@ -2470,6 +2482,7 @@ style={{
     </div>
   )
 ) : null}
+
 
 
 {activeTab?.type === "playback" ? (
@@ -2636,25 +2649,24 @@ style={{
 
   {/* bottom bar (fixed inside overlay) */}
   <div
-    style={{
-      position: "fixed",
-      left: 16,
-      right: 16,
-      bottom: TABBAR_OFFSET + 16,
-      zIndex: 10001,
-      maxWidth: 520,
-      margin: "0 auto",
-      borderRadius: 22,
-      border: `1px solid ${LIGHT_BORDER}`,
-      background: LIGHT_SURFACE,
-      boxShadow: LIGHT_SHADOW,
-      padding: 10,
-      display: "grid",
-      gridTemplateColumns: "44px 1fr 44px",
-      alignItems: "center",
-      gap: 10,
-    }}
-  >
+  style={{
+    position: "fixed",
+    left: 16,
+    right: 16,
+    bottom: TABBAR_OFFSET + 16,
+    zIndex: 10001,
+    maxWidth: 520,
+    margin: "0 auto",
+    padding: 0,
+    background: "transparent",
+    border: "none",
+    boxShadow: "none",
+    display: "grid",
+    gridTemplateColumns: "44px 1fr 44px",
+    alignItems: "center",
+    gap: 10,
+  }}
+>
     <button
       type="button"
       onClick={() => {
@@ -2675,8 +2687,8 @@ style={{
         width: 44,
         height: 44,
         borderRadius: 16,
-        border: `1px solid ${LIGHT_BORDER}`,
-        background: "rgba(17,24,39,0.04)",
+   border: "none",
+background: "rgba(17,24,39,0.06)",
         display: "grid",
         placeItems: "center",
         cursor: activeTabIdx <= 0 ? "not-allowed" : "pointer",
@@ -2713,8 +2725,8 @@ style={{
         width: 44,
         height: 44,
         borderRadius: 16,
-        border: `1px solid ${LIGHT_BORDER}`,
-        background: "rgba(17,24,39,0.04)",
+border: "none",
+background: "rgba(17,24,39,0.06)",
         display: "grid",
         placeItems: "center",
         cursor: activeTabIdx >= overlayTabs.length - 1 ? "not-allowed" : "pointer",
