@@ -2054,140 +2054,194 @@ style={{
 
 
 
-{/* ---------- Overlay tabs (dynamic) ---------- */}
-<div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-  {overlayTabs.map((t, idx) => (
-    <button
-      key={`ovtab_${t.key}`}
-      type="button"
-      onClick={() => {
-        setActiveTabIdx(idx);
-        setDeepDiveOpen(false);
-        setVideoMuted(true);
-        try {
-          const v = videoRef.current;
-          if (v) { v.pause(); v.currentTime = 0; }
-        } catch {}
-      }}
+{/* ---------- Swipe header (no tab bar) ---------- */}
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "44px 1fr 44px",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 6,
+  }}
+>
+  <button
+    type="button"
+    onClick={() => {
+      setActiveTabIdx((i) => Math.max(0, i - 1));
+      setDeepDiveOpen(false);
+      setVideoMuted(true);
+      try {
+        const v = videoRef.current;
+        if (v) {
+          v.pause();
+          v.currentTime = 0;
+        }
+      } catch {}
+    }}
+    disabled={activeTabIdx <= 0}
+    aria-label="Previous"
+    style={{
+      width: 44,
+      height: 44,
+      borderRadius: 16,
+      border: `1px solid ${LIGHT_BORDER}`,
+      background: LIGHT_SURFACE,
+      display: "grid",
+      placeItems: "center",
+      cursor: activeTabIdx <= 0 ? "not-allowed" : "pointer",
+      opacity: activeTabIdx <= 0 ? 0.45 : 1,
+    }}
+  >
+    <ChevronLeft className="h-6 w-6" />
+  </button>
+
+  <div style={{ textAlign: "center", fontWeight: 950, color: LIGHT_TEXT }}>
+    <div style={{ fontSize: 16, lineHeight: 1.1 }}>{activeTab?.label || ""}</div>
+    <div style={{ fontSize: 12, color: LIGHT_MUTED, fontWeight: 850, marginTop: 2 }}>
+      Swipe left / right
+    </div>
+  </div>
+
+  <button
+    type="button"
+    onClick={() => {
+      setActiveTabIdx((i) => Math.min(overlayTabs.length - 1, i + 1));
+      setDeepDiveOpen(false);
+      setVideoMuted(true);
+      try {
+        const v = videoRef.current;
+        if (v) {
+          v.pause();
+          v.currentTime = 0;
+        }
+      } catch {}
+    }}
+    disabled={activeTabIdx >= overlayTabs.length - 1}
+    aria-label="Next"
+    style={{
+      width: 44,
+      height: 44,
+      borderRadius: 16,
+      border: `1px solid ${LIGHT_BORDER}`,
+      background: LIGHT_SURFACE,
+      display: "grid",
+      placeItems: "center",
+      cursor: activeTabIdx >= overlayTabs.length - 1 ? "not-allowed" : "pointer",
+      opacity: activeTabIdx >= overlayTabs.length - 1 ? 0.45 : 1,
+    }}
+  >
+    <ChevronRight className="h-6 w-6" />
+  </button>
+</div>
+
+{/* ---------- Swipeable page ---------- */}
+<motion.div
+  key={`swipe_${activeTab?.key || "x"}`}
+  initial={{ opacity: 0, x: 12 }}
+  animate={{ opacity: 1, x: 0 }}
+  exit={{ opacity: 0, x: -12 }}
+  transition={{ duration: 0.16 }}
+  drag="x"
+  dragConstraints={{ left: 0, right: 0 }}
+  dragElastic={0.12}
+  onDragEnd={(_, info) => {
+    const dx = info?.offset?.x || 0;
+    const TH = 60;
+
+    if (dx > TH) setActiveTabIdx((i) => Math.max(0, i - 1));
+    else if (dx < -TH) setActiveTabIdx((i) => Math.min(overlayTabs.length - 1, i + 1));
+
+    setDeepDiveOpen(false);
+    setVideoMuted(true);
+    try {
+      const v = videoRef.current;
+      if (v) {
+        v.pause();
+        v.currentTime = 0;
+      }
+    } catch {}
+  }}
+  style={{ marginTop: 8 }}
+>
+  {activeTab?.type === "overview" ? (
+    /* ✅ behold din eksisterende overview-blok her (uændret) */
+    <div
       style={{
-        border: "none",
-        background: idx === activeTabIdx ? "rgba(17,24,39,0.06)" : "transparent",
-        padding: "8px 12px",
-        borderRadius: 14,
-        cursor: "pointer",
-        fontSize: 14,
-        fontWeight: 950,
-        color: "#111827",
+        marginTop: 10,
+        minHeight: "calc(100vh - 280px)",
+        display: "grid",
+        placeItems: "center",
       }}
     >
-      {t.label}
-    </button>
-  ))}
-</div>
-{/* ---------- Active tab content ---------- */}
-{activeTab?.type === "overview" ? (
-  <div style={{ marginTop: 14 }}>
-    {/* WORD big */}
-    <div style={{ textAlign: "center", fontWeight: 950, fontSize: 44, lineHeight: 1.05, color: scoreColor(currentWordScore) }}>
-      {currentWordText || (isSentence ? "—" : target)}
+      {/* ... DIN OVERVIEW JSX ... */}
     </div>
+  ) : null}
 
-    {/* phoneme strip */}
-    <div style={{ textAlign: "center", marginTop: 10 }}>
-      <div style={{ display: "inline-flex", flexWrap: "wrap", justifyContent: "center", gap: 10, alignItems: "baseline" }}>
-        {phonemeLineItems.map((it) => (
-          <span
-            key={`ph_strip_${it.key}`}
-            style={{
-              fontSize: 20,
-              fontWeight: 950,
-              color: scoreColor(it.score),
-              textDecoration: it.isWeak ? "underline" : "none",
-              textUnderlineOffset: 6,
-              textDecorationThickness: 3,
-              opacity: it.hasVideo ? 1 : 0.55,
-            }}
-          >
-            {it.code}
-          </span>
-        ))}
-      </div>
+  {activeTab?.type === "phoneme" ? (
+    /* ✅ behold din eksisterende phoneme-blok her (uændret) */
+    <div style={{ marginTop: 14 }}>
+      {/* ... DIN PHONEME JSX ... */}
     </div>
+  ) : null}
 
-    {/* sentence word picker (som du allerede har) */}
-    {isSentence ? (
-      <motion.div layout style={{ display: "grid", gap: 8, marginTop: 12 }}>
-        <AnimatePresence initial={false}>
-          {words.map((w, i) => {
-            const label = String(w?.word || w?.text || w?.name || "").trim();
-            if (!label) return null;
+  {activeTab?.type === "playback" ? (
+    /* ✅ behold din eksisterende playback-blok her (uændret) */
+    <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+      {/* ... DIN PLAYBACK JSX ... */}
+    </div>
+  ) : null}
 
-            const score = getScore(w);
-            const active = safeWordIdx === i;
-            const visible = !wordsOpen || active;
-            if (!visible) return null;
+{activeTab?.type === "actions" ? (
+  <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+    <div
+      style={{
+        borderRadius: 22,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: LIGHT_SURFACE,
+        boxShadow: LIGHT_SHADOW,
+        padding: 14,
+        display: "grid",
+        gap: 12,
+      }}
+    >
+      <div style={{ fontWeight: 950, color: LIGHT_TEXT }}>Actions</div>
 
-            return (
-              <motion.button
-                key={`sent_word_${i}_${label}`}
-                layout
-                initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.18 }}
-                type="button"
-                onClick={() => {
-                  if (active && wordsOpen) {
-                    setWordsOpen(false);
-                    setSelectedWordIdx(-1);
-                    return;
-                  }
-                  setSelectedWordIdx(i);
-                  setWordsOpen(true);
-                  setActiveTabIdx(0); // tilbage til Overview for det valgte ord
-                  setDeepDiveOpen(false);
-                  setVideoMuted(true);
-                }}
-                style={{
-                  width: "100%",
-                  border: "none",
-                  background: "transparent",
-                  padding: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  cursor: "pointer",
-                  overflow: "hidden",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 34,
-                    lineHeight: 1.05,
-                    fontWeight: 950,
-                    color: active ? scoreColor(score) : "rgba(17,24,39,0.45)",
-                    textAlign: "left",
-                  }}
-                >
-                  {label}
-                </span>
+      <button
+        type="button"
+        onClick={onTryAgain}
+        style={{
+          height: 54,
+          borderRadius: 18,
+          border: "none",
+          background: "rgba(17,24,39,0.10)",
+          fontWeight: 950,
+          cursor: "pointer",
+        }}
+      >
+        Try again
+      </button>
 
-                <motion.div
-                  animate={{ rotate: active && wordsOpen ? 180 : 0 }}
-                  transition={{ duration: 0.12 }}
-                  style={{ flex: "0 0 auto", color: "rgba(17,24,39,0.45)" }}
-                >
-                  <ChevronDown className="h-5 w-5" />
-                </motion.div>
-              </motion.button>
-            );
-          })}
-        </AnimatePresence>
-      </motion.div>
-    ) : null}
+      <button
+        type="button"
+        onClick={onNext}
+        style={{
+          height: 54,
+          borderRadius: 18,
+          border: "none",
+          background: BTN_BLUE,
+          color: "white",
+          fontWeight: 950,
+          cursor: "pointer",
+        }}
+      >
+        Next
+      </button>
+    </div>
   </div>
 ) : null}
+
+</motion.div>
+
 
 {activeTab?.type === "phoneme" ? (
   <div style={{ marginTop: 14 }}>
@@ -2315,7 +2369,148 @@ style={{
               Watch Deep Dive <ChevronRight className="h-5 w-5" />
             </button>
 
-            {/* behold din deepDive modal her (copy/paste den fra din nuværende) */}
+            {/* ---------- Deep Dive modal ---------- */}
+<AnimatePresence>
+  {deepDiveOpen && activeWeakItem ? (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.14 }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 10000,
+        background: "rgba(0,0,0,0.35)",
+        display: "grid",
+        placeItems: "center",
+        padding: 16,
+      }}
+      onClick={() => setDeepDiveOpen(false)}
+    >
+      <motion.div
+        initial={{ y: 10, scale: 0.98, opacity: 0 }}
+        animate={{ y: 0, scale: 1, opacity: 1 }}
+        exit={{ y: 10, scale: 0.98, opacity: 0 }}
+        transition={{ duration: 0.16 }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%",
+          maxWidth: 560,
+          borderRadius: 22,
+          background: LIGHT_SURFACE,
+          border: `1px solid ${LIGHT_BORDER}`,
+          boxShadow: "0 18px 60px rgba(0,0,0,0.18)",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ padding: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ fontWeight: 950, fontSize: 16, color: LIGHT_TEXT }}>
+            Deep Dive — {activeWeakItem.code}
+          </div>
+          <button
+            type="button"
+            onClick={() => setDeepDiveOpen(false)}
+            style={{
+              height: 38,
+              padding: "0 12px",
+              borderRadius: 14,
+              border: `1px solid ${LIGHT_BORDER}`,
+              background: "rgba(17,24,39,0.04)",
+              fontWeight: 950,
+              cursor: "pointer",
+            }}
+          >
+            Close
+          </button>
+        </div>
+
+        <div style={{ padding: 14, paddingTop: 0, display: "grid", gap: 12 }}>
+          {/* video */}
+          <div
+            style={{
+              borderRadius: 20,
+              overflow: "hidden",
+              border: `1px solid ${LIGHT_BORDER}`,
+              background: "#0b1020",
+            }}
+          >
+            <video
+              src={activeWeakItem.assets?.videoSrc}
+              muted={videoMuted}
+              playsInline
+              controls
+              preload="auto"
+              style={{ width: "100%", height: "auto", display: "block" }}
+            />
+          </div>
+
+          {/* tip + listen-for */}
+          {(() => {
+            const tip = getPhonemeTip(activeWeakItem.code);
+            const lf = getListenFor(activeWeakItem.code);
+            if (!tip && !lf) return null;
+
+            return (
+              <div style={{ display: "grid", gap: 10 }}>
+                {tip?.tryThis ? (
+                  <div style={{ padding: 12, borderRadius: 18, border: `1px solid ${LIGHT_BORDER}`, background: "rgba(17,24,39,0.03)" }}>
+                    <div style={{ fontWeight: 950, fontSize: 13, color: LIGHT_MUTED }}>Try this</div>
+                    <div style={{ marginTop: 6, fontWeight: 900, color: LIGHT_TEXT, lineHeight: 1.35 }}>
+                      {tip.tryThis}
+                    </div>
+                  </div>
+                ) : null}
+
+                {lf ? (
+                  <div style={{ padding: 12, borderRadius: 18, border: `1px solid ${LIGHT_BORDER}`, background: "rgba(17,24,39,0.03)" }}>
+                    <div style={{ fontWeight: 950, fontSize: 13, color: LIGHT_MUTED }}>Listen for</div>
+                    <div style={{ marginTop: 6, fontWeight: 900, color: LIGHT_TEXT, lineHeight: 1.35 }}>
+                      {lf}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })()}
+
+          {/* examples */}
+          {(() => {
+            const ex = getExamplesForPhoneme(activeWeakItem.code);
+            if (!ex?.length) return null;
+
+            return (
+              <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ fontWeight: 950, color: LIGHT_TEXT }}>Examples</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                  {ex.slice(0, 10).map((w) => (
+                    <button
+                      key={`ex_${activeWeakItem.code}_${w}`}
+                      type="button"
+                      onClick={() => playExampleTts(w)}
+                      style={{
+                        height: 40,
+                        padding: "0 12px",
+                        borderRadius: 16,
+                        border: `1px solid ${LIGHT_BORDER}`,
+                        background: "rgba(17,24,39,0.04)",
+                        fontWeight: 950,
+                        cursor: "pointer",
+                      }}
+                      title="Play example"
+                    >
+                      {w}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </motion.div>
+    </motion.div>
+  ) : null}
+</AnimatePresence>
           </div>
         );
       })()
@@ -2324,16 +2519,135 @@ style={{
 ) : null}
 
 {activeTab?.type === "playback" ? (
-  <div style={{ marginTop: 14 }}>
-    {/* copy/paste hele dit nuværende "Card 2: You / Correct pronunciation" block her */}
+  <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+    {/* You / Correct */}
+    <div
+      style={{
+        borderRadius: 22,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: LIGHT_SURFACE,
+        boxShadow: LIGHT_SHADOW,
+        padding: 14,
+        display: "grid",
+        gap: 12,
+      }}
+    >
+      <div style={{ fontWeight: 950, color: LIGHT_TEXT }}>Playback</div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <button
+          type="button"
+          onClick={toggleUserRecording}
+          disabled={!result?.userAudioUrl}
+          style={{
+            height: 52,
+            borderRadius: 18,
+            border: "none",
+            background: "rgba(17,24,39,0.10)",
+            fontWeight: 950,
+            cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
+            opacity: result?.userAudioUrl ? 1 : 0.55,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+          }}
+        >
+          {isUserPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+          You
+        </button>
+
+        <button
+          type="button"
+          onClick={toggleCorrectTts}
+          disabled={!String(isSentence ? target : currentWordText).trim()}
+          style={{
+            height: 52,
+            borderRadius: 18,
+            border: "none",
+            background: "rgba(17,24,39,0.10)",
+            fontWeight: 950,
+            cursor: String(isSentence ? target : currentWordText).trim() ? "pointer" : "not-allowed",
+            opacity: String(isSentence ? target : currentWordText).trim() ? 1 : 0.55,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+          }}
+        >
+          {isCorrectPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+          Correct
+        </button>
+      </div>
+
+      {/* A/B compare */}
+      <button
+        type="button"
+        onClick={toggleABCompare}
+        disabled={!result?.userAudioUrl || !String(isSentence ? target : currentWordText).trim()}
+        style={{
+          height: 52,
+          borderRadius: 18,
+          border: "none",
+          background: isABPlaying ? "#111827" : "rgba(17,24,39,0.10)",
+          color: isABPlaying ? "white" : "#111827",
+          fontWeight: 950,
+          cursor:
+            result?.userAudioUrl && String(isSentence ? target : currentWordText).trim() ? "pointer" : "not-allowed",
+          opacity:
+            result?.userAudioUrl && String(isSentence ? target : currentWordText).trim() ? 1 : 0.55,
+        }}
+        title="Alternate between You and Correct"
+      >
+        {isABPlaying ? "Stop A/B Compare" : "A/B Compare"}
+      </button>
+
+      {/* Rate */}
+      <div style={{ display: "grid", gap: 8 }}>
+        <div style={{ fontWeight: 950, color: LIGHT_TEXT, fontSize: 13 }}>Speed</div>
+        <div style={{ display: "flex", gap: 10 }}>
+          {[1.0, 0.85, 0.75].map((r) => (
+            <button
+              key={`rate_${r}`}
+              type="button"
+              onClick={() => setPlaybackRate(r)}
+              style={{
+                height: 42,
+                padding: "0 12px",
+                borderRadius: 16,
+                border: `1px solid ${LIGHT_BORDER}`,
+                background: playbackRate === r ? "rgba(17,24,39,0.10)" : LIGHT_SURFACE,
+                fontWeight: 950,
+                cursor: "pointer",
+                flex: 1,
+              }}
+            >
+              {r === 1 ? "1.0×" : r === 0.85 ? "0.85×" : "0.75×"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Loop */}
+      <button
+        type="button"
+        onClick={() => setLoopOn((v) => !v)}
+        style={{
+          height: 46,
+          borderRadius: 18,
+          border: `1px solid ${LIGHT_BORDER}`,
+          background: loopOn ? "rgba(17,24,39,0.10)" : LIGHT_SURFACE,
+          fontWeight: 950,
+          cursor: "pointer",
+        }}
+        title="Loop first 2.5 seconds"
+      >
+        {loopOn ? "Loop: ON (first 2.5s)" : "Loop: OFF"}
+      </button>
+    </div>
   </div>
 ) : null}
 
-{activeTab?.type === "actions" ? (
-  <div style={{ marginTop: 14 }}>
-    {/* copy/paste hele dit nuværende "Card 3: Try again / Next" block her */}
-  </div>
-) : null}
 
   </AnimatePresence>
 
