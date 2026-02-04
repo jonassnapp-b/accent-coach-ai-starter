@@ -378,13 +378,13 @@ useEffect(() => {
   // overlay state (sentence dropdown)
   const [selectedWordIdx, setSelectedWordIdx] = useState(-1);
   const [expandedPhonemeKey, setExpandedPhonemeKey] = useState(null); // e.g. "UW_3"
-  const [weakIdx, setWeakIdx] = useState(0);
-const [deepDiveOpen, setDeepDiveOpen] = useState(false);
+  const [deepDiveOpen, setDeepDiveOpen] = useState(false);
 const [videoMuted, setVideoMuted] = useState(true);
 const videoRef = useRef(null);
 
 const [wordsOpen, setWordsOpen] = useState(false); // ✅ dropdown open/closed
-const [overlayCardIdx, setOverlayCardIdx] = useState(0); // 0=Tips, 1=Playback, 2=Actions
+const [activeTabIdx, setActiveTabIdx] = useState(0); // overlayTabs index
+
 
   // recording
   const [isRecording, setIsRecording] = useState(false);
@@ -448,7 +448,7 @@ useEffect(() => {
   setIsCorrectPlaying(false);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [overlayCardIdx]);
+}, [activeTabIdx]);
 
 
 useEffect(() => {
@@ -934,7 +934,7 @@ function onBack() {
   setIsUserPlaying(false);
   setIsCorrectPlaying(false);
 
-  setOverlayCardIdx(0); // ✅ reset overlay cards
+  setActiveTabIdx(0);
 }
 
 
@@ -1035,8 +1035,7 @@ function onBack() {
         createdAt: Date.now(),
       };
 setResult(payload);
-setOverlayCardIdx(0);
-setWeakIdx(0);
+setActiveTabIdx(0);
 setDeepDiveOpen(false);
 setVideoMuted(true);
 setIsUserPlaying(false);
@@ -1167,6 +1166,28 @@ const weakItems = useMemo(
   () => phonemeLineItems.filter((x) => x.hasVideo && x.isWeak),
   [phonemeLineItems]
 );
+const overlayTabs = useMemo(() => {
+  const tabs = [{ type: "overview", key: "overview", label: "Overview" }];
+
+  // one tab per weak phoneme (only those with video and not green)
+  for (const it of weakItems) {
+    tabs.push({ type: "phoneme", key: it.key, label: it.code });
+  }
+
+  // keep your two existing last tabs
+  tabs.push({ type: "playback", key: "playback", label: "Playback" });
+  tabs.push({ type: "actions", key: "actions", label: "Actions" });
+
+  return tabs;
+}, [weakItems]);
+
+const activeTab = overlayTabs[Math.max(0, Math.min(activeTabIdx, overlayTabs.length - 1))] || overlayTabs[0];
+
+const activeWeakItem = useMemo(() => {
+  if (activeTab?.type !== "phoneme") return null;
+  return weakItems.find((x) => x.key === activeTab.key) || null;
+}, [activeTab, weakItems]);
+
 const primaryWeakPhoneme = useMemo(() => {
   // pick lowest RAW score (more honest than normalized)
   const scored = phonemeLineItems
@@ -1636,7 +1657,7 @@ function onTryAgain() {
   setSelectedWordIdx(-1);
   setExpandedPhonemeKey(null);
   setWordsOpen(false);
-  setOverlayCardIdx(0);
+  setActiveTabIdx(0);
 
 
   // stop evt. igangværende lyd (så den ikke føles som “correct” spiller igen)
@@ -1659,7 +1680,7 @@ function onNext() {
   setSelectedWordIdx(-1);
   setExpandedPhonemeKey(null);
   setWordsOpen(false);
-  setOverlayCardIdx(0);
+  setActiveTabIdx(0);
 
 
   }
@@ -2030,28 +2051,49 @@ style={{
 <div style={{ marginTop: 18, display: "grid", gap: 12 }}>
   {/* Card content */}
   <AnimatePresence mode="wait">
-{overlayCardIdx === 0 ? (
-<motion.div
-  key="card_tips"
-  initial={{ opacity: 0, x: 10, scale: 0.99 }}
-  animate={{ opacity: 1, x: 0, scale: 1 }}
-  exit={{ opacity: 0, x: -10, scale: 0.99 }}
-  transition={{ duration: 0.18 }}
->
 
-    {/* Card 1: Tips (uses currentWordObj for BOTH words + sentences) */}
-{/* Card 1: Tips */}
-<>
-  {/* ✅ sentence word list ALWAYS visible */}
-  <>
-  {/* ✅ FIRST TAB HEADER: word + phonemes (colored) */}
-  <div style={{ display: "grid", gap: 10 }}>
+
+
+{/* ---------- Overlay tabs (dynamic) ---------- */}
+<div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+  {overlayTabs.map((t, idx) => (
+    <button
+      key={`ovtab_${t.key}`}
+      type="button"
+      onClick={() => {
+        setActiveTabIdx(idx);
+        setDeepDiveOpen(false);
+        setVideoMuted(true);
+        try {
+          const v = videoRef.current;
+          if (v) { v.pause(); v.currentTime = 0; }
+        } catch {}
+      }}
+      style={{
+        border: "none",
+        background: idx === activeTabIdx ? "rgba(17,24,39,0.06)" : "transparent",
+        padding: "8px 12px",
+        borderRadius: 14,
+        cursor: "pointer",
+        fontSize: 14,
+        fontWeight: 950,
+        color: "#111827",
+      }}
+    >
+      {t.label}
+    </button>
+  ))}
+</div>
+{/* ---------- Active tab content ---------- */}
+{activeTab?.type === "overview" ? (
+  <div style={{ marginTop: 14 }}>
+    {/* WORD big */}
     <div style={{ textAlign: "center", fontWeight: 950, fontSize: 44, lineHeight: 1.05, color: scoreColor(currentWordScore) }}>
       {currentWordText || (isSentence ? "—" : target)}
     </div>
 
-    {/* phoneme strip colored (NON-clickable) */}
-    <div style={{ textAlign: "center" }}>
+    {/* phoneme strip */}
+    <div style={{ textAlign: "center", marginTop: 10 }}>
       <div style={{ display: "inline-flex", flexWrap: "wrap", justifyContent: "center", gap: 10, alignItems: "baseline" }}>
         {phonemeLineItems.map((it) => (
           <span
@@ -2071,140 +2113,98 @@ style={{
         ))}
       </div>
     </div>
-  </div>
 
-  {/* ✅ If sentence: keep your word picker (unchanged) */}
-  {isSentence ? (
-    <motion.div layout style={{ display: "grid", gap: 8, marginTop: 12 }}>
-      <AnimatePresence initial={false}>
-        {words.map((w, i) => {
-          const label = String(w?.word || w?.text || w?.name || "").trim();
-          if (!label) return null;
+    {/* sentence word picker (som du allerede har) */}
+    {isSentence ? (
+      <motion.div layout style={{ display: "grid", gap: 8, marginTop: 12 }}>
+        <AnimatePresence initial={false}>
+          {words.map((w, i) => {
+            const label = String(w?.word || w?.text || w?.name || "").trim();
+            if (!label) return null;
 
-          const score = getScore(w);
-          const active = safeWordIdx === i;
-          const visible = !wordsOpen || active;
-          if (!visible) return null;
+            const score = getScore(w);
+            const active = safeWordIdx === i;
+            const visible = !wordsOpen || active;
+            if (!visible) return null;
 
-          return (
-            <motion.button
-              key={`sent_word_${i}_${label}`}
-              layout
-              initial={{ opacity: 0, height: 0, marginTop: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.18 }}
-              type="button"
-              onClick={() => {
-                if (active && wordsOpen) {
-                  setWordsOpen(false);
-                  setSelectedWordIdx(-1);
-                  return;
-                }
-                setSelectedWordIdx(i);
-                setWordsOpen(true);
-                setWeakIdx(0);
-                setDeepDiveOpen(false);
-                setVideoMuted(true);
-              }}
-              style={{
-                width: "100%",
-                border: "none",
-                background: "transparent",
-                padding: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-                cursor: "pointer",
-                overflow: "hidden",
-              }}
-            >
-              <span
+            return (
+              <motion.button
+                key={`sent_word_${i}_${label}`}
+                layout
+                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.18 }}
+                type="button"
+                onClick={() => {
+                  if (active && wordsOpen) {
+                    setWordsOpen(false);
+                    setSelectedWordIdx(-1);
+                    return;
+                  }
+                  setSelectedWordIdx(i);
+                  setWordsOpen(true);
+                  setActiveTabIdx(0); // tilbage til Overview for det valgte ord
+                  setDeepDiveOpen(false);
+                  setVideoMuted(true);
+                }}
                 style={{
-                  fontSize: 34,
-                  lineHeight: 1.05,
-                  fontWeight: 950,
-                  color: active ? scoreColor(score) : "rgba(17,24,39,0.45)",
-                  textAlign: "left",
+                  width: "100%",
+                  border: "none",
+                  background: "transparent",
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  cursor: "pointer",
+                  overflow: "hidden",
                 }}
               >
-                {label}
-              </span>
+                <span
+                  style={{
+                    fontSize: 34,
+                    lineHeight: 1.05,
+                    fontWeight: 950,
+                    color: active ? scoreColor(score) : "rgba(17,24,39,0.45)",
+                    textAlign: "left",
+                  }}
+                >
+                  {label}
+                </span>
 
-              <motion.div
-                animate={{ rotate: active && wordsOpen ? 180 : 0 }}
-                transition={{ duration: 0.12 }}
-                style={{ flex: "0 0 auto", color: "rgba(17,24,39,0.45)" }}
-              >
-                <ChevronDown className="h-5 w-5" />
-              </motion.div>
-            </motion.button>
-          );
-        })}
-      </AnimatePresence>
-    </motion.div>
-  ) : null}
+                <motion.div
+                  animate={{ rotate: active && wordsOpen ? 180 : 0 }}
+                  transition={{ duration: 0.12 }}
+                  style={{ flex: "0 0 auto", color: "rgba(17,24,39,0.45)" }}
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </motion.div>
+              </motion.button>
+            );
+          })}
+        </AnimatePresence>
+      </motion.div>
+    ) : null}
+  </div>
+) : null}
 
-  {/* ✅ If sentence and no selected word: show nothing */}
-  {!currentWordObj ? null : (
-    <>
-      {/* ✅ Weak phoneme tabs ONLY (not green) */}
-      {weakItems.length ? (
-        <div style={{ marginTop: 16, display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-          {weakItems.map((it, idx) => (
-            <button
-              key={`weak_tab_${it.key}`}
-              type="button"
-              onClick={() => {
-                setWeakIdx(idx);
-                setDeepDiveOpen(false);
-                setVideoMuted(true);
-                try {
-                  const v = videoRef.current;
-                  if (v) {
-                    v.pause();
-                    v.currentTime = 0;
-                  }
-                } catch {}
-              }}
-              style={{
-                border: "none",
-                background: "transparent",
-                padding: 0,
-                cursor: "pointer",
-                fontSize: 20,
-                fontWeight: 950,
-                color: scoreColor(it.score),
-                textDecoration: idx === weakIdx ? "underline" : "none",
-                textUnderlineOffset: 6,
-                textDecorationThickness: 3,
-              }}
-            >
-              {it.code}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div style={{ marginTop: 18, textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>
-          No weak phonemes 🎉
-        </div>
-      )}
-
-      {/* ✅ “EE Sound” screen */}
-      {weakItems.length ? (() => {
-        const sel = weakItems[Math.max(0, Math.min(weakIdx, weakItems.length - 1))];
+{activeTab?.type === "phoneme" ? (
+  <div style={{ marginTop: 14 }}>
+    {!activeWeakItem ? (
+      <div style={{ textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>No data.</div>
+    ) : (
+      (() => {
+        const sel = activeWeakItem;
         const copy = getPhonemeUiCopy(sel.code);
 
         return (
-          <div style={{ marginTop: 18 }}>
-            {/* Title + description (like image 2) */}
+          <div>
             <div style={{ fontWeight: 950, fontSize: 34, color: "#111827" }}>{copy.title}</div>
             <div style={{ marginTop: 8, fontSize: 15, fontWeight: 850, color: "rgba(17,24,39,0.62)", lineHeight: 1.35 }}>
               {copy.desc}
             </div>
 
-            {/* Video card */}
             <div
               style={{
                 marginTop: 14,
@@ -2233,7 +2233,6 @@ style={{
                 }}
               />
 
-              {/* Play button overlay (like image 2) */}
               <button
                 type="button"
                 onClick={() => {
@@ -2272,7 +2271,6 @@ style={{
                 </div>
               </button>
 
-              {/* Mute toggle */}
               <button
                 type="button"
                 onClick={() => setVideoMuted((v) => !v)}
@@ -2295,7 +2293,6 @@ style={{
               </button>
             </div>
 
-            {/* Watch Deep Dive */}
             <button
               type="button"
               onClick={() => setDeepDiveOpen(true)}
@@ -2318,407 +2315,29 @@ style={{
               Watch Deep Dive <ChevronRight className="h-5 w-5" />
             </button>
 
-            {/* Deep Dive modal: examples INSIDE */}
-            {deepDiveOpen ? (
-              <div
-                style={{
-                  position: "fixed",
-                  inset: 0,
-                  zIndex: 10000,
-                  background: "rgba(0,0,0,0.45)",
-                  display: "grid",
-                  placeItems: "center",
-                  padding: 16,
-                }}
-              >
-                <div
-                  style={{
-                    width: "100%",
-                    maxWidth: 520,
-                    borderRadius: 24,
-                    background: "#0f172a",
-                    color: "white",
-                    padding: 18,
-                    border: "1px solid rgba(255,255,255,0.12)",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                    <div style={{ fontSize: 22, fontWeight: 950 }}>{copy.title}</div>
-                    <button
-                      type="button"
-                      onClick={() => setDeepDiveOpen(false)}
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 999,
-                        border: "none",
-                        background: "rgba(255,255,255,0.10)",
-                        color: "white",
-                        fontWeight: 950,
-                        cursor: "pointer",
-                      }}
-                      aria-label="Close"
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 850, lineHeight: 1.35 }}>
-                    {copy.desc}
-                  </div>
-
-                  {/* Examples moved here */}
-                  {getExamplesForPhoneme(sel.code).length ? (
-                    <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
-                      <div style={{ fontWeight: 950, fontSize: 14, color: "rgba(255,255,255,0.92)" }}>Examples</div>
-                      {getExamplesForPhoneme(sel.code).map((w) => (
-                        <button
-                          key={`deep_${sel.code}_${w}`}
-                          type="button"
-                          onClick={() => playExampleTts(w)}
-                          style={{
-                            border: "1px solid rgba(255,255,255,0.14)",
-                            background: "rgba(255,255,255,0.06)",
-                            borderRadius: 16,
-                            padding: "12px 12px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            cursor: "pointer",
-                            color: "white",
-                            fontWeight: 900,
-                            textAlign: "left",
-                          }}
-                        >
-                          <Volume2 className="h-5 w-5" />
-                          <span>{w}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ marginTop: 14, color: "rgba(255,255,255,0.72)", fontWeight: 900 }}>
-                      No examples for this phoneme yet.
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : null}
+            {/* behold din deepDive modal her (copy/paste den fra din nuværende) */}
           </div>
         );
-      })() : null}
-    </>
-  )}
-</>
-
-
-  {/* ✅ If no selected word yet (sentences), show nothing (NOT the message) */}
-  {!currentWordObj ? (
-    isSentence ? null : (
-      <div style={{ textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>No data.</div>
-    )
-  ) : (
-    <>
-      {(!isSentence || wordsOpen) ? (
-        <>
-        {!isSentence && wordOnlyResult ? (
-  <PhonemeFeedback
-    result={wordOnlyResult}
-    embed={true}
-    hideBookmark={true}
-    mode="wordOnly"
-  />
+      })()
+    )}
+  </div>
 ) : null}
 
-
-
-
-
-
-        </>
-      ) : (
-        <div style={{ textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>
-          Select a word above to see tips.
-        </div>
-      )}
-    </>
-  )}
-</>
-
-  </motion.div>
+{activeTab?.type === "playback" ? (
+  <div style={{ marginTop: 14 }}>
+    {/* copy/paste hele dit nuværende "Card 2: You / Correct pronunciation" block her */}
+  </div>
 ) : null}
 
+{activeTab?.type === "actions" ? (
+  <div style={{ marginTop: 14 }}>
+    {/* copy/paste hele dit nuværende "Card 3: Try again / Next" block her */}
+  </div>
+) : null}
 
-    {overlayCardIdx === 1 ? (
-     <motion.div
-  key="card_playback"
-  initial={{ opacity: 0, x: 10, scale: 0.99 }}
-  animate={{ opacity: 1, x: 0, scale: 1 }}
-  exit={{ opacity: 0, x: -10, scale: 0.99 }}
-  transition={{ duration: 0.18 }}
->
-
-        {/* Card 2: You / Correct pronunciation */}
-        <div style={{ display: "grid", gap: 28 }}>
-          <div style={{ display: "grid", gap: 10 }}>
-            <div style={{ fontSize: 26, fontWeight: 950, color: "#111827", textAlign: "center" }}>You</div>
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <button
-                type="button"
-                onClick={toggleUserRecording}
-                disabled={!result?.userAudioUrl}
-                title="Play"
-                style={{
-                  width: 96,
-                  height: 96,
-                  borderRadius: 26,
-                  border: `1px solid ${LIGHT_BORDER}`,
-                  background: "#fff",
-                  display: "grid",
-                  placeItems: "center",
-                  cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
-                  opacity: result?.userAudioUrl ? 1 : 0.6,
-                }}
-              >
-                {isUserPlaying ? <Pause className="h-12 w-12" /> : <Play className="h-12 w-12" />}
-              </button>
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gap: 10 }}>
-            <div style={{ fontSize: 26, fontWeight: 950, color: "#111827", textAlign: "center" }}>
-              Correct pronunciation
-            </div>
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <button
-                type="button"
-                onClick={toggleCorrectTts}
-disabled={!String(isSentence ? target : currentWordText).trim()}
-                title="Play"
-                style={{
-                  width: 96,
-                  height: 96,
-                  borderRadius: 26,
-                  border: `1px solid ${LIGHT_BORDER}`,
-                  background: "#fff",
-                  display: "grid",
-                  placeItems: "center",
-                  cursor: "pointer",
-                  opacity: String(target).trim() ? 1 : 0.6,
-                }}
-              >
-                {isCorrectPlaying ? <Pause className="h-12 w-12" /> : <Play className="h-12 w-12" />}
-              </button>
-            </div>
-          </div>
-        </div>
-                {/* Playback tools: Loop / Slow / A-B */}
-        <div style={{ marginTop: 18, display: "grid", gap: 10 }}>
-          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={() => setLoopOn((v) => !v)}
-              style={{
-                height: 40,
-                padding: "0 14px",
-                borderRadius: 14,
-                border: `1px solid ${LIGHT_BORDER}`,
-                background: loopOn ? "rgba(33,150,243,0.12)" : "#fff",
-                fontWeight: 950,
-                cursor: "pointer",
-              }}
-            >
-              Loop {loopOn ? "On" : "Off"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setPlaybackRate(1.0)}
-              style={{
-                height: 40,
-                padding: "0 14px",
-                borderRadius: 14,
-                border: `1px solid ${LIGHT_BORDER}`,
-                background: playbackRate === 1.0 ? "rgba(33,150,243,0.12)" : "#fff",
-                fontWeight: 950,
-                cursor: "pointer",
-              }}
-            >
-              1.0x
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setPlaybackRate(0.85)}
-              style={{
-                height: 40,
-                padding: "0 14px",
-                borderRadius: 14,
-                border: `1px solid ${LIGHT_BORDER}`,
-                background: playbackRate === 0.85 ? "rgba(33,150,243,0.12)" : "#fff",
-                fontWeight: 950,
-                cursor: "pointer",
-              }}
-            >
-              0.85x
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setPlaybackRate(0.75)}
-              style={{
-                height: 40,
-                padding: "0 14px",
-                borderRadius: 14,
-                border: `1px solid ${LIGHT_BORDER}`,
-                background: playbackRate === 0.75 ? "rgba(33,150,243,0.12)" : "#fff",
-                fontWeight: 950,
-                cursor: "pointer",
-              }}
-            >
-              0.75x
-            </button>
-
-          
-          </div>
-
-          {/* What to listen for (single short line, not repeating tips) */}
-          {(() => {
-            const focusCode = primaryWeakPhoneme?.code || null;
-            const cue = focusCode ? getListenFor(focusCode) : null;
-            if (!focusCode || !cue) return null;
-
-            return (
-              <div
-                style={{
-                  marginTop: 2,
-                  textAlign: "center",
-                  fontWeight: 900,
-                  fontSize: 13,
-                  color: "rgba(17,24,39,0.78)",
-                }}
-              >
-                <span style={{ color: "rgba(17,24,39,0.55)", fontWeight: 950 }}>What to listen for:</span>{" "}
-                <span>
-                  {focusCode}: {cue}
-                </span>
-              </div>
-            );
-          })()}
-        </div>
-
-      </motion.div>
-    ) : null}
-
-    {overlayCardIdx === 2 ? (
-      <motion.div
-        key="card_actions"
-        initial={{ opacity: 0, x: 10, scale: 0.99 }}
-        animate={{ opacity: 1, x: 0, scale: 1 }}
-        exit={{ opacity: 0, x: -10, scale: 0.99 }}
-        transition={{ duration: 0.18 }}
-        style={{ background: "transparent", border: "none", boxShadow: "none", padding: 0, borderRadius: 0 }}
-
-      >
-        {/* Card 3: Try again / Next */}
-        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-          <button
-            type="button"
-            onClick={onTryAgain}
-            disabled={isAnalyzing || isRecording || !String(target).trim()}
-            style={{
-              height: 46,
-              padding: "0 18px",
-              borderRadius: 16,
-              border: "none",
-              background: "#FF9800",
-              color: "white",
-              fontWeight: 950,
-              cursor: "pointer",
-              opacity: isAnalyzing || isRecording || !String(target).trim() ? 0.6 : 1,
-              minWidth: 140,
-            }}
-          >
-            Try again
-          </button>
-
-          <button
-            type="button"
-            onClick={onNext}
-            disabled={isAnalyzing || isRecording}
-            style={{
-              height: 46,
-              padding: "0 18px",
-              borderRadius: 16,
-              border: "none",
-              background: BTN_BLUE,
-              color: "white",
-              fontWeight: 950,
-              cursor: "pointer",
-              opacity: isAnalyzing || isRecording ? 0.6 : 1,
-              minWidth: 140,
-            }}
-          >
-            Next
-          </button>
-        </div>
-      </motion.div>
-    ) : null}
   </AnimatePresence>
 
-  {/* Nav row (chevrons) */}
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: 12,
-      marginTop: 2,
-    }}
-  >
-    <button
-      type="button"
-      onClick={() => setOverlayCardIdx((v) => Math.max(0, v - 1))}
-      disabled={overlayCardIdx === 0}
-      style={{
-        width: 46,
-        height: 46,
-        borderRadius: 16,
-        border: `1px solid ${LIGHT_BORDER}`,
-        background: "#fff",
-        display: "grid",
-        placeItems: "center",
-        cursor: overlayCardIdx === 0 ? "not-allowed" : "pointer",
-        opacity: overlayCardIdx === 0 ? 0.45 : 1,
-      }}
-      title="Back"
-    >
-      <ChevronLeft className="h-6 w-6" />
-    </button>
 
-    <div style={{ fontSize: 12, fontWeight: 900, color: LIGHT_MUTED }}>
-      {overlayCardIdx + 1} / 3
-    </div>
-
-    <button
-      type="button"
-      onClick={() => setOverlayCardIdx((v) => Math.min(2, v + 1))}
-      disabled={overlayCardIdx === 2}
-      style={{
-        width: 46,
-        height: 46,
-        borderRadius: 16,
-        border: `1px solid ${LIGHT_BORDER}`,
-        background: "#fff",
-        display: "grid",
-        placeItems: "center",
-        cursor: overlayCardIdx === 2 ? "not-allowed" : "pointer",
-        opacity: overlayCardIdx === 2 ? 0.45 : 1,
-      }}
-      title="Next"
-    >
-      <ChevronRight className="h-6 w-6" />
-    </button>
-  </div>
 </div>
 
 
