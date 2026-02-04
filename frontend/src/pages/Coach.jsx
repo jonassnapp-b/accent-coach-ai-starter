@@ -2345,36 +2345,6 @@ style={{
             <Play className="h-8 w-8" style={{ color: "#0B1220" }} />
           </button>
         </div>
-
-        {/* Diagram section (below video) */}
-        <div style={{ background: "rgba(255,255,255,0.06)", padding: 14 }}>
-          <div style={{ width: "100%", borderRadius: 18, overflow: "hidden", background: "rgba(0,0,0,0.22)" }}>
-            <img
-              src={resolvePhonemeDiagramImage(activeWeakItem.code) || ""}
-              alt=""
-              style={{ width: "100%", display: "block", objectFit: "cover" }}
-            />
-          </div>
-
-          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                background: "rgba(255,255,255,0.10)",
-                display: "grid",
-                placeItems: "center",
-                fontWeight: 950,
-              }}
-            >
-              i
-            </div>
-            <div style={{ fontWeight: 950, fontSize: 28, letterSpacing: -0.2 }}>
-              {String(activeWeakItem.code || "").toUpperCase()}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* ONLY card/pill allowed: Watch Deep Dive */}
@@ -2399,6 +2369,90 @@ style={{
       >
         Watch Deep Dive <span style={{ fontSize: 18, lineHeight: 1 }}>→</span>
       </button>
+{/* In-card navigation (moved from outside) */}
+<div
+  style={{
+    marginTop: 14,
+    display: "grid",
+    gridTemplateColumns: "44px 1fr 44px",
+    alignItems: "center",
+    gap: 10,
+    padding: 12,
+    borderRadius: 20,
+    background: "rgba(255,255,255,0.10)",
+  }}
+>
+  <button
+    type="button"
+    onClick={() => {
+      setActiveTabIdx((i) => Math.max(0, i - 1));
+      setDeepDiveOpen(false);
+      setVideoMuted(true);
+      try {
+        const v = videoRef.current;
+        if (v) {
+          v.pause();
+          v.currentTime = 0;
+        }
+      } catch {}
+    }}
+    disabled={activeTabIdx <= 0}
+    aria-label="Previous"
+    style={{
+      width: 44,
+      height: 44,
+      borderRadius: 16,
+      border: "none",
+      background: "rgba(255,255,255,0.14)",
+      display: "grid",
+      placeItems: "center",
+      cursor: activeTabIdx <= 0 ? "not-allowed" : "pointer",
+      opacity: activeTabIdx <= 0 ? 0.45 : 1,
+      color: "white",
+    }}
+  >
+    <ChevronLeft className="h-6 w-6" style={{ color: "white" }} />
+  </button>
+
+  <div style={{ textAlign: "center", fontWeight: 950, color: "white" }}>
+    <div style={{ fontSize: 14, lineHeight: 1.1 }}>{activeTab?.label || ""}</div>
+    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.72)", fontWeight: 850, marginTop: 2 }}>
+      Swipe left / right
+    </div>
+  </div>
+
+  <button
+    type="button"
+    onClick={() => {
+      setActiveTabIdx((i) => Math.min(overlayTabs.length - 1, i + 1));
+      setDeepDiveOpen(false);
+      setVideoMuted(true);
+      try {
+        const v = videoRef.current;
+        if (v) {
+          v.pause();
+          v.currentTime = 0;
+        }
+      } catch {}
+    }}
+    disabled={activeTabIdx >= overlayTabs.length - 1}
+    aria-label="Next"
+    style={{
+      width: 44,
+      height: 44,
+      borderRadius: 16,
+      border: "none",
+      background: "rgba(255,255,255,0.14)",
+      display: "grid",
+      placeItems: "center",
+      cursor: activeTabIdx >= overlayTabs.length - 1 ? "not-allowed" : "pointer",
+      opacity: activeTabIdx >= overlayTabs.length - 1 ? 0.45 : 1,
+      color: "white",
+    }}
+  >
+    <ChevronRight className="h-6 w-6" style={{ color: "white" }} />
+  </button>
+</div>
 
       {/* Deep Dive modal (samme som før) */}
       {deepDiveOpen ? (
@@ -2645,96 +2699,6 @@ style={{
 
       </motion.div>
     </AnimatePresence>
-  </div>
-
-  {/* bottom bar (fixed inside overlay) */}
-  <div
-  style={{
-    position: "fixed",
-    left: 16,
-    right: 16,
-    bottom: TABBAR_OFFSET + 16,
-    zIndex: 10001,
-    maxWidth: 520,
-    margin: "0 auto",
-    padding: 0,
-    background: "transparent",
-    border: "none",
-    boxShadow: "none",
-    display: "grid",
-    gridTemplateColumns: "44px 1fr 44px",
-    alignItems: "center",
-    gap: 10,
-  }}
->
-    <button
-      type="button"
-      onClick={() => {
-        setActiveTabIdx((i) => Math.max(0, i - 1));
-        setDeepDiveOpen(false);
-        setVideoMuted(true);
-        try {
-          const v = videoRef.current;
-          if (v) {
-            v.pause();
-            v.currentTime = 0;
-          }
-        } catch {}
-      }}
-      disabled={activeTabIdx <= 0}
-      aria-label="Previous"
-      style={{
-        width: 44,
-        height: 44,
-        borderRadius: 16,
-   border: "none",
-background: "rgba(17,24,39,0.06)",
-        display: "grid",
-        placeItems: "center",
-        cursor: activeTabIdx <= 0 ? "not-allowed" : "pointer",
-        opacity: activeTabIdx <= 0 ? 0.45 : 1,
-      }}
-    >
-      <ChevronLeft className="h-6 w-6" />
-    </button>
-
-    <div style={{ textAlign: "center", fontWeight: 950, color: LIGHT_TEXT }}>
-      <div style={{ fontSize: 14, lineHeight: 1.1 }}>{activeTab?.label || ""}</div>
-      <div style={{ fontSize: 12, color: LIGHT_MUTED, fontWeight: 850, marginTop: 2 }}>
-        Swipe left / right
-      </div>
-    </div>
-
-    <button
-      type="button"
-      onClick={() => {
-        setActiveTabIdx((i) => Math.min(overlayTabs.length - 1, i + 1));
-        setDeepDiveOpen(false);
-        setVideoMuted(true);
-        try {
-          const v = videoRef.current;
-          if (v) {
-            v.pause();
-            v.currentTime = 0;
-          }
-        } catch {}
-      }}
-      disabled={activeTabIdx >= overlayTabs.length - 1}
-      aria-label="Next"
-      style={{
-        width: 44,
-        height: 44,
-        borderRadius: 16,
-border: "none",
-background: "rgba(17,24,39,0.06)",
-        display: "grid",
-        placeItems: "center",
-        cursor: activeTabIdx >= overlayTabs.length - 1 ? "not-allowed" : "pointer",
-        opacity: activeTabIdx >= overlayTabs.length - 1 ? 0.45 : 1,
-      }}
-    >
-      <ChevronRight className="h-6 w-6" />
-    </button>
   </div>
 </div>
 
