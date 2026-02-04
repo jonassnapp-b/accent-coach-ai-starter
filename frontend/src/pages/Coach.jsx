@@ -2048,150 +2048,211 @@ style={{
 
 
 {/* ---------- 3-card slider ---------- */}
-<div style={{ marginTop: 18, display: "grid", gap: 12 }}>
-  {/* Card content */}
-  <AnimatePresence mode="wait">
+<div style={{ marginTop: 18 }}>
+  {/* content area (scrollable) */}
+  <div style={{ paddingBottom: 88 }}>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={`swipe_${activeTab?.key || "x"}`}
+        initial={{ opacity: 0, x: 12 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -12 }}
+        transition={{ duration: 0.16 }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.12}
+        onDragEnd={(_, info) => {
+          const dx = info?.offset?.x || 0;
+          const TH = 60;
 
+          if (dx > TH) setActiveTabIdx((i) => Math.max(0, i - 1));
+          else if (dx < -TH) setActiveTabIdx((i) => Math.min(overlayTabs.length - 1, i + 1));
 
-
-{/* ---------- Swipe header (no tab bar) ---------- */}
-<div
-  style={{
-    display: "grid",
-    gridTemplateColumns: "44px 1fr 44px",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 6,
-  }}
->
-  <button
-    type="button"
-    onClick={() => {
-      setActiveTabIdx((i) => Math.max(0, i - 1));
-      setDeepDiveOpen(false);
-      setVideoMuted(true);
-      try {
-        const v = videoRef.current;
-        if (v) {
-          v.pause();
-          v.currentTime = 0;
-        }
-      } catch {}
-    }}
-    disabled={activeTabIdx <= 0}
-    aria-label="Previous"
-    style={{
-      width: 44,
-      height: 44,
-      borderRadius: 16,
-      border: `1px solid ${LIGHT_BORDER}`,
-      background: LIGHT_SURFACE,
-      display: "grid",
-      placeItems: "center",
-      cursor: activeTabIdx <= 0 ? "not-allowed" : "pointer",
-      opacity: activeTabIdx <= 0 ? 0.45 : 1,
-    }}
-  >
-    <ChevronLeft className="h-6 w-6" />
-  </button>
-
-  <div style={{ textAlign: "center", fontWeight: 950, color: LIGHT_TEXT }}>
-    <div style={{ fontSize: 16, lineHeight: 1.1 }}>{activeTab?.label || ""}</div>
-    <div style={{ fontSize: 12, color: LIGHT_MUTED, fontWeight: 850, marginTop: 2 }}>
-      Swipe left / right
-    </div>
-  </div>
-
-  <button
-    type="button"
-    onClick={() => {
-      setActiveTabIdx((i) => Math.min(overlayTabs.length - 1, i + 1));
-      setDeepDiveOpen(false);
-      setVideoMuted(true);
-      try {
-        const v = videoRef.current;
-        if (v) {
-          v.pause();
-          v.currentTime = 0;
-        }
-      } catch {}
-    }}
-    disabled={activeTabIdx >= overlayTabs.length - 1}
-    aria-label="Next"
-    style={{
-      width: 44,
-      height: 44,
-      borderRadius: 16,
-      border: `1px solid ${LIGHT_BORDER}`,
-      background: LIGHT_SURFACE,
-      display: "grid",
-      placeItems: "center",
-      cursor: activeTabIdx >= overlayTabs.length - 1 ? "not-allowed" : "pointer",
-      opacity: activeTabIdx >= overlayTabs.length - 1 ? 0.45 : 1,
-    }}
-  >
-    <ChevronRight className="h-6 w-6" />
-  </button>
-</div>
-
-{/* ---------- Swipeable page ---------- */}
-<motion.div
-  key={`swipe_${activeTab?.key || "x"}`}
-  initial={{ opacity: 0, x: 12 }}
-  animate={{ opacity: 1, x: 0 }}
-  exit={{ opacity: 0, x: -12 }}
-  transition={{ duration: 0.16 }}
-  drag="x"
-  dragConstraints={{ left: 0, right: 0 }}
-  dragElastic={0.12}
-  onDragEnd={(_, info) => {
-    const dx = info?.offset?.x || 0;
-    const TH = 60;
-
-    if (dx > TH) setActiveTabIdx((i) => Math.max(0, i - 1));
-    else if (dx < -TH) setActiveTabIdx((i) => Math.min(overlayTabs.length - 1, i + 1));
-
-    setDeepDiveOpen(false);
-    setVideoMuted(true);
-    try {
-      const v = videoRef.current;
-      if (v) {
-        v.pause();
-        v.currentTime = 0;
-      }
-    } catch {}
-  }}
-  style={{ marginTop: 8 }}
->
-  {activeTab?.type === "overview" ? (
-    /* ✅ behold din eksisterende overview-blok her (uændret) */
+          setDeepDiveOpen(false);
+          setVideoMuted(true);
+          try {
+            const v = videoRef.current;
+            if (v) {
+              v.pause();
+              v.currentTime = 0;
+            }
+          } catch {}
+        }}
+        style={{ marginTop: 8 }}
+      >
+     {activeTab?.type === "overview" ? (
+  <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
     <div
       style={{
-        marginTop: 10,
-        minHeight: "calc(100vh - 280px)",
+        borderRadius: 22,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: LIGHT_SURFACE,
+        boxShadow: LIGHT_SHADOW,
+        padding: 14,
         display: "grid",
-        placeItems: "center",
+        gap: 10,
       }}
     >
-      {/* ... DIN OVERVIEW JSX ... */}
-    </div>
-  ) : null}
+      <div style={{ fontWeight: 950, fontSize: 14 }}>Words</div>
 
-  {activeTab?.type === "phoneme" ? (
-    /* ✅ behold din eksisterende phoneme-blok her (uændret) */
-    <div style={{ marginTop: 14 }}>
-      {/* ... DIN PHONEME JSX ... */}
-    </div>
-  ) : null}
+      {words?.length ? (
+        <div style={{ display: "grid", gap: 8 }}>
+          {words.map((w, idx) => {
+            const t = String(w?.word || w?.text || "").trim();
+            const s = getScore(w);
+            const active = idx === safeWordIdx;
 
-  {activeTab?.type === "playback" ? (
-    /* ✅ behold din eksisterende playback-blok her (uændret) */
-    <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
-      {/* ... DIN PLAYBACK JSX ... */}
+            return (
+              <button
+                key={`${t}_${idx}`}
+                type="button"
+                onClick={() => {
+                  setSelectedWordIdx(idx);
+                  setActiveTabIdx(0); // stay on overview, but select word
+                }}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  borderRadius: 16,
+                  border: `1px solid ${LIGHT_BORDER}`,
+                  background: active ? "rgba(33,150,243,0.10)" : "rgba(17,24,39,0.04)",
+                  padding: "10px 12px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                }}
+              >
+                <span style={{ fontWeight: 900 }}>{t || `Word ${idx + 1}`}</span>
+                <span style={{ fontWeight: 950, color: scoreColor(s) }}>{s == null ? "—" : Math.round(s)}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>No data yet.</div>
+      )}
     </div>
-  ) : null}
 
-{activeTab?.type === "actions" ? (
+    {/* Show selected word phoneme list (only when a word is selected) */}
+    {currentWordObj ? (
+      <div
+        style={{
+          borderRadius: 22,
+          border: `1px solid ${LIGHT_BORDER}`,
+          background: LIGHT_SURFACE,
+          boxShadow: LIGHT_SHADOW,
+          padding: 14,
+          display: "grid",
+          gap: 10,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ fontWeight: 950, fontSize: 14 }}>
+            Selected: <span style={{ fontWeight: 950 }}>{currentWordText || "—"}</span>
+          </div>
+          <div style={{ fontWeight: 950, color: scoreColor(currentWordScore) }}>
+            {currentWordScore == null ? "—" : Math.round(currentWordScore)}
+          </div>
+        </div>
+
+        {weakItems?.length ? (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {weakItems.map((it) => (
+              <button
+                key={it.key}
+                type="button"
+                onClick={() => {
+                  // jump directly to that phoneme tab
+                  const idx = overlayTabs.findIndex((t) => t.key === it.key);
+                  if (idx >= 0) setActiveTabIdx(idx);
+                }}
+                style={{
+                  borderRadius: 999,
+                  border: `1px solid ${LIGHT_BORDER}`,
+                  background: "rgba(17,24,39,0.04)",
+                  padding: "8px 10px",
+                  fontWeight: 950,
+                  cursor: "pointer",
+                }}
+              >
+                {it.code} <span style={{ color: scoreColor(it.score) }}>{it.score == null ? "—" : Math.round(it.score)}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>No weak phonemes with video.</div>
+        )}
+      </div>
+    ) : (
+      <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>Tap a word above to see phonemes.</div>
+    )}
+  </div>
+) : null}
+
+{activeTab?.type === "phoneme" ? (
+  <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+    {!activeWeakItem ? (
+      <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>No data for this phoneme.</div>
+    ) : (
+      <div
+        style={{
+          borderRadius: 22,
+          border: `1px solid ${LIGHT_BORDER}`,
+          background: LIGHT_SURFACE,
+          boxShadow: LIGHT_SHADOW,
+          padding: 14,
+          display: "grid",
+          gap: 12,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ fontWeight: 950, fontSize: 16 }}>{activeWeakItem.code}</div>
+          <div style={{ fontWeight: 950, color: scoreColor(activeWeakItem.score) }}>
+            {activeWeakItem.score == null ? "—" : Math.round(activeWeakItem.score)}
+          </div>
+        </div>
+
+        {/* video */}
+        {activeWeakItem?.assets?.videoSrc ? (
+          <video
+            ref={videoRef}
+            src={activeWeakItem.assets.videoSrc}
+            muted={videoMuted}
+            playsInline
+            controls
+            style={{
+              width: "100%",
+              borderRadius: 18,
+              border: `1px solid ${LIGHT_BORDER}`,
+              background: "#000",
+            }}
+          />
+        ) : (
+          <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>No video asset.</div>
+        )}
+
+        {/* quick tip */}
+        <div style={{ color: LIGHT_TEXT, fontWeight: 900 }}>
+          Tip:{" "}
+          <span style={{ fontWeight: 850, color: LIGHT_MUTED }}>
+            {getPhonemeTip(activeWeakItem.code)?.tryThis || "Focus on a clean mouth shape and a steady sound."}
+          </span>
+        </div>
+
+        <div style={{ color: LIGHT_TEXT, fontWeight: 900 }}>
+          Listen for:{" "}
+          <span style={{ fontWeight: 850, color: LIGHT_MUTED }}>
+            {getListenFor(activeWeakItem.code) || "a clean, controlled sound."}
+          </span>
+        </div>
+      </div>
+    )}
+  </div>
+) : null}
+
+{activeTab?.type === "playback" ? (
   <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
     <div
       style={{
@@ -2204,16 +2265,125 @@ style={{
         gap: 12,
       }}
     >
-      <div style={{ fontWeight: 950, color: LIGHT_TEXT }}>Actions</div>
+      <div style={{ fontWeight: 950, fontSize: 14 }}>Playback</div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <button
+          type="button"
+          onClick={toggleUserRecording}
+          disabled={!result?.userAudioUrl}
+          style={{
+            height: 44,
+            borderRadius: 16,
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: "rgba(17,24,39,0.04)",
+            fontWeight: 950,
+            cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
+            opacity: result?.userAudioUrl ? 1 : 0.5,
+          }}
+        >
+          {isUserPlaying ? "Pause You" : "Play You"}
+        </button>
+
+        <button
+          type="button"
+          onClick={toggleCorrectTts}
+          disabled={!String(isSentence ? target : currentWordText).trim()}
+          style={{
+            height: 44,
+            borderRadius: 16,
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: "rgba(17,24,39,0.04)",
+            fontWeight: 950,
+            cursor: String(isSentence ? target : currentWordText).trim() ? "pointer" : "not-allowed",
+            opacity: String(isSentence ? target : currentWordText).trim() ? 1 : 0.5,
+          }}
+        >
+          {isCorrectPlaying ? "Pause Correct" : "Play Correct"}
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={toggleABCompare}
+        disabled={!result?.userAudioUrl || !String(isSentence ? target : currentWordText).trim()}
+        style={{
+          height: 44,
+          borderRadius: 16,
+          border: `1px solid ${LIGHT_BORDER}`,
+          background: "rgba(17,24,39,0.04)",
+          fontWeight: 950,
+          cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
+          opacity: result?.userAudioUrl ? 1 : 0.5,
+        }}
+      >
+        {isABPlaying ? "Stop A/B Compare" : "A/B Compare"}
+      </button>
+
+      <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {[1.0, 0.85, 0.75].map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setPlaybackRate(r)}
+              style={{
+                height: 38,
+                padding: "0 12px",
+                borderRadius: 999,
+                border: `1px solid ${LIGHT_BORDER}`,
+                background: playbackRate === r ? "rgba(33,150,243,0.14)" : "rgba(17,24,39,0.04)",
+                fontWeight: 950,
+                cursor: "pointer",
+              }}
+            >
+              {r}x
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setLoopOn((v) => !v)}
+          style={{
+            height: 44,
+            borderRadius: 16,
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: loopOn ? "rgba(33,150,243,0.14)" : "rgba(17,24,39,0.04)",
+            fontWeight: 950,
+            cursor: "pointer",
+          }}
+        >
+          {loopOn ? "Loop: ON" : "Loop: OFF"}
+        </button>
+      </div>
+    </div>
+  </div>
+) : null}
+
+{activeTab?.type === "actions" ? (
+  <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+    <div
+      style={{
+        borderRadius: 22,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: LIGHT_SURFACE,
+        boxShadow: LIGHT_SHADOW,
+        padding: 14,
+        display: "grid",
+        gap: 10,
+      }}
+    >
+      <div style={{ fontWeight: 950, fontSize: 14 }}>Actions</div>
 
       <button
         type="button"
         onClick={onTryAgain}
         style={{
-          height: 54,
-          borderRadius: 18,
-          border: "none",
-          background: "rgba(17,24,39,0.10)",
+          height: 46,
+          borderRadius: 16,
+          border: `1px solid ${LIGHT_BORDER}`,
+          background: "rgba(17,24,39,0.04)",
           fontWeight: 950,
           cursor: "pointer",
         }}
@@ -2225,8 +2395,8 @@ style={{
         type="button"
         onClick={onNext}
         style={{
-          height: 54,
-          borderRadius: 18,
+          height: 46,
+          borderRadius: 16,
           border: "none",
           background: BTN_BLUE,
           color: "white",
@@ -2240,419 +2410,102 @@ style={{
   </div>
 ) : null}
 
-</motion.div>
+      </motion.div>
+    </AnimatePresence>
+  </div>
 
-
-{activeTab?.type === "phoneme" ? (
-  <div style={{ marginTop: 14 }}>
-    {!activeWeakItem ? (
-      <div style={{ textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>No data.</div>
-    ) : (
-      (() => {
-        const sel = activeWeakItem;
-        const copy = getPhonemeUiCopy(sel.code);
-
-        return (
-          <div>
-            <div style={{ fontWeight: 950, fontSize: 34, color: "#111827" }}>{copy.title}</div>
-            <div style={{ marginTop: 8, fontSize: 15, fontWeight: 850, color: "rgba(17,24,39,0.62)", lineHeight: 1.35 }}>
-              {copy.desc}
-            </div>
-
-            <div
-              style={{
-                marginTop: 14,
-                borderRadius: 22,
-                overflow: "hidden",
-                border: `1px solid ${LIGHT_BORDER}`,
-                background: "#0b1020",
-                position: "relative",
-              }}
-            >
-              <video
-                ref={videoRef}
-                src={sel.assets?.videoSrc}
-                muted={videoMuted}
-                playsInline
-                preload="auto"
-                style={{ width: "100%", height: "auto", display: "block" }}
-                onEnded={() => {
-                  try {
-                    const v = videoRef.current;
-                    if (v) {
-                      v.pause();
-                      v.currentTime = 0;
-                    }
-                  } catch {}
-                }}
-              />
-
-              <button
-                type="button"
-                onClick={() => {
-                  try {
-                    const v = videoRef.current;
-                    if (!v) return;
-                    if (v.paused || v.ended) v.play().catch(() => {});
-                    else {
-                      v.pause();
-                      v.currentTime = 0;
-                    }
-                  } catch {}
-                }}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "grid",
-                  placeItems: "center",
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                }}
-                aria-label="Play video"
-              >
-                <div
-                  style={{
-                    width: 84,
-                    height: 84,
-                    borderRadius: 999,
-                    background: "rgba(255,255,255,0.92)",
-                    display: "grid",
-                    placeItems: "center",
-                  }}
-                >
-                  <Play className="h-10 w-10" style={{ color: "#111827", marginLeft: 4 }} />
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setVideoMuted((v) => !v)}
-                style={{
-                  position: "absolute",
-                  right: 12,
-                  top: 12,
-                  width: 44,
-                  height: 44,
-                  borderRadius: 999,
-                  border: "none",
-                  background: "rgba(255,255,255,0.18)",
-                  display: "grid",
-                  placeItems: "center",
-                  cursor: "pointer",
-                }}
-                aria-label="Toggle mute"
-              >
-                <Volume2 className="h-6 w-6" style={{ color: "white", opacity: videoMuted ? 0.65 : 1 }} />
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setDeepDiveOpen(true)}
-              style={{
-                marginTop: 14,
-                width: "100%",
-                height: 52,
-                borderRadius: 18,
-                border: "none",
-                background: "rgba(17,24,39,0.10)",
-                color: "#111827",
-                fontWeight: 950,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-              }}
-            >
-              Watch Deep Dive <ChevronRight className="h-5 w-5" />
-            </button>
-
-            {/* ---------- Deep Dive modal ---------- */}
-<AnimatePresence>
-  {deepDiveOpen && activeWeakItem ? (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.14 }}
+  {/* bottom bar (fixed inside overlay) */}
+  <div
+    style={{
+      position: "fixed",
+      left: 16,
+      right: 16,
+      bottom: TABBAR_OFFSET + 16,
+      zIndex: 10001,
+      maxWidth: 520,
+      margin: "0 auto",
+      borderRadius: 22,
+      border: `1px solid ${LIGHT_BORDER}`,
+      background: LIGHT_SURFACE,
+      boxShadow: LIGHT_SHADOW,
+      padding: 10,
+      display: "grid",
+      gridTemplateColumns: "44px 1fr 44px",
+      alignItems: "center",
+      gap: 10,
+    }}
+  >
+    <button
+      type="button"
+      onClick={() => {
+        setActiveTabIdx((i) => Math.max(0, i - 1));
+        setDeepDiveOpen(false);
+        setVideoMuted(true);
+        try {
+          const v = videoRef.current;
+          if (v) {
+            v.pause();
+            v.currentTime = 0;
+          }
+        } catch {}
+      }}
+      disabled={activeTabIdx <= 0}
+      aria-label="Previous"
       style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 10000,
-        background: "rgba(0,0,0,0.35)",
+        width: 44,
+        height: 44,
+        borderRadius: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: "rgba(17,24,39,0.04)",
         display: "grid",
         placeItems: "center",
-        padding: 16,
-      }}
-      onClick={() => setDeepDiveOpen(false)}
-    >
-      <motion.div
-        initial={{ y: 10, scale: 0.98, opacity: 0 }}
-        animate={{ y: 0, scale: 1, opacity: 1 }}
-        exit={{ y: 10, scale: 0.98, opacity: 0 }}
-        transition={{ duration: 0.16 }}
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "100%",
-          maxWidth: 560,
-          borderRadius: 22,
-          background: LIGHT_SURFACE,
-          border: `1px solid ${LIGHT_BORDER}`,
-          boxShadow: "0 18px 60px rgba(0,0,0,0.18)",
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ padding: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <div style={{ fontWeight: 950, fontSize: 16, color: LIGHT_TEXT }}>
-            Deep Dive — {activeWeakItem.code}
-          </div>
-          <button
-            type="button"
-            onClick={() => setDeepDiveOpen(false)}
-            style={{
-              height: 38,
-              padding: "0 12px",
-              borderRadius: 14,
-              border: `1px solid ${LIGHT_BORDER}`,
-              background: "rgba(17,24,39,0.04)",
-              fontWeight: 950,
-              cursor: "pointer",
-            }}
-          >
-            Close
-          </button>
-        </div>
-
-        <div style={{ padding: 14, paddingTop: 0, display: "grid", gap: 12 }}>
-          {/* video */}
-          <div
-            style={{
-              borderRadius: 20,
-              overflow: "hidden",
-              border: `1px solid ${LIGHT_BORDER}`,
-              background: "#0b1020",
-            }}
-          >
-            <video
-              src={activeWeakItem.assets?.videoSrc}
-              muted={videoMuted}
-              playsInline
-              controls
-              preload="auto"
-              style={{ width: "100%", height: "auto", display: "block" }}
-            />
-          </div>
-
-          {/* tip + listen-for */}
-          {(() => {
-            const tip = getPhonemeTip(activeWeakItem.code);
-            const lf = getListenFor(activeWeakItem.code);
-            if (!tip && !lf) return null;
-
-            return (
-              <div style={{ display: "grid", gap: 10 }}>
-                {tip?.tryThis ? (
-                  <div style={{ padding: 12, borderRadius: 18, border: `1px solid ${LIGHT_BORDER}`, background: "rgba(17,24,39,0.03)" }}>
-                    <div style={{ fontWeight: 950, fontSize: 13, color: LIGHT_MUTED }}>Try this</div>
-                    <div style={{ marginTop: 6, fontWeight: 900, color: LIGHT_TEXT, lineHeight: 1.35 }}>
-                      {tip.tryThis}
-                    </div>
-                  </div>
-                ) : null}
-
-                {lf ? (
-                  <div style={{ padding: 12, borderRadius: 18, border: `1px solid ${LIGHT_BORDER}`, background: "rgba(17,24,39,0.03)" }}>
-                    <div style={{ fontWeight: 950, fontSize: 13, color: LIGHT_MUTED }}>Listen for</div>
-                    <div style={{ marginTop: 6, fontWeight: 900, color: LIGHT_TEXT, lineHeight: 1.35 }}>
-                      {lf}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            );
-          })()}
-
-          {/* examples */}
-          {(() => {
-            const ex = getExamplesForPhoneme(activeWeakItem.code);
-            if (!ex?.length) return null;
-
-            return (
-              <div style={{ display: "grid", gap: 8 }}>
-                <div style={{ fontWeight: 950, color: LIGHT_TEXT }}>Examples</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                  {ex.slice(0, 10).map((w) => (
-                    <button
-                      key={`ex_${activeWeakItem.code}_${w}`}
-                      type="button"
-                      onClick={() => playExampleTts(w)}
-                      style={{
-                        height: 40,
-                        padding: "0 12px",
-                        borderRadius: 16,
-                        border: `1px solid ${LIGHT_BORDER}`,
-                        background: "rgba(17,24,39,0.04)",
-                        fontWeight: 950,
-                        cursor: "pointer",
-                      }}
-                      title="Play example"
-                    >
-                      {w}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      </motion.div>
-    </motion.div>
-  ) : null}
-</AnimatePresence>
-          </div>
-        );
-      })()
-    )}
-  </div>
-) : null}
-
-{activeTab?.type === "playback" ? (
-  <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
-    {/* You / Correct */}
-    <div
-      style={{
-        borderRadius: 22,
-        border: `1px solid ${LIGHT_BORDER}`,
-        background: LIGHT_SURFACE,
-        boxShadow: LIGHT_SHADOW,
-        padding: 14,
-        display: "grid",
-        gap: 12,
+        cursor: activeTabIdx <= 0 ? "not-allowed" : "pointer",
+        opacity: activeTabIdx <= 0 ? 0.45 : 1,
       }}
     >
-      <div style={{ fontWeight: 950, color: LIGHT_TEXT }}>Playback</div>
+      <ChevronLeft className="h-6 w-6" />
+    </button>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <button
-          type="button"
-          onClick={toggleUserRecording}
-          disabled={!result?.userAudioUrl}
-          style={{
-            height: 52,
-            borderRadius: 18,
-            border: "none",
-            background: "rgba(17,24,39,0.10)",
-            fontWeight: 950,
-            cursor: result?.userAudioUrl ? "pointer" : "not-allowed",
-            opacity: result?.userAudioUrl ? 1 : 0.55,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-          }}
-        >
-          {isUserPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-          You
-        </button>
-
-        <button
-          type="button"
-          onClick={toggleCorrectTts}
-          disabled={!String(isSentence ? target : currentWordText).trim()}
-          style={{
-            height: 52,
-            borderRadius: 18,
-            border: "none",
-            background: "rgba(17,24,39,0.10)",
-            fontWeight: 950,
-            cursor: String(isSentence ? target : currentWordText).trim() ? "pointer" : "not-allowed",
-            opacity: String(isSentence ? target : currentWordText).trim() ? 1 : 0.55,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-          }}
-        >
-          {isCorrectPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-          Correct
-        </button>
+    <div style={{ textAlign: "center", fontWeight: 950, color: LIGHT_TEXT }}>
+      <div style={{ fontSize: 14, lineHeight: 1.1 }}>{activeTab?.label || ""}</div>
+      <div style={{ fontSize: 12, color: LIGHT_MUTED, fontWeight: 850, marginTop: 2 }}>
+        Swipe left / right
       </div>
-
-      {/* A/B compare */}
-      <button
-        type="button"
-        onClick={toggleABCompare}
-        disabled={!result?.userAudioUrl || !String(isSentence ? target : currentWordText).trim()}
-        style={{
-          height: 52,
-          borderRadius: 18,
-          border: "none",
-          background: isABPlaying ? "#111827" : "rgba(17,24,39,0.10)",
-          color: isABPlaying ? "white" : "#111827",
-          fontWeight: 950,
-          cursor:
-            result?.userAudioUrl && String(isSentence ? target : currentWordText).trim() ? "pointer" : "not-allowed",
-          opacity:
-            result?.userAudioUrl && String(isSentence ? target : currentWordText).trim() ? 1 : 0.55,
-        }}
-        title="Alternate between You and Correct"
-      >
-        {isABPlaying ? "Stop A/B Compare" : "A/B Compare"}
-      </button>
-
-      {/* Rate */}
-      <div style={{ display: "grid", gap: 8 }}>
-        <div style={{ fontWeight: 950, color: LIGHT_TEXT, fontSize: 13 }}>Speed</div>
-        <div style={{ display: "flex", gap: 10 }}>
-          {[1.0, 0.85, 0.75].map((r) => (
-            <button
-              key={`rate_${r}`}
-              type="button"
-              onClick={() => setPlaybackRate(r)}
-              style={{
-                height: 42,
-                padding: "0 12px",
-                borderRadius: 16,
-                border: `1px solid ${LIGHT_BORDER}`,
-                background: playbackRate === r ? "rgba(17,24,39,0.10)" : LIGHT_SURFACE,
-                fontWeight: 950,
-                cursor: "pointer",
-                flex: 1,
-              }}
-            >
-              {r === 1 ? "1.0×" : r === 0.85 ? "0.85×" : "0.75×"}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Loop */}
-      <button
-        type="button"
-        onClick={() => setLoopOn((v) => !v)}
-        style={{
-          height: 46,
-          borderRadius: 18,
-          border: `1px solid ${LIGHT_BORDER}`,
-          background: loopOn ? "rgba(17,24,39,0.10)" : LIGHT_SURFACE,
-          fontWeight: 950,
-          cursor: "pointer",
-        }}
-        title="Loop first 2.5 seconds"
-      >
-        {loopOn ? "Loop: ON (first 2.5s)" : "Loop: OFF"}
-      </button>
     </div>
+
+    <button
+      type="button"
+      onClick={() => {
+        setActiveTabIdx((i) => Math.min(overlayTabs.length - 1, i + 1));
+        setDeepDiveOpen(false);
+        setVideoMuted(true);
+        try {
+          const v = videoRef.current;
+          if (v) {
+            v.pause();
+            v.currentTime = 0;
+          }
+        } catch {}
+      }}
+      disabled={activeTabIdx >= overlayTabs.length - 1}
+      aria-label="Next"
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: "rgba(17,24,39,0.04)",
+        display: "grid",
+        placeItems: "center",
+        cursor: activeTabIdx >= overlayTabs.length - 1 ? "not-allowed" : "pointer",
+        opacity: activeTabIdx >= overlayTabs.length - 1 ? 0.45 : 1,
+      }}
+    >
+      <ChevronRight className="h-6 w-6" />
+    </button>
   </div>
-) : null}
-
-
-  </AnimatePresence>
-
-
 </div>
+
 
 
 
