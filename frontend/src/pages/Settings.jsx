@@ -1,8 +1,8 @@
 // src/pages/Settings.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Trash2, Send, Gift } from "lucide-react";
+import { Trash2, Send } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
-import { getReferralCode, getReferralCount, getProStatus } from "../lib/api.js";
+import { getReferralCount, getProStatus } from "../lib/api.js";
 
 const FEEDBACK_EMAIL = "admin@fluentup.app";
 const APP_URL = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
@@ -85,10 +85,9 @@ export default function Settings() {
   const [fbMsg, setFbMsg] = useState("");
 
   /* --- Referral + Pro --- */
-  const [referralCode, setReferralCode] = useState("");
   const [referralCount, setReferralCount] = useState(0);
   const [isPro, setIsPro] = useState(false);
-  const [copyMsg, setCopyMsg] = useState("");
+
 
   useEffect(() => {
     let id = localStorage.getItem("userId");
@@ -99,46 +98,17 @@ export default function Settings() {
 
     async function loadReferral() {
       try {
-        const codeRes = await getReferralCode(id);
         const countRes = await getReferralCount(id);
         const proRes = await getProStatus(id);
-        setReferralCode(codeRes?.code || id);
         setReferralCount(countRes?.count || 0);
         setIsPro(!!proRes?.isPro);
       } catch (e) {
+
         console.warn("[Settings] Referral load failed:", e);
       }
     }
     loadReferral();
   }, []);
-
-  const inviteUrl = useMemo(() => {
-    return referralCode ? `${APP_URL}/?ref=${encodeURIComponent(referralCode)}` : "";
-  }, [referralCode]);
-
-  async function inviteFriend() {
-    if (!inviteUrl) return;
-    const text = "Join me on Accent Coach — I get 1 month free when you install with my link:";
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Accent Coach", text, url: inviteUrl });
-        return;
-      } catch {
-        // fall through
-      }
-    }
-
-    window.open(inviteUrl, "_blank", "noopener,noreferrer");
-
-    try {
-      await navigator.clipboard.writeText(inviteUrl);
-      setCopyMsg("Invite link opened and copied to clipboard.");
-    } catch {
-      setCopyMsg("Invite link opened. Copy it from the new tab.");
-    }
-    setTimeout(() => setCopyMsg(""), 2500);
-  }
 
   const clearLocalData = () => {
     if (!confirm("This will reset your settings and locally cached clips (if any). Continue?")) return;
@@ -214,24 +184,7 @@ export default function Settings() {
               </div>
             </Row>
 
-            <Row label="Invite a friend" hint="When a friend installs the app using your link, YOU get 1 month free.">
-              <div className="flex flex-wrap items-center gap-3">
-                <button onClick={inviteFriend} type="button" className="btn btn-primary whitespace-nowrap">
-                  <Gift className="h-4 w-4" /> Invite a friend
-                </button>
-                {copyMsg ? (
-                  <div className="text-sm" style={{ color: "var(--muted)" }}>
-                    {copyMsg}
-                  </div>
-                ) : null}
-              </div>
-
-              {inviteUrl ? (
-                <div className="mt-2 text-xs break-all" style={{ color: "var(--muted)" }}>
-                  {inviteUrl}
-                </div>
-              ) : null}
-            </Row>
+           
           </Section>
 
           {/* Speaking */}

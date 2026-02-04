@@ -79,11 +79,11 @@ function PracticeGate() {
 /* ---------------- Tabs ---------------- */
 /* ---------------- Tabs ---------------- */
 const TABS = [
-  { path: "/ai-chat",  label: "AI Chat",  Icon: MessageCircle, element: <AiChat /> },
   { path: "/coach",    label: "Talk",     Icon: AudioWaveform, element: <Coach /> },
   { path: "/practice", label: "Practice", Icon: Mic,           element: <Practice /> },
   { path: "/settings", label: "Settings", Icon: SettingsIcon,  element: <Settings /> },
 ];
+
 
 
 
@@ -204,13 +204,15 @@ function AppInner() {
             {/* Onboarding always reachable */}
             
             {/* Default route */}
-           <Route path="/" element={<Navigate to="/ai-chat" replace />} />
+           <Route path="/" element={<Navigate to="/practice" replace />} />
 
 
             {/* Tabs */}
 {TABS.map((t) => (
   <Route key={t.path} path={t.path} element={t.element} />
 ))}
+<Route path="/ai-chat" element={<AiChat />} />
+
 {/* Hidden route (NOT a tab) */}
 <Route path="/imitate" element={<ProgressiveSentenceMastery />} />
 
