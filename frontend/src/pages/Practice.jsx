@@ -13,6 +13,32 @@ export default function Practice() {
 
   const [text, setText] = useState("");
   const [expanded, setExpanded] = useState(false);
+  const [kb, setKb] = useState(0);
+
+useEffect(() => {
+  if (!expanded) {
+    setKb(0);
+    return;
+  }
+
+  const vv = window.visualViewport;
+  if (!vv) return;
+
+  const update = () => {
+    const height = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    setKb(height);
+  };
+
+  update();
+  vv.addEventListener("resize", update);
+  vv.addEventListener("scroll", update);
+
+  return () => {
+    vv.removeEventListener("resize", update);
+    vv.removeEventListener("scroll", update);
+  };
+}, [expanded]);
+
   const [bookmarkCount, setBookmarkCount] = useState(() => {
   try {
     const items = getBookmarks();
@@ -120,14 +146,13 @@ return (
     cursor: expanded ? "default" : "pointer",
     transformOrigin: "center",
 
-    position: expanded ? "fixed" : "relative",
-    inset: expanded ? 0 : "auto",
-    zIndex: expanded ? 9999 : "auto",
-    width: expanded ? "100%" : "auto",
+  width: "100%",
   }}
 >
   {!expanded ? (
     <>
+      {/* COLLAPSED (dit nuværende card-indhold) */}
+
       <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
         <div
           style={{
@@ -208,7 +233,16 @@ return (
     </>
   ) : (
     <>
-      <div style={{ paddingTop: `calc(${safeTop} + 10px)` }}>
+      {/* EXPANDED (samme card, fullscreen) */}
+
+      <div
+  style={{
+    paddingTop: `calc(${safeTop} + 10px)`,
+    minHeight: "100dvh",
+    display: "flex",
+    flexDirection: "column",
+  }}
+>
         <div style={{ maxWidth: 720, margin: "0 auto", width: "100%", padding: "8px 12px 10px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button
@@ -238,7 +272,17 @@ return (
           </div>
         </div>
 
-        <div style={{ maxWidth: 720, margin: "0 auto", padding: "10px 16px 0" }}>
+        <div
+  style={{
+    maxWidth: 720,
+    margin: "0 auto",
+    padding: "10px 16px 0",
+    flex: 1,
+    width: "100%",
+    display: "flex",
+    flexDirection: "column",
+  }}
+>
           <div
             style={{
               borderRadius: 26,
@@ -297,7 +341,7 @@ return (
             </div>
           </div>
 
-          <div style={{ padding: `14px 0 calc(${safeBottom} + 14px)` }}>
+          <div style={{ padding: `14px 0 calc(${safeBottom} + ${kb}px + 14px)` }}>
             <button
               type="button"
               onClick={() => {
