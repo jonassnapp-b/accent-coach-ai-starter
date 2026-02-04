@@ -200,6 +200,7 @@ const [messages, setMessages] = useState(() => [
     text: scenario.opening || "Hi! Ready to start?",
   },
 ]);
+const [turnIndex, setTurnIndex] = useState(0);
 
 
   // AI returns an "expected short reply" that you score against
