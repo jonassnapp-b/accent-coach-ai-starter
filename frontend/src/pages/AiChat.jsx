@@ -431,34 +431,33 @@ const wordScoreMap = buildWordScoreMap(json?.words);
     wordScores: Array.from(wordScoreMap.entries()), // serializeable
   },
 ]);
+const turn = scenario.turns?.[turnIndex];
 
-const nextHistory = [
-  ...messages,
-  { role: "user", text: userText },
-];
+if (turn) {
+  // assistant reply
+  setMessages((prev) => [
+    ...prev,
+    {
+      role: "assistant",
+      speaker: scenario.partnerName || "AI Partner",
+      text: turn.assistantText,
+    },
+  ]);
 
-      // 4) Get real AI partner reply + next expected reply
-      const ai = await fetch(`${base}/api/ai-chat-turn`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scenarioId: scenario.id,
-          scenarioTitle: scenario.title,
-          scenarioSubtitle: scenario.subtitle,
-          level: scenario.level,
-          accent: accentUi,
-          history: nextHistory,
-        }),
-      }).then((x) => x.json().catch(() => null));
+  // next expected user line
+  setTargetLine(turn.nextUserLine || "");
 
-     if (ai?.assistantText) {
+  setTurnIndex((i) => i + 1);
+} else {
+  // end of scenario
+  setTargetLine("");
+}
+
+
+
+     if (ai && typeof ai.assistantText === "string") {
   setMessages((prev) => {
-    const aiCount = prev.filter((x) => x.role === "assistant").length;
-    if (aiCount >= MAX_AI_MESSAGES) {
-      // End scenario: no more turns
-      setTargetLine("");
-      return prev;
-    }
+ 
     return [
       ...prev,
       { role: "assistant", speaker: scenario.partnerName || "AI Partner", text: ai.assistantText },
@@ -581,20 +580,21 @@ if (ai?.nextUserLine) {
 
         {/* Messages */}
         <div style={{ overflowY: "auto", padding: "6px 4px" }}>
-          <div style={{ display: "grid", gap: 14 }}>
+          <div style={{ display: "grid", gap: 8 }}>
             {messages.map((m, idx) => {
               if (m.role === "assistant") {
                 return (
-                  <div key={`m_${idx}`} style={{ display: "grid", gap: 8 }}>
+                  <div key={`m_${idx}`} style={{ display: "grid", gap: 4 }}>
                     <div style={{ textAlign: "center", color: "rgba(255,255,255,0.40)", fontWeight: 900, fontSize: 12 }}>
                       {m.speaker}
                     </div>
                   <div
   style={{
     width: "min(360px, 78%)",
-    marginLeft: 0,
-    marginRight: "auto",
-transform: "translateX(-14px)",
+marginLeft: 40,
+marginRight: "auto",
+transform: "none",
+
     background: "rgba(59,130,246,0.85)",
    borderRadius: 16,
 padding: "10px 12px",
@@ -612,7 +612,7 @@ padding: "10px 12px",
 
               if (m.role === "user") {
                 return (
-                  <div key={`m_${idx}`} style={{ display: "grid", gap: 10 }}>
+                  <div key={`m_${idx}`} style={{ display: "grid", gap: 6 }}>
                     <div style={{ textAlign: "center", color: "rgba(255,255,255,0.35)", fontWeight: 900, fontSize: 12 }}>
                       You
                     </div>
@@ -620,9 +620,10 @@ padding: "10px 12px",
                  <div
   style={{
 width: "min(360px, 78%)",
-    marginLeft: "auto",
-    marginRight: 0,
-transform: "translateX(14px)",
+marginLeft: "auto",
+marginRight: 40,
+transform: "none",
+
     background: "rgba(255,255,255,0.06)",
     border: "1px solid rgba(255,255,255,0.10)",
     borderRadius: 16,
@@ -665,6 +666,7 @@ padding: "10px 12px",
                     {/* Improve bar like screenshot */}
                     <div
                       style={{
+                        marginTop: -2,
                         margin: "0 auto",
 width: "min(360px, 78%)",
 marginLeft: "auto",
@@ -774,16 +776,7 @@ transform: "translateX(8px)", // lidt til højre, men ikke så meget at den cutt
         <span style={{ color: "rgba(255,255,255,0.92)" }}>{targetLine}</span>
       </div>
 
-      <div
-        style={{
-          marginTop: 8,
-          fontWeight: 900,
-          fontSize: 12,
-          color: "rgba(255,255,255,0.40)",
-        }}
-      >
-        Tap the speaker, then record it
-      </div>
+     
 
       <button
         type="button"
