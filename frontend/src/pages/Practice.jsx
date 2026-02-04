@@ -242,123 +242,145 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Full-screen expanded editor */}
-      <AnimatePresence>
-        {expanded ? (
-          <motion.div
-            key="practice-editor"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 24 }}
-            transition={{ type: "spring", stiffness: 420, damping: 38 }}
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "var(--bg)",
-              zIndex: 9999,
-              paddingTop: `calc(${safeTop} + 10px)`,
-              paddingBottom: `calc(${safeBottom} + 14px)`,
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            {/* Top bar */}
-            <div style={{ maxWidth: 720, margin: "0 auto", width: "100%", padding: "8px 12px 10px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => setExpanded(false)}
-                  aria-label="Back"
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 999,
-                   border: "1px solid var(--panel-border)",
-background: "var(--panel-bg)",
+    {/* Practice My Text — sheet (matches video-style transition) */}
+<AnimatePresence>
+  {expanded ? (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        key="practice-backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        onClick={() => setExpanded(false)}
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 9998,
+          background: "rgba(0,0,0,0.18)",
+        }}
+      />
 
-                    boxShadow: "0 8px 18px rgba(0,0,0,0.06)",
-                    display: "grid",
-                    placeItems: "center",
-                    cursor: "pointer",
-                  }}
-                >
-                  <ChevronLeft style={{ width: 20, height: 20, color: "var(--text)" }} />
-                </button>
+      {/* Bottom sheet */}
+      <motion.div
+        key="practice-sheet"
+        initial={{ y: 42, opacity: 0, scale: 0.98 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        exit={{ y: 42, opacity: 0, scale: 0.98 }}
+        transition={{ type: "spring", stiffness: 420, damping: 38 }}
+        style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 9999,
 
-                <div style={{ flex: 1, textAlign: "center", fontWeight: 900, fontSize: 18, color: "var(--text)" }}>
-                  Practice your words
-                </div>
+          // sheet look
+          background: "var(--bg)",
+          borderTopLeftRadius: 26,
+          borderTopRightRadius: 26,
+          border: "1px solid rgba(0,0,0,0.10)",
+          boxShadow: "0 -18px 44px rgba(0,0,0,0.18)",
 
-                <div style={{ width: 42 }} />
-              </div>
+          // size
+          maxHeight: "92vh",
+          overflow: "hidden",
+        }}
+        onClick={(e) => e.stopPropagation()} // don't close when clicking inside
+      >
+        {/* Sheet header */}
+        <div style={{ maxWidth: 720, margin: "0 auto", width: "100%", padding: `calc(${safeTop} + 10px) 12px 10px` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              aria-label="Back"
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 999,
+                border: "1px solid var(--panel-border)",
+                background: "var(--panel-bg)",
+                boxShadow: "0 8px 18px rgba(0,0,0,0.06)",
+                display: "grid",
+                placeItems: "center",
+                cursor: "pointer",
+              }}
+            >
+              <ChevronLeft style={{ width: 20, height: 20, color: "var(--text)" }} />
+            </button>
+
+            <div style={{ flex: 1, textAlign: "center", fontWeight: 900, fontSize: 18, color: "var(--text)" }}>
+              Practice your words
             </div>
 
-            {/* Body */}
-            <div style={{ flex: 1, overflow: "auto" }}>
-              <div style={{ maxWidth: 720, margin: "0 auto", padding: "10px 16px 0" }}>
+            <div style={{ width: 42 }} />
+          </div>
+        </div>
+
+        {/* Sheet body (scrollable) */}
+        <div style={{ overflow: "auto", maxHeight: `calc(92vh - 76px)` }}>
+          <div style={{ maxWidth: 720, margin: "0 auto", padding: "10px 16px 0" }}>
+            <div
+              style={{
+                borderRadius: 26,
+                background: "var(--panel-bg)",
+                border: "1px solid var(--panel-border)",
+                boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
+                padding: 18,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 28,
+                  fontWeight: 900,
+                  letterSpacing: -0.4,
+                  lineHeight: 1.12,
+                  marginBottom: 14,
+                  color: "var(--text)",
+                }}
+              >
+                Type or paste your own word or text. You can use this to practice a speech, presentation, or whatever you like!
+              </div>
+
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value.slice(0, MAX_LEN))}
+                placeholder="Tap to type…"
+                style={{
+                  width: "100%",
+                  minHeight: 120,
+                  borderRadius: 18,
+                  border: `1px solid rgba(0,0,0,0.10)`,
+                  background: "rgba(17,24,39,0.04)",
+                  padding: 14,
+                  outline: "none",
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: "var(--text)",
+                  resize: "none",
+                }}
+              />
+
+              <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, color: "var(--muted)", fontWeight: 900 }}>
                 <div
                   style={{
-  borderRadius: 26,
-  background: "var(--panel-bg)",
-  border: "1px solid var(--panel-border)",
-  boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
-  padding: 18,
-}}
-
-                >
-                  <div
-                    style={{
-                      fontSize: 28,
-                      fontWeight: 900,
-                      letterSpacing: -0.4,
-                      lineHeight: 1.12,
-                      marginBottom: 14,
-color: "var(--text)",
-                    }}
-                  >
-                    Type or paste your own word or text. You can use this to practice a speech, presentation, or whatever
-                    you like!
-                  </div>
-
-                  <textarea
-                    value={text}
-                    onChange={(e) => setText(e.target.value.slice(0, MAX_LEN))}
-                    placeholder="Tap to type…"
-                    style={{
-                      width: "100%",
-                      minHeight: 120,
-                      borderRadius: 18,
-                      border: `1px solid rgba(0,0,0,0.10)`,
-                      background: "rgba(17,24,39,0.04)",
-                      padding: 14,
-                      outline: "none",
-                      fontSize: 18,
-                      fontWeight: 800,
-                      color: "var(--text)",
-                      resize: "none",
-                    }}
-                  />
-
-                  <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, color: "var(--muted)", fontWeight: 900 }}>
-                    <div
-                      style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 999,
-                        border: `3px solid rgba(139,92,246,0.25)`,
-                        borderTopColor: "rgba(139,92,246,0.95)",
-                      }}
-                    />
-                    <div>
-                      {Math.min(text.length, MAX_LEN)} / {MAX_LEN}
-                    </div>
-                  </div>
+                    width: 22,
+                    height: 22,
+                    borderRadius: 999,
+                    border: `3px solid rgba(139,92,246,0.25)`,
+                    borderTopColor: "rgba(139,92,246,0.95)",
+                  }}
+                />
+                <div>
+                  {Math.min(text.length, MAX_LEN)} / {MAX_LEN}
                 </div>
               </div>
             </div>
 
-            {/* Bottom CTA */}
-            <div style={{ maxWidth: 720, margin: "0 auto", width: "100%", padding: "14px 16px 0" }}>
+            {/* Bottom CTA inside sheet */}
+            <div style={{ padding: `14px 0 calc(${safeBottom} + 14px)` }}>
               <button
                 type="button"
                 onClick={() => {
@@ -388,9 +410,13 @@ color: "var(--text)",
                 Start Practicing
               </button>
             </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+          </div>
+        </div>
+      </motion.div>
+    </>
+  ) : null}
+</AnimatePresence>
+
     </div>
   );
 }
