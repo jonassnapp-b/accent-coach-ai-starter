@@ -139,11 +139,16 @@ const [showIntro, setShowIntro] = useState(() => {
   // ✅ full feedback shown on SAME page
   const [result, setResult] = useState(null);
 
-function sanitizeText(raw) {
-  // allow sentences, but normalize whitespace
-  const s = String(raw || "").replace(/\s+/g, " ").trim();
-  return s;
+function sanitizeTextForSubmit(raw) {
+  // normalize whitespace, trim only when we actually submit
+  return String(raw || "").replace(/\s+/g, " ").trim();
 }
+
+function sanitizeTextForPaste(raw) {
+  // paste: keep it clean but don't block typing spaces later
+  return String(raw || "").replace(/\s+/g, " ");
+}
+
 
 function closeIntro() {
   setShowIntro(false);
@@ -328,7 +333,7 @@ else setErr("Microphone access is blocked. Please allow it and try again.");
 
   async function sendToServer(audioBlob, localUrl) {
     try {
-      const text = refText.trim();
+      const text = sanitizeTextForSubmit(refText);
       const base = getApiBase();
 
       const fd = new FormData();
@@ -589,19 +594,27 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
               }}
             >
                             <input
-                className="placeholder:text-[rgba(17,24,39,0.45)]"
-                value={refText}
-             onChange={(e) => setRefText(sanitizeText(e.target.value))}
-onPaste={(e) => {
-  e.preventDefault();
-  const pasted = e.clipboardData?.getData("text") || "";
-  setRefText(sanitizeText(pasted));
-}}
-placeholder="Type text…"
-maxLength={220}
+  className="placeholder:text-[rgba(17,24,39,0.45)]"
+  value={refText}
+  onChange={(e) => setRefText(e.target.value)}
+  onPaste={(e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData?.getData("text") || "";
+    setRefText(sanitizeTextForPaste(pasted));
+  }}
+  placeholder="Type text…"
+  maxLength={220}
+  style={{
+    flex: 1,
+    minWidth: 0,
+    width: "100%",
+    border: "none",
+    outline: "none",
+    background: "transparent",
+  }}
+  disabled={isBusy}
+/>
 
-                disabled={isBusy}
-              />
 
 
               {/* Record button */}
