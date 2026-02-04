@@ -600,6 +600,15 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
   className="placeholder:text-[rgba(17,24,39,0.45)]"
   value={refText}
   onChange={(e) => setRefText(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();       // stop submit/navigation
+      e.stopPropagation();      // ekstra safety hvis en parent lytter
+      // (valgfrit) start recording på Enter:
+      if (showIntro) closeIntro();
+      if (!isBusy && refText.trim()) togglePronunciationRecord();
+    }
+  }}
   onPaste={(e) => {
     e.preventDefault();
     const pasted = e.clipboardData?.getData("text") || "";
