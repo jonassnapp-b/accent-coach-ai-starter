@@ -348,8 +348,9 @@ function renderScoredLine(text, wordScoreMap) {
     const type = chunks[0]?.type || rec?.mimeType || "audio/webm";
     const blob = new Blob(chunks, { type });
 
-    setIsAnalyzing(true);
-    setAnalyzeStatus("Analyzing…");
+setIsAnalyzing(true);
+setAnalyzeStatus("Analyzing…");
+
 
 // Hide the “Your turn” bubble while we analyze (prevents duplicate line)
 const spokenText = targetLine; // snapshot of the prompt you just spoke
@@ -359,7 +360,7 @@ setTargetLine("");
 const controller = new AbortController();
 const timeoutId = setTimeout(() => {
   try { controller.abort(); } catch {}
-}, 8000);
+}, 12000);
 
     try {
       // 1) score pronunciation via SpeechSuper (same endpoint as Coach/Record)
@@ -396,7 +397,7 @@ const timeoutId = setTimeout(() => {
       let overall = Number(rawOverall);
       if (!Number.isFinite(overall)) overall = 0;
       if (overall > 0 && overall <= 1) overall = overall * 100;
-      setLastScorePct(Math.round(overall));
+      setAnalyzeStatus("");
 
       // 2) show "You can improve <word> <pct>" like screenshot (placeholder extraction)
       // If SpeechSuper words exist, pick lowest word score, else keep placeholder.
@@ -441,7 +442,7 @@ const userText = String(spokenText || "").trim();
           scenarioSubtitle: scenario.subtitle,
           level: scenario.level,
           accent: accentUi,
-          history: [...messages, { role: "user", text: userText }],
+          history: nextHistory,
         }),
       }).then((x) => x.json().catch(() => null));
 
@@ -474,13 +475,15 @@ if (ai?.nextUserLine) {
       writeProgress(next);
     } catch (e) {
       // if you want: show error as system message
-      if (String(e?.name || "").includes("Abort")) {
-  setAnalyzeStatus("Took too long — try again.");
-} else {
-  setAnalyzeStatus("Analyze failed — try again.");
-}
+    setAnalyzeStatus("Analyze failed — try again.");
+
 
       setMessages((prev) => [...prev, { role: "system", speaker: "System", text: String(e?.message || e) }]);
+      const nextHistory = [
+  ...messages,
+  { role: "user", text: userText },
+];
+
    } finally {
   clearTimeout(timeoutId);
   setIsAnalyzing(false);
@@ -583,19 +586,21 @@ if (ai?.nextUserLine) {
                     <div style={{ textAlign: "center", color: "rgba(255,255,255,0.40)", fontWeight: 900, fontSize: 12 }}>
                       {m.speaker}
                     </div>
-                    <div
-                      style={{
-                        margin: "0 auto",
-                        width: "min(520px, 92%)",
-                        background: "rgba(59,130,246,0.85)",
-                        borderRadius: 24,
-                        padding: "16px 18px",
-                        fontWeight: 950,
-                        fontSize: 34,
-                        lineHeight: 1.05,
-                        boxShadow: "0 22px 60px rgba(0,0,0,0.35)",
-                      }}
-                    >
+                  <div
+  style={{
+    width: "min(440px, 86%)",
+    marginLeft: 0,
+    marginRight: "auto",
+    transform: "translateX(-10px)",
+    background: "rgba(59,130,246,0.85)",
+    borderRadius: 20,
+    padding: "12px 14px",
+    fontWeight: 900,
+    fontSize: 24,
+    lineHeight: 1.12,
+    boxShadow: "0 18px 46px rgba(0,0,0,0.32)",
+  }}
+>
                       {m.text}
                     </div>
                   </div>
@@ -609,19 +614,22 @@ if (ai?.nextUserLine) {
                       You
                     </div>
 
-                    <div
-                      style={{
-                        margin: "0 auto",
-                        width: "min(520px, 92%)",
-                        background: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.10)",
-                        borderRadius: 22,
-                        padding: "14px 16px",
-                        position: "relative",
-                        boxShadow: "0 22px 60px rgba(0,0,0,0.35)",
-                      }}
-                    >
-                      <div style={{ fontWeight: 950, fontSize: 28, lineHeight: 1.06 }}>
+                 <div
+  style={{
+    width: "min(440px, 86%)",
+    marginLeft: "auto",
+    marginRight: 0,
+    transform: "translateX(10px)",
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    borderRadius: 20,
+    padding: "12px 14px",
+    position: "relative",
+    boxShadow: "0 18px 46px rgba(0,0,0,0.32)",
+  }}
+>
+
+<div style={{ fontWeight: 900, fontSize: 20, lineHeight: 1.15 }}>
                         {m.wordScores ? (
   renderScoredLine(
     m.text,
@@ -824,7 +832,7 @@ top: 14,
             {isRecording ? <StopCircle className="h-10 w-10" style={{ color: "white" }} /> : <Mic className="h-10 w-10" style={{ color: "white" }} />}
           </button>
 
-        {isRecording ? "Recording…" : isAnalyzing ? (analyzeStatus || "Analyzing…") : (analyzeStatus || " ")}
+        {isRecording ? "Recording…" : isAnalyzing ? (analyzeStatus || "Analyzing…") : ""}
 
         </div>
       </div>
