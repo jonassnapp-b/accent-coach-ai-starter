@@ -12,7 +12,7 @@ import {
   getLevel,
   setLevel,
 } from "../lib/sentenceBank.js";
-import phonemeSentenceIndex from "../data/phonemeSentenceIndex.json";
+import phonemeSentenceIndex from "../lib/phonemeSentenceIndex.json";
 
 
 
