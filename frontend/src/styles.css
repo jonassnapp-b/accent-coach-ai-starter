@@ -233,7 +233,8 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   border-top: 1px solid var(--tabbar-border);
 
   display: grid;
-  grid-template-columns: repeat(5, 1fr); /* ✅ you have 5 tabs */
+  grid-template-columns: repeat(3, 1fr);
+ /* ✅ you have 5 tabs */
   align-items: center;
   z-index: 50;
 }
