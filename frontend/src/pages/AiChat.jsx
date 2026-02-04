@@ -354,6 +354,7 @@ setAnalyzeStatus("Analyzing…");
 
 // Hide the “Your turn” bubble while we analyze (prevents duplicate line)
 const spokenText = targetLine; // snapshot of the prompt you just spoke
+const userText = String(spokenText || "").trim();
 
 setTargetLine("");
 
@@ -418,7 +419,6 @@ const wordScoreMap = buildWordScoreMap(json?.words);
 
       // 3) Append the user message (we show the expected reply text as what user intended to say)
       // 3) Append the user message (score the line that was visible when recording started)
-const userText = String(spokenText || "").trim();
 
 
   setMessages((prev) => [
@@ -431,6 +431,11 @@ const userText = String(spokenText || "").trim();
     wordScores: Array.from(wordScoreMap.entries()), // serializeable
   },
 ]);
+
+const nextHistory = [
+  ...messages,
+  { role: "user", text: userText },
+];
 
       // 4) Get real AI partner reply + next expected reply
       const ai = await fetch(`${base}/api/ai-chat-turn`, {
@@ -479,10 +484,8 @@ if (ai?.nextUserLine) {
 
 
       setMessages((prev) => [...prev, { role: "system", speaker: "System", text: String(e?.message || e) }]);
-      const nextHistory = [
-  ...messages,
-  { role: "user", text: userText },
-];
+
+
 
    } finally {
   clearTimeout(timeoutId);
@@ -588,16 +591,16 @@ if (ai?.nextUserLine) {
                     </div>
                   <div
   style={{
-    width: "min(440px, 86%)",
+    width: "min(360px, 78%)",
     marginLeft: 0,
     marginRight: "auto",
-    transform: "translateX(-10px)",
+transform: "translateX(-14px)",
     background: "rgba(59,130,246,0.85)",
-    borderRadius: 20,
-    padding: "12px 14px",
+   borderRadius: 16,
+padding: "10px 12px",
     fontWeight: 900,
-    fontSize: 24,
-    lineHeight: 1.12,
+    fontSize: 18,
+    lineHeight: 1.18,
     boxShadow: "0 18px 46px rgba(0,0,0,0.32)",
   }}
 >
@@ -616,20 +619,20 @@ if (ai?.nextUserLine) {
 
                  <div
   style={{
-    width: "min(440px, 86%)",
+width: "min(360px, 78%)",
     marginLeft: "auto",
     marginRight: 0,
-    transform: "translateX(10px)",
+transform: "translateX(14px)",
     background: "rgba(255,255,255,0.06)",
     border: "1px solid rgba(255,255,255,0.10)",
-    borderRadius: 20,
-    padding: "12px 14px",
+    borderRadius: 16,
+padding: "10px 12px",
     position: "relative",
     boxShadow: "0 18px 46px rgba(0,0,0,0.32)",
   }}
 >
 
-<div style={{ fontWeight: 900, fontSize: 20, lineHeight: 1.15 }}>
+<div style={{ fontWeight: 850, fontSize: 16, lineHeight: 1.22 }}>
                         {m.wordScores ? (
   renderScoredLine(
     m.text,
@@ -663,7 +666,11 @@ if (ai?.nextUserLine) {
                     <div
                       style={{
                         margin: "0 auto",
-                        width: "min(520px, 92%)",
+width: "min(360px, 78%)",
+marginLeft: "auto",
+marginRight: 0,
+transform: "translateX(14px)",
+
                         background: "rgba(255,255,255,0.06)",
                         border: "1px solid rgba(255,255,255,0.10)",
                         borderRadius: 18,
@@ -730,7 +737,8 @@ if (ai?.nextUserLine) {
     {/* Right-shifted “your turn” bubble */}
    <div
   style={{
-width: "min(460px, 84%)",   // mindre bubble
+width: "min(360px, 78%)",
+   // mindre bubble
     maxWidth: "100%",
     boxSizing: "border-box",
 
@@ -762,7 +770,7 @@ transform: "translateX(8px)", // lidt til højre, men ikke så meget at den cutt
         Your turn — say this out loud
       </div>
 
-      <div style={{ fontWeight: 950, fontSize: 28, lineHeight: 1.06 }}>
+      <div style={{ fontWeight: 850, fontSize: 16, lineHeight: 1.22 }}>
         <span style={{ color: "rgba(255,255,255,0.92)" }}>{targetLine}</span>
       </div>
 
