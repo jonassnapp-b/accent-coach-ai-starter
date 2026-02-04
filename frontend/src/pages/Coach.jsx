@@ -1782,8 +1782,43 @@ const pickerCenter = {
   return (
     <div className="page" style={{ minHeight: "100vh", background: LIGHT_BG, color: LIGHT_TEXT }}>
       <div className="mx-auto w-full" style={{ maxWidth: 720, padding: "14px 12px 8px" }}>
-        <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: LIGHT_TEXT }}>Talk Coach</div>
-      </div>
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "44px 1fr 44px",
+      alignItems: "center",
+    }}
+  >
+    <div />
+
+    <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: LIGHT_TEXT }}>
+      Talk Coach
+    </div>
+
+    <button
+      type="button"
+      onClick={onBack}
+      disabled={stage === "setup" || isBusy}
+      aria-label="Close"
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: LIGHT_SURFACE,
+        display: "grid",
+        placeItems: "center",
+        cursor: stage === "setup" || isBusy ? "not-allowed" : "pointer",
+        opacity: stage === "setup" || isBusy ? 0.5 : 1,
+        color: LIGHT_TEXT,
+        justifySelf: "end",
+      }}
+    >
+      <ChevronDown className="h-6 w-6" />
+    </button>
+  </div>
+</div>
+
 
       <div
         className="mx-auto w-full"
