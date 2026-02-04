@@ -1,7 +1,7 @@
 // src/pages/Practice.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { ChevronLeft, Mic, Target, Bookmark } from "lucide-react";
 import { getBookmarks } from "../lib/bookmarks";
 
@@ -91,9 +91,10 @@ useEffect(() => {
     nav("/record", { state: { seedText } });
   }
 
-  return (
-  <div className="page" style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
-      {/* Page header */}
+return (
+  <LayoutGroup id="practice-morph">
+    <div className="page" style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
+   {/* Page header */}
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "8px 16px 14px" }}>
         <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Practice</div>
       </div>
@@ -102,20 +103,23 @@ useEffect(() => {
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 16px 110px" }}>
         <div style={{ display: "grid", gap: 14 }}>
           {/* Practice My Text card (special because it has the collapsed input) */}
-          <div
-            onClick={() => setExpanded(true)}
-            role="button"
-            tabIndex={0}
-            style={{
-  borderRadius: 22,
-  background: "var(--panel-bg)",
-  border: "1px solid var(--panel-border)",
-  boxShadow: "0 8px 18px rgba(0,0,0,0.08)", // matcher .panel
-  padding: 16,
-  cursor: "pointer",
-}}
+         <motion.div
+  layoutId="practice-mytext-card"
+  onClick={() => setExpanded(true)}
+  role="button"
+  tabIndex={0}
+  transition={{ type: "spring", stiffness: 520, damping: 42 }}
+  style={{
+    borderRadius: 22,
+    background: "var(--panel-bg)",
+    border: "1px solid var(--panel-border)",
+    boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
+    padding: 16,
+    cursor: "pointer",
+    transformOrigin: "center",
+  }}
+>
 
-          >
             <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
               <div
                 style={{
@@ -194,9 +198,10 @@ useEffect(() => {
                 </div>
               </div>
             </div>
-          </div>
+                  </motion.div>
 
           {/* Weakness + Bookmarks cards */}
+
           {cards
             .filter((c) => c.key !== "practice_my_text")
             .map((c) => (
@@ -417,6 +422,8 @@ useEffect(() => {
   ) : null}
 </AnimatePresence>
 
-    </div>
-  );
+       </div>
+  </LayoutGroup>
+);
 }
+
