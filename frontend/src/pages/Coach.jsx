@@ -92,6 +92,62 @@ const PHONEME_LISTEN_FOR = {
   ZH: "voiced ‘zh’ buzz (like ‘vision’).",
 };
 
+const PHONEME_UI_COPY = {
+  // vowels
+  AO: { title: "AO Sound", desc: "Round your lips gently. Keep the tongue back and low-mid. Hold it steady (no glide)." },
+  OH: { title: "OH Sound", desc: "Round your lips and keep the tongue mid-back. Keep it stable (avoid turning it into OW)." },
+  AA: { title: "AA Sound", desc: "Open your jaw more. Keep the tongue low and relaxed. Let the sound be wide and steady." },
+  IX: { title: "IX Sound", desc: "A very reduced vowel. Keep everything relaxed and quick—don’t form a strong vowel shape." },
+  IY: { title: "EE Sound", desc: "Spread your lips slightly. Teeth close (almost touching). Tongue high-front; sides lightly touch upper teeth." },
+  UW: { title: "OO Sound", desc: "Round the lips more. Tongue high-back. Keep it dark and steady (don’t front it)." },
+  UX: { title: "UX Sound", desc: "A short, reduced UW. Keep it quick and relaxed—small lip rounding, minimal movement." },
+  EH: { title: "EH Sound", desc: "Jaw slightly open. Tongue mid-front. Keep it clean—don’t glide toward AY." },
+  IH: { title: "IH Sound", desc: "Tongue high-front but relaxed. Lips neutral. Keep it short—don’t tense into EE." },
+  UH: { title: "UH Sound", desc: "Tongue high-back. Lips relaxed (not strongly rounded). Keep it short and steady." },
+  AH: { title: "UH (AH) Sound", desc: "Neutral mouth. Tongue central and relaxed. Don’t over-round or over-smile." },
+  AX: { title: "Schwa (AX)", desc: "Very relaxed and quick. Minimal mouth shaping—let it be neutral and unstressed." },
+  AXR: { title: "R-colored Schwa (AXR)", desc: "Like schwa, but add an R-color. Keep the tongue bunched/curl slightly without touching." },
+  AE: { title: "AE Sound", desc: "Spread the lips slightly. Jaw open more than EH. Tongue front and low-mid." },
+  EY: { title: "AY (EY) Sound", desc: "Start at EH and glide slightly upward. Keep it controlled—don’t overdo the glide." },
+  AY: { title: "AI (AY) Sound", desc: "Start open (AH/AA-like), then glide up toward EE. Keep it smooth and clear." },
+  OW: { title: "OH-OO (OW) Sound", desc: "Start rounded, then glide toward OO. Keep the glide clear (not flat)." },
+  AW: { title: "OW (AW) Sound", desc: "Start open (AH/AA-like), then glide toward OO. Lips round more as you glide." },
+  OY: { title: "OY Sound", desc: "Start rounded (O), then glide to EE. Keep both parts distinct and smooth." },
+
+  // consonants
+  P: { title: "P Sound", desc: "Close both lips. Build pressure. Release with a clear puff of air (aspiration)." },
+  B: { title: "B Sound", desc: "Close both lips. Voice ON (buzz). Release cleanly with minimal extra vowel." },
+  T: { title: "T Sound", desc: "Tongue tip to ridge behind top teeth. Release cleanly. Keep it crisp (no extra schwa)." },
+  D: { title: "D Sound", desc: "Tongue tip to ridge. Voice ON. Release quickly and cleanly." },
+  K: { title: "K Sound", desc: "Back of tongue touches the soft palate. Build pressure. Release with a clean burst." },
+  G: { title: "G Sound", desc: "Like K but voiced. Keep a gentle buzz and release cleanly." },
+  CH:{ title: "CH Sound", desc: "Start with a T-like stop, then release into SH. Keep it crisp: ‘tch’." },
+  JH:{ title: "J Sound", desc: "Like CH but voiced. Keep a buzz while releasing (as in ‘judge’)." },
+  F: { title: "F Sound", desc: "Top teeth lightly touch lower lip. Blow air continuously. No voicing." },
+  V: { title: "V Sound", desc: "Top teeth on lower lip. Voice ON (buzz) while air flows continuously." },
+  TH:{ title: "TH Sound", desc: "Tongue lightly between teeth. Air flows out. No voicing (unlike DH)." },
+  DH:{ title: "DH Sound", desc: "Tongue lightly between teeth. Voice ON (buzz). Keep it gentle." },
+  S: { title: "S Sound", desc: "Tongue close to ridge with a narrow channel. Strong, steady airflow. No voicing." },
+  Z: { title: "Z Sound", desc: "Like S but voiced. Keep a buzz while maintaining the narrow airflow." },
+  SH:{ title: "SH Sound", desc: "Tongue slightly back. Narrow groove. Smooth steady airflow (hiss), no voicing." },
+  ZH:{ title: "ZH Sound", desc: "Like SH but voiced (buzz), as in ‘vision’." },
+  HH:{ title: "H Sound", desc: "Just breathy airflow from the throat. Don’t add an extra vowel before it." },
+  M: { title: "M Sound", desc: "Close lips and keep voicing. Let air go through the nose; feel nasal vibration." },
+  N: { title: "N Sound", desc: "Tongue tip up. Voice ON. Air through the nose (nasal)." },
+  NG:{ title: "NG Sound", desc: "Back of tongue up (like K/G position). Voice ON. Air through the nose (no release)." },
+  L: { title: "L Sound", desc: "Tongue tip to ridge. Keep airflow around the sides of the tongue." },
+  R: { title: "R Sound", desc: "Curl or bunch the tongue without touching. Slight lip rounding. Keep it smooth." },
+  ER:{ title: "ER Sound", desc: "R-colored vowel. Bunch/curl tongue, lips slightly rounded. Hold it steady." },
+  W: { title: "W Sound", desc: "Strong lip rounding, then quickly move into the next vowel. Don’t hold it too long." },
+  Y: { title: "Y Sound", desc: "Tongue high-front (like EE start), then glide quickly into the next vowel." },
+};
+
+function getPhonemeUiCopy(code) {
+  const c = String(code || "").trim().toUpperCase();
+  return PHONEME_UI_COPY[c] || { title: `${c} Sound`, desc: "Focus on a clean mouth shape and a steady, controlled sound." };
+}
+
+
 function getListenFor(code) {
   const c = String(code || "").trim().toUpperCase();
   return PHONEME_LISTEN_FOR[c] || null;
@@ -153,54 +209,17 @@ function pickRandom(arr) {
  *
  * If missing -> we skip feedback for that phoneme (as requested).
  */
-const AVAILABLE_IMAGES = new Set([
-  // vowels (as per your images folder)
-  "AA", "AH", "AO", "AX", "EH", "EY", "IH", "IX", "IY", "OH", "OY", "UH", "UW", "UX",
-
-  // consonants (as per your images folder)
-  "B", "CH", "D", "DH", "F", "G", "HH", "JH", "K", "L", "M", "N", "P", "R", "SH", "T", "TH", "V", "W", "ZH",
-]);
-
-const AVAILABLE_AUDIO_BR = new Set([
-  // vowels (as per your en_br audio folder)
-  "AA", "AH", "AO", "AX", "EH", "EY", "IH", "IX", "IY", "OH", "OY", "UH", "UW", "UX",
-
-  // consonants (as per your en_br audio folder)
-  "B", "CH", "D", "F", "G", "HH", "JH", "K", "L", "M", "N", "P", "R", "SH", "T", "TH", "V", "W", "ZH",
-]);
-
-const AVAILABLE_AUDIO_US = new Set([
-  // you only have AO_us.mp3 in en_us
-  "AO",
-]);
 
 
-function resolvePhonemeAssets(code, accentUi) {
+function resolvePhonemeVideo(code) {
   const c = String(code || "").trim().toUpperCase();
   if (!c) return null;
 
-  const imgOk = AVAILABLE_IMAGES.has(c);
-  const imgSrc = imgOk ? `/phonemes/images/${c}.png` : null;
-
-  // audio:
-  // - if en_us and we have US version -> use that
-  // - else fallback to en_br if we have it
-  let audioSrc = null;
-
-  if (accentUi === "en_us" && AVAILABLE_AUDIO_US.has(c)) {
-    // special filename for US:
-    if (c === "AO") audioSrc = `/phonemes/audio/en_us/AO_us.mp3`;
-  } else if (AVAILABLE_AUDIO_BR.has(c)) {
-    audioSrc = `/phonemes/audio/en_br/${c}.mp3`;
-  }
-
-  // If either missing, we still allow showing image-only or audio-only?
-  // You asked: "overskrift + billede + lyd-knap under billed med lyd"
-  // => we require image, and audio is optional (button shown only if audio exists).
-  if (!imgSrc) return null;
-
-  return { imgSrc, audioSrc };
+  // You said you added videos for all SpeechSuper CMU phonemes here:
+  // frontend/public/phonemes/Videos/<CODE>.mp4
+  return { videoSrc: `/phonemes/Videos/${c}.mp4` };
 }
+
 
 /* ---------------- SpeechSuper parsing helpers ---------------- */
 function getPhonemeCode(p) {
@@ -359,6 +378,11 @@ useEffect(() => {
   // overlay state (sentence dropdown)
   const [selectedWordIdx, setSelectedWordIdx] = useState(-1);
   const [expandedPhonemeKey, setExpandedPhonemeKey] = useState(null); // e.g. "UW_3"
+  const [weakIdx, setWeakIdx] = useState(0);
+const [deepDiveOpen, setDeepDiveOpen] = useState(false);
+const [videoMuted, setVideoMuted] = useState(true);
+const videoRef = useRef(null);
+
 const [wordsOpen, setWordsOpen] = useState(false); // ✅ dropdown open/closed
 const [overlayCardIdx, setOverlayCardIdx] = useState(0); // 0=Tips, 1=Playback, 2=Actions
 
@@ -1012,7 +1036,9 @@ function onBack() {
       };
 setResult(payload);
 setOverlayCardIdx(0);
-
+setWeakIdx(0);
+setDeepDiveOpen(false);
+setVideoMuted(true);
 setIsUserPlaying(false);
 setIsCorrectPlaying(false);
 
@@ -1118,17 +1144,17 @@ const phonemeLineItems = useMemo(() => {
     const raw = getScore(p);
     const s = normalizePhonemeScore(raw, currentWordScore, rawScores);
 
-    const assets = resolvePhonemeAssets(code, accentUi);
+const assets = resolvePhonemeVideo(code);
 
-   out.push({
+out.push({
   key: `${code}_${i}`,
   code,
   score: s,
   rawScore: raw,
-  letters: getPhonemeLetters(p), // ✅ only if provided by API
-  assets,
-  hasImage: !!assets?.imgSrc,
-  hasTip: !!assets?.imgSrc && (s == null || !isGreen(s)),
+  letters: getPhonemeLetters(p),
+  assets, // { videoSrc }
+  hasVideo: !!assets?.videoSrc,
+  isWeak: s == null || !isGreen(s), // <= NOT green
 });
 
   }
@@ -1137,7 +1163,10 @@ const phonemeLineItems = useMemo(() => {
 }, [currentWordObj, accentUi, currentWordScore]);
 
 
-const tipItems = useMemo(() => phonemeLineItems.filter((x) => x.hasTip), [phonemeLineItems]);
+const weakItems = useMemo(
+  () => phonemeLineItems.filter((x) => x.hasVideo && x.isWeak),
+  [phonemeLineItems]
+);
 const primaryWeakPhoneme = useMemo(() => {
   // pick lowest RAW score (more honest than normalized)
   const scored = phonemeLineItems
@@ -1584,140 +1613,6 @@ async function prefetchTtsBatch(texts, rate = 0.98) {
   }
 }
 
-function renderTipCard(tip) {
-  if (!tip?.assets?.imgSrc) return null;
-
-  return (
-    <div
-      style={{ background: "transparent", border: "none", boxShadow: "none", padding: 0, borderRadius: 0 }}
-    >
-      <div style={{ display: "grid", placeItems: "center", marginTop: 16 }}>
-        <img
-          src={tip.assets.imgSrc}
-          alt={tip.code}
-          style={{
-            width: "100%",
-            maxWidth: 320,
-            height: "auto",
-            borderRadius: 16,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: "#fff",
-          }}
-        />
-              {/* One actionable instruction for this phoneme (not guessing; technique-based) */}
-  
-
-      </div>
-
-      {tip.assets.audioSrc ? (
-        <div style={{ width: "100%" }}>
-          <button
-            type="button"
-            onClick={() => toggleOverlayAudio(tip.assets.audioSrc, "phoneme")}
-            style={{
-              marginTop: 12,
-              height: 44,
-              width: "100%",
-              padding: "0 14px",
-              borderRadius: 16,
-              border: `1px solid ${LIGHT_BORDER}`,
-              background: "#fff",
-              fontWeight: 950,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              cursor: "pointer",
-            }}
-          >
-            <Volume2 className="h-5 w-5" />
-            Play sound
-          </button>
-        </div>
-      ) : null}
-{/* Primary focus (weakest phoneme in the current word) */}
-{/* Primary focus (single help card) */}
-{(() => {
-  const focusCode = primaryWeakPhoneme?.code || tip?.code || null;
-  if (!focusCode) return null;
-
-  const focusTip = getPhonemeTip(focusCode);
-  if (!focusTip?.tryThis) return null;
-
-  return (
-    <div
-      style={{
-        marginTop: 12,
-        border: `1px solid ${LIGHT_BORDER}`,
-        background: "#fff",
-        borderRadius: 16,
-        padding: "10px 12px",
-        textAlign: "left",
-      }}
-    >
-      <div style={{ fontWeight: 950, fontSize: 13, color: "#111827", marginBottom: 6 }}>
-        Primary focus:{" "}
-        <span style={{ color: scoreColor(primaryWeakPhoneme?.score) }}>{focusCode}</span>
-        {primaryWeakPhoneme && Number.isFinite(primaryWeakPhoneme.rawScore) ? (
-          <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}>
-            {" "}
-            · {Math.round(primaryWeakPhoneme.rawScore)}%
-          </span>
-        ) : null}
-        {primaryWeakPhoneme?.letters ? (
-          <span style={{ color: LIGHT_MUTED, fontWeight: 900 }}>
-            {" "}
-            · from “{primaryWeakPhoneme.letters}”
-          </span>
-        ) : null}
-      </div>
-
-      <div style={{ fontSize: 13, fontWeight: 900, color: "rgba(17,24,39,0.82)" }}>
-        “{focusTip.tryThis}”
-      </div>
-    </div>
-  );
-})()}
-
-
-
-     
-
-
-
-
-      {getExamplesForPhoneme(tip.code).length ? (
-        <div style={{ marginTop: 14 }}>
-          <div style={{ fontWeight: 950, fontSize: 14, color: LIGHT_TEXT }}>Examples</div>
-
-          <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
-            {getExamplesForPhoneme(tip.code).map((w) => (
-              <button
-                key={`${tip.code}_${w}`}
-                type="button"
-                onClick={() => playExampleTts(w)}
-                style={{
-                  border: `1px solid ${LIGHT_BORDER}`,
-                  background: "#fff",
-                  borderRadius: 14,
-                  padding: "10px 12px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
-              >
-                <Volume2 className="h-5 w-5" />
-                <span style={{ fontWeight: 900 }}>{w}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
 function getFirstTipKeyForWord(wordObj) {
   const ps = Array.isArray(wordObj?.phonemes) ? wordObj.phonemes : [];
   const wordScore = getScore(wordObj);
@@ -2165,8 +2060,39 @@ style={{
 {/* Card 1: Tips */}
 <>
   {/* ✅ sentence word list ALWAYS visible */}
+  <>
+  {/* ✅ FIRST TAB HEADER: word + phonemes (colored) */}
+  <div style={{ display: "grid", gap: 10 }}>
+    <div style={{ textAlign: "center", fontWeight: 950, fontSize: 44, lineHeight: 1.05, color: scoreColor(currentWordScore) }}>
+      {currentWordText || (isSentence ? "—" : target)}
+    </div>
+
+    {/* phoneme strip colored (NON-clickable) */}
+    <div style={{ textAlign: "center" }}>
+      <div style={{ display: "inline-flex", flexWrap: "wrap", justifyContent: "center", gap: 10, alignItems: "baseline" }}>
+        {phonemeLineItems.map((it) => (
+          <span
+            key={`ph_strip_${it.key}`}
+            style={{
+              fontSize: 20,
+              fontWeight: 950,
+              color: scoreColor(it.score),
+              textDecoration: it.isWeak ? "underline" : "none",
+              textUnderlineOffset: 6,
+              textDecorationThickness: 3,
+              opacity: it.hasVideo ? 1 : 0.55,
+            }}
+          >
+            {it.code}
+          </span>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  {/* ✅ If sentence: keep your word picker (unchanged) */}
   {isSentence ? (
-    <motion.div layout style={{ display: "grid", gap: 8, marginBottom: 10 }}>
+    <motion.div layout style={{ display: "grid", gap: 8, marginTop: 12 }}>
       <AnimatePresence initial={false}>
         {words.map((w, i) => {
           const label = String(w?.word || w?.text || w?.name || "").trim();
@@ -2190,13 +2116,13 @@ style={{
                 if (active && wordsOpen) {
                   setWordsOpen(false);
                   setSelectedWordIdx(-1);
-                  setExpandedPhonemeKey(null);
                   return;
                 }
                 setSelectedWordIdx(i);
                 setWordsOpen(true);
-                const firstTipKey = getFirstTipKeyForWord(w);
-                setExpandedPhonemeKey(firstTipKey || null);
+                setWeakIdx(0);
+                setDeepDiveOpen(false);
+                setVideoMuted(true);
               }}
               style={{
                 width: "100%",
@@ -2213,9 +2139,9 @@ style={{
             >
               <span
                 style={{
-                  fontSize: 44,
+                  fontSize: 34,
                   lineHeight: 1.05,
-                  fontWeight: 900,
+                  fontWeight: 950,
                   color: active ? scoreColor(score) : "rgba(17,24,39,0.45)",
                   textAlign: "left",
                 }}
@@ -2236,6 +2162,271 @@ style={{
       </AnimatePresence>
     </motion.div>
   ) : null}
+
+  {/* ✅ If sentence and no selected word: show nothing */}
+  {!currentWordObj ? null : (
+    <>
+      {/* ✅ Weak phoneme tabs ONLY (not green) */}
+      {weakItems.length ? (
+        <div style={{ marginTop: 16, display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+          {weakItems.map((it, idx) => (
+            <button
+              key={`weak_tab_${it.key}`}
+              type="button"
+              onClick={() => {
+                setWeakIdx(idx);
+                setDeepDiveOpen(false);
+                setVideoMuted(true);
+                try {
+                  const v = videoRef.current;
+                  if (v) {
+                    v.pause();
+                    v.currentTime = 0;
+                  }
+                } catch {}
+              }}
+              style={{
+                border: "none",
+                background: "transparent",
+                padding: 0,
+                cursor: "pointer",
+                fontSize: 20,
+                fontWeight: 950,
+                color: scoreColor(it.score),
+                textDecoration: idx === weakIdx ? "underline" : "none",
+                textUnderlineOffset: 6,
+                textDecorationThickness: 3,
+              }}
+            >
+              {it.code}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div style={{ marginTop: 18, textAlign: "center", color: LIGHT_MUTED, fontWeight: 900 }}>
+          No weak phonemes 🎉
+        </div>
+      )}
+
+      {/* ✅ “EE Sound” screen */}
+      {weakItems.length ? (() => {
+        const sel = weakItems[Math.max(0, Math.min(weakIdx, weakItems.length - 1))];
+        const copy = getPhonemeUiCopy(sel.code);
+
+        return (
+          <div style={{ marginTop: 18 }}>
+            {/* Title + description (like image 2) */}
+            <div style={{ fontWeight: 950, fontSize: 34, color: "#111827" }}>{copy.title}</div>
+            <div style={{ marginTop: 8, fontSize: 15, fontWeight: 850, color: "rgba(17,24,39,0.62)", lineHeight: 1.35 }}>
+              {copy.desc}
+            </div>
+
+            {/* Video card */}
+            <div
+              style={{
+                marginTop: 14,
+                borderRadius: 22,
+                overflow: "hidden",
+                border: `1px solid ${LIGHT_BORDER}`,
+                background: "#0b1020",
+                position: "relative",
+              }}
+            >
+              <video
+                ref={videoRef}
+                src={sel.assets?.videoSrc}
+                muted={videoMuted}
+                playsInline
+                preload="auto"
+                style={{ width: "100%", height: "auto", display: "block" }}
+                onEnded={() => {
+                  try {
+                    const v = videoRef.current;
+                    if (v) {
+                      v.pause();
+                      v.currentTime = 0;
+                    }
+                  } catch {}
+                }}
+              />
+
+              {/* Play button overlay (like image 2) */}
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    const v = videoRef.current;
+                    if (!v) return;
+                    if (v.paused || v.ended) v.play().catch(() => {});
+                    else {
+                      v.pause();
+                      v.currentTime = 0;
+                    }
+                  } catch {}
+                }}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                }}
+                aria-label="Play video"
+              >
+                <div
+                  style={{
+                    width: 84,
+                    height: 84,
+                    borderRadius: 999,
+                    background: "rgba(255,255,255,0.92)",
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
+                  <Play className="h-10 w-10" style={{ color: "#111827", marginLeft: 4 }} />
+                </div>
+              </button>
+
+              {/* Mute toggle */}
+              <button
+                type="button"
+                onClick={() => setVideoMuted((v) => !v)}
+                style={{
+                  position: "absolute",
+                  right: 12,
+                  top: 12,
+                  width: 44,
+                  height: 44,
+                  borderRadius: 999,
+                  border: "none",
+                  background: "rgba(255,255,255,0.18)",
+                  display: "grid",
+                  placeItems: "center",
+                  cursor: "pointer",
+                }}
+                aria-label="Toggle mute"
+              >
+                <Volume2 className="h-6 w-6" style={{ color: "white", opacity: videoMuted ? 0.65 : 1 }} />
+              </button>
+            </div>
+
+            {/* Watch Deep Dive */}
+            <button
+              type="button"
+              onClick={() => setDeepDiveOpen(true)}
+              style={{
+                marginTop: 14,
+                width: "100%",
+                height: 52,
+                borderRadius: 18,
+                border: "none",
+                background: "rgba(17,24,39,0.10)",
+                color: "#111827",
+                fontWeight: 950,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+              }}
+            >
+              Watch Deep Dive <ChevronRight className="h-5 w-5" />
+            </button>
+
+            {/* Deep Dive modal: examples INSIDE */}
+            {deepDiveOpen ? (
+              <div
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 10000,
+                  background: "rgba(0,0,0,0.45)",
+                  display: "grid",
+                  placeItems: "center",
+                  padding: 16,
+                }}
+              >
+                <div
+                  style={{
+                    width: "100%",
+                    maxWidth: 520,
+                    borderRadius: 24,
+                    background: "#0f172a",
+                    color: "white",
+                    padding: 18,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                    <div style={{ fontSize: 22, fontWeight: 950 }}>{copy.title}</div>
+                    <button
+                      type="button"
+                      onClick={() => setDeepDiveOpen(false)}
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 999,
+                        border: "none",
+                        background: "rgba(255,255,255,0.10)",
+                        color: "white",
+                        fontWeight: 950,
+                        cursor: "pointer",
+                      }}
+                      aria-label="Close"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 850, lineHeight: 1.35 }}>
+                    {copy.desc}
+                  </div>
+
+                  {/* Examples moved here */}
+                  {getExamplesForPhoneme(sel.code).length ? (
+                    <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
+                      <div style={{ fontWeight: 950, fontSize: 14, color: "rgba(255,255,255,0.92)" }}>Examples</div>
+                      {getExamplesForPhoneme(sel.code).map((w) => (
+                        <button
+                          key={`deep_${sel.code}_${w}`}
+                          type="button"
+                          onClick={() => playExampleTts(w)}
+                          style={{
+                            border: "1px solid rgba(255,255,255,0.14)",
+                            background: "rgba(255,255,255,0.06)",
+                            borderRadius: 16,
+                            padding: "12px 12px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            cursor: "pointer",
+                            color: "white",
+                            fontWeight: 900,
+                            textAlign: "left",
+                          }}
+                        >
+                          <Volume2 className="h-5 w-5" />
+                          <span>{w}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 14, color: "rgba(255,255,255,0.72)", fontWeight: 900 }}>
+                      No examples for this phoneme yet.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        );
+      })() : null}
+    </>
+  )}
+</>
+
 
   {/* ✅ If no selected word yet (sentences), show nothing (NOT the message) */}
   {!currentWordObj ? (
