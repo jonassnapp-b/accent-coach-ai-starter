@@ -2192,65 +2192,285 @@ style={{
 ) : null}
 
 {activeTab?.type === "phoneme" ? (
-  <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
-    {!activeWeakItem ? (
-      <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>No data for this phoneme.</div>
-    ) : (
-      <div
+  !activeWeakItem ? (
+    <div style={{ marginTop: 12, color: LIGHT_MUTED, fontWeight: 800 }}>No data for this phoneme.</div>
+  ) : (
+    <div
+      style={{
+        marginTop: 12,
+        background: "#0B1220",
+        borderRadius: 28,
+        padding: 18,
+        minHeight: 520,
+        color: "white",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* X (top-right) -> back to Overview */}
+      <button
+        type="button"
+        onClick={() => {
+          setDeepDiveOpen(false);
+          setVideoMuted(true);
+          try {
+            const v = videoRef.current;
+            if (v) {
+              v.pause();
+              v.currentTime = 0;
+            }
+          } catch {}
+          setActiveTabIdx(0);
+        }}
+        aria-label="Close"
         style={{
+          position: "absolute",
+          top: 14,
+          right: 14,
+          width: 44,
+          height: 44,
           borderRadius: 22,
-          border: `1px solid ${LIGHT_BORDER}`,
-          background: LIGHT_SURFACE,
-          boxShadow: LIGHT_SHADOW,
-          padding: 14,
+          border: "none",
+          background: "rgba(255,255,255,0.10)",
+          color: "white",
           display: "grid",
-          gap: 12,
+          placeItems: "center",
+          cursor: "pointer",
+          fontWeight: 900,
+          fontSize: 18,
         }}
       >
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-          <div style={{ fontWeight: 950, fontSize: 16 }}>{activeWeakItem.code}</div>
-          <div style={{ fontWeight: 950, color: scoreColor(activeWeakItem.score) }}>
-            {activeWeakItem.score == null ? "—" : Math.round(activeWeakItem.score)}
-          </div>
+        ×
+      </button>
+
+      {/* Title + desc (like screenshot 2) */}
+      <div style={{ paddingRight: 60 }}>
+        <div style={{ fontSize: 36, fontWeight: 950, letterSpacing: -0.5 }}>
+          {getPhonemeUiCopy(activeWeakItem.code).title}
         </div>
-
-        {/* video */}
-        {activeWeakItem?.assets?.videoSrc ? (
-          <video
-            ref={videoRef}
-            src={activeWeakItem.assets.videoSrc}
-            muted={videoMuted}
-            playsInline
-            controls
-            style={{
-              width: "100%",
-              borderRadius: 18,
-              border: `1px solid ${LIGHT_BORDER}`,
-              background: "#000",
-            }}
-          />
-        ) : (
-          <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>No video asset.</div>
-        )}
-
-        {/* quick tip */}
-        <div style={{ color: LIGHT_TEXT, fontWeight: 900 }}>
-          Tip:{" "}
-          <span style={{ fontWeight: 850, color: LIGHT_MUTED }}>
-            {getPhonemeTip(activeWeakItem.code)?.tryThis || "Focus on a clean mouth shape and a steady sound."}
-          </span>
-        </div>
-
-        <div style={{ color: LIGHT_TEXT, fontWeight: 900 }}>
-          Listen for:{" "}
-          <span style={{ fontWeight: 850, color: LIGHT_MUTED }}>
-            {getListenFor(activeWeakItem.code) || "a clean, controlled sound."}
-          </span>
+        <div
+          style={{
+            marginTop: 10,
+            fontSize: 16,
+            lineHeight: 1.35,
+            color: "rgba(255,255,255,0.72)",
+            fontWeight: 650,
+          }}
+        >
+          {getPhonemeUiCopy(activeWeakItem.code).desc}
         </div>
       </div>
-    )}
-  </div>
+
+      {/* Video area */}
+      <div
+        style={{
+          marginTop: 18,
+          borderRadius: 22,
+          background: "rgba(255,255,255,0.06)",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10" }}>
+          <video
+            ref={videoRef}
+            src={activeWeakItem.assets?.videoSrc || ""}
+            playsInline
+            muted={videoMuted}
+            preload="auto"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+              background: "black",
+            }}
+          />
+
+          {/* Play button (center) */}
+          <button
+            type="button"
+            onClick={() => {
+              const v = videoRef.current;
+              if (!v) return;
+              try {
+                v.muted = false;
+                setVideoMuted(false);
+                v.currentTime = 0;
+                v.play().catch(() => {});
+              } catch {}
+            }}
+            aria-label="Play"
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              width: 74,
+              height: 74,
+              borderRadius: 37,
+              border: "none",
+              background: "rgba(255,255,255,0.92)",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+            }}
+          >
+            <Play className="h-8 w-8" style={{ color: "#0B1220" }} />
+          </button>
+
+          {/* Mute toggle (top-right on video) */}
+          <button
+            type="button"
+            onClick={() => {
+              setVideoMuted((m) => {
+                const next = !m;
+                try {
+                  const v = videoRef.current;
+                  if (v) v.muted = next;
+                } catch {}
+                return next;
+              });
+            }}
+            aria-label="Mute"
+            style={{
+              position: "absolute",
+              right: 12,
+              top: 12,
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              border: "none",
+              background: "rgba(0,0,0,0.35)",
+              color: "white",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+            }}
+          >
+            <Volume2 className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Bottom row: phoneme label + deep dive button */}
+        <div
+          style={{
+            padding: "12px 14px 14px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <div style={{ fontSize: 26, fontWeight: 950, letterSpacing: -0.3 }}>
+            {String(activeWeakItem.code || "").toUpperCase()}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setDeepDiveOpen(true)}
+            style={{
+              height: 46,
+              padding: "0 18px",
+              borderRadius: 18,
+              border: "none",
+              background: "rgba(255,255,255,0.12)",
+              color: "white",
+              fontWeight: 900,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            Watch Deep Dive <span style={{ fontSize: 18, lineHeight: 1 }}>→</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Deep Dive modal */}
+      {deepDiveOpen ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 10050,
+            background: "rgba(0,0,0,0.75)",
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 520,
+              background: "#0B1220",
+              borderRadius: 28,
+              overflow: "hidden",
+              position: "relative",
+              border: "1px solid rgba(255,255,255,0.10)",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setDeepDiveOpen(false);
+                try {
+                  const v = videoRef.current;
+                  if (v) {
+                    v.pause();
+                    v.currentTime = 0;
+                  }
+                } catch {}
+              }}
+              aria-label="Close deep dive"
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                border: "none",
+                background: "rgba(255,255,255,0.10)",
+                color: "white",
+                display: "grid",
+                placeItems: "center",
+                cursor: "pointer",
+                fontWeight: 900,
+                fontSize: 18,
+                zIndex: 2,
+              }}
+            >
+              ×
+            </button>
+
+            <div style={{ padding: 16, paddingTop: 18, color: "white" }}>
+              <div style={{ fontSize: 28, fontWeight: 950 }}>
+                {getPhonemeUiCopy(activeWeakItem.code).title}
+              </div>
+              <div style={{ marginTop: 6, color: "rgba(255,255,255,0.72)", fontWeight: 650 }}>
+                {getPhonemeUiCopy(activeWeakItem.code).desc}
+              </div>
+            </div>
+
+            <div style={{ width: "100%", aspectRatio: "16 / 10", background: "black" }}>
+              <video
+                src={activeWeakItem.assets?.videoSrc || ""}
+                playsInline
+                controls
+                autoPlay
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
 ) : null}
+
 
 {activeTab?.type === "playback" ? (
   <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
