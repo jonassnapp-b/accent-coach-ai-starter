@@ -556,6 +556,7 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
           <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "6px 0px 10px", WebkitOverflowScrolling: "touch", maxWidth: "100%" }}>
             {suggestions.map((s) => (
   <button
+      type="button"
     key={s}
     onClick={() => setRefText(s)}
     className="btn btn-ghost btn-sm"
@@ -621,6 +622,8 @@ const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
 
               {/* Record button */}
               <button
+                type="button"
+
               onClick={() => {
   if (showIntro) closeIntro();
   togglePronunciationRecord();
