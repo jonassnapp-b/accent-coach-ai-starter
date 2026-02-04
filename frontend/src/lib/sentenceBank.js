@@ -188,7 +188,7 @@ const TEMPLATES = {
     "{S} {VM} {DET} {N}, but the timing feels weird.",
     "{S} {VM} it slower {T}.",
     "{S} {VM} the stress on the right part.",
-    "{S} {VM} to keep the rhythm steady.",
+"{S} try to keep the rhythm steady.",
   ],
 
   // reduction: softening, less force, relaxed mouth
