@@ -220,9 +220,12 @@ transition={{
   initial={false}
   animate={{
     opacity: collapsedReady ? 1 : 0,
-    y: collapsedReady ? 0 : 6,
+    y: collapsedReady ? 0 : 3,
   }}
-  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+  transition={{
+  opacity: { duration: collapsedReady ? 0.48 : 0.14, ease: [0.22, 1, 0.36, 1] },
+  y: { duration: collapsedReady ? 0.48 : 0.14, ease: [0.22, 1, 0.36, 1] },
+}}
   style={{ pointerEvents: collapsedReady ? "auto" : "none" }}
 >
 
