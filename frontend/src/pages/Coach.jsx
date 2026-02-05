@@ -329,12 +329,13 @@ export default function Coach() {
 const TABBAR_OFFSET = 64;
 const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
 
-  // dropdown state
-  const mode = "words"; // locked (sentences hidden)
-  const [difficulty, setDifficulty] = useState("easy"); // easy | medium | hard
+// dropdown state
+const [mode, setMode] = useState("words"); // words | sentences
+const [difficulty, setDifficulty] = useState("easy"); // easy | medium | hard
+
   const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
-// const MODE_OPTIONS = ["words", "sentences"];
-// const MODE_LABEL = { words: "Words", sentences: "Sentences" };
+const MODE_OPTIONS = ["words", "sentences"];
+const MODE_LABEL = { words: "Words", sentences: "Sentences" };
 
 
 const DIFF_OPTIONS = ["easy", "medium", "hard"];
@@ -1841,6 +1842,27 @@ style={{
               >
                 <div style={stack}>
                  
+<div style={pickerRow}>
+  <button
+    type="button"
+    onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, -1))}
+    style={pickerBtn}
+    aria-label="Previous mode"
+  >
+    <ChevronLeft className="h-7 w-7" />
+  </button>
+
+  <div style={pickerCenter}>{MODE_LABEL[mode] || "—"}</div>
+
+  <button
+    type="button"
+    onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, 1))}
+    style={pickerBtn}
+    aria-label="Next mode"
+  >
+    <ChevronRight className="h-7 w-7" />
+  </button>
+</div>
 
 <div style={pickerRow}>
   <button
