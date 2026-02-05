@@ -250,6 +250,17 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   color: var(--muted);
   min-width: 0;
 }
+
+.tabbtn.active {
+  color: var(--primary);
+}
+
+/* Force outline-only icons everywhere */
+.tabbtn .tabicon {
+  fill: none !important;
+  stroke: currentColor !important;
+}
+
 .tabbtn .tablabel { display: none; }
 .tabbtn .tabicon {
   width: 28px;
