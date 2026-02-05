@@ -274,33 +274,16 @@ export default function Settings() {
 
             </div>
           </Section>
-
-          {/* Feedback & Support (new design) */}
-<div className="grid gap-3">
-  {/* heading OUTSIDE the card (like screenshot 1) */}
+{/* Feedback & Support */}
+<Section title="FEEDBACK AND SUPPORT">
   <div
     style={{
-      letterSpacing: "0.14em",
-      textTransform: "uppercase",
-      fontWeight: 900,
-      fontSize: 13,
-      color: "var(--muted)",
-      paddingLeft: 6,
+      borderRadius: 28,
+      padding: 22,
+      background: "#FFFFFF",
+      border: "1px solid rgba(0,0,0,0.10)",
+      boxShadow: "0 18px 40px rgba(0,0,0,0.10)",
     }}
-  >
-    Feedback and Support
-  </div>
-
-  {/* dark card */}
-  <div
-   style={{
-  borderRadius: 28,
-  padding: 22,
-  background: "#FFFFFF",
-  border: "1px solid rgba(0,0,0,0.10)",
-  boxShadow: "0 18px 40px rgba(0,0,0,0.10)",
-}}
-
   >
     <div
       style={{
@@ -333,7 +316,6 @@ export default function Settings() {
       If something feels confusing, broken, or you have an idea that would make the app better, write it here — we read every message.
     </div>
 
-    {/* input */}
     <div style={{ marginTop: 18 }}>
       <textarea
         value={fb}
@@ -342,18 +324,16 @@ export default function Settings() {
         placeholder="Describe the issue…"
         className="w-full outline-none"
         style={{
-  borderRadius: 18,
-  padding: 14,
-  background: "#FFFFFF",
-  border: "1px solid rgba(0,0,0,0.10)",
-  color: "var(--text)",
-  resize: "vertical",
-}}
-
+          borderRadius: 18,
+          padding: 14,
+          background: "#FFFFFF",
+          border: "1px solid rgba(0,0,0,0.10)",
+          color: "var(--text)",
+          resize: "vertical",
+        }}
       />
     </div>
 
-    {/* button */}
     <div style={{ marginTop: 14, display: "grid", gap: 10, justifyItems: "center" }}>
       <button
         type="button"
@@ -382,11 +362,12 @@ export default function Settings() {
       </button>
 
       {fbMsg ? (
-        <div style={{ color: "rgba(255,255,255,0.72)", fontWeight: 800, fontSize: 13 }}>{fbMsg}</div>
+        <div style={{ color: "rgba(17,24,39,0.60)", fontWeight: 800, fontSize: 13 }}>{fbMsg}</div>
       ) : null}
     </div>
   </div>
-</div>
+</Section>
+
 
         </div>
       </div>
