@@ -141,9 +141,10 @@ return (
   role="button"
   tabIndex={0}
 transition={{
-  layout: { type: "spring", stiffness: 220, damping: 30, mass: 1.25 },
-  default: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+  layout: { type: "spring", stiffness: 90, damping: 26, mass: 2.2 },
+  default: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
 }}
+
   style={{
     borderRadius: expanded ? 26 : 22,
     background: "var(--panel-bg)",
