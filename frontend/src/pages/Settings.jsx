@@ -67,7 +67,11 @@ function ControlSelect(props) {
   appearance: "none",
   WebkitAppearance: "none",
   MozAppearance: "none",
+  fontWeight: 800,     // ✅ match btn
+  fontSize: 16,        // ✅ samme “feel” som knappen
+  lineHeight: 1.2,
 }}
+
 
 
     />
