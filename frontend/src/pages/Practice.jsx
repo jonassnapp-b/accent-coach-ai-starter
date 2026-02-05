@@ -13,7 +13,12 @@ export default function Practice() {
 
   const [text, setText] = useState("");
   const [expanded, setExpanded] = useState(false);
+  const [collapsedReady, setCollapsedReady] = useState(true);
+
   const [kb, setKb] = useState(0);
+useEffect(() => {
+  if (expanded) setCollapsedReady(false);
+}, [expanded]);
 
 useEffect(() => {
   if (!expanded) {
@@ -153,10 +158,15 @@ return (
   }}
   role="button"
   tabIndex={0}
-transition={{
-  layout: { type: "spring", stiffness: 90, damping: 26, mass: 2.2 },
-  default: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
+  onLayoutAnimationComplete={() => {
+  if (!expanded) setCollapsedReady(true);
 }}
+
+transition={{
+  layout: { type: "spring", stiffness: 220, damping: 30, mass: 1.25 },
+  default: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+}}
+
 
   style={{
     borderRadius: expanded ? 26 : 22,
@@ -174,8 +184,13 @@ transition={{
     <>
       {/* COLLAPSED (dit nuværende card-indhold) */}
 
-      <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-        <div
+      <motion.div
+  initial={false}
+  animate={{ opacity: collapsedReady ? 1 : 0 }}
+  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+  style={{ pointerEvents: collapsedReady ? "auto" : "none" }}
+>
+  <div style={{ display: "flex", gap: 14, alignItems: "center" }}>        <div
           style={{
             width: 54,
             height: 54,
@@ -197,6 +212,7 @@ transition={{
 </div>
 </div>
 
+</motion.div>
 
       <div
         style={{
