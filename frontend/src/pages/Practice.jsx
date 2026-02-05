@@ -126,23 +126,33 @@ const progressDeg = (clampedLen / MAX_LEN) * 360;
 
 return (
   <LayoutGroup id="practice-morph">
-    <div className="page" style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
- <AnimatePresence initial={false}>
-  {!expanded && (
-    <motion.div
-      layout
-      initial={{ opacity: 1, height: "auto" }}
-      exit={{ opacity: 0, height: 0 }}
-      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-      style={{ overflow: "hidden" }}
-    >
-      {/* Page header */}
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "8px 16px 14px" }}>
-        <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Practice</div>
-      </div>
-    </motion.div>
-  )}
-</AnimatePresence>
+    <div className="page" style={{ minHeight: "100vh", position: "relative", background: "var(--bg)", color: "var(--text)" }}>
+{/* Header (overlay) */}
+<motion.div
+  initial={false}
+  animate={{ opacity: expanded ? 0 : 1 }}
+  transition={{ duration: expanded ? 0.18 : 0.12, ease: [0.22, 1, 0.36, 1] }}
+  style={{
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    pointerEvents: expanded ? "none" : "auto",
+  }}
+>
+  <div style={{ maxWidth: 720, margin: "0 auto", padding: "8px 16px 14px" }}>
+    <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Practice</div>
+  </div>
+</motion.div>
+
+{/* Spacer (this is what actually moves the content up smoothly) */}
+<motion.div
+  initial={false}
+  animate={{ height: expanded ? 0 : 68 }}
+  transition={{ duration: expanded ? 1.15 : 0.80, ease: [0.22, 1, 0.36, 1] }}
+  style={{ overflow: "hidden" }}
+/>
+
 
 
       {/* Cards */}
