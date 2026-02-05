@@ -59,11 +59,15 @@ function ControlSelect(props) {
         "focus:ring-2 focus:ring-[rgba(33,150,243,.35)]",
         props.className || "",
       ].join(" ")}
-     style={{
+    style={{
   background: "#2196F3",
   color: "white",
   border: "none",
+  appearance: "none",
+  WebkitAppearance: "none",
+  MozAppearance: "none",
 }}
+
 
     />
   );
@@ -189,20 +193,16 @@ export default function Settings() {
             <Row label="Volume">
               <div className="flex items-center gap-3">
                 <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={volumeVal}
-                  onChange={(e) => setS({ ...s, volume: Number(e.target.value) })}
-                  className="w-56"
-               style={{
-  accentColor: "#2196F3",
-  background: "linear-gradient(to right, #2196F3 0%, #2196F3 " + (volumeVal * 100) + "%, #ffffff " + (volumeVal * 100) + "%, #ffffff 100%)",
-}}
+  type="range"
+  min="0"
+  max="1"
+  step="0.01"
+  value={volumeVal}
+  onChange={(e) => setS({ ...s, volume: Number(e.target.value) })}
+  className="w-56 range-blue-white"
+  style={{ accentColor: "#2196F3" }}
+/>
 
-
-                />
                 <span className="w-12 text-right" style={{ color: "var(--muted)" }}>
                   {Math.round(volumeVal * 100)}%
                 </span>
@@ -248,18 +248,18 @@ export default function Settings() {
             </Row>
 
             <div className="mt-3">
-              <button
+           <button
   onClick={clearLocalData}
-className=""
-style={{
-  background: "#2196F3",
-  color: "white",
-  border: "none",
-}}
-
+  className="btn btn-ghost"
+  style={{
+    background: "#2196F3",
+    borderColor: "transparent",
+    color: "white",
+  }}
 >
   <Trash2 className="h-4 w-4" /> Clear cached data
 </button>
+
 
             </div>
           </Section>

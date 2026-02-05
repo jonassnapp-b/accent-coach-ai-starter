@@ -844,3 +844,54 @@ input, textarea, select {
 @media (max-width: 520px){
   .pf-embed-wrap{ padding: 0 10px; }  /* prøv 10px */
 }
+
+/* Settings volume slider: left = blue, right = white */
+.range-blue-white {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: #ffffff; /* fallback track */
+}
+
+/* WebKit track */
+.range-blue-white::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+/* WebKit thumb */
+.range-blue-white::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #2196F3;
+  border: none;
+  margin-top: -6px; /* centers thumb on 6px track */
+}
+
+/* Firefox track */
+.range-blue-white::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+/* Firefox filled (left side) */
+.range-blue-white::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: #2196F3;
+}
+
+/* Firefox thumb */
+.range-blue-white::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #2196F3;
+  border: none;
+}
