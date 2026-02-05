@@ -66,7 +66,7 @@ export default function AiChat() {
     <div
       style={{
         minHeight: "100vh",
-        color: "white",
+        color: "rgba(17,24,39,0.92)", // næsten sort
         background: "transparent",
         paddingBottom: 88,
       }}
@@ -85,8 +85,8 @@ export default function AiChat() {
               borderRadius: 999,
               border: "1px solid rgba(255,255,255,0.10)",
               background: "rgba(255,255,255,0.06)",
-              color: "rgba(255,255,255,0.85)",
-              display: "grid",
+          color: "rgba(17,24,39,0.85)",
+                        display: "grid",
               placeItems: "center",
               fontSize: 18,
             }}
@@ -114,8 +114,7 @@ export default function AiChat() {
     style={{
       fontSize: 16,
       fontWeight: 900,
-      color: "rgba(255,255,255,0.55)",
-    }}
+  color: "rgba(17,24,39,0.55)",    }}
   >
     {completedInLevel}/{totalInLevel}
   </div>
@@ -169,10 +168,10 @@ fontSize: 30,
 
                       {/* right text */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 22, fontWeight: 950, color: "rgba(255,255,255,0.82)" }}>
+                        <div style={{ fontSize: 22, fontWeight: 950, color: "rgba(17,24,39,0.92)" }}>
                           {s.title}
                         </div>
-                        <div style={{ marginTop: 4, fontSize: 14, fontWeight: 800, color: "rgba(255,255,255,0.50)" }}>
+                        <div style={{ marginTop: 4, fontSize: 14, fontWeight: 800, color: "rgba(17,24,39,0.55)" }}>
                           {s.subtitle}
                         </div>
                       </div>
