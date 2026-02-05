@@ -11,11 +11,11 @@ function Row({ label, children, hint }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 py-3">
       <div className="sm:min-w-[220px]">
-        <div className="font-medium" style={{ color: "var(--text)" }}>
+        <div className="font-medium" style={{ color: "white" }}>
           {label}
         </div>
         {hint ? (
-          <div className="text-sm" style={{ color: "var(--muted)" }}>
+          <div className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
             {hint}
           </div>
         ) : null}
@@ -43,7 +43,17 @@ function Section({ title, children }) {
       </div>
 
       {/* card */}
-      <div className="rounded-2xl panel">{children}</div>
+      <div
+  className="rounded-2xl"
+  style={{
+    background: "#2196f3",
+    padding: 16,
+    color: "white",
+    boxShadow: "0 12px 28px rgba(33,150,243,0.35)",
+  }}
+>
+  {children}
+</div>
     </div>
   );
 }
@@ -263,7 +273,7 @@ export default function Settings() {
     style={{
       borderRadius: 28,
       padding: 22,
-      background: "linear-gradient(180deg, #1B2237 0%, #151B2E 100%)",
+      background: "#2196f3",
       border: "1px solid rgba(255,255,255,0.08)",
       boxShadow: "0 18px 40px rgba(0,0,0,0.25)",
     }}
