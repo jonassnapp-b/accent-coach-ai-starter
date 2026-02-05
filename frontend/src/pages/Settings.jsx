@@ -229,36 +229,119 @@ export default function Settings() {
             </div>
           </Section>
 
-          {/* Report a problem (unchanged) */}
-          <Section title="Report a problem">
-            <Row label="Tell us what went wrong" hint="Include what you tried and what you expected to happen.">
-              <div className="grid gap-2">
-                <textarea
-                  value={fb}
-                  onChange={(e) => setFb(e.target.value)}
-                  rows={4}
-                  className="w-full rounded-xl p-3 outline-none focus:ring-2 focus:ring-[rgba(33,150,243,.35)]"
-                  style={{
-                    background: "var(--panel-bg)",
-                    color: "var(--panel-text)",
-                    border: "1px solid var(--panel-border)",
-                  }}
-                  placeholder="Describe the issue…"
-                />
+          {/* Feedback & Support (new design) */}
+<div className="grid gap-3">
+  {/* heading OUTSIDE the card (like screenshot 1) */}
+  <div
+    style={{
+      letterSpacing: "0.14em",
+      textTransform: "uppercase",
+      fontWeight: 900,
+      fontSize: 13,
+      color: "var(--muted)",
+      paddingLeft: 6,
+    }}
+  >
+    Feedback and Support
+  </div>
 
-                <div className="flex items-center gap-2">
-                  <button onClick={sendFeedback} disabled={!fb.trim() || fbSending} className="btn btn-primary disabled:opacity-60">
-                    <Send className="h-4 w-4" /> {fbSending ? "Sending…" : "Send feedback"}
-                  </button>
-                  {fbMsg ? (
-                    <div className="text-sm" style={{ color: "var(--muted)" }}>
-                      {fbMsg}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </Row>
-          </Section>
+  {/* dark card */}
+  <div
+    style={{
+      borderRadius: 28,
+      padding: 22,
+      background: "linear-gradient(180deg, #1B2237 0%, #151B2E 100%)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      boxShadow: "0 18px 40px rgba(0,0,0,0.25)",
+    }}
+  >
+    <div
+      style={{
+        fontSize: 44,
+        lineHeight: 1.02,
+        fontWeight: 950,
+        letterSpacing: -0.8,
+        color: "white",
+        textAlign: "center",
+        marginTop: 6,
+      }}
+    >
+      We’d love to hear
+      <br />
+      from you
+    </div>
+
+    <div
+      style={{
+        marginTop: 18,
+        color: "rgba(255,255,255,0.70)",
+        fontWeight: 650,
+        fontSize: 16,
+        lineHeight: 1.55,
+      }}
+    >
+      I’m Jonas — the creator of Accent Coach AI. Like you, I’m a non-native English speaker, so I care a lot about making
+      practice feel simple, honest, and actually useful.
+      <br />
+      <br />
+      If something feels confusing, broken, or you have an idea that would make the app better, write it here and I’ll read
+      it.
+    </div>
+
+    {/* input */}
+    <div style={{ marginTop: 18 }}>
+      <textarea
+        value={fb}
+        onChange={(e) => setFb(e.target.value)}
+        rows={4}
+        placeholder="Describe the issue…"
+        className="w-full outline-none"
+        style={{
+          borderRadius: 18,
+          padding: 14,
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          color: "rgba(255,255,255,0.92)",
+          resize: "vertical",
+        }}
+      />
+    </div>
+
+    {/* button */}
+    <div style={{ marginTop: 14, display: "grid", gap: 10, justifyItems: "center" }}>
+      <button
+        type="button"
+        onClick={sendFeedback}
+        disabled={!fb.trim() || fbSending}
+        style={{
+          width: "100%",
+          maxWidth: 520,
+          height: 64,
+          borderRadius: 999,
+          border: "none",
+          background: "#5B6CFF",
+          color: "white",
+          fontWeight: 950,
+          fontSize: 20,
+          cursor: !fb.trim() || fbSending ? "not-allowed" : "pointer",
+          opacity: !fb.trim() || fbSending ? 0.55 : 1,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+        }}
+      >
+        <Send className="h-5 w-5" />
+        {fbSending ? "Sending…" : "Contact Us"}
+      </button>
+
+      {fbMsg ? (
+        <div style={{ color: "rgba(255,255,255,0.72)", fontWeight: 800, fontSize: 13 }}>{fbMsg}</div>
+      ) : null}
+    </div>
+  </div>
+</div>
+
         </div>
       </div>
     </div>
