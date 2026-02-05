@@ -1812,7 +1812,7 @@ const pickerCenter = {
 
   return (
     <div className="page" style={{ minHeight: "100vh", background: LIGHT_BG, color: LIGHT_TEXT }}>
-      <div className="mx-auto w-full" style={{ maxWidth: 720, padding: "14px 12px 8px" }}>
+<div className="mx-auto w-full" style={{ maxWidth: 720, padding: "14px 12px 28px" }}>
         <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: LIGHT_TEXT }}>Talk Coach</div>
       </div>
 

@@ -67,7 +67,7 @@ export default function AiChat() {
       style={{
         minHeight: "100vh",
         color: "white",
-        background: "radial-gradient(1200px 800px at 20% 0%, rgba(99,102,241,0.45), transparent 55%), radial-gradient(900px 600px at 80% 10%, rgba(236,72,153,0.35), transparent 55%), #070A12",
+        background: "transparent",
         paddingBottom: 88,
       }}
     >
@@ -523,9 +523,8 @@ if (ai?.nextUserLine) {
         position: "fixed",
         inset: 0,
         zIndex: 9999,
-        background:
-          "radial-gradient(1200px 800px at 20% 0%, rgba(99,102,241,0.45), transparent 55%), radial-gradient(900px 600px at 80% 10%, rgba(236,72,153,0.35), transparent 55%), #070A12",
-        padding: 12,
+        background: "transparent",
+          padding: 12,
         paddingBottom: 24,
       }}
     >
