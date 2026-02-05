@@ -16,7 +16,7 @@ export default function Practice() {
   const [collapsedReady, setCollapsedReady] = useState(true);
 // Show collapsed icon/title slightly BEFORE the close animation fully finishes
 const CLOSE_DURATION_MS = 800; // matches your "expanded ? 1.15 : 0.80" close duration
-const COLLAPSED_REVEAL_EARLY_MS = 360; // how much earlier it should appear
+const COLLAPSED_REVEAL_EARLY_MS = 400; // how much earlier it should appear
 const closeRevealTimerRef = React.useRef(null);
 
   const [kb, setKb] = useState(0);
@@ -222,9 +222,9 @@ transition={{
     opacity: collapsedReady ? 1 : 0,
     y: collapsedReady ? 0 : 3,
   }}
-  transition={{
-  opacity: { duration: collapsedReady ? 0.48 : 0.14, ease: [0.22, 1, 0.36, 1] },
-  y: { duration: collapsedReady ? 0.48 : 0.14, ease: [0.22, 1, 0.36, 1] },
+ transition={{
+  opacity: { duration: collapsedReady ? 0.60 : 0.14, ease: [0.22, 1, 0.36, 1] },
+  y: { duration: collapsedReady ? 0.60 : 0.14, ease: [0.22, 1, 0.36, 1] },
 }}
   style={{ pointerEvents: collapsedReady ? "auto" : "none" }}
 >
