@@ -217,7 +217,7 @@ function AccentDropdown({ value, onChange }) {
 >
 
         <span className="text-base">{current.flag}</span>
-        <span className="font-semibold">{current.label}</span>
+        <span style={{ fontWeight: 800 }}>{current.label}</span>
         <ChevronDown className="h-4 w-4 opacity-70" />
       </button>
 
@@ -542,7 +542,7 @@ function trainPhoneme(rawPhoneme) {
   onChange={(e) => setSortBy(e.target.value)}
   className="select-pill"
   title="Sort"
-  style={{ background: "#2196F3", color: "white" }}
+  style={{ background: "#2196F3", color: "white", fontWeight: 800 }}
 >
               <option value="lowest">Sort: Lowest score</option>
               <option value="attempts">Sort: Most attempts</option>
