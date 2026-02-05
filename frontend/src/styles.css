@@ -224,8 +224,8 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   right: 0;
   bottom: 0;
 
-  /* ✅ one-row bar, safe-area handled cleanly */
-  height: calc(64px + env(safe-area-inset-bottom));
+  height: auto;
+  min-height: 64px;
   padding-bottom: env(safe-area-inset-bottom);
   box-sizing: border-box;
 
@@ -233,11 +233,12 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   border-top: 1px solid var(--tabbar-border);
 
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
- /* ✅ you have 5 tabs */
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 64px;
   align-items: center;
   z-index: 50;
 }
+
 
 
 .tabbtn {
