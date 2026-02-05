@@ -14,11 +14,33 @@ export default function Practice() {
   const [text, setText] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [collapsedReady, setCollapsedReady] = useState(true);
+// Show collapsed icon/title slightly BEFORE the close animation fully finishes
+const CLOSE_DURATION_MS = 800; // matches your "expanded ? 1.15 : 0.80" close duration
+const COLLAPSED_REVEAL_EARLY_MS = 140; // how much earlier it should appear
+const closeRevealTimerRef = React.useRef(null);
 
   const [kb, setKb] = useState(0);
 useEffect(() => {
-  if (expanded) setCollapsedReady(false);
+  // always clear any pending timer
+  if (closeRevealTimerRef.current) {
+    clearTimeout(closeRevealTimerRef.current);
+    closeRevealTimerRef.current = null;
+  }
+
+  if (expanded) {
+    // hiding collapsed header immediately when opening
+    setCollapsedReady(false);
+    return;
+  }
+
+  // when closing, reveal a bit before animation ends
+  const ms = Math.max(0, CLOSE_DURATION_MS - COLLAPSED_REVEAL_EARLY_MS);
+  closeRevealTimerRef.current = setTimeout(() => {
+    setCollapsedReady(true);
+    closeRevealTimerRef.current = null;
+  }, ms);
 }, [expanded]);
+
 
 useEffect(() => {
   if (!expanded) {
@@ -168,9 +190,10 @@ return (
   }}
   role="button"
   tabIndex={0}
-  onLayoutAnimationComplete={() => {
-  if (!expanded) setCollapsedReady(true);
+ onLayoutAnimationComplete={() => {
+  if (!expanded && !collapsedReady) setCollapsedReady(true);
 }}
+
 
 transition={{
   layout: { type: "tween", duration: expanded ? 1.15 : 0.80, ease: [0.22, 1, 0.36, 1] },
@@ -196,7 +219,7 @@ transition={{
       <motion.div
   initial={false}
   animate={{ opacity: collapsedReady ? 1 : 0 }}
-  transition={{ duration: 0.0, ease: [0.22, 1, 0.36, 1] }}
+  transition={{ duration: 0.06, ease: [0.22, 1, 0.36, 1] }}
   style={{ pointerEvents: collapsedReady ? "auto" : "none" }}
 >
   <div style={{ display: "flex", gap: 14, alignItems: "center" }}>        <div
