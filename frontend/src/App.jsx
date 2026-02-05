@@ -254,7 +254,12 @@ function AppInner() {
         fill={isActive ? "#2196F3" : "none"}
       />
     ) : (
-      <t.Icon className="tabicon" />
+      <t.Icon
+  className="tabicon"
+  fill="none"
+  stroke={location.pathname === t.path ? "#2196F3" : "currentColor"}
+  strokeWidth={2}
+/>
     )
   }
 </NavLink>
