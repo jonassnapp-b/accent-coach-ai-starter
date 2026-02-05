@@ -167,13 +167,13 @@ function Ring({ value = 0, size = 34, stroke = 6 }) {
 }
 
 /* ------------ local “hide” with auto-unhide rules ------------ */
-function hiddenKey(accent) {
-  return `ac_hidden_weakness_${accent || "en_us"}`;
+function hiddenKey() {
+  return "ac_hidden_weakness_all";
 }
 
-function loadHiddenMap(accent) {
+function loadHiddenMap() {
   try {
-    const raw = localStorage.getItem(hiddenKey(accent));
+    const raw = localStorage.getItem(hiddenKey());
     const obj = raw ? JSON.parse(raw) : {};
     if (!obj || typeof obj !== "object") return new Map();
     const m = new Map();
@@ -189,13 +189,14 @@ function loadHiddenMap(accent) {
   }
 }
 
-function saveHiddenMap(accent, map) {
+function saveHiddenMap(map) {
   try {
     const obj = {};
     for (const [k, v] of map.entries()) obj[k] = v;
-    localStorage.setItem(hiddenKey(accent), JSON.stringify(obj));
+    localStorage.setItem(hiddenKey(), JSON.stringify(obj));
   } catch {}
 }
+
 function AccentDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
 
@@ -282,68 +283,76 @@ export default function WeaknessLab() {
   const [err, setErr] = useState("");
 
   const [sortBy, setSortBy] = useState("lowest"); // lowest | attempts | az
-  const [hiddenMap, setHiddenMap] = useState(() => loadHiddenMap(defaultAccent));
+const [hiddenMap, setHiddenMap] = useState(() => loadHiddenMap());
 
-  useEffect(() => {
-    setHiddenMap(loadHiddenMap(accent));
-  }, [accent]);
 
-  async function load(a = accent) {
-    setErr("");
-    setLoading(true);
-    try {
-      const base = getApiBase();
-      const url = `${base}/api/weakness?accent=${encodeURIComponent(a)}`;
+ async function load() {
+  setErr("");
+  setLoading(true);
+  try {
+    const base = getApiBase();
+    const accents = ["en_us", "en_br"];
 
-      const r = await fetch(url, {
-        method: "GET",
-        cache: "no-store",
-        headers: { "Cache-Control": "no-cache" },
-      });
+    const results = await Promise.all(
+      accents.map(async (a) => {
+        const url = `${base}/api/weakness?accent=${encodeURIComponent(a)}`;
 
-      const json = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(json?.error || r.statusText || "Failed to load weakness data");
+        const r = await fetch(url, {
+          method: "GET",
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache" },
+        });
 
-      let arr = [];
-      if (Array.isArray(json)) arr = json;
-      else if (Array.isArray(json?.items)) arr = json.items;
-      else if (Array.isArray(json?.topWeaknesses)) {
-        arr = json.topWeaknesses.map((w) => ({
-          phoneme: w?.label,
-          avg: w?.avg,
-          count: w?.count,
-          accent: a,
-          best: w?.best ?? w?.bestScore ?? null,
-        }));
-      }
+        const json = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(json?.error || r.statusText || "Failed to load weakness data");
 
-      setItems(arr);
-    } catch (e) {
-      setErr(e?.message || String(e));
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
+        let arr = [];
+        if (Array.isArray(json)) arr = json;
+        else if (Array.isArray(json?.items)) arr = json.items;
+        else if (Array.isArray(json?.topWeaknesses)) {
+          arr = json.topWeaknesses.map((w) => ({
+            phoneme: w?.label,
+            avg: w?.avg,
+            count: w?.count,
+            accent: a,
+            best: w?.best ?? w?.bestScore ?? null,
+          }));
+        }
+
+        // ensure accent is present on each item
+        return arr.map((x) => ({ ...x, accent: String(x?.accent || a).toLowerCase() }));
+      })
+    );
+
+    setItems(results.flat());
+  } catch (e) {
+    setErr(e?.message || String(e));
+    setItems([]);
+  } finally {
+    setLoading(false);
   }
+}
 
-  useEffect(() => {
-    load(accent);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accent]);
 
-  useEffect(() => {
-    const onFocus = () => load(accent);
-    const onVis = () => {
-      if (document.visibilityState === "visible") load(accent);
-    };
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onVis);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accent]);
+useEffect(() => {
+  load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
+useEffect(() => {
+  const onFocus = () => load();
+  const onVis = () => {
+    if (document.visibilityState === "visible") load();
+  };
+  window.addEventListener("focus", onFocus);
+  document.addEventListener("visibilitychange", onVis);
+  return () => {
+    window.removeEventListener("focus", onFocus);
+    document.removeEventListener("visibilitychange", onVis);
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
 
   const normalized = useMemo(() => {
     const mapped = (items || []).map((x) => {
@@ -369,26 +378,42 @@ export default function WeaknessLab() {
     });
     // ✅ Merge local Coach/Imitate stats so they also appear in WeaknessLab.
     // We still only show phonemes that have attempts (>0).
-    const local = loadLocalPhonemeStats(accent);
+    const localUS = loadLocalPhonemeStats("en_us");
+const localBR = loadLocalPhonemeStats("en_br");
 
     // Convert local stats to same shape as server items:
     // - rawPhoneme must match your keys (no slashes)
-    const localItems = Object.entries(local || {}).map(([raw, v]) => {
-      const count = Number(v?.count) || 0;
-      const best = Number(v?.best) || 0;
-      const avg = Number(v?.avg) || 0;
+const localItems = [
+  ...Object.entries(localUS || {}).map(([raw, v]) => {
+    const count = Number(v?.count) || 0;
+    const best = Number(v?.best) || 0;
+    const avg = Number(v?.avg) || 0;
+    const usedPct = best > 0 ? best : avg;
 
-      // WeaknessLab uses best if present, otherwise avg
-      const usedPct = best > 0 ? best : avg;
+    return {
+      phoneme: formatPhoneme(raw),
+      rawPhoneme: String(raw || "").trim(),
+      pct: clamp(Number(usedPct) || 0, 0, 100),
+      count,
+      accent: "en_us",
+    };
+  }),
+  ...Object.entries(localBR || {}).map(([raw, v]) => {
+    const count = Number(v?.count) || 0;
+    const best = Number(v?.best) || 0;
+    const avg = Number(v?.avg) || 0;
+    const usedPct = best > 0 ? best : avg;
 
-      return {
-        phoneme: formatPhoneme(raw),
-        rawPhoneme: String(raw || "").trim(),
-        pct: clamp(Number(usedPct) || 0, 0, 100),
-        count,
-        accent: String(accent || "").toLowerCase(),
-      };
-    });
+    return {
+      phoneme: formatPhoneme(raw),
+      rawPhoneme: String(raw || "").trim(),
+      pct: clamp(Number(usedPct) || 0, 0, 100),
+      count,
+      accent: "en_br",
+    };
+  }),
+];
+
 
     // Merge server + local, summing counts and keeping best score
     const mergedMap = new Map();
@@ -410,12 +435,12 @@ export default function WeaknessLab() {
 
     const merged = Array.from(mergedMap.values());
 
-  const byAccent = merged.filter((m) => {
+const byAccent = merged.filter((m) => {
   if (!m.phoneme) return false;
   if ((Number(m.count) || 0) <= 0) return false; // ✅ only phonemes with attempts
-  if (!m.accent) return true;
-  return m.accent === String(accent || "").toLowerCase();
+  return true; // show across accents
 });
+
 
 
     let didAutoUnhide = false;
@@ -440,7 +465,7 @@ export default function WeaknessLab() {
     if (didAutoUnhide) {
       setTimeout(() => {
         setHiddenMap(nextHidden);
-        saveHiddenMap(accent, nextHidden);
+        saveHiddenMap(nextHidden);
       }, 0);
     }
 // Only show weak sounds (hide green)
@@ -502,7 +527,7 @@ function trainPhoneme(rawPhoneme) {
         countAtHide: Number(countNow) || 0,
         pctAtHide: Number(pctNow) || 0,
       });
-      saveHiddenMap(accent, next);
+      saveHiddenMap(next);
       return next;
     });
   }
@@ -510,7 +535,7 @@ function trainPhoneme(rawPhoneme) {
   function resetHidden() {
     const empty = new Map();
     setHiddenMap(empty);
-    saveHiddenMap(accent, empty);
+    saveHiddenMap(empty);
   }
 
   const hiddenCount = hiddenMap.size;
@@ -535,8 +560,7 @@ function trainPhoneme(rawPhoneme) {
         {/* Controls */}
         <div className="panel mt-4">
           <div className="flex flex-wrap items-center gap-2">
-            <AccentDropdown value={accent} onChange={setAccent} />
-
+            
             <select
   value={sortBy}
   onChange={(e) => setSortBy(e.target.value)}
