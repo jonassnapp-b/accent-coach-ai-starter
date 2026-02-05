@@ -27,7 +27,7 @@ function Row({ label, children, hint }) {
 
 function Section({ title, children }) {
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3" style={{ marginTop: 14 }}>
       {/* heading OUTSIDE the card */}
       <div
         style={{
@@ -154,7 +154,7 @@ export default function Settings() {
   return (
     <div className="page">
       <div className="mx-auto max-w-[1100px]">
-   {/* Fixed header (always visible while scrolling) */}
+{/* Fixed header (always visible while scrolling) */}
 <div
   style={{
     position: "fixed",
@@ -162,23 +162,22 @@ export default function Settings() {
     left: 0,
     right: 0,
     zIndex: 9999,
-    background: "rgba(255,255,255,0.92)",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
+    background: "#2196F3",
     borderBottom: "1px solid rgba(0,0,0,0.06)",
   }}
 >
-  <div className="mx-auto max-w-[1100px]" style={{ padding: "14px 16px 8px" }}>
+  <div className="mx-auto max-w-[1100px]" style={{ padding: "22px 16px 18px" }}>
     <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
       <div />
-      <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: "var(--text)" }}>Settings</div>
+      <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: "#FFFFFF" }}>Settings</div>
       <div />
     </div>
   </div>
 </div>
 
 {/* Spacer so content doesn't go under fixed header */}
-<div style={{ height: 58 }} />
+<div style={{ height: 86 }} />
+
 
 
 
