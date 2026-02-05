@@ -16,7 +16,7 @@ export default function Practice() {
   const [collapsedReady, setCollapsedReady] = useState(true);
 // Show collapsed icon/title slightly BEFORE the close animation fully finishes
 const CLOSE_DURATION_MS = 800; // matches your "expanded ? 1.15 : 0.80" close duration
-const COLLAPSED_REVEAL_EARLY_MS = 260; // how much earlier it should appear
+const COLLAPSED_REVEAL_EARLY_MS = 300; // how much earlier it should appear
 const closeRevealTimerRef = React.useRef(null);
 
   const [kb, setKb] = useState(0);
@@ -216,12 +216,16 @@ transition={{
     <>
       {/* COLLAPSED (dit nuværende card-indhold) */}
 
-      <motion.div
+     <motion.div
   initial={false}
-  animate={{ opacity: collapsedReady ? 1 : 0 }}
-  transition={{ duration: 0.06, ease: [0.22, 1, 0.36, 1] }}
+  animate={{
+    opacity: collapsedReady ? 1 : 0,
+    y: collapsedReady ? 0 : 6,
+  }}
+  transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
   style={{ pointerEvents: collapsedReady ? "auto" : "none" }}
 >
+
   <div style={{ display: "flex", gap: 14, alignItems: "center" }}>        <div
           style={{
             width: 54,
