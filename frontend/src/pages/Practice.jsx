@@ -163,9 +163,10 @@ return (
 }}
 
 transition={{
-  layout: { type: "spring", stiffness: 220, damping: 30, mass: 1.25 },
+  layout: { type: "tween", duration: 0.28, ease: [0.22, 1, 0.36, 1] },
   default: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
 }}
+
 
 
   style={{
@@ -187,7 +188,7 @@ transition={{
       <motion.div
   initial={false}
   animate={{ opacity: collapsedReady ? 1 : 0 }}
-  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+  transition={{ duration: 0.10, ease: [0.22, 1, 0.36, 1] }}
   style={{ pointerEvents: collapsedReady ? "auto" : "none" }}
 >
   <div style={{ display: "flex", gap: 14, alignItems: "center" }}>        <div
