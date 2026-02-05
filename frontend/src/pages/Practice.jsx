@@ -163,8 +163,8 @@ return (
 }}
 
 transition={{
-  layout: { type: "tween", duration: 0.80, ease: [0.22, 1, 0.36, 1] },
-  default: { duration: 0.80, ease: [0.22, 1, 0.36, 1] },
+  layout: { type: "tween", duration: expanded ? 1.15 : 0.80, ease: [0.22, 1, 0.36, 1] },
+  default: { duration: expanded ? 1.15 : 0.80, ease: [0.22, 1, 0.36, 1] },
 }}
 
   style={{
