@@ -286,7 +286,7 @@ export default function WeaknessLab() {
 const [hiddenMap, setHiddenMap] = useState(() => loadHiddenMap());
 
 
- async function load() {
+async function load() {
   setErr("");
   setLoading(true);
   try {
@@ -306,21 +306,17 @@ const [hiddenMap, setHiddenMap] = useState(() => loadHiddenMap());
         const json = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(json?.error || r.statusText || "Failed to load weakness data");
 
-        let arr = [];
-        if (Array.isArray(json)) arr = json;
-        else if (Array.isArray(json?.items)) arr = json.items;
-        else if (Array.isArray(json?.topWeaknesses)) {
-          arr = json.topWeaknesses.map((w) => ({
-            phoneme: w?.label,
-            avg: w?.avg,
-            count: w?.count,
-            accent: a,
-            best: w?.best ?? w?.bestScore ?? null,
-          }));
-        }
+        // Backend returns: { topWeaknesses: [{label,count,avg}, ...] }
+        const arr = Array.isArray(json?.topWeaknesses) ? json.topWeaknesses : [];
 
-        // ensure accent is present on each item
-        return arr.map((x) => ({ ...x, accent: String(x?.accent || a).toLowerCase() }));
+        // Convert to the shape your normalized() expects
+        return arr.map((w) => ({
+          phoneme: w?.label,
+          avg: w?.avg,
+          count: w?.count,
+          accent: a,
+          best: w?.best ?? w?.bestScore ?? null,
+        }));
       })
     );
 
@@ -543,22 +539,39 @@ function trainPhoneme(rawPhoneme) {
   return (
     <div className="page">
   <div className="mx-auto w-full max-w-[820px]">
-    <div style={{ padding: "14px 16px 8px" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
-        <div />
-        <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: "var(--text)" }}>
-          Train your weakest sounds
-        </div>
-        <div />
+  {/* Fixed header (always visible while scrolling) */}
+<div
+  style={{
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
+    background: "#2196F3",
+    borderBottom: "1px solid rgba(0,0,0,0.06)",
+  }}
+>
+  <div className="mx-auto w-full max-w-[820px]" style={{ padding: "22px 16px 18px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
+      <div />
+      <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: "#FFFFFF" }}>
+        Train your weakest sounds
       </div>
+      <div />
     </div>
+  </div>
+</div>
+
+{/* Spacer so content doesn't go under fixed header */}
+<div style={{ height: 68 }} />
+
 
 
 
 
 
         {/* Controls */}
-        <div className="panel mt-4">
+        <div className="panel">
           <div className="flex flex-wrap items-center gap-2">
             
             <select
