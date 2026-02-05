@@ -196,7 +196,7 @@ transition={{
       <motion.div
   initial={false}
   animate={{ opacity: collapsedReady ? 1 : 0 }}
-  transition={{ duration: 0.04, ease: [0.22, 1, 0.36, 1] }}
+  transition={{ duration: 0.0, ease: [0.22, 1, 0.36, 1] }}
   style={{ pointerEvents: collapsedReady ? "auto" : "none" }}
 >
   <div style={{ display: "flex", gap: 14, alignItems: "center" }}>        <div
