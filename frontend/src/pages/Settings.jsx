@@ -11,11 +11,11 @@ function Row({ label, children, hint }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 py-3">
       <div className="sm:min-w-[220px]">
-        <div className="font-medium" style={{ color: "white" }}>
+        <div className="font-medium" style={{ color: "var(--text)" }}>
           {label}
         </div>
         {hint ? (
-          <div className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+          <div className="text-sm" style={{ color: "var(--muted)" }}>
             {hint}
           </div>
         ) : null}
@@ -43,17 +43,7 @@ function Section({ title, children }) {
       </div>
 
       {/* card */}
-      <div
-  className="rounded-2xl"
-  style={{
-    background: "#2196f3",
-    padding: 16,
-    color: "white",
-    boxShadow: "0 12px 28px rgba(33,150,243,0.35)",
-  }}
->
-  {children}
-</div>
+      <div className="rounded-2xl panel">{children}</div>
     </div>
   );
 }
@@ -72,7 +62,7 @@ function ControlSelect(props) {
       style={{
         background: "var(--panel-bg)",
         color: "var(--panel-text)",
-        borderColor: "var(--panel-border)",
+        borderColor: "rgba(33,150,243,.65)",
       }}
     />
   );
@@ -159,7 +149,16 @@ export default function Settings() {
   return (
     <div className="page">
       <div className="mx-auto max-w-[1100px]">
-        <div style={{ padding: "14px 16px 8px" }}>
+        <div
+  style={{
+    position: "sticky",
+    top: 0,
+    zIndex: 50,
+    padding: "14px 16px 8px",
+    background: "rgba(255,255,255,0.85)",
+    backdropFilter: "blur(10px)",
+  }}
+>
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
             <div />
             <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: "var(--text)" }}>Settings</div>
@@ -196,6 +195,8 @@ export default function Settings() {
                   value={volumeVal}
                   onChange={(e) => setS({ ...s, volume: Number(e.target.value) })}
                   className="w-56"
+                  style={{ accentColor: "#2196F3" }}
+
                 />
                 <span className="w-12 text-right" style={{ color: "var(--muted)" }}>
                   {Math.round(volumeVal * 100)}%
@@ -243,12 +244,13 @@ export default function Settings() {
 
             <div className="mt-3">
               <button
-                onClick={clearLocalData}
-                className="btn btn-ghost text-red-600"
-                style={{ borderColor: "rgba(239,68,68,.35)" }}
-              >
-                <Trash2 className="h-4 w-4" /> Clear cached data
-              </button>
+  onClick={clearLocalData}
+  className="btn btn-ghost"
+  style={{ borderColor: "rgba(33,150,243,.45)", color: "#2196F3" }}
+>
+  <Trash2 className="h-4 w-4" /> Clear cached data
+</button>
+
             </div>
           </Section>
 
@@ -273,7 +275,7 @@ export default function Settings() {
     style={{
       borderRadius: 28,
       padding: 22,
-      background: "#2196f3",
+      background: "linear-gradient(180deg, #1B2237 0%, #151B2E 100%)",
       border: "1px solid rgba(255,255,255,0.08)",
       boxShadow: "0 18px 40px rgba(0,0,0,0.25)",
     }}
@@ -340,7 +342,7 @@ export default function Settings() {
           height: 64,
           borderRadius: 999,
           border: "none",
-          background: "#5B6CFF",
+          background: "#2196F3",
           color: "white",
           fontWeight: 950,
           fontSize: 20,
