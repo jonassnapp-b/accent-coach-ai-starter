@@ -209,11 +209,13 @@ function AccentDropdown({ value, onChange }) {
   return (
     <div className="relative">
       <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="select-pill inline-flex items-center gap-2"
-        title="Accent"
-      >
+  type="button"
+  onClick={() => setOpen((v) => !v)}
+  className="select-pill inline-flex items-center gap-2"
+  title="Accent"
+  style={{ background: "#2196F3", color: "white" }}
+>
+
         <span className="text-base">{current.flag}</span>
         <span className="font-semibold">{current.label}</span>
         <ChevronDown className="h-4 w-4 opacity-70" />
@@ -535,7 +537,13 @@ function trainPhoneme(rawPhoneme) {
           <div className="flex flex-wrap items-center gap-2">
             <AccentDropdown value={accent} onChange={setAccent} />
 
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="select-pill" title="Sort">
+            <select
+  value={sortBy}
+  onChange={(e) => setSortBy(e.target.value)}
+  className="select-pill"
+  title="Sort"
+  style={{ background: "#2196F3", color: "white" }}
+>
               <option value="lowest">Sort: Lowest score</option>
               <option value="attempts">Sort: Most attempts</option>
               <option value="az">Sort: A–Z</option>
@@ -543,13 +551,18 @@ function trainPhoneme(rawPhoneme) {
 
             <div className="flex-1" />
 
-            <button
-              onClick={resetHidden}
-              disabled={hiddenCount === 0}
-              className="btn btn-ghost btn-sm"
-              title={hiddenCount === 0 ? "No hidden phonemes" : "Restore hidden phonemes"}
-              style={{ opacity: hiddenCount === 0 ? 0.5 : 1 }}
-            >
+           <button
+  onClick={resetHidden}
+  disabled={hiddenCount === 0}
+  className="btn btn-ghost btn-sm"
+  title={hiddenCount === 0 ? "No hidden phonemes" : "Restore hidden phonemes"}
+  style={{
+    background: "#2196F3",
+    color: "white",
+    opacity: hiddenCount === 0 ? 0.5 : 1,
+  }}
+>
+
               Restore hidden{hiddenCount ? ` (${hiddenCount})` : ""}
             </button>
           </div>
