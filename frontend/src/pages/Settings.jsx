@@ -7,44 +7,43 @@ const FEEDBACK_EMAIL = "admin@fluentup.app";
 const APP_URL = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
 
 /* ---------- UI helpers ---------- */
-function Row({ label, children, hint, isLast = false }) {
+function Row({ label, children, hint }) {
   return (
-    <div
-      className={[
-        "grid gap-2",
-        "sm:grid-cols-[260px_1fr]",
-        "sm:items-center",
-        "py-4",
-        !isLast ? "border-b" : "",
-      ].join(" ")}
-      style={{ borderColor: "rgba(17,24,39,0.08)" }}
-    >
-      <div>
-        <div style={{ color: "var(--text)", fontWeight: 800, fontSize: 14 }}>{label}</div>
+    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 py-3">
+      <div className="sm:min-w-[220px]">
+        <div className="font-medium" style={{ color: "var(--text)" }}>
+          {label}
+        </div>
         {hint ? (
-          <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2, lineHeight: 1.35 }}>{hint}</div>
+          <div className="text-sm" style={{ color: "var(--muted)" }}>
+            {hint}
+          </div>
         ) : null}
       </div>
-
-      <div className="sm:flex sm:justify-end">{children}</div>
+      <div className="flex-1">{children}</div>
     </div>
   );
 }
 
-
 function Section({ title, children }) {
   return (
-    <div
-      style={{
-        background: "white",
-        borderRadius: 18,
-        padding: 18,
-        border: "1px solid rgba(17,24,39,0.06)",
-        boxShadow: "0 10px 24px rgba(15,23,42,0.06)",
-      }}
-    >
-      <div style={{ color: "var(--text)", fontWeight: 900, fontSize: 14, marginBottom: 10 }}>{title}</div>
-      {children}
+    <div className="grid gap-3">
+      {/* heading OUTSIDE the card */}
+      <div
+        style={{
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          fontWeight: 900,
+          fontSize: 13,
+          color: "var(--muted)",
+          paddingLeft: 6,
+        }}
+      >
+        {title}
+      </div>
+
+      {/* card */}
+      <div className="rounded-2xl panel">{children}</div>
     </div>
   );
 }
@@ -61,12 +60,10 @@ function ControlSelect(props) {
         props.className || "",
       ].join(" ")}
       style={{
-  background: "rgba(17,24,39,0.02)",
-  color: "var(--panel-text)",
-  borderColor: "rgba(17,24,39,0.10)",
-  boxShadow: "0 1px 0 rgba(17,24,39,0.02)",
-}}
-
+        background: "var(--panel-bg)",
+        color: "var(--panel-text)",
+        borderColor: "var(--panel-border)",
+      }}
     />
   );
 }
@@ -81,13 +78,11 @@ function ControlInput(props) {
         "focus:ring-2 focus:ring-[rgba(33,150,243,.35)]",
         props.className || "",
       ].join(" ")}
-    style={{
-  background: "rgba(17,24,39,0.02)",
-  color: "var(--panel-text)",
-  borderColor: "rgba(17,24,39,0.10)",
-  boxShadow: "0 1px 0 rgba(17,24,39,0.02)",
-}}
-
+      style={{
+        background: "var(--panel-bg)",
+        color: "var(--panel-text)",
+        borderColor: "var(--panel-border)",
+      }}
     />
   );
 }
@@ -153,7 +148,7 @@ export default function Settings() {
   /* ---------- Render ---------- */
   return (
     <div className="page">
-      <div className="mx-auto max-w-[820px]" style={{ padding: "0 14px 28px" }}>
+      <div className="mx-auto max-w-[1100px]">
         <div style={{ padding: "14px 16px 8px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
             <div />
@@ -164,12 +159,12 @@ export default function Settings() {
 
         <div className="h-2" />
 
-        <div className="grid gap-5">
+        <div className="grid gap-4">
          
 
           {/* Speaking */}
-          <Section title="Speaking">
-            <Row label="Default accent" hint="Used for IPA, target, and native TTS language." isLast>
+          <Section title="SPEAKING">
+            <Row label="Default accent" hint="Used for IPA, target, and native TTS language.">
               <div className="inline-flex items-center gap-2">
                 <ControlSelect value={s.accentDefault} onChange={(e) => setS({ ...s, accentDefault: e.target.value })}>
                   <option value="en_us">🇺🇸 American English (US)</option>
@@ -180,8 +175,8 @@ export default function Settings() {
           </Section>
 
           {/* Audio */}
-          <Section title="Audio">
-            <Row label="Volume" isLast>
+          <Section title="AUDIO">
+            <Row label="Volume">
               <div className="flex items-center gap-3">
                 <input
                   type="range"
@@ -200,7 +195,7 @@ export default function Settings() {
           </Section>
 
           {/* Privacy & data (unchanged) */}
-          <Section title="Privacy & data">
+          <Section title="PRIVACY & DATA">
             <Row
               label="Send audio to server"
               hint="Needed for cloud scoring. Turn off to keep audio on this device (some features will be disabled)."
@@ -212,11 +207,7 @@ export default function Settings() {
               />
             </Row>
 
-            <Row
-  label="Keep recordings locally"
-  hint="Store clips in this browser so you can replay them. Nothing is uploaded."
-  isLast
->
+            <Row label="Keep recordings locally" hint="Store clips in this browser so you can replay them. Nothing is uploaded.">
               <div className="flex flex-wrap items-center gap-3">
                 <input
                   type="checkbox"
