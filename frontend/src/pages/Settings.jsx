@@ -25,7 +25,7 @@ function Row({ label, children, hint }) {
   );
 }
 
-function Section({ title, children }) {
+function Section({ title, children, noPanel = false }) {
   return (
     <div className="grid gap-3" style={{ marginTop: 22 }}>
       {/* heading OUTSIDE the card */}
@@ -43,10 +43,11 @@ function Section({ title, children }) {
       </div>
 
       {/* card */}
-      <div className="rounded-2xl panel">{children}</div>
+      {noPanel ? children : <div className="rounded-2xl panel">{children}</div>}
     </div>
   );
 }
+
 
 
 function ControlSelect(props) {
@@ -275,7 +276,7 @@ export default function Settings() {
             </div>
           </Section>
 {/* Feedback & Support */}
-<Section title="FEEDBACK AND SUPPORT">
+<Section title="FEEDBACK AND SUPPORT" noPanel>
   <div
     style={{
       borderRadius: 28,
