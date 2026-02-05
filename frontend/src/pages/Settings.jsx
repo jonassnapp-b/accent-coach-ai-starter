@@ -59,11 +59,12 @@ function ControlSelect(props) {
         "focus:ring-2 focus:ring-[rgba(33,150,243,.35)]",
         props.className || "",
       ].join(" ")}
-      style={{
-        background: "var(--panel-bg)",
-        color: "var(--panel-text)",
-        borderColor: "rgba(33,150,243,.65)",
-      }}
+     style={{
+  background: "#2196F3",
+  color: "white",
+  border: "none",
+}}
+
     />
   );
 }
@@ -195,7 +196,11 @@ export default function Settings() {
                   value={volumeVal}
                   onChange={(e) => setS({ ...s, volume: Number(e.target.value) })}
                   className="w-56"
-                  style={{ accentColor: "#2196F3" }}
+               style={{
+  accentColor: "#2196F3",
+  background: "linear-gradient(to right, #2196F3 0%, #2196F3 " + (volumeVal * 100) + "%, #ffffff " + (volumeVal * 100) + "%, #ffffff 100%)",
+}}
+
 
                 />
                 <span className="w-12 text-right" style={{ color: "var(--muted)" }}>
@@ -245,8 +250,13 @@ export default function Settings() {
             <div className="mt-3">
               <button
   onClick={clearLocalData}
-  className="btn btn-ghost"
-  style={{ borderColor: "rgba(33,150,243,.45)", color: "#2196F3" }}
+className=""
+style={{
+  background: "#2196F3",
+  color: "white",
+  border: "none",
+}}
+
 >
   <Trash2 className="h-4 w-4" /> Clear cached data
 </button>
