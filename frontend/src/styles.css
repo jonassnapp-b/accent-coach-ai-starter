@@ -895,3 +895,57 @@ input, textarea, select {
   background: #2196F3;
   border: none;
 }
+
+/* Settings: range slider (left=blue, right=white) */
+input[type="range"].range-blue-white{
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  outline: none;
+  background: linear-gradient(
+    to right,
+    #2196F3 0%,
+    #2196F3 var(--pct, 50%),
+    #ffffff var(--pct, 50%),
+    #ffffff 100%
+  );
+}
+
+/* WebKit track */
+input[type="range"].range-blue-white::-webkit-slider-runnable-track{
+  height: 6px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+/* WebKit thumb */
+input[type="range"].range-blue-white::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #2196F3;
+  border: 0;
+  margin-top: -8px; /* center thumb on 6px track */
+}
+
+/* Firefox */
+input[type="range"].range-blue-white::-moz-range-track{
+  height: 6px;
+  border-radius: 999px;
+  background: #ffffff;
+}
+input[type="range"].range-blue-white::-moz-range-progress{
+  height: 6px;
+  border-radius: 999px;
+  background: #2196F3;
+}
+input[type="range"].range-blue-white::-moz-range-thumb{
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #2196F3;
+  border: 0;
+}

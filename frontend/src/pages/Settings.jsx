@@ -154,22 +154,24 @@ export default function Settings() {
   return (
     <div className="page">
       <div className="mx-auto max-w-[1100px]">
-        <div
+      <div
   style={{
     position: "sticky",
     top: 0,
-    zIndex: 50,
+    zIndex: 9999,
     padding: "14px 16px 8px",
-    background: "rgba(255,255,255,0.85)",
+    background: "rgba(255,255,255,0.92)",
     backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
   }}
 >
-          <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
-            <div />
-            <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: "var(--text)" }}>Settings</div>
-            <div />
-          </div>
-        </div>
+  <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
+    <div />
+    <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: "var(--text)" }}>Settings</div>
+    <div />
+  </div>
+</div>
+
 
         <div className="h-2" />
 
@@ -200,8 +202,9 @@ export default function Settings() {
   value={volumeVal}
   onChange={(e) => setS({ ...s, volume: Number(e.target.value) })}
   className="w-56 range-blue-white"
-  style={{ accentColor: "#2196F3" }}
+  style={{ "--pct": `${Math.round(volumeVal * 100)}%` }}
 />
+
 
                 <span className="w-12 text-right" style={{ color: "var(--muted)" }}>
                   {Math.round(volumeVal * 100)}%
@@ -282,13 +285,14 @@ export default function Settings() {
 
   {/* dark card */}
   <div
-    style={{
-      borderRadius: 28,
-      padding: 22,
-      background: "linear-gradient(180deg, #1B2237 0%, #151B2E 100%)",
-      border: "1px solid rgba(255,255,255,0.08)",
-      boxShadow: "0 18px 40px rgba(0,0,0,0.25)",
-    }}
+   style={{
+  borderRadius: 28,
+  padding: 22,
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.10)",
+  boxShadow: "0 18px 40px rgba(0,0,0,0.10)",
+}}
+
   >
     <div
       style={{
@@ -296,7 +300,7 @@ export default function Settings() {
         lineHeight: 1.02,
         fontWeight: 950,
         letterSpacing: -0.8,
-        color: "white",
+        color: "var(--text)",
         textAlign: "center",
         marginTop: 6,
       }}
@@ -309,7 +313,7 @@ export default function Settings() {
     <div
       style={{
         marginTop: 18,
-        color: "rgba(255,255,255,0.70)",
+        color: "var(--muted)",
         fontWeight: 650,
         fontSize: 16,
         lineHeight: 1.55,
@@ -330,13 +334,14 @@ export default function Settings() {
         placeholder="Describe the issue…"
         className="w-full outline-none"
         style={{
-          borderRadius: 18,
-          padding: 14,
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.10)",
-          color: "rgba(255,255,255,0.92)",
-          resize: "vertical",
-        }}
+  borderRadius: 18,
+  padding: 14,
+  background: "#FFFFFF",
+  border: "1px solid rgba(0,0,0,0.10)",
+  color: "var(--text)",
+  resize: "vertical",
+}}
+
       />
     </div>
 
