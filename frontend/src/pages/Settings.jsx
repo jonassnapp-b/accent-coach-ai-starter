@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Trash2, Send } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
-import { getReferralCount, getProStatus } from "../lib/api.js";
 
 const FEEDBACK_EMAIL = "admin@fluentup.app";
 const APP_URL = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
@@ -84,31 +83,9 @@ export default function Settings() {
   const [fbSending, setFbSending] = useState(false);
   const [fbMsg, setFbMsg] = useState("");
 
-  /* --- Referral + Pro --- */
-  const [referralCount, setReferralCount] = useState(0);
-  const [isPro, setIsPro] = useState(false);
 
 
-  useEffect(() => {
-    let id = localStorage.getItem("userId");
-    if (!id) {
-      id = "u_" + Math.random().toString(36).slice(2, 10);
-      localStorage.setItem("userId", id);
-    }
 
-    async function loadReferral() {
-      try {
-        const countRes = await getReferralCount(id);
-        const proRes = await getProStatus(id);
-        setReferralCount(countRes?.count || 0);
-        setIsPro(!!proRes?.isPro);
-      } catch (e) {
-
-        console.warn("[Settings] Referral load failed:", e);
-      }
-    }
-    loadReferral();
-  }, []);
 
   const clearLocalData = () => {
     if (!confirm("This will reset your settings and locally cached clips (if any). Continue?")) return;
@@ -170,22 +147,7 @@ export default function Settings() {
         <div className="h-2" />
 
         <div className="grid gap-4">
-          {/* --- Pro & Referral --- */}
-          <Section title="Pro & Referral">
-            <Row label="Your status">
-              <div className="text-sm" style={{ color: "var(--muted)" }}>
-                {isPro ? "✅ You have Pro access" : "Free plan"}
-              </div>
-            </Row>
-
-            <Row label="Invites sent">
-              <div className="text-sm" style={{ color: "var(--muted)" }}>
-                {referralCount} friend{referralCount === 1 ? "" : "s"} joined
-              </div>
-            </Row>
-
-           
-          </Section>
+         
 
           {/* Speaking */}
           <Section title="Speaking">

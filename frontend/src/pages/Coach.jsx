@@ -994,7 +994,25 @@ function onBack() {
       fd.append("refText", target);
       fd.append("accent", accentUi === "en_br" ? "en_br" : "en_us");
 
-      const r = await fetch(`${base}/api/analyze-speech`, { method: "POST", body: fd });
+const timeoutMs = 15000;
+const controller = new AbortController();
+const t = setTimeout(() => controller.abort(), timeoutMs);
+
+let r;
+try {
+  r = await fetch(`${base}/api/analyze-speech`, {
+    method: "POST",
+    body: fd,
+    signal: controller.signal,
+  });
+} catch (e) {
+  if (e?.name === "AbortError") {
+    throw new Error(`Analysis timed out after ${Math.round(timeoutMs / 1000)}s`);
+  }
+  throw e;
+} finally {
+  clearTimeout(t);
+}
       const json = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
       // ✅ Save Coach phoneme attempts locally so WeaknessLab includes them too
@@ -1101,15 +1119,27 @@ if (overall > 0 && overall <= 1) overall = overall * 100;
   setStatus("Try again (listen to the feedback) 🔁");
 }
 
-    } catch (e) {
-      setStatus(IS_PROD ? "Something went wrong. Try again." : e?.message || String(e));
-    } finally {
-      setIsAnalyzing(false);
-    }
-  }
+   } catch (e) {
+  const msg = e?.message || String(e);
+  const isTimeout = /timed out/i.test(msg);
+
+  setStatus(
+    isTimeout
+      ? "Analysis took too long. Try again."
+      : (IS_PROD ? "Something went wrong. Try again." : msg)
+  );
+} finally {
+  setIsAnalyzing(false);
+}
+
+} // ✅ CLOSE sendToServer
+
+/* ---------------- overlay data ---------------- */
+const words = useMemo(() => normalizeWordsFromResult(result, target), [result, target]);
+
+
 
   /* ---------------- overlay data ---------------- */
-  const words = useMemo(() => normalizeWordsFromResult(result, target), [result, target]);
   const isSentence = useMemo(() => (mode === "sentences") || (words?.length > 1), [mode, words?.length]);
 
  const maxIdx = Math.max(0, (words?.length || 1) - 1);
@@ -1782,43 +1812,8 @@ const pickerCenter = {
   return (
     <div className="page" style={{ minHeight: "100vh", background: LIGHT_BG, color: LIGHT_TEXT }}>
       <div className="mx-auto w-full" style={{ maxWidth: 720, padding: "14px 12px 8px" }}>
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "44px 1fr 44px",
-      alignItems: "center",
-    }}
-  >
-    <div />
-
-    <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: LIGHT_TEXT }}>
-      Talk Coach
-    </div>
-
-    <button
-      type="button"
-      onClick={onBack}
-      disabled={stage === "setup" || isBusy}
-      aria-label="Close"
-      style={{
-        width: 44,
-        height: 44,
-        borderRadius: 16,
-        border: `1px solid ${LIGHT_BORDER}`,
-        background: LIGHT_SURFACE,
-        display: "grid",
-        placeItems: "center",
-        cursor: stage === "setup" || isBusy ? "not-allowed" : "pointer",
-        opacity: stage === "setup" || isBusy ? 0.5 : 1,
-        color: LIGHT_TEXT,
-        justifySelf: "end",
-      }}
-    >
-      <ChevronDown className="h-6 w-6" />
-    </button>
-  </div>
-</div>
-
+        <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: LIGHT_TEXT }}>Talk Coach</div>
+      </div>
 
       <div
         className="mx-auto w-full"
