@@ -246,22 +246,15 @@ function AppInner() {
   }}
   className={({ isActive }) => "tabbtn" + (isActive ? " active" : "")}
 >
-  {({ isActive }) =>
-    t.path === "/settings" ? (
-      <t.Icon
-        className="tabicon"
-        stroke={isActive ? "#2196F3" : "currentColor"}
-        fill={isActive ? "#2196F3" : "none"}
-      />
-    ) : (
-      <t.Icon
-  className="tabicon"
-  fill="none"
-  stroke={location.pathname === t.path ? "#2196F3" : "currentColor"}
-  strokeWidth={2}
-/>
-    )
-  }
+ {({ isActive }) => (
+  <t.Icon
+    className="tabicon"
+    fill="none"
+    stroke={isActive ? "#2196F3" : "currentColor"}
+    strokeWidth={2}
+  />
+)}
+
 </NavLink>
 
           ))}
