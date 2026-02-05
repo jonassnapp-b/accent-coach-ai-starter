@@ -52,20 +52,29 @@ export default function Bookmarks() {
 >
   <div className="mx-auto w-full max-w-[720px] px-4" style={{ paddingTop: 22, paddingBottom: 18 }}>
     <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
-      <div>
-       style={{
-  borderRadius: 14,
-  padding: "10px 14px",
-  fontWeight: 900,
-  color: "white",
-  background: "rgba(255,255,255,0.18)",
-  border: "1px solid rgba(255,255,255,0.28)",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
-}}
+    <div>
+  <button
+    type="button"
+    onClick={() => navigate(-1)}
+    className="btn btn-ghost btn-sm"
+    style={{
+      borderRadius: 14,
+      padding: "10px 14px",
+      fontWeight: 900,
+      color: "white",
+      background: "rgba(255,255,255,0.18)",
+      border: "1px solid rgba(255,255,255,0.28)",
+      backdropFilter: "blur(10px)",
+      WebkitBackdropFilter: "blur(10px)",
+      boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
+    }}
+    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.26)")}
+    onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.18)")}
+  >
+    Back
+  </button>
+</div>
 
-      </div>
 
       <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: "#FFFFFF" }}>
         Bookmarks
