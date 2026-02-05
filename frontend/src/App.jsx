@@ -233,23 +233,32 @@ function AppInner() {
             {showTabs && (
         <nav className="tabbar">
           {TABS.map((t) => (
-            <NavLink
-              key={t.path}
-              to={t.path}
-              aria-label={t.label}
-              onMouseEnter={() => prefetchRoute(t.path)}
-              onTouchStart={() => prefetchRoute(t.path)}
-              // 👇 NYT: stempler et "user gesture" tidspunkt for Imitate/Speak
-              onClick={() => {
-              if (t.path === "/coach") {
-  sessionStorage.setItem("ac_last_nav_click", String(Date.now()));
-}
-              }}
-              className={({ isActive }) => "tabbtn" + (isActive ? " active" : "")}
-            >
-              <t.Icon className="tabicon" />
-              {/* <span className="tablabel">{t.label}</span> */}
-            </NavLink>
+           <NavLink
+  key={t.path}
+  to={t.path}
+  aria-label={t.label}
+  onMouseEnter={() => prefetchRoute(t.path)}
+  onTouchStart={() => prefetchRoute(t.path)}
+  onClick={() => {
+    if (t.path === "/coach") {
+      sessionStorage.setItem("ac_last_nav_click", String(Date.now()));
+    }
+  }}
+  className={({ isActive }) => "tabbtn" + (isActive ? " active" : "")}
+>
+  {({ isActive }) =>
+    t.path === "/settings" ? (
+      <t.Icon
+        className="tabicon"
+        stroke={isActive ? "#2196F3" : "currentColor"}
+        fill={isActive ? "#2196F3" : "none"}
+      />
+    ) : (
+      <t.Icon className="tabicon" />
+    )
+  }
+</NavLink>
+
           ))}
         </nav>
       )}

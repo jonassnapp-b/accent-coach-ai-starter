@@ -27,7 +27,7 @@ function Row({ label, children, hint }) {
 
 function Section({ title, children }) {
   return (
-    <div className="grid gap-3" style={{ marginTop: 14 }}>
+    <div className="grid gap-3" style={{ marginTop: 22 }}>
       {/* heading OUTSIDE the card */}
       <div
         style={{
@@ -176,7 +176,7 @@ export default function Settings() {
 </div>
 
 {/* Spacer so content doesn't go under fixed header */}
-<div style={{ height: 86 }} />
+<div style={{ height: 68 }} />
 
 
 
