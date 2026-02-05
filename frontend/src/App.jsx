@@ -246,14 +246,22 @@ function AppInner() {
   }}
   className={({ isActive }) => "tabbtn" + (isActive ? " active" : "")}
 >
- {({ isActive }) => (
-  <t.Icon
-    className="tabicon"
-    fill="none"
-    stroke={isActive ? "#2196F3" : "currentColor"}
-    strokeWidth={2}
-  />
-)}
+{({ isActive }) =>
+  t.path === "/settings" ? (
+    <span
+      className={"tabicon gear-mask" + (isActive ? " active" : "")}
+      aria-hidden
+    />
+  ) : (
+    <t.Icon
+      className="tabicon"
+      fill="none"
+      stroke={isActive ? "#2196F3" : "currentColor"}
+      strokeWidth={2}
+    />
+  )
+}
+
 
 </NavLink>
 

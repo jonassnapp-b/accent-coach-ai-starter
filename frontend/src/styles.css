@@ -949,3 +949,10 @@ input[type="range"].range-blue-white::-moz-range-thumb{
   background: #2196F3;
   border: 0;
 }
+
+/* Tabs: “fill gear teeth” when active (without filling the center hole) */
+.tabbtn.active .tabicon {
+  fill: #2196F3;            /* fills the gear shape */
+  fill-rule: evenodd;       /* keeps the inner hole unfilled */
+  stroke: #2196F3;
+}
