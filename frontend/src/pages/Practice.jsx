@@ -222,7 +222,7 @@ transition={{
     opacity: collapsedReady ? 1 : 0,
     y: collapsedReady ? 0 : 6,
   }}
-  transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
   style={{ pointerEvents: collapsedReady ? "auto" : "none" }}
 >
 
