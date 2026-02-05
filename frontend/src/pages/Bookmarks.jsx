@@ -37,37 +37,50 @@ export default function Bookmarks() {
 
   return (
     <div className="page">
-      <div className="mx-auto w-full max-w-[720px] px-4 py-5">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div
-            className="h-10 w-10 rounded-xl grid place-items-center"
-            style={{
-              background: "rgba(33,150,243,0.10)",
-              border: "1px solid rgba(33,150,243,0.18)",
-              color: "var(--text)",
-            }}
-            aria-hidden="true"
-          >
-            <Bookmark className="h-5 w-5" />
-          </div>
-          <h1 className="text-xl font-semibold" style={cText}>
-            Bookmarks
-          </h1>
-          <button
-  type="button"
- onClick={() => navigate(-1)}
-  className="btn btn-ghost btn-sm"
+      <div className="mx-auto w-full max-w-[720px] px-4">
+      {/* Fixed header (always visible while scrolling) */}
+<div
   style={{
-    borderRadius: 14,
-    padding: "10px 14px",
-    fontWeight: 900,
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
+    background: "#2196F3",
+    borderBottom: "1px solid rgba(0,0,0,0.06)",
   }}
 >
-  Back
-</button>
+  <div className="mx-auto w-full max-w-[720px] px-4" style={{ paddingTop: 22, paddingBottom: 18 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
+      <div>
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="btn btn-ghost btn-sm"
+          style={{
+            borderRadius: 14,
+            padding: "10px 14px",
+            fontWeight: 900,
+            color: "white",
+          }}
+        >
+          Back
+        </button>
+      </div>
 
-        </div>
+      <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: "#FFFFFF" }}>
+        Bookmarks
+      </div>
+
+      <div />
+    </div>
+  </div>
+</div>
+
+{/* Spacer so content doesn't go under fixed header */}
+<div style={{ height: 68 }} />
+
+<div className="h-2" />
 
         {/* Panel */}
         <div className="panel">
