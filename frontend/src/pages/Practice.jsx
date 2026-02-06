@@ -434,10 +434,11 @@ transition={{
           <div style={{ padding: `14px 0 calc(${safeBottom} + ${kb}px + 14px)` }}>
             <button
               type="button"
-              onClick={() => {
-  setExpanded(false);
+              onClick={(e) => {
+  e.stopPropagation();
   goPracticeMyText();
 }}
+
 
               disabled={!String(text || "").trim()}
               style={{
