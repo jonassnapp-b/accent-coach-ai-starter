@@ -202,11 +202,9 @@ export default function Settings() {
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
-    padding: "18px 16px 110px",
-    marginTop: 24, // 👈 ryk contentet længere ned
+    padding: "36px 16px 110px",
   }}
 >
-
 
     <div className="grid gap-4">
 
