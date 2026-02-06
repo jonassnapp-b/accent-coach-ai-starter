@@ -314,7 +314,7 @@ async function handleStop(rec) {
   setIsAnalyzing(true);
 
   try {
-    const refText = sanitizeTextForSubmit(text);
+    const refText = sanitizeTextForSubmit(text).slice(0, MAX_LEN);
     const base = getApiBase();
 
     const fd = new FormData();
@@ -609,7 +609,8 @@ transition={{
             <textarea
               autoFocus
               value={text}
-              onChange={(e) => setText(e.target.value.slice(0, MAX_LEN))}
+              onChange={(e) => setText(String(e.target.value || "").slice(0, MAX_LEN))}
+maxLength={MAX_LEN}
               placeholder="Start typing…"
               style={{
                 width: "100%",
