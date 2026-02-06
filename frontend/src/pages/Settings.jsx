@@ -159,7 +159,10 @@ export default function Settings() {
 
   /* ---------- Render ---------- */
   return (
-    <div className="page">
+    <div
+  className="page"
+  style={{ position: "relative" }}
+>
       <div className="mx-auto max-w-[720px]">
 
 
