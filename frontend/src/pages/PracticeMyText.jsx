@@ -268,14 +268,22 @@ export default function PracticeMyText() {
 
   const MAX_LEN = 220;
 
-  // Light tokens aligned with Coach
-const LIGHT_TEXT = "rgba(255,255,255,0.92)";
-const LIGHT_MUTED = "rgba(255,255,255,0.70)";
-const LIGHT_BORDER = "rgba(255,255,255,0.10)";
-  const LIGHT_SHADOW = "0 10px 24px rgba(0,0,0,0.06)";
-const LIGHT_SURFACE = "rgba(255,255,255,0.06)";
-  const LIGHT_BG = "#0B1220";
-  const SEND_PURPLE = "#8B5CF6";
+// Page (light) + header (dark) like your screenshot
+const PAGE_BG = "#EEF5FF";
+const PAGE_TEXT = "#0B1220";
+const PAGE_MUTED = "rgba(11,18,32,0.55)";
+const PAGE_BORDER = "rgba(11,18,32,0.10)";
+const PAGE_SURFACE = "rgba(255,255,255,0.88)";
+const PAGE_SHADOW = "0 10px 24px rgba(0,0,0,0.06)";
+
+const HEADER_BG = "#0B1220";
+const HEADER_TEXT = "rgba(255,255,255,0.92)";
+const HEADER_MUTED = "rgba(255,255,255,0.70)";
+const HEADER_BORDER = "rgba(255,255,255,0.12)";
+const HEADER_SURFACE = "rgba(255,255,255,0.10)";
+
+const SEND_PURPLE = "#8B5CF6";
+
 
   const TABBAR_OFFSET = 64;
   const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
@@ -283,13 +291,14 @@ const LIGHT_SURFACE = "rgba(255,255,255,0.06)";
 useEffect(() => {
   const prevBody = document.body.style.background;
   const prevHtml = document.documentElement.style.background;
-  document.body.style.background = LIGHT_BG;
-  document.documentElement.style.background = LIGHT_BG;
+  document.body.style.background = PAGE_BG;
+  document.documentElement.style.background = PAGE_BG;
   return () => {
     document.body.style.background = prevBody;
     document.documentElement.style.background = prevHtml;
   };
-}, [LIGHT_BG]);
+}, [PAGE_BG]);
+
 
   // keep SFX volume synced with settings (0 = mute)
   useEffect(() => {
@@ -726,16 +735,17 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
 
   }
 
-  return (
-    <div
-  className="page"
-  style={{
-    minHeight: "100dvh",
-    width: "100%",
-    background: LIGHT_BG,
-    color: LIGHT_TEXT,
-  }}
->
+ return (
+  <div
+    className="page"
+    style={{
+      minHeight: "100dvh",
+      width: "100%",
+      background: PAGE_BG,
+      color: PAGE_TEXT,
+    }}
+  >
+
      
 
 
@@ -756,7 +766,8 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
     zIndex: 20,
     paddingTop: `calc(${SAFE_TOP} + 14px)`,
     paddingBottom: 12,
-    background: LIGHT_BG,
+    background: HEADER_BG,
+color: HEADER_TEXT,
   }}
 >
   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -768,9 +779,10 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
         width: 44,
         height: 44,
         borderRadius: 16,
-        border: `1px solid ${LIGHT_BORDER}`,
-        background: LIGHT_SURFACE,
-        boxShadow: LIGHT_SHADOW,
+   border: `1px solid ${HEADER_BORDER}`,
+background: HEADER_SURFACE,
+boxShadow: PAGE_SHADOW,
+
         display: "grid",
         placeItems: "center",
         cursor: "pointer",
@@ -804,10 +816,11 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
           borderRadius: 16,
           padding: "0 12px",
           fontWeight: 900,
-          color: LIGHT_TEXT,
-          background: LIGHT_SURFACE,
-          border: `1px solid ${LIGHT_BORDER}`,
-          boxShadow: LIGHT_SHADOW,
+       color: HEADER_TEXT,
+background: HEADER_SURFACE,
+border: `1px solid ${HEADER_BORDER}`,
+boxShadow: PAGE_SHADOW,
+
           outline: "none",
           cursor: isBusy ? "not-allowed" : "pointer",
           appearance: "none",
@@ -826,7 +839,7 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
           right: 10,
           top: "50%",
           transform: "translateY(-50%)",
-          color: LIGHT_MUTED,
+          color: HEADER_MUTED,
           pointerEvents: "none",
         }}
       />
@@ -888,15 +901,16 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
   {!result ? (
     <div
       style={{
-        borderRadius: 22,
-        background: LIGHT_SURFACE,
-        border: `1px solid ${LIGHT_BORDER}`,
-        boxShadow: LIGHT_SHADOW,
-        padding: 14,
-        color: LIGHT_MUTED,
-        fontWeight: 900,
-        textAlign: "center",
-      }}
+  borderRadius: 22,
+  background: PAGE_SURFACE,
+  border: `1px solid ${PAGE_BORDER}`,
+  boxShadow: PAGE_SHADOW,
+  padding: 14,
+  color: PAGE_MUTED,
+  fontWeight: 900,
+  textAlign: "center",
+}}
+
     >
       No result yet.
     </div>
@@ -909,13 +923,14 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
         // ---------------- Slide 1: word/sentence -> % count-up -> line ----------------
         <div
           style={{
-            borderRadius: 22,
-            background: LIGHT_SURFACE,
-            border: `1px solid ${LIGHT_BORDER}`,
-            boxShadow: LIGHT_SHADOW,
-            padding: 18,
-            overflow: "hidden",
-          }}
+  borderRadius: 22,
+  background: PAGE_SURFACE,
+  border: `1px solid ${PAGE_BORDER}`,
+  boxShadow: PAGE_SHADOW,
+  padding: 18,
+  overflow: "hidden",
+}}
+
         >
           <div style={{ height: 120, position: "relative" }}>
             <div
@@ -962,7 +977,7 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
               marginTop: 6,
               textAlign: "center",
               fontWeight: 900,
-              color: LIGHT_MUTED,
+              color: PAGE_MUTED,
               opacity: introPhase >= 2 ? 1 : 0,
               transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
               transition: "all 650ms ease",
@@ -1014,12 +1029,13 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
         // ---------------- Playback slide ----------------
         <div
           style={{
-            borderRadius: 22,
-            background: LIGHT_SURFACE,
-            border: `1px solid ${LIGHT_BORDER}`,
-            boxShadow: LIGHT_SHADOW,
-            padding: 16,
-          }}
+  borderRadius: 22,
+  background: PAGE_SURFACE,
+  border: `1px solid ${PAGE_BORDER}`,
+  boxShadow: PAGE_SHADOW,
+  padding: 16,
+}}
+
         >
           <div style={{ fontWeight: 950, fontSize: 18, marginBottom: 12 }}>Playback</div>
 
@@ -1106,12 +1122,13 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
         // ---------------- Actions slide ----------------
         <div
           style={{
-            borderRadius: 22,
-            background: LIGHT_SURFACE,
-            border: `1px solid ${LIGHT_BORDER}`,
-            boxShadow: LIGHT_SHADOW,
-            padding: 16,
-          }}
+  borderRadius: 22,
+  background: PAGE_SURFACE,
+  border: `1px solid ${PAGE_BORDER}`,
+  boxShadow: PAGE_SHADOW,
+  padding: 16,
+}}
+
         >
           <div style={{ fontWeight: 950, fontSize: 18, marginBottom: 12 }}>Next</div>
 
@@ -1168,43 +1185,62 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
           </div>
         </div>
       )}
-     {!isPhonemeOverlay && (
-  <>
-    {/* Bottom chevrons */}
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
-      <button
-        type="button"
-        onClick={() => {
-          stopAllAudio();
-          goPrev();
-        }}
-        disabled={slideIdx <= 0}
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 16,
-          border: `1px solid ${LIGHT_BORDER}`,
-          background: slideIdx <= 0 ? "rgba(255,255,255,0.6)" : LIGHT_SURFACE,
-          boxShadow: LIGHT_SHADOW,
-          display: "grid",
-          placeItems: "center",
-          cursor: slideIdx <= 0 ? "not-allowed" : "pointer",
-          opacity: slideIdx <= 0 ? 0.5 : 1,
-        }}
-        aria-label="Previous"
-      >
-        <ChevronLeft className="h-6 w-6" />
-      </button>
+{!isPhonemeOverlay && (
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
+    <button
+      type="button"
+      onClick={() => {
+        stopAllAudio();
+        goPrev();
+      }}
+      disabled={slideIdx <= 0}
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 16,
+        border: `1px solid ${PAGE_BORDER}`,
+        background: slideIdx <= 0 ? "rgba(255,255,255,0.65)" : PAGE_SURFACE,
+        boxShadow: PAGE_SHADOW,
+        display: "grid",
+        placeItems: "center",
+        cursor: slideIdx <= 0 ? "not-allowed" : "pointer",
+        opacity: slideIdx <= 0 ? 0.5 : 1,
+      }}
+      aria-label="Previous"
+    >
+      <ChevronLeft className="h-6 w-6" />
+    </button>
 
-      <div style={{ fontWeight: 900, color: LIGHT_MUTED }}>
-        {slideIdx + 1} / {totalSlides}
-      </div>
-
-
-
+    <div style={{ fontWeight: 900, color: PAGE_MUTED }}>
+      {slideIdx + 1} / {totalSlides}
     </div>
-  </>
+
+    <button
+      type="button"
+      onClick={() => {
+        stopAllAudio();
+        goNext();
+      }}
+      disabled={slideIdx >= totalSlides - 1}
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 16,
+        border: `1px solid ${PAGE_BORDER}`,
+        background: slideIdx >= totalSlides - 1 ? "rgba(255,255,255,0.65)" : PAGE_SURFACE,
+        boxShadow: PAGE_SHADOW,
+        display: "grid",
+        placeItems: "center",
+        cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
+        opacity: slideIdx >= totalSlides - 1 ? 0.5 : 1,
+      }}
+      aria-label="Next"
+    >
+      <ChevronRight className="h-6 w-6" />
+    </button>
+  </div>
 )}
+
 
     </div>
   )}
