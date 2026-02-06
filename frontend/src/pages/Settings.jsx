@@ -162,10 +162,18 @@ export default function Settings() {
    <div
   className="page"
   style={{
-    position: "relative",
-    minHeight: "100vh",
-    background: "#2196F3",
-  }}
+  position: "relative",
+  minHeight: "100vh",
+  background: "#2196F3",
+
+  // ✅ same fix as Practice: kill page bottom padding from shell
+  paddingBottom: 0,
+
+  // ✅ allow sheet to stretch down
+  display: "flex",
+  flexDirection: "column",
+}}
+
 >
 {/* Force blue backdrop even if parent/shell paints background */}
 <div
@@ -178,7 +186,16 @@ export default function Settings() {
   }}
 />
 
-      <div className="mx-auto max-w-[720px]" style={{ position: "relative", zIndex: 1 }}>
+      <div
+  style={{
+    position: "relative",
+    zIndex: 1,
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+  }}
+>
+  <div className="mx-auto max-w-[720px]" style={{ width: "100%" }}>
 
 
 
@@ -198,13 +215,16 @@ export default function Settings() {
 {/* White sheet under blue header */}
 <div
   style={{
+    flex: 1, // ✅ fill down to tab bar
     background: "#FFFFFF",
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
-    padding: "36px 16px 110px",
+    padding: "36px 16px 16px",
+    paddingBottom: "calc(16px + var(--safe-bottom))",
   }}
 >
+
 
     <div className="grid gap-4">
 
@@ -398,9 +418,11 @@ export default function Settings() {
 </Section>
 
 
-        </div>
+               </div>
       </div>
     </div>
   </div>
+</div>
   );
 }
+
