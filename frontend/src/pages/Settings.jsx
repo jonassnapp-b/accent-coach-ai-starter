@@ -158,17 +158,21 @@ export default function Settings() {
   /* ---------- Render ---------- */
   return (
     <div className="page">
-      <div className="mx-auto max-w-[1100px]">
-<div style={{ maxWidth: 720, margin: "0 auto", padding: "8px 16px 14px" }}>
-  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Settings</div>
-</div>
+      <div className="mx-auto max-w-[720px]">
 
 
 
 
-        <div className="h-2" />
 
-        <div className="grid gap-4">
+      {/* Header (aligned with cards like Practice) */}
+  <div style={{ padding: "8px 16px 14px" }}>
+    <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Settings</div>
+  </div>
+
+  {/* Content (same padding as Practice cards) */}
+  <div style={{ padding: "0 16px 110px" }}>
+    <div className="grid gap-4">
+
          
 
           {/* Speaking */}
@@ -357,5 +361,6 @@ export default function Settings() {
         </div>
       </div>
     </div>
+  </div>
   );
 }
