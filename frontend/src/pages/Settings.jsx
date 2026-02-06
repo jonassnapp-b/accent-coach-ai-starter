@@ -159,29 +159,9 @@ export default function Settings() {
   return (
     <div className="page">
       <div className="mx-auto max-w-[1100px]">
-{/* Fixed header (always visible while scrolling) */}
-<div
-  style={{
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 9999,
-    background: "#2196F3",
-    borderBottom: "1px solid rgba(0,0,0,0.06)",
-  }}
->
-  <div className="mx-auto max-w-[1100px]" style={{ padding: "22px 16px 18px" }}>
-    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
-      <div />
-      <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: "#FFFFFF" }}>Settings</div>
-      <div />
-    </div>
-  </div>
+<div style={{ maxWidth: 720, margin: "0 auto", padding: "8px 16px 14px" }}>
+  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Settings</div>
 </div>
-
-{/* Spacer so content doesn't go under fixed header */}
-<div style={{ height: 68 }} />
 
 
 
