@@ -727,15 +727,23 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
   }
 
   return (
-    <div className="page" style={{ minHeight: "100dvh", background: LIGHT_BG, color: LIGHT_TEXT }}>
+    <div
+  className="page"
+  style={{
+    minHeight: "100dvh",
+    width: "100%",
+    background: LIGHT_BG,
+    color: LIGHT_TEXT,
+  }}
+>
      
 
 
 
       <div
         style={{
-      maxWidth: 520,
-          margin: "0 auto",
+      maxWidth: "100%",
+          margin: 0,
           padding: "0 16px",
           paddingBottom: `calc(${TABBAR_OFFSET}px + 24px + ${SAFE_BOTTOM})`,
         }}
@@ -1192,68 +1200,7 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
         {slideIdx + 1} / {totalSlides}
       </div>
 
-      {/* Bottom chevrons (inside phoneme overlay) */}
-<div
-  style={{
-    marginTop: 12,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  }}
->
-  <button
-    type="button"
-    onClick={() => {
-      stopAllAudio();
-      goPrev();
-    }}
-    disabled={slideIdx <= 1}
-    style={{
-      width: 44,
-      height: 44,
-      borderRadius: 16,
-      border: "1px solid rgba(255,255,255,0.12)",
-      background: slideIdx <= 1 ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.10)",
-      color: "white",
-      display: "grid",
-      placeItems: "center",
-      cursor: slideIdx <= 1 ? "not-allowed" : "pointer",
-      opacity: slideIdx <= 1 ? 0.45 : 1,
-    }}
-    aria-label="Previous"
-  >
-    <ChevronLeft className="h-6 w-6" />
-  </button>
 
-  <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.70)" }}>
-    {slideIdx + 1} / {totalSlides}
-  </div>
-
-  <button
-    type="button"
-    onClick={() => {
-      stopAllAudio();
-      goNext();
-    }}
-    disabled={slideIdx >= totalSlides - 1}
-    style={{
-      width: 44,
-      height: 44,
-      borderRadius: 16,
-      border: "1px solid rgba(255,255,255,0.12)",
-      background: slideIdx >= totalSlides - 1 ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.10)",
-      color: "white",
-      display: "grid",
-      placeItems: "center",
-      cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
-      opacity: slideIdx >= totalSlides - 1 ? 0.45 : 1,
-    }}
-    aria-label="Next"
-  >
-    <ChevronRight className="h-6 w-6" />
-  </button>
-</div>
 
     </div>
   </>
