@@ -112,24 +112,7 @@ export default function AiChat() {
               AI Chat
             </div>
 
-           <button
-  type="button"
-  style={{
-    width: 44,
-    height: 44,
-    borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.45)",
-    background: "#FFFFFF",                 // ✅ hvid baggrund
-    color: "rgba(17,24,39,0.92)",          // ✅ sort ikon
-    display: "grid",
-    placeItems: "center",
-    fontSize: 18,
-    cursor: "pointer",
-  }}
-  title="History"
->
-  ⏱
-</button>
+          
 
           </div>
 
