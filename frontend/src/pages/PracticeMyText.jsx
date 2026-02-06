@@ -901,19 +901,16 @@ boxShadow: PAGE_SHADOW,
   {!result ? (
     <div
       style={{
-  borderRadius: 22,
-  background: PAGE_SURFACE,
-  border: `1px solid ${PAGE_BORDER}`,
-  boxShadow: PAGE_SHADOW,
-  padding: 14,
-  color: PAGE_MUTED,
-  fontWeight: 900,
-  textAlign: "center",
-}}
-
+        paddingTop: 28,
+        paddingBottom: 12,
+        color: PAGE_MUTED,
+        fontWeight: 900,
+        textAlign: "center",
+      }}
     >
       No result yet.
     </div>
+
   ) : (
     <div style={{ position: "relative" }}>
      
@@ -921,17 +918,13 @@ boxShadow: PAGE_SHADOW,
       {/* Slide content */}
       {slideIdx === 0 ? (
         // ---------------- Slide 1: word/sentence -> % count-up -> line ----------------
-        <div
+               <div
           style={{
-  borderRadius: 22,
-  background: PAGE_SURFACE,
-  border: `1px solid ${PAGE_BORDER}`,
-  boxShadow: PAGE_SHADOW,
-  padding: 18,
-  overflow: "hidden",
-}}
-
+            paddingTop: 18,
+            paddingBottom: 10,
+          }}
         >
+
           <div style={{ height: 120, position: "relative" }}>
             <div
               style={{
@@ -992,51 +985,100 @@ boxShadow: PAGE_SHADOW,
           const s = weakPhonemeSlides[slideIdx - 1];
           const title = `${s.code} Sound`;
 
-          return (
+return (
   <div
     style={{
-      position: "fixed",
-      inset: 0,
-      height: "100dvh",
-      background: "#0B1220",
-      color: "white",
-      zIndex: 9999,
-      overflow: "hidden",
+      paddingTop: 18,
+      paddingBottom: 10,
     }}
   >
-    <div
+
+    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+      <div>
+        <div style={{ fontWeight: 950, fontSize: 18, lineHeight: 1.1 }}>{title}</div>
+        <div style={{ marginTop: 6, color: PAGE_MUTED, fontWeight: 850 }}>
+          Letters: <span style={{ color: PAGE_TEXT }}>{s.letters}</span>
+          {" • "}
+          Score: <span style={{ color: PAGE_TEXT }}>{s.score == null ? "—" : Math.round(s.score)}%</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setDeepDivePhoneme({ code: s.code, letters: s.letters });
+          setDeepDiveOpen(true);
+        }}
+        style={{
+          height: 40,
+          padding: "0 12px",
+          borderRadius: 14,
+          border: `1px solid ${PAGE_BORDER}`,
+          background: "rgba(33,150,243,0.10)",
+          boxShadow: PAGE_SHADOW,
+          fontWeight: 950,
+          cursor: "pointer",
+        }}
+      >
+        Tips
+      </button>
+    </div>
+
+        <div
       style={{
-        position: "relative",
+        marginTop: 12,
         maxWidth: 520,
-        margin: "0 auto",
-        width: "100%",
-        height: "100%",
-        paddingTop: `calc(${SAFE_TOP} + 14px)`,
-        paddingLeft: 16,
-        paddingRight: 16,
-        paddingBottom: `calc(14px + ${SAFE_BOTTOM})`,
-        display: "flex",
-        flexDirection: "column",
+        marginLeft: "auto",
+        marginRight: "auto",
       }}
     >
+
+      {s.mediaKind === "image" ? (
+        <img
+          src={s.mediaSrc}
+          alt={`${s.code} visual`}
+          style={{ width: "100%", display: "block" }}
+        />
+      ) : (
+        <video
+          key={s.mediaSrc}
+          src={s.mediaSrc}
+          playsInline
+          muted
+          autoPlay
+          loop
+          controls
+          style={{ width: "100%", display: "block" }}
+        />
+      )}
     </div>
+
+      <div
+      style={{
+        marginTop: 10,
+        color: PAGE_MUTED,
+        fontWeight: 850,
+        textAlign: "center",
+      }}
+    >
+      {getShortTipForPhoneme(s.code)}
+    </div>
+
   </div>
 );
+
 
         
         })()
       ) : slideIdx === 1 + weakPhonemeSlides.length ? (
         // ---------------- Playback slide ----------------
-        <div
+              <div
           style={{
-  borderRadius: 22,
-  background: PAGE_SURFACE,
-  border: `1px solid ${PAGE_BORDER}`,
-  boxShadow: PAGE_SHADOW,
-  padding: 16,
-}}
-
+            paddingTop: 10,
+            paddingBottom: 10,
+          }}
         >
+
           <div style={{ fontWeight: 950, fontSize: 18, marginBottom: 12 }}>Playback</div>
 
           <div style={{ display: "grid", gap: 10 }}>
@@ -1120,16 +1162,13 @@ boxShadow: PAGE_SHADOW,
         </div>
       ) : (
         // ---------------- Actions slide ----------------
-        <div
+                <div
           style={{
-  borderRadius: 22,
-  background: PAGE_SURFACE,
-  border: `1px solid ${PAGE_BORDER}`,
-  boxShadow: PAGE_SHADOW,
-  padding: 16,
-}}
-
+            paddingTop: 10,
+            paddingBottom: 10,
+          }}
         >
+
           <div style={{ fontWeight: 950, fontSize: 18, marginBottom: 12 }}>Next</div>
 
           <div style={{ display: "grid", gap: 10 }}>
