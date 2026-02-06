@@ -909,7 +909,7 @@ boxShadow: PAGE_SHADOW,
       position: "fixed",
       inset: 0,
       height: "100dvh",
-      background: "#0B1220",
+      background: "#2196F3",
       color: "white",
       zIndex: 9999,
       paddingTop: `calc(${SAFE_TOP} + 14px)`,
@@ -951,7 +951,7 @@ nav("/practice");
     <div
       style={{
         width: "100%",
-    maxWidth: 960,
+    maxWidth: 760,
         margin: "0 auto",
         display: "flex",
         flexDirection: "column",
@@ -967,7 +967,7 @@ nav("/practice");
     display: "flex",
     flexDirection: "column",
     justifyContent: slideIdx === 0 ? "center" : "flex-start",
-    paddingTop: slideIdx === 0 ? 0 : 72, // mere space over overskriften på Playback/andre slides
+    paddingTop: slideIdx === 0 ? 0 : 38, // mere space over overskriften på Playback/andre slides
     paddingBottom: 12,
   }}
 >
@@ -986,7 +986,7 @@ nav("/practice");
             transition: "all 900ms ease",
             textAlign: "center",
             fontWeight: 950,
-            fontSize: 44,
+            fontSize: 84,
             letterSpacing: -0.4,
             color: scoreColor(overallScore),
             textShadow: "0 12px 40px rgba(0,0,0,0.35)",
@@ -1006,7 +1006,7 @@ nav("/practice");
             transition: "all 800ms ease",
             textAlign: "center",
             fontWeight: 950,
-            fontSize: 56,
+            fontSize: 84,
             letterSpacing: -0.8,
             color: scoreColor(overallScore),
             textShadow: "0 14px 46px rgba(0,0,0,0.38)",
@@ -1021,6 +1021,7 @@ nav("/practice");
           marginTop: 10,
           textAlign: "center",
           fontWeight: 900,
+          fontSize: 22,
           color: "rgba(255,255,255,0.72)",
           opacity: introPhase >= 2 ? 1 : 0,
           transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
@@ -1039,11 +1040,11 @@ nav("/practice");
       return (
         <>
           <div style={{ paddingRight: 60 }}>
-            <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>
+            <div style={{ fontSize: 42, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>
               {s.code} Sound
             </div>
 
-            <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35 }}>
+            <div style={{ marginTop: 8, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35, fontSize: 18 }}>
               {getShortTipForPhoneme(s.code)}
             </div>
           </div>
@@ -1051,7 +1052,7 @@ nav("/practice");
           <div
             style={{
               marginTop: 28,
-              maxWidth: 920,
+              
               width: "100%",
               marginLeft: "auto",
               marginRight: "auto",
@@ -1077,31 +1078,32 @@ nav("/practice");
             )}
           </div>
 
-          <div style={{ marginTop: "auto" }}>
-            <button
-              type="button"
-              onClick={() => {
-                setDeepDivePhoneme({ code: s.code, letters: s.letters });
-                setDeepDiveOpen(true);
-              }}
-              style={{
-                width: "100%",
-                height: 56,
-                borderRadius: 20,
-                border: "none",
-                background: "rgba(255,255,255,0.14)",
-                color: "white",
-                fontWeight: 900,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-              }}
-            >
-              Watch Deep Dive <span style={{ fontSize: 20, lineHeight: 0 }}>→</span>
-            </button>
-          </div>
+         <div style={{ marginTop: 16 }}>
+  <button
+    type="button"
+    onClick={() => {
+      setDeepDivePhoneme({ code: s.code, letters: s.letters });
+      setDeepDiveOpen(true);
+    }}
+    style={{
+      width: "100%",
+      height: 56,
+      borderRadius: 20,
+      border: "none",
+      background: "rgba(255,255,255,0.14)",
+      color: "white",
+      fontWeight: 900,
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+    }}
+  >
+    Watch Deep Dive <span style={{ fontSize: 20, lineHeight: 0 }}>→</span>
+  </button>
+</div>
+
         </>
       );
     })()
@@ -1305,9 +1307,9 @@ nav("/practice");
           disabled={slideIdx <= 0}
           aria-label="Previous"
           style={{
-         width: 64,
-height: 64,
-borderRadius: 24,
+         width: 52,
+height: 52,
+borderRadius: 20,
 
             border: "1px solid rgba(255,255,255,0.12)",
             background: "rgba(255,255,255,0.08)",
@@ -1317,13 +1319,13 @@ borderRadius: 24,
             opacity: slideIdx <= 0 ? 0.45 : 1,
           }}
         >
-<ChevronLeft className="h-8 w-8" />
+<ChevronLeft className="h-6 w-6" />
         </button>
 
      <div
   style={{
     fontWeight: 950,
-    fontSize: 22,
+    fontSize: 16,
     letterSpacing: -0.2,
     color: "rgba(255,255,255,0.78)",
   }}
@@ -1352,7 +1354,7 @@ borderRadius: 24,
             opacity: slideIdx >= totalSlides - 1 ? 0.45 : 1,
           }}
         >
-<ChevronRight className="h-7 w-7" />
+<ChevronRight className="h-6 w-6" />
         </button>
       </div>
     </div>
