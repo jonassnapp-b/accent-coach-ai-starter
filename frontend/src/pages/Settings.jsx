@@ -28,7 +28,8 @@ function Row({ label, children, hint }) {
 
 function Section({ title, children, noPanel = false }) {
   return (
-    <div className="grid gap-3" style={{ marginTop: 22 }}>
+    <div className="grid gap-3" style={{ marginTop: 0 }}>
+
       {/* heading OUTSIDE the card */}
       <div
         style={{
