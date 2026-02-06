@@ -903,7 +903,7 @@ boxShadow: PAGE_SHADOW,
   </button>
 )}
 
-  {isPhonemeOverlay && activePhonemeSlide && (
+ {isPhonemeOverlay && activePhonemeSlide && (
   <div
     style={{
       position: "fixed",
@@ -913,9 +913,9 @@ boxShadow: PAGE_SHADOW,
       color: "white",
       zIndex: 9999,
       paddingTop: `calc(${SAFE_TOP} + 14px)`,
-      paddingLeft: 18,
-      paddingRight: 18,
-      paddingBottom: `calc(18px + ${SAFE_BOTTOM})`,
+      paddingLeft: 16,
+      paddingRight: 16,
+      paddingBottom: `calc(14px + ${SAFE_BOTTOM})`,
       overflow: "hidden",
       display: "flex",
       flexDirection: "column",
@@ -944,71 +944,150 @@ boxShadow: PAGE_SHADOW,
       <X className="h-5 w-5" />
     </button>
 
-    {/* Title + description */}
-    <div style={{ paddingRight: 60 }}>
-      <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>
-        {activePhonemeSlide.code} Sound
-      </div>
-
-      <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35 }}>
-        {getShortTipForPhoneme(activePhonemeSlide.code)}
-      </div>
-    </div>
-
-    {/* Media */}
+    {/* Centered width like other pages */}
     <div
       style={{
-        marginTop: 16,
-        borderRadius: 24,
-        overflow: "hidden",
-        background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.10)",
-      }}
-    >
-      {activePhonemeSlide.mediaKind === "image" ? (
-        <img
-          src={activePhonemeSlide.mediaSrc}
-          alt={`${activePhonemeSlide.code} visual`}
-          style={{ width: "100%", display: "block" }}
-        />
-      ) : (
-        <video
-          key={activePhonemeSlide.mediaSrc}
-          src={activePhonemeSlide.mediaSrc}
-          playsInline
-          muted
-          autoPlay
-          loop
-          controls
-          style={{ width: "100%", display: "block" }}
-        />
-      )}
-    </div>
-
-    {/* Bottom button */}
-    <button
-      type="button"
-      onClick={() => {
-        setDeepDivePhoneme({ code: activePhonemeSlide.code, letters: activePhonemeSlide.letters });
-        setDeepDiveOpen(true);
-      }}
-      style={{
-        marginTop: "auto",
-        height: 56,
-        borderRadius: 20,
-        border: "none",
-        background: "rgba(255,255,255,0.14)",
-        color: "white",
-        fontWeight: 900,
-        cursor: "pointer",
+        width: "100%",
+        maxWidth: 720,
+        margin: "0 auto",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 10,
+        flexDirection: "column",
+        minHeight: 0,
+        flex: "1 1 auto",
       }}
     >
-      Watch Deep Dive <span style={{ fontSize: 20, lineHeight: 0 }}>→</span>
-    </button>
+      {/* Title + description */}
+      <div style={{ paddingRight: 60 }}>
+        <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>
+          {activePhonemeSlide.code} Sound
+        </div>
+
+        <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35 }}>
+          {getShortTipForPhoneme(activePhonemeSlide.code)}
+        </div>
+      </div>
+
+      {/* Media (keep it not crazy wide) */}
+      <div
+        style={{
+          marginTop: 16,
+          maxWidth: 680,
+          width: "100%",
+          marginLeft: "auto",
+          marginRight: "auto",
+          borderRadius: 24,
+          overflow: "hidden",
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.10)",
+        }}
+      >
+        {activePhonemeSlide.mediaKind === "image" ? (
+          <img
+            src={activePhonemeSlide.mediaSrc}
+            alt={`${activePhonemeSlide.code} visual`}
+            style={{ width: "100%", display: "block" }}
+          />
+        ) : (
+          <video
+            key={activePhonemeSlide.mediaSrc}
+            src={activePhonemeSlide.mediaSrc}
+            playsInline
+            muted
+            autoPlay
+            loop
+            controls
+            style={{ width: "100%", display: "block" }}
+          />
+        )}
+      </div>
+
+      {/* Bottom area: Deep Dive + chevrons */}
+      <div style={{ marginTop: "auto" }}>
+        <button
+          type="button"
+          onClick={() => {
+            setDeepDivePhoneme({ code: activePhonemeSlide.code, letters: activePhonemeSlide.letters });
+            setDeepDiveOpen(true);
+          }}
+          style={{
+            width: "100%",
+            height: 56,
+            borderRadius: 20,
+            border: "none",
+            background: "rgba(255,255,255,0.14)",
+            color: "white",
+            fontWeight: 900,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+          }}
+        >
+          Watch Deep Dive <span style={{ fontSize: 20, lineHeight: 0 }}>→</span>
+        </button>
+
+        {/* Chevrons (bottom) */}
+        <div
+          style={{
+            marginTop: 12,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              stopAllAudio();
+              goPrev();
+            }}
+            disabled={slideIdx <= 1}
+            aria-label="Previous"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(255,255,255,0.08)",
+              display: "grid",
+              placeItems: "center",
+              cursor: slideIdx <= 1 ? "not-allowed" : "pointer",
+              opacity: slideIdx <= 1 ? 0.45 : 1,
+            }}
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+
+          <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.72)" }}>
+            {slideIdx + 1} / {totalSlides}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              stopAllAudio();
+              goNext();
+            }}
+            disabled={slideIdx >= weakPhonemeSlides.length}
+            aria-label="Next"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(255,255,255,0.08)",
+              display: "grid",
+              placeItems: "center",
+              cursor: slideIdx >= weakPhonemeSlides.length ? "not-allowed" : "pointer",
+              opacity: slideIdx >= weakPhonemeSlides.length ? 0.45 : 1,
+            }}
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 )}
    
