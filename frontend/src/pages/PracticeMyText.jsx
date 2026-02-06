@@ -190,6 +190,25 @@ function pickShortLineFromScore(score) {
   return "Needs work.";
 }
 
+function fallbackLettersFromWord(wordText, phonemeIndex, phonemeCount) {
+  const w = String(wordText || "").trim();
+  if (!w) return "";
+
+  const n = Math.max(1, Number(phonemeCount) || 1);
+  const i = Math.max(0, Math.min(Number(phonemeIndex) || 0, n - 1));
+
+  // simple proportional slice across characters
+  const start = Math.floor((i * w.length) / n);
+  const end = Math.floor(((i + 1) * w.length) / n);
+
+  let chunk = w.slice(start, end).trim();
+
+  // ensure non-empty (e.g. short words)
+  if (!chunk) chunk = w.slice(start, start + 1).trim();
+  if (!chunk) chunk = w; // last fallback
+
+  return chunk;
+}
 
 function buildWeakPhonemeSlidesFromWords(wordsArr) {
   const slides = [];
@@ -211,7 +230,10 @@ function buildWeakPhonemeSlidesFromWords(wordsArr) {
       const media = resolvePhonemeMedia(code);
 if (!media?.src) continue;
 
-      const letters = getPhonemeLetters(p) || wordText || code;
+      const letters =
+  getPhonemeLetters(p) ||
+  fallbackLettersFromWord(wordText, i, ps.length) ||
+  code;
 
       slides.push({
         type: "phoneme",
@@ -228,6 +250,16 @@ mediaSrc: media.src,
   return slides;
 }
 
+const PHONEME_SHORT_TIPS = {
+  // examples (add more as you want)
+  OW: "Round your lips. Glide from open to rounded as the sound finishes.",
+  IY: "Spread your lips slightly. Keep your tongue high and forward.",
+  K: "Back of the tongue touches the soft palate. Release with a clean burst.",
+};
+function getShortTipForPhoneme(code) {
+  const c = String(code || "").toUpperCase();
+  return PHONEME_SHORT_TIPS[c] || "Focus on mouth shape and airflow for this sound.";
+}
 
 export default function PracticeMyText() {
   const nav = useNavigate();
@@ -260,6 +292,51 @@ export default function PracticeMyText() {
 
   const [refText, setRefText] = useState("");
   const [err, setErr] = useState("");
+{err && (
+  <div
+    style={{
+      marginTop: 10,
+      padding: "10px 12px",
+      borderRadius: 14,
+      background: "rgba(239,68,68,0.08)",
+      border: "1px solid rgba(239,68,68,0.18)",
+      color: "rgba(17,24,39,0.92)",
+      fontWeight: 800,
+      fontSize: 13,
+      lineHeight: 1.35,
+    }}
+  >
+    {err}
+  </div>
+)}
+
+{canRetryAnalyze && !isAnalyzing && (
+  <button
+    type="button"
+    onClick={() => {
+      const b = lastAudioBlobRef.current;
+      const u = lastAudioUrlRef.current;
+      if (!b || !u) return;
+
+      setErr("");
+      setCanRetryAnalyze(false);
+      setIsAnalyzing(true);
+      sendToServer(b, u);
+    }}
+    style={{
+      marginTop: 10,
+      width: "100%",
+      height: 46,
+      borderRadius: 16,
+      border: "none",
+      background: "rgba(33,150,243,0.14)",
+      fontWeight: 950,
+      cursor: "pointer",
+    }}
+  >
+    Retry analysis
+  </button>
+)}
 
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -268,6 +345,11 @@ export default function PracticeMyText() {
   const mediaRecRef = useRef(null);
   const chunksRef = useRef([]);
   const [lastUrl, setLastUrl] = useState(null);
+  const lastAudioBlobRef = useRef(null);
+const lastAudioUrlRef = useRef(null);
+
+const [canRetryAnalyze, setCanRetryAnalyze] = useState(false);
+
 
   const [result, setResult] = useState(null);
   // Load analysis result from Practice.jsx (via navigate state or sessionStorage)
@@ -544,10 +626,17 @@ const activeWeakItem = useMemo(() => {
     const type = chunks[0]?.type || rec?.mimeType || "audio/webm";
     const blob = new Blob(chunks, { type });
 
-    const localUrl = URL.createObjectURL(blob);
-    setLastUrl(localUrl);
-    setIsAnalyzing(true);
-    sendToServer(blob, localUrl);
+const localUrl = URL.createObjectURL(blob);
+setLastUrl(localUrl);
+
+// save for retry
+lastAudioBlobRef.current = blob;
+lastAudioUrlRef.current = localUrl;
+setCanRetryAnalyze(false);
+
+setIsAnalyzing(true);
+sendToServer(blob, localUrl);
+
   }
 
   async function startPronunciationRecord() {
@@ -593,8 +682,8 @@ const activeWeakItem = useMemo(() => {
 
       // hard timeout
       const controller = new AbortController();
-      const timeoutMs = 12000;
-      const t = setTimeout(() => controller.abort(), timeoutMs);
+    const timeoutMs = 12000; // keep your value
+const t = setTimeout(() => controller.abort(), timeoutMs);
 
       let r;
       let json = {};
@@ -649,13 +738,22 @@ const activeWeakItem = useMemo(() => {
       };
 
       setResult(payload);
-    } catch (e) {
-      if (!IS_PROD) setErr(e?.message || String(e));
-      else setErr("Something went wrong. Try again.");
-      if (canPlaySfx) sfx.softFail();
-    } finally {
-      setIsAnalyzing(false);
-    }
+  } catch (e) {
+  const isAbort = e?.name === "AbortError" || String(e?.message || "").toLowerCase().includes("timed out");
+
+  if (isAbort) {
+    setErr("Analysis timed out. Tap retry and try again.");
+    setCanRetryAnalyze(!!lastAudioBlobRef.current && !!lastAudioUrlRef.current);
+  } else {
+    if (!IS_PROD) setErr(e?.message || String(e));
+    else setErr("Something went wrong. Try again.");
+  }
+
+  if (canPlaySfx) sfx.softFail();
+} finally {
+  setIsAnalyzing(false);
+}
+
   }
 
   return (
@@ -857,21 +955,27 @@ const activeWeakItem = useMemo(() => {
 
           return (
             <div
-              style={{
-                background: "#0B1220",
-                borderRadius: 28,
-                padding: 18,
-                color: "white",
-                position: "relative",
-                overflow: "hidden",
-              }}
-            >
+  style={{
+    position: "fixed",
+    inset: 0,
+    background: "#0B1220",
+    color: "white",
+    zIndex: 9999,
+    paddingTop: `calc(${SAFE_TOP} + 14px)`,
+    paddingLeft: 18,
+    paddingRight: 18,
+    paddingBottom: `calc(18px + ${SAFE_BOTTOM})`,
+    overflowY: "auto",
+  }}
+>
+
               <button
                 type="button"
-                onClick={() => {
-                  stopAllAudio();
-                  goNext();
-                }}
+               onClick={() => {
+  stopAllAudio();
+  nav(-1);
+}}
+
                 aria-label="Close"
                 style={{
                   position: "absolute",
@@ -895,6 +999,10 @@ const activeWeakItem = useMemo(() => {
                 <div style={{ fontSize: 30, fontWeight: 950, letterSpacing: -0.4 }}>{title}</div>
                 <div style={{ marginTop: 6, color: "rgba(255,255,255,0.72)", fontWeight: 650 }}>
                   {s.code} • Score {s.score == null ? "—" : Math.round(s.score)}%
+                  <div style={{ marginTop: 10, color: "rgba(255,255,255,0.78)", fontSize: 16, lineHeight: 1.35 }}>
+  {getShortTipForPhoneme(s.code)}
+</div>
+
                 </div>
               </div>
 
@@ -920,6 +1028,34 @@ const activeWeakItem = useMemo(() => {
 </div>
 
               </div>
+              <button
+  type="button"
+  onClick={() => {
+    // simplest: open the phoneme asset as “deep dive”
+    try {
+      window.open(s.mediaSrc, "_blank", "noopener,noreferrer");
+    } catch {}
+  }}
+  style={{
+    marginTop: 18,
+    width: "100%",
+    height: 56,
+    borderRadius: 18,
+    border: "none",
+    background: "rgba(255,255,255,0.12)",
+    color: "white",
+    fontWeight: 950,
+    fontSize: 18,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    cursor: "pointer",
+  }}
+>
+  Watch Deep Dive <ChevronRight className="h-5 w-5" />
+</button>
+
             </div>
           );
         })()
@@ -1076,7 +1212,7 @@ const activeWeakItem = useMemo(() => {
                 cursor: "pointer",
               }}
             >
-              Back to practice
+              Back to Menu
             </button>
           </div>
         </div>
