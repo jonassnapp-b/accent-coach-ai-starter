@@ -167,8 +167,18 @@ export default function Settings() {
     background: "#2196F3",
   }}
 >
+{/* Force blue backdrop even if parent/shell paints background */}
+<div
+  aria-hidden
+  style={{
+    position: "fixed",
+    inset: 0,
+    background: "#2196F3",
+    zIndex: 0,
+  }}
+/>
 
-      <div className="mx-auto max-w-[720px]">
+      <div className="mx-auto max-w-[720px]" style={{ position: "relative", zIndex: 1 }}>
 
 
 
