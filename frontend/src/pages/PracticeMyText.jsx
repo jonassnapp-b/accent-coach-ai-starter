@@ -152,11 +152,18 @@ function normalizeWordsFromResult(result, fallbackText) {
   return parts.map((w) => ({ word: w, phonemes: [] }));
 }
 
-function resolvePhonemeVideo(code) {
+const IMAGE_ONLY_PHONEMES = new Set(["AA", "AO", "AX", "EY", "IX", "OH", "OW", "UW"]);
+
+function resolvePhonemeMedia(code) {
   const c = String(code || "").trim().toUpperCase();
   if (!c) return null;
-  return { videoSrc: `/phonemes/Videos/${c}.mp4` };
+
+  if (IMAGE_ONLY_PHONEMES.has(c)) {
+    return { kind: "image", src: `/phonemes/Videos/${c}.jpg` };
+  }
+  return { kind: "video", src: `/phonemes/Videos/${c}.mp4` };
 }
+
 
 function getPhonemeLetters(p) {
   // SpeechSuper kan (nogle gange) have et felt for hvilke bogstaver/chunk phonemen matcher.
@@ -175,12 +182,14 @@ function getPhonemeLetters(p) {
 
 function pickShortLineFromScore(score) {
   const s = Number(score);
-  if (!Number.isFinite(s)) return "Try again — go slower.";
-  if (s >= 95) return "Unreal. 🔥";
-  if (s >= 90) return "Super clean. ✨";
-  if (s >= 75) return "Good — slow it down a bit.";
-  return "Focus on the stressed sound.";
+  if (!Number.isFinite(s)) return "No score yet.";
+  if (s >= 95) return "Perfect.";
+  if (s >= 90) return "Excellent.";
+  if (s >= 75) return "Good job.";
+  if (s >= 60) return "Needs a bit more work.";
+  return "Needs work.";
 }
+
 
 function buildWeakPhonemeSlidesFromWords(wordsArr) {
   const slides = [];
@@ -199,8 +208,8 @@ function buildWeakPhonemeSlidesFromWords(wordsArr) {
       const isWeak = score == null || !isGreen(score);
       if (!isWeak) continue;
 
-      const assets = resolvePhonemeVideo(code);
-      if (!assets?.videoSrc) continue;
+      const media = resolvePhonemeMedia(code);
+if (!media?.src) continue;
 
       const letters = getPhonemeLetters(p) || wordText || code;
 
@@ -210,8 +219,9 @@ function buildWeakPhonemeSlidesFromWords(wordsArr) {
         code,
         letters,
         score,
-        videoSrc: assets.videoSrc,
-      });
+        mediaKind: media.kind,
+mediaSrc: media.src,    
+  });
     }
   }
 
@@ -327,8 +337,9 @@ useEffect(() => {
   setIntroPct(0);
 
   // phase timings (feel free to tweak)
-  const t1 = setTimeout(() => setIntroPhase(1), 520);
-  const t2 = setTimeout(() => setIntroPhase(2), 1400);
+const t1 = setTimeout(() => setIntroPhase(1), 900);
+const t2 = setTimeout(() => setIntroPhase(2), 2400);
+
 
   // count-up starts when phase becomes 1
   return () => {
@@ -346,7 +357,7 @@ useEffect(() => {
   const target = Math.max(0, Math.min(100, Number(overallScore) || 0));
   let raf = 0;
   const start = performance.now();
-  const dur = 900; // ms
+  const dur = 1600; // ms
 
   const tick = (now) => {
     const p = Math.min(1, (now - start) / dur);
@@ -448,15 +459,15 @@ function playCorrectTts() {
       const raw = getScore(p);
       const s = normalizePhonemeScore(raw, wordScore, rawScores);
 
-      const assets = resolvePhonemeVideo(code);
+      const media = resolvePhonemeMedia(code);
 
       out.push({
         key: `${code}_${i}`,
         code,
         score: s,
         rawScore: raw,
-        assets,
-        hasVideo: !!assets?.videoSrc,
+      media,
+hasVideo: media?.kind === "video" && !!media?.src,
         isWeak: s == null || !isGreen(s),
       });
     }
@@ -649,15 +660,9 @@ const activeWeakItem = useMemo(() => {
 
   return (
     <div className="page" style={{ minHeight: "100vh", background: LIGHT_BG, color: LIGHT_TEXT }}>
-      {/* Header (like Coach) */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, pointerEvents: "auto" }}>
-        <div style={{ maxWidth: 720, margin: "0 auto", padding: `calc(${SAFE_TOP} + 32px) 16px 14px` }}>
-          <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Practice My Text</div>
-        </div>
-      </div>
+     
 
-      {/* Spacer */}
-      <div style={{ height: `calc(${SAFE_TOP} + 76px)` }} />
+
 
       <div
         style={{
@@ -667,66 +672,92 @@ const activeWeakItem = useMemo(() => {
           paddingBottom: `calc(${TABBAR_OFFSET}px + 24px + ${SAFE_BOTTOM})`,
         }}
       >
-        {/* Top row (back + accent) */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <button
-            type="button"
-            onClick={() => nav(-1)}
-            aria-label="Back"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 16,
-              border: `1px solid ${LIGHT_BORDER}`,
-              background: LIGHT_SURFACE,
-              boxShadow: LIGHT_SHADOW,
-              display: "grid",
-              placeItems: "center",
-              cursor: "pointer",
-            }}
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
+      {/* iOS-style header row */}
+<div
+  style={{
+    position: "sticky",
+    top: 0,
+    zIndex: 20,
+    paddingTop: `calc(${SAFE_TOP} + 14px)`,
+    paddingBottom: 12,
+    background: LIGHT_BG,
+  }}
+>
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+    <button
+      type="button"
+      onClick={() => nav(-1)}
+      aria-label="Back"
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 16,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: LIGHT_SURFACE,
+        boxShadow: LIGHT_SHADOW,
+        display: "grid",
+        placeItems: "center",
+        cursor: "pointer",
+        flex: "0 0 auto",
+      }}
+    >
+      <ChevronLeft className="h-6 w-6" />
+    </button>
 
-          <div style={{ position: "relative", flex: "0 0 auto" }}>
-            <select
-              aria-label="Accent"
-              value={accentUi}
-              onChange={(e) => !isBusy && setAccentUi(e.target.value)}
-              disabled={isBusy}
-              style={{
-                height: 44,
-                borderRadius: 16,
-                padding: "0 12px",
-                fontWeight: 900,
-                color: LIGHT_TEXT,
-                background: LIGHT_SURFACE,
-                border: `1px solid ${LIGHT_BORDER}`,
-                boxShadow: LIGHT_SHADOW,
-                outline: "none",
-                cursor: isBusy ? "not-allowed" : "pointer",
-                appearance: "none",
-                paddingRight: 34,
-              }}
-              title="Accent"
-            >
-              <option value="en_us">🇺🇸</option>
-              <option value="en_br">🇬🇧</option>
-            </select>
+    <div
+      style={{
+        fontSize: 28,
+        fontWeight: 950,
+        letterSpacing: -0.4,
+        lineHeight: 1.1,
+        textAlign: "center",
+        flex: "1 1 auto",
+      }}
+    >
+      Practice My Text
+    </div>
 
-            <ChevronDown
-              className="h-4 w-4"
-              style={{
-                position: "absolute",
-                right: 10,
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: LIGHT_MUTED,
-                pointerEvents: "none",
-              }}
-            />
-          </div>
-        </div>
+    <div style={{ position: "relative", flex: "0 0 auto" }}>
+      <select
+        aria-label="Accent"
+        value={accentUi}
+        onChange={(e) => !isBusy && setAccentUi(e.target.value)}
+        disabled={isBusy}
+        style={{
+          height: 44,
+          borderRadius: 16,
+          padding: "0 12px",
+          fontWeight: 900,
+          color: LIGHT_TEXT,
+          background: LIGHT_SURFACE,
+          border: `1px solid ${LIGHT_BORDER}`,
+          boxShadow: LIGHT_SHADOW,
+          outline: "none",
+          cursor: isBusy ? "not-allowed" : "pointer",
+          appearance: "none",
+          paddingRight: 34,
+        }}
+        title="Accent"
+      >
+        <option value="en_us">🇺🇸</option>
+        <option value="en_br">🇬🇧</option>
+      </select>
+
+      <ChevronDown
+        className="h-4 w-4"
+        style={{
+          position: "absolute",
+          right: 10,
+          top: "50%",
+          transform: "translateY(-50%)",
+          color: LIGHT_MUTED,
+          pointerEvents: "none",
+        }}
+      />
+    </div>
+  </div>
+</div>
+
 
      
 
@@ -749,60 +780,7 @@ const activeWeakItem = useMemo(() => {
     </div>
   ) : (
     <div style={{ position: "relative" }}>
-      {/* Top chevrons */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <button
-          type="button"
-          onClick={() => {
-            stopAllAudio();
-            goPrev();
-          }}
-          disabled={slideIdx <= 0}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: slideIdx <= 0 ? "rgba(255,255,255,0.6)" : LIGHT_SURFACE,
-            boxShadow: LIGHT_SHADOW,
-            display: "grid",
-            placeItems: "center",
-            cursor: slideIdx <= 0 ? "not-allowed" : "pointer",
-            opacity: slideIdx <= 0 ? 0.5 : 1,
-          }}
-          aria-label="Previous"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </button>
-
-        <div style={{ fontWeight: 900, color: LIGHT_MUTED }}>
-          {slideIdx + 1} / {totalSlides}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            stopAllAudio();
-            goNext();
-          }}
-          disabled={slideIdx >= totalSlides - 1}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: slideIdx >= totalSlides - 1 ? "rgba(255,255,255,0.6)" : LIGHT_SURFACE,
-            boxShadow: LIGHT_SHADOW,
-            display: "grid",
-            placeItems: "center",
-            cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
-            opacity: slideIdx >= totalSlides - 1 ? 0.5 : 1,
-          }}
-          aria-label="Next"
-        >
-          <ChevronRight className="h-6 w-6" />
-        </button>
-      </div>
+     
 
       {/* Slide content */}
       {slideIdx === 0 ? (
@@ -826,7 +804,7 @@ const activeWeakItem = useMemo(() => {
                 top: introPhase >= 1 ? 10 : 36,
                 opacity: introPhase >= 0 ? 1 : 0,
                 transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-                transition: "all 520ms ease",
+                transition: "all 900ms ease",
                 textAlign: "center",
                 fontWeight: 950,
                 fontSize: 34,
@@ -845,7 +823,7 @@ const activeWeakItem = useMemo(() => {
                 top: 46,
                 opacity: introPhase >= 1 ? 1 : 0,
                 transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-                transition: "all 420ms ease",
+                transition: "all 800ms ease",
                 textAlign: "center",
                 fontWeight: 950,
                 fontSize: 44,
@@ -865,7 +843,7 @@ const activeWeakItem = useMemo(() => {
               color: LIGHT_MUTED,
               opacity: introPhase >= 2 ? 1 : 0,
               transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
-              transition: "all 320ms ease",
+              transition: "all 650ms ease",
             }}
           >
             {pickShortLineFromScore(overallScore)}
@@ -921,51 +899,26 @@ const activeWeakItem = useMemo(() => {
               </div>
 
               <div style={{ marginTop: 14, borderRadius: 22, overflow: "hidden", position: "relative", background: "black" }}>
-                <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10" }}>
-                  <video
-                    key={s.videoSrc}
-                    src={s.videoSrc}
-                    playsInline
-                    muted
-                    preload="auto"
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                  />
+               <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10" }}>
+  {s.mediaKind === "image" ? (
+    <img
+      src={s.mediaSrc}
+      alt={s.code}
+      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+    />
+  ) : (
+    <video
+      key={s.mediaSrc}
+      src={s.mediaSrc}
+      playsInline
+      muted={false}
+      preload="auto"
+      controls
+      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+    />
+  )}
+</div>
 
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: 12,
-                      top: 12,
-                      width: 44,
-                      height: 44,
-                      borderRadius: 22,
-                      border: "none",
-                      background: "rgba(0,0,0,0.35)",
-                      color: "white",
-                      display: "grid",
-                      placeItems: "center",
-                    }}
-                  >
-                    <Volume2 className="h-5 w-5" />
-                  </div>
-
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: "50%",
-                      top: "50%",
-                      transform: "translate(-50%, -50%)",
-                      width: 78,
-                      height: 78,
-                      borderRadius: 39,
-                      background: "rgba(255,255,255,0.95)",
-                      display: "grid",
-                      placeItems: "center",
-                    }}
-                  >
-                    <Play className="h-8 w-8" style={{ color: "#0B1220" }} />
-                  </div>
-                </div>
               </div>
             </div>
           );
@@ -1128,9 +1081,64 @@ const activeWeakItem = useMemo(() => {
           </div>
         </div>
       )}
+        {/* Bottom chevrons */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
+        <button
+          type="button"
+          onClick={() => {
+            stopAllAudio();
+            goPrev();
+          }}
+          disabled={slideIdx <= 0}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 16,
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: slideIdx <= 0 ? "rgba(255,255,255,0.6)" : LIGHT_SURFACE,
+            boxShadow: LIGHT_SHADOW,
+            display: "grid",
+            placeItems: "center",
+            cursor: slideIdx <= 0 ? "not-allowed" : "pointer",
+            opacity: slideIdx <= 0 ? 0.5 : 1,
+          }}
+          aria-label="Previous"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
+
+        <div style={{ fontWeight: 900, color: LIGHT_MUTED }}>
+          {slideIdx + 1} / {totalSlides}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            stopAllAudio();
+            goNext();
+          }}
+          disabled={slideIdx >= totalSlides - 1}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 16,
+            border: `1px solid ${LIGHT_BORDER}`,
+            background: slideIdx >= totalSlides - 1 ? "rgba(255,255,255,0.6)" : LIGHT_SURFACE,
+            boxShadow: LIGHT_SHADOW,
+            display: "grid",
+            placeItems: "center",
+            cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
+            opacity: slideIdx >= totalSlides - 1 ? 0.5 : 1,
+          }}
+          aria-label="Next"
+        >
+          <ChevronRight className="h-6 w-6" />
+        </button>
+      </div>
     </div>
   )}
 </div>
+
 
 
 
