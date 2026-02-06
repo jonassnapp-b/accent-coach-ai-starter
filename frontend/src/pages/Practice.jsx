@@ -1,12 +1,102 @@
 // src/pages/Practice.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import { ChevronLeft, Mic, Target, Bookmark } from "lucide-react";
+import { ChevronLeft, Mic, Target, Bookmark, StopCircle } from "lucide-react";
 import { getBookmarks } from "../lib/bookmarks";
+import { useSettings } from "../lib/settings-store.jsx";
+import * as sfx from "../lib/sfx.js";
+
+
+const IS_PROD = !!import.meta?.env?.PROD;
+const RESULT_KEY = "ac_practice_my_text_result_v1";
+
+/* ------------ API base (web + native) ------------ */
+function isNative() {
+  return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
+}
+function getApiBase() {
+  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
+  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
+  if (isNative()) {
+    const base = (ls || env).replace(/\/+$/, "");
+    if (!base) throw new Error("VITE_API_BASE (or localStorage.apiBase) is not set — required on iOS.");
+    return base;
+  }
+  return (ls || env || window.location.origin).replace(/\/+$/, "");
+}
+
+function clamp01(v) {
+  const n = Number(v);
+  if (!isFinite(n)) return null;
+  return n <= 1 ? Math.max(0, Math.min(1, n)) : Math.max(0, Math.min(1, n / 100));
+}
+
+function wordScore100LikePSM(wordObj) {
+  const phs = Array.isArray(wordObj?.phonemes) ? wordObj.phonemes : [];
+  if (!phs.length) return null;
+
+  let num = 0;
+  let den = 0;
+
+  for (const ph of phs) {
+    const s01 = clamp01(
+      ph.pronunciation ??
+        ph.accuracy_score ??
+        ph.pronunciation_score ??
+        ph.score ??
+        ph.accuracy ??
+        ph.accuracyScore ??
+        ph.accuracyScore
+    );
+    if (s01 == null) continue;
+
+    const span = ph.span || ph.time || null;
+    const start10 = span?.start ?? span?.s ?? null;
+    const end10 = span?.end ?? span?.e ?? null;
+
+    const dur =
+      typeof start10 === "number" && typeof end10 === "number" && end10 > start10
+        ? (end10 - start10) * 0.01
+        : 1;
+
+    num += s01 * dur;
+    den += dur;
+  }
+
+  if (!den) return null;
+  return Math.round((num / den) * 100);
+}
+
+function psmSentenceScoreFromApi(json) {
+  const apiWords = Array.isArray(json?.words) ? json.words : [];
+  const wordScores = apiWords.map((w) => wordScore100LikePSM(w)).filter((v) => Number.isFinite(v));
+  const overall = wordScores.length ? Math.round(wordScores.reduce((a, b) => a + b, 0) / wordScores.length) : 0;
+  return { overall, wordScores };
+}
+
+function sanitizeTextForSubmit(raw) {
+  return String(raw || "").replace(/\s+/g, " ").trim();
+}
 
 export default function Practice() {
   const nav = useNavigate();
+    const { settings } = useSettings();
+
+  // keep SFX volume synced (0 = mute)
+  useEffect(() => {
+    sfx.setVolume(settings.volume ?? 0.6);
+  }, [settings.volume]);
+  const canPlaySfx = (settings.volume ?? 0) > 0.001;
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const isBusy = isRecording || isAnalyzing;
+
+  const mediaRecRef = useRef(null);
+  const chunksRef = useRef([]);
+  const lastUrlRef = useRef(null);
+
 
   // Keep it aligned with Record (record input maxLength=220 in Record.jsx)
   const MAX_LEN = 220;
@@ -140,10 +230,142 @@ const progressDeg = (clampedLen / MAX_LEN) * 360;
       },
     ];
   }, [nav, bookmarkCount]);
-function goPracticeMyText() {
-  const seedText = String(text || "").replace(/\s+/g, " ").trim();
-  nav("/practice-my-text", { state: { seedText } });
+function disposeRecorder() {
+  try {
+    mediaRecRef.current?.stream?.getTracks?.().forEach((t) => t.stop());
+  } catch {}
+  mediaRecRef.current = null;
 }
+
+async function ensureMic() {
+  disposeRecorder();
+  if (!navigator?.mediaDevices?.getUserMedia) throw new Error("Microphone not supported on this device.");
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+  let options = {};
+  if (typeof MediaRecorder !== "undefined" && typeof MediaRecorder.isTypeSupported === "function") {
+    if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) options.mimeType = "audio/webm;codecs=opus";
+    else if (MediaRecorder.isTypeSupported("audio/webm")) options.mimeType = "audio/webm";
+    else if (MediaRecorder.isTypeSupported("audio/mp4")) options.mimeType = "audio/mp4";
+  }
+
+  let rec;
+  try {
+    rec = new MediaRecorder(stream, options);
+  } catch {
+    rec = new MediaRecorder(stream);
+  }
+
+  chunksRef.current = [];
+  rec.ondataavailable = (e) => {
+    if (e?.data && e.data.size > 0) chunksRef.current.push(e.data);
+  };
+  rec.onstop = () => handleStop(rec);
+
+  mediaRecRef.current = rec;
+}
+
+function stopRecording() {
+  try {
+    if (mediaRecRef.current && mediaRecRef.current.state !== "inactive") mediaRecRef.current.stop();
+  } catch {}
+}
+
+async function startRecording() {
+  const cleaned = sanitizeTextForSubmit(text);
+  if (!cleaned) return;
+
+  try {
+    await ensureMic();
+    chunksRef.current = [];
+    mediaRecRef.current.start();
+    setIsRecording(true);
+    if (canPlaySfx) sfx.warm();
+  } catch (e) {
+    setIsRecording(false);
+    if (!IS_PROD) console.warn("[Practice] mic error:", e);
+    if (canPlaySfx) sfx.softFail();
+  }
+}
+
+async function togglePracticeRecord() {
+  if (isAnalyzing) return;
+  if (isRecording) stopRecording();
+  else await startRecording();
+}
+
+async function handleStop(rec) {
+  setIsRecording(false);
+
+  const chunks = chunksRef.current.slice();
+  chunksRef.current = [];
+
+  disposeRecorder();
+
+  try {
+    if (lastUrlRef.current) URL.revokeObjectURL(lastUrlRef.current);
+  } catch {}
+
+  const type = chunks[0]?.type || rec?.mimeType || "audio/webm";
+  const blob = new Blob(chunks, { type });
+  const localUrl = URL.createObjectURL(blob);
+  lastUrlRef.current = localUrl;
+
+  setIsAnalyzing(true);
+
+  try {
+    const refText = sanitizeTextForSubmit(text);
+    const base = getApiBase();
+
+    const fd = new FormData();
+    fd.append("audio", blob, "clip.webm");
+    fd.append("refText", refText);
+    // Brug din default accent hvis du vil – ellers bare en fast fallback:
+    fd.append("accent", (settings?.accentDefault === "en_br" ? "en_br" : "en_us"));
+
+    const controller = new AbortController();
+    const timeoutMs = 12000;
+    const t = setTimeout(() => controller.abort(), timeoutMs);
+
+    const r = await fetch(`${base}/api/analyze-speech`, {
+      method: "POST",
+      body: fd,
+      signal: controller.signal,
+    }).finally(() => clearTimeout(t));
+
+    const ct = r.headers?.get("content-type") || "";
+    const json = ct.includes("application/json") ? await r.json().catch(() => ({})) : {};
+
+    if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
+
+    const psm = psmSentenceScoreFromApi(json);
+    const overall = Number(psm?.overall ?? json?.overall ?? 0);
+
+    const payload = {
+      ...json,
+      overall,
+      pronunciation: overall,
+      overallAccuracy: overall,
+      psmWordScores: Array.isArray(psm?.wordScores) ? psm.wordScores : [],
+      userAudioUrl: localUrl,
+      userAudioBlob: blob,
+      refText,
+      accent: settings?.accentDefault === "en_br" ? "en_br" : "en_us",
+      createdAt: Date.now(),
+    };
+
+    try { sessionStorage.setItem(RESULT_KEY, JSON.stringify(payload)); } catch {}
+
+    // IMPORTANT: gå direkte til feedback-siden med resultatet
+    nav("/practice-my-text", { state: { result: payload } });
+  } catch (e) {
+    if (!IS_PROD) console.warn("[Practice] analyze error:", e);
+    if (canPlaySfx) sfx.softFail();
+  } finally {
+    setIsAnalyzing(false);
+  }
+}
+
 
 
 
@@ -434,13 +656,12 @@ transition={{
           <div style={{ padding: `14px 0 calc(${safeBottom} + ${kb}px + 14px)` }}>
             <button
               type="button"
-              onClick={(e) => {
+             onClick={(e) => {
   e.stopPropagation();
-  goPracticeMyText();
+  togglePracticeRecord();
 }}
+disabled={!String(text || "").trim() || isAnalyzing}
 
-
-              disabled={!String(text || "").trim()}
               style={{
                 width: "100%",
                 height: 56,
@@ -458,10 +679,21 @@ transition={{
                 justifyContent: "center",
                 gap: 10,
               }}
-            >
-              <Mic style={{ width: 20, height: 20, color: "white" }} />
-              Start Practicing
-            </button>
+            
+         >
+  {isRecording ? (
+    <>
+      <StopCircle style={{ width: 20, height: 20, color: "white" }} />
+      Stop
+    </>
+  ) : (
+    <>
+      <Mic style={{ width: 20, height: 20, color: "white" }} />
+      {isAnalyzing ? "Analyzing…" : "Record"}
+    </>
+  )}
+</button>
+
           </div>
         </div>
       </div>

@@ -7,6 +7,7 @@ import * as sfx from "../lib/sfx.js";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 
 const IS_PROD = !!import.meta?.env?.PROD;
+const RESULT_KEY = "ac_practice_my_text_result_v1";
 
 /* ------------ API base (web + native) ------------ */
 function isNative() {
@@ -137,6 +138,23 @@ export default function PracticeMyText() {
   const [lastUrl, setLastUrl] = useState(null);
 
   const [result, setResult] = useState(null);
+  // Load analysis result from Practice.jsx (via navigate state or sessionStorage)
+useEffect(() => {
+  const fromState = location?.state?.result || null;
+
+  if (fromState) {
+    setResult(fromState);
+    try { sessionStorage.setItem(RESULT_KEY, JSON.stringify(fromState)); } catch {}
+    return;
+  }
+
+  try {
+    const raw = sessionStorage.getItem(RESULT_KEY);
+    if (raw) setResult(JSON.parse(raw));
+  } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [location.key]);
+
 
   // seedText from Practice.jsx
   useEffect(() => {
