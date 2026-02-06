@@ -159,41 +159,43 @@ export default function Settings() {
 
   /* ---------- Render ---------- */
   return (
-    <div
+   <div
   className="page"
-  style={{ position: "relative" }}
+  style={{
+    position: "relative",
+    minHeight: "100vh",
+    background: "#2196F3",
+  }}
 >
+
       <div className="mx-auto max-w-[720px]">
 
 
 
 
 
-     {/* Header (overlay – same as Practice) */}
-<div
-  style={{
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    pointerEvents: "auto",
-  }}
->
-  <div style={{ maxWidth: 720, margin: "0 auto", padding: "8px 16px 14px" }}>
-    <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>
-      Settings
-    </div>
+  {/* Blue header (only title lives here) */}
+<div style={{ maxWidth: 720, margin: "0 auto", padding: "18px 16px 18px", color: "white" }}>
+  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>
+    Settings
   </div>
 </div>
 
-{/* Spacer (EXACT same as Practice) */}
-<div style={{ height: 68 }} />
 
 {/* Spacer (match Practice header → cards gap) */}
 
 
-  {/* Content (same padding as Practice cards) */}
-  <div style={{ padding: "0 16px 110px" }}>
+{/* White sheet under blue header */}
+<div
+  style={{
+    background: "#FFFFFF",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
+    padding: "18px 16px 110px",
+  }}
+>
+
     <div className="grid gap-4">
 
          
