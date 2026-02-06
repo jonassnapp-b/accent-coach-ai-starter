@@ -391,7 +391,15 @@ return (
         }}
       />
 
-      <div style={{ position: "relative", zIndex: 1 }}>
+      <div
+  style={{
+    position: "relative",
+    zIndex: 1,
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
+  }}
+>
         {/* Blue header (only title lives here) */}
         <div style={{ maxWidth: 720, margin: "0 auto", padding: "18px 16px 18px", color: "white" }}>
           <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Practice</div>
@@ -400,6 +408,9 @@ return (
         {/* White sheet under blue header */}
         <div
         style={{
+          flex: 1,
+width: "100%",
+
   maxWidth: 720,
   margin: "0 auto",
   background: "#FFFFFF",
