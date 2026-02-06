@@ -269,12 +269,12 @@ export default function PracticeMyText() {
   const MAX_LEN = 220;
 
   // Light tokens aligned with Coach
-  const LIGHT_TEXT = "rgba(17,24,39,0.92)";
-  const LIGHT_MUTED = "rgba(17,24,39,0.55)";
-  const LIGHT_BORDER = "rgba(0,0,0,0.10)";
+const LIGHT_TEXT = "rgba(255,255,255,0.92)";
+const LIGHT_MUTED = "rgba(255,255,255,0.70)";
+const LIGHT_BORDER = "rgba(255,255,255,0.10)";
   const LIGHT_SHADOW = "0 10px 24px rgba(0,0,0,0.06)";
-  const LIGHT_SURFACE = "#FFFFFF";
-  const LIGHT_BG = "#EEF5FF";
+const LIGHT_SURFACE = "rgba(255,255,255,0.06)";
+  const LIGHT_BG = "#0B1220";
   const SEND_PURPLE = "#8B5CF6";
 
   const TABBAR_OFFSET = 64;
@@ -292,51 +292,7 @@ export default function PracticeMyText() {
 
   const [refText, setRefText] = useState("");
   const [err, setErr] = useState("");
-{err && (
-  <div
-    style={{
-      marginTop: 10,
-      padding: "10px 12px",
-      borderRadius: 14,
-      background: "rgba(239,68,68,0.08)",
-      border: "1px solid rgba(239,68,68,0.18)",
-      color: "rgba(17,24,39,0.92)",
-      fontWeight: 800,
-      fontSize: 13,
-      lineHeight: 1.35,
-    }}
-  >
-    {err}
-  </div>
-)}
 
-{canRetryAnalyze && !isAnalyzing && (
-  <button
-    type="button"
-    onClick={() => {
-      const b = lastAudioBlobRef.current;
-      const u = lastAudioUrlRef.current;
-      if (!b || !u) return;
-
-      setErr("");
-      setCanRetryAnalyze(false);
-      setIsAnalyzing(true);
-      sendToServer(b, u);
-    }}
-    style={{
-      marginTop: 10,
-      width: "100%",
-      height: 46,
-      borderRadius: 16,
-      border: "none",
-      background: "rgba(33,150,243,0.14)",
-      fontWeight: 950,
-      cursor: "pointer",
-    }}
-  >
-    Retry analysis
-  </button>
-)}
 
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -379,6 +335,9 @@ const [introPct, setIntroPct] = useState(0);
 
 const [loopOn, setLoopOn] = useState(false);
 const [playbackRate, setPlaybackRate] = useState(1.0);
+const [deepDiveOpen, setDeepDiveOpen] = useState(false);
+const [deepDivePhoneme, setDeepDivePhoneme] = useState(null); // { code, letters }
+
 
 const userAudioRef = useRef(null);
 const loopTimerRef = useRef(null);
@@ -409,6 +368,7 @@ function goPrev() {
 function goNext() {
   setSlideIdx((i) => clampSlide(i + 1));
 }
+const isPhonemeOverlay = slideIdx >= 1 && slideIdx <= weakPhonemeSlides.length;
 
 // Reset slide flow when new result comes in
 useEffect(() => {
@@ -856,6 +816,52 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
   </div>
 </div>
 
+{/* Error + Retry (only after timeout) */}
+{!!err && (
+  <div
+    style={{
+      marginTop: 10,
+      padding: "10px 12px",
+      borderRadius: 14,
+      background: "rgba(239,68,68,0.08)",
+      border: "1px solid rgba(239,68,68,0.18)",
+      color: "rgba(17,24,39,0.92)",
+      fontWeight: 800,
+      fontSize: 13,
+      lineHeight: 1.35,
+    }}
+  >
+    {err}
+  </div>
+)}
+
+{canRetryAnalyze && !isAnalyzing && (
+  <button
+    type="button"
+    onClick={() => {
+      const b = lastAudioBlobRef.current;
+      const u = lastAudioUrlRef.current;
+      if (!b || !u) return;
+
+      setErr("");
+      setCanRetryAnalyze(false);
+      setIsAnalyzing(true);
+      sendToServer(b, u);
+    }}
+    style={{
+      marginTop: 10,
+      width: "100%",
+      height: 46,
+      borderRadius: 16,
+      border: "none",
+      background: "rgba(33,150,243,0.14)",
+      fontWeight: 950,
+      cursor: "pointer",
+    }}
+  >
+    Retry analysis
+  </button>
+)}
 
      
 
@@ -899,13 +905,13 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
                 position: "absolute",
                 left: 0,
                 right: 0,
-                top: introPhase >= 1 ? 10 : 36,
+                top: introPhase >= 1 ? 8 : 28,
                 opacity: introPhase >= 0 ? 1 : 0,
                 transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
                 transition: "all 900ms ease",
                 textAlign: "center",
                 fontWeight: 950,
-                fontSize: 34,
+                fontSize: 44,
                 letterSpacing: -0.4,
                 color: scoreColor(overallScore),
               }}
@@ -918,7 +924,7 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
                 position: "absolute",
                 left: 0,
                 right: 0,
-                top: 46,
+                top: 56,
                 opacity: introPhase >= 1 ? 1 : 0,
                 transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
                 transition: "all 800ms ease",
@@ -958,16 +964,20 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
   style={{
     position: "fixed",
     inset: 0,
+    height: "100dvh",
     background: "#0B1220",
     color: "white",
     zIndex: 9999,
     paddingTop: `calc(${SAFE_TOP} + 14px)`,
     paddingLeft: 18,
     paddingRight: 18,
-    paddingBottom: `calc(18px + ${SAFE_BOTTOM})`,
-    overflowY: "auto",
+    paddingBottom: `calc(14px + ${SAFE_BOTTOM})`,
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
   }}
 >
+
 
               <button
                 type="button"
@@ -1006,13 +1016,24 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
                 </div>
               </div>
 
-              <div style={{ marginTop: 14, borderRadius: 22, overflow: "hidden", position: "relative", background: "black" }}>
-               <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10" }}>
+              <div
+  style={{
+    marginTop: 14,
+    borderRadius: 22,
+    overflow: "hidden",
+    position: "relative",
+    background: "black",
+    flex: "1 1 auto",
+    minHeight: 0,
+    display: "flex",
+  }}
+>
+               <div style={{ position: "relative", width: "100%", height: "100%" }}>
   {s.mediaKind === "image" ? (
     <img
       src={s.mediaSrc}
       alt={s.code}
-      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+      style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
     />
   ) : (
     <video
@@ -1022,20 +1043,81 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
       muted={false}
       preload="auto"
       controls
-      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+      style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
     />
   )}
 </div>
+<div
+  style={{
+    marginTop: 12,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  }}
+>
+  <button
+    type="button"
+    onClick={() => {
+      stopAllAudio();
+      goPrev();
+    }}
+    disabled={slideIdx <= 1}
+    style={{
+      width: 48,
+      height: 48,
+      borderRadius: 16,
+      border: "1px solid rgba(255,255,255,0.12)",
+      background: slideIdx <= 1 ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.10)",
+      color: "white",
+      display: "grid",
+      placeItems: "center",
+      cursor: slideIdx <= 1 ? "not-allowed" : "pointer",
+      opacity: slideIdx <= 1 ? 0.45 : 1,
+    }}
+    aria-label="Previous"
+  >
+    <ChevronLeft className="h-6 w-6" />
+  </button>
+
+  <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.70)" }}>
+    {slideIdx + 1} / {totalSlides}
+  </div>
+
+  <button
+    type="button"
+    onClick={() => {
+      stopAllAudio();
+      goNext();
+    }}
+    disabled={slideIdx >= totalSlides - 1}
+    style={{
+      width: 48,
+      height: 48,
+      borderRadius: 16,
+      border: "1px solid rgba(255,255,255,0.12)",
+      background: slideIdx >= totalSlides - 1 ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.10)",
+      color: "white",
+      display: "grid",
+      placeItems: "center",
+      cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
+      opacity: slideIdx >= totalSlides - 1 ? 0.45 : 1,
+    }}
+    aria-label="Next"
+  >
+    <ChevronRight className="h-6 w-6" />
+  </button>
+</div>
 
               </div>
+
               <button
   type="button"
-  onClick={() => {
-    // simplest: open the phoneme asset as “deep dive”
-    try {
-      window.open(s.mediaSrc, "_blank", "noopener,noreferrer");
-    } catch {}
-  }}
+ onClick={() => {
+  setDeepDivePhoneme({ code: s.code, letters: s.letters });
+  setDeepDiveOpen(true);
+}}
+
   style={{
     marginTop: 18,
     width: "100%",
@@ -1217,60 +1299,65 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
           </div>
         </div>
       )}
-        {/* Bottom chevrons */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
-        <button
-          type="button"
-          onClick={() => {
-            stopAllAudio();
-            goPrev();
-          }}
-          disabled={slideIdx <= 0}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: slideIdx <= 0 ? "rgba(255,255,255,0.6)" : LIGHT_SURFACE,
-            boxShadow: LIGHT_SHADOW,
-            display: "grid",
-            placeItems: "center",
-            cursor: slideIdx <= 0 ? "not-allowed" : "pointer",
-            opacity: slideIdx <= 0 ? 0.5 : 1,
-          }}
-          aria-label="Previous"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </button>
+     {!isPhonemeOverlay && (
+  <>
+    {/* Bottom chevrons */}
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
+      <button
+        type="button"
+        onClick={() => {
+          stopAllAudio();
+          goPrev();
+        }}
+        disabled={slideIdx <= 0}
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 16,
+          border: `1px solid ${LIGHT_BORDER}`,
+          background: slideIdx <= 0 ? "rgba(255,255,255,0.6)" : LIGHT_SURFACE,
+          boxShadow: LIGHT_SHADOW,
+          display: "grid",
+          placeItems: "center",
+          cursor: slideIdx <= 0 ? "not-allowed" : "pointer",
+          opacity: slideIdx <= 0 ? 0.5 : 1,
+        }}
+        aria-label="Previous"
+      >
+        <ChevronLeft className="h-6 w-6" />
+      </button>
 
-        <div style={{ fontWeight: 900, color: LIGHT_MUTED }}>
-          {slideIdx + 1} / {totalSlides}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            stopAllAudio();
-            goNext();
-          }}
-          disabled={slideIdx >= totalSlides - 1}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            border: `1px solid ${LIGHT_BORDER}`,
-            background: slideIdx >= totalSlides - 1 ? "rgba(255,255,255,0.6)" : LIGHT_SURFACE,
-            boxShadow: LIGHT_SHADOW,
-            display: "grid",
-            placeItems: "center",
-            cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
-            opacity: slideIdx >= totalSlides - 1 ? 0.5 : 1,
-          }}
-          aria-label="Next"
-        >
-          <ChevronRight className="h-6 w-6" />
-        </button>
+      <div style={{ fontWeight: 900, color: LIGHT_MUTED }}>
+        {slideIdx + 1} / {totalSlides}
       </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          stopAllAudio();
+          goNext();
+        }}
+        disabled={slideIdx >= totalSlides - 1}
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 16,
+          border: `1px solid ${LIGHT_BORDER}`,
+          background: slideIdx >= totalSlides - 1 ? "rgba(255,255,255,0.6)" : LIGHT_SURFACE,
+          boxShadow: LIGHT_SHADOW,
+          display: "grid",
+          placeItems: "center",
+          cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
+          opacity: slideIdx >= totalSlides - 1 ? 0.5 : 1,
+        }}
+        aria-label="Next"
+      >
+        <ChevronRight className="h-6 w-6" />
+      </button>
+    </div>
+  </>
+)}
+
     </div>
   )}
 </div>
@@ -1279,6 +1366,74 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
 
 
       </div>
+      {deepDiveOpen && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      height: "100dvh",
+      background: "#0B1220",
+      color: "white",
+      zIndex: 10000,
+      paddingTop: `calc(${SAFE_TOP} + 14px)`,
+      paddingLeft: 18,
+      paddingRight: 18,
+      paddingBottom: `calc(14px + ${SAFE_BOTTOM})`,
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+    }}
+  >
+    <button
+      type="button"
+      onClick={() => setDeepDiveOpen(false)}
+      aria-label="Close deep dive"
+      style={{
+        position: "absolute",
+        top: 14,
+        right: 14,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        border: "none",
+        background: "rgba(255,255,255,0.10)",
+        color: "white",
+        display: "grid",
+        placeItems: "center",
+        cursor: "pointer",
+      }}
+    >
+      <X className="h-5 w-5" />
+    </button>
+
+    <div style={{ paddingRight: 60 }}>
+      <div style={{ fontSize: 30, fontWeight: 950, letterSpacing: -0.4 }}>
+        {deepDivePhoneme?.letters || "—"} Sound
+      </div>
+      <div style={{ marginTop: 6, color: "rgba(255,255,255,0.72)", fontWeight: 650 }}>
+        {deepDivePhoneme?.code || "—"} • Deep Dive
+      </div>
+    </div>
+
+    <div
+      style={{
+        marginTop: 14,
+        borderRadius: 22,
+        background: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        padding: 14,
+        color: "rgba(255,255,255,0.78)",
+        lineHeight: 1.35,
+        flex: "1 1 auto",
+        minHeight: 0,
+        overflowY: "auto",
+      }}
+    >
+      Deep dive content coming soon.
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
