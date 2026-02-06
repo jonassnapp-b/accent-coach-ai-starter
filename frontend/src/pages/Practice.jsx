@@ -371,15 +371,23 @@ async function handleStop(rec) {
 
 return (
   <LayoutGroup id="practice-morph">
-    <div
-      className="page"
-      style={{
-        minHeight: "100vh",
-        position: "relative",
-        background: "#2196F3",
-        color: "var(--text)",
-      }}
-    >
+<div
+  className="page"
+  style={{
+    minHeight: "100vh",
+    position: "relative",
+    background: "#2196F3",
+    color: "var(--text)",
+
+    // ✅ override shell/page padding for tab bar
+    paddingBottom: 0,
+
+    // ✅ let sheet stretch
+    display: "flex",
+    flexDirection: "column",
+  }}
+>
+
       {/* Force blue backdrop even if parent/shell paints background */}
       <div
         aria-hidden
@@ -395,7 +403,9 @@ return (
   style={{
     position: "relative",
     zIndex: 1,
-    minHeight: "100vh",
+    height: "100%",
+flex: 1,
+
     display: "flex",
     flexDirection: "column",
   }}
