@@ -31,7 +31,8 @@ function Section({ title, children, noPanel = false, first = false }) {
     <div
       className="grid"
       style={{
-        marginTop: first ? 0 : 18, // ✅ første får 0, resten 18
+        marginTop: first ? 10 : 18,
+ // ✅ første får 0, resten 18
         rowGap: 10,
       }}
     >
