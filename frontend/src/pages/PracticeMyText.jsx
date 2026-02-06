@@ -926,7 +926,7 @@ boxShadow: PAGE_SHADOW,
       type="button"
 onClick={() => {
   stopAllAudio();
-  nav("/record");
+nav("/practice");
 }}
       aria-label="Close"
       style={{
@@ -1252,7 +1252,7 @@ onClick={() => {
         type="button"
         onClick={() => {
           stopAllAudio();
-          nav("/record");
+        nav("/practice");
         }}
         style={{
           height: 56,
@@ -1291,9 +1291,9 @@ onClick={() => {
           disabled={slideIdx <= 0}
           aria-label="Previous"
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
+            width: 56,
+height: 56,
+borderRadius: 20,
             border: "1px solid rgba(255,255,255,0.12)",
             background: "rgba(255,255,255,0.08)",
             display: "grid",
@@ -1302,12 +1302,20 @@ onClick={() => {
             opacity: slideIdx <= 0 ? 0.45 : 1,
           }}
         >
-          <ChevronLeft className="h-6 w-6" />
+<ChevronLeft className="h-7 w-7" />
         </button>
 
-        <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.72)" }}>
-          {slideIdx + 1} / {totalSlides}
-        </div>
+     <div
+  style={{
+    fontWeight: 950,
+    fontSize: 22,
+    letterSpacing: -0.2,
+    color: "rgba(255,255,255,0.78)",
+  }}
+>
+  {slideIdx + 1} / {totalSlides}
+</div>
+
 
         <button
           type="button"
@@ -1329,7 +1337,7 @@ onClick={() => {
             opacity: slideIdx >= totalSlides - 1 ? 0.45 : 1,
           }}
         >
-          <ChevronRight className="h-6 w-6" />
+<ChevronRight className="h-7 w-7" />
         </button>
       </div>
     </div>
