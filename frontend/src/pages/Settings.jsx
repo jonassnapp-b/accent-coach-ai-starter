@@ -28,8 +28,13 @@ function Row({ label, children, hint }) {
 
 function Section({ title, children, noPanel = false }) {
   return (
-    <div className="grid gap-3" style={{ marginTop: 0 }}>
-
+    <div
+      className="grid"
+      style={{
+        marginTop: 18,      // ✅ mere luft OVER hver section
+        rowGap: 10,         // ✅ mere luft mellem heading og card
+      }}
+    >
       {/* heading OUTSIDE the card */}
       <div
         style={{
@@ -39,6 +44,7 @@ function Section({ title, children, noPanel = false }) {
           fontSize: 13,
           color: "var(--muted)",
           paddingLeft: 6,
+          marginTop: 2,      // (valgfrit) lidt ekstra “breathing room”
         }}
       >
         {title}
@@ -49,6 +55,7 @@ function Section({ title, children, noPanel = false }) {
     </div>
   );
 }
+
 
 
 
