@@ -99,7 +99,7 @@ export default function Practice() {
 
 
   // Keep it aligned with Record (record input maxLength=220 in Record.jsx)
-  const MAX_LEN = 220;
+  const MAX_LEN = 120;
 
   const [text, setText] = useState("");
   const [expanded, setExpanded] = useState(false);
