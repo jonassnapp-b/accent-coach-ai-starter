@@ -154,7 +154,7 @@ return (
 <motion.div
   initial={false}
   animate={{ opacity: expanded ? 0 : 1 }}
-  transition={{ duration: expanded ? 0.18 : 0.12, ease: [0.22, 1, 0.36, 1] }}
+transition={{ duration: expanded ? 0.34 : 0.26, ease: [0.22, 1, 0.36, 1] }}
   style={{
     position: "absolute",
     top: 0,
