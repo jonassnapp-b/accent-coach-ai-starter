@@ -280,6 +280,16 @@ const LIGHT_SURFACE = "rgba(255,255,255,0.06)";
   const TABBAR_OFFSET = 64;
   const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
   const SAFE_TOP = "env(safe-area-inset-top, 0px)";
+useEffect(() => {
+  const prevBody = document.body.style.background;
+  const prevHtml = document.documentElement.style.background;
+  document.body.style.background = LIGHT_BG;
+  document.documentElement.style.background = LIGHT_BG;
+  return () => {
+    document.body.style.background = prevBody;
+    document.documentElement.style.background = prevHtml;
+  };
+}, [LIGHT_BG]);
 
   // keep SFX volume synced with settings (0 = mute)
   useEffect(() => {
@@ -717,14 +727,14 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
   }
 
   return (
-    <div className="page" style={{ minHeight: "100vh", background: LIGHT_BG, color: LIGHT_TEXT }}>
+    <div className="page" style={{ minHeight: "100dvh", background: LIGHT_BG, color: LIGHT_TEXT }}>
      
 
 
 
       <div
         style={{
-          maxWidth: 720,
+      maxWidth: 520,
           margin: "0 auto",
           padding: "0 16px",
           paddingBottom: `calc(${TABBAR_OFFSET}px + 24px + ${SAFE_BOTTOM})`,
@@ -957,189 +967,40 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
         // ---------------- Phoneme slides: 1 per weak phoneme ----------------
         (() => {
           const s = weakPhonemeSlides[slideIdx - 1];
-          const title = `${s.letters} Sound`;
+          const title = `${s.code} Sound`;
 
           return (
-            <div
-  style={{
-    position: "fixed",
-    inset: 0,
-    height: "100dvh",
-    background: "#0B1220",
-    color: "white",
-    zIndex: 9999,
-    paddingTop: `calc(${SAFE_TOP} + 14px)`,
-    paddingLeft: 18,
-    paddingRight: 18,
-    paddingBottom: `calc(14px + ${SAFE_BOTTOM})`,
-    overflow: "hidden",
-    display: "flex",
-    flexDirection: "column",
-  }}
->
-
-
-              <button
-                type="button"
-               onClick={() => {
-  stopAllAudio();
-  nav(-1);
-}}
-
-                aria-label="Close"
-                style={{
-                  position: "absolute",
-                  top: 14,
-                  right: 14,
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  border: "none",
-                  background: "rgba(255,255,255,0.10)",
-                  color: "white",
-                  display: "grid",
-                  placeItems: "center",
-                  cursor: "pointer",
-                }}
-              >
-                <X className="h-5 w-5" />
-              </button>
-
-              <div style={{ paddingRight: 60 }}>
-                <div style={{ fontSize: 30, fontWeight: 950, letterSpacing: -0.4 }}>{title}</div>
-                <div style={{ marginTop: 6, color: "rgba(255,255,255,0.72)", fontWeight: 650 }}>
-                  {s.code} • Score {s.score == null ? "—" : Math.round(s.score)}%
-                  <div style={{ marginTop: 10, color: "rgba(255,255,255,0.78)", fontSize: 16, lineHeight: 1.35 }}>
-  {getShortTipForPhoneme(s.code)}
-</div>
-
-                </div>
-              </div>
-
-              <div
-  style={{
-    marginTop: 14,
-    borderRadius: 22,
-    overflow: "hidden",
-    position: "relative",
-    background: "black",
-    flex: "1 1 auto",
-    minHeight: 0,
-    display: "flex",
-  }}
->
-               <div style={{ position: "relative", width: "100%", height: "100%" }}>
-  {s.mediaKind === "image" ? (
-    <img
-      src={s.mediaSrc}
-      alt={s.code}
-      style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-    />
-  ) : (
-    <video
-      key={s.mediaSrc}
-      src={s.mediaSrc}
-      playsInline
-      muted={false}
-      preload="auto"
-      controls
-      style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-    />
-  )}
-</div>
-<div
-  style={{
-    marginTop: 12,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  }}
->
-  <button
-    type="button"
-    onClick={() => {
-      stopAllAudio();
-      goPrev();
-    }}
-    disabled={slideIdx <= 1}
+  <div
     style={{
-      width: 48,
-      height: 48,
-      borderRadius: 16,
-      border: "1px solid rgba(255,255,255,0.12)",
-      background: slideIdx <= 1 ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.10)",
+      position: "fixed",
+      inset: 0,
+      height: "100dvh",
+      background: "#0B1220",
       color: "white",
-      display: "grid",
-      placeItems: "center",
-      cursor: slideIdx <= 1 ? "not-allowed" : "pointer",
-      opacity: slideIdx <= 1 ? 0.45 : 1,
+      zIndex: 9999,
+      overflow: "hidden",
     }}
-    aria-label="Previous"
   >
-    <ChevronLeft className="h-6 w-6" />
-  </button>
-
-  <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.70)" }}>
-    {slideIdx + 1} / {totalSlides}
+    <div
+      style={{
+        position: "relative",
+        maxWidth: 520,
+        margin: "0 auto",
+        width: "100%",
+        height: "100%",
+        paddingTop: `calc(${SAFE_TOP} + 14px)`,
+        paddingLeft: 16,
+        paddingRight: 16,
+        paddingBottom: `calc(14px + ${SAFE_BOTTOM})`,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+    </div>
   </div>
+);
 
-  <button
-    type="button"
-    onClick={() => {
-      stopAllAudio();
-      goNext();
-    }}
-    disabled={slideIdx >= totalSlides - 1}
-    style={{
-      width: 48,
-      height: 48,
-      borderRadius: 16,
-      border: "1px solid rgba(255,255,255,0.12)",
-      background: slideIdx >= totalSlides - 1 ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.10)",
-      color: "white",
-      display: "grid",
-      placeItems: "center",
-      cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
-      opacity: slideIdx >= totalSlides - 1 ? 0.45 : 1,
-    }}
-    aria-label="Next"
-  >
-    <ChevronRight className="h-6 w-6" />
-  </button>
-</div>
-
-              </div>
-
-              <button
-  type="button"
- onClick={() => {
-  setDeepDivePhoneme({ code: s.code, letters: s.letters });
-  setDeepDiveOpen(true);
-}}
-
-  style={{
-    marginTop: 18,
-    width: "100%",
-    height: 56,
-    borderRadius: 18,
-    border: "none",
-    background: "rgba(255,255,255,0.12)",
-    color: "white",
-    fontWeight: 950,
-    fontSize: 18,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    cursor: "pointer",
-  }}
->
-  Watch Deep Dive <ChevronRight className="h-5 w-5" />
-</button>
-
-            </div>
-          );
+        
         })()
       ) : slideIdx === 1 + weakPhonemeSlides.length ? (
         // ---------------- Playback slide ----------------
@@ -1331,29 +1192,69 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
         {slideIdx + 1} / {totalSlides}
       </div>
 
-      <button
-        type="button"
-        onClick={() => {
-          stopAllAudio();
-          goNext();
-        }}
-        disabled={slideIdx >= totalSlides - 1}
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 16,
-          border: `1px solid ${LIGHT_BORDER}`,
-          background: slideIdx >= totalSlides - 1 ? "rgba(255,255,255,0.6)" : LIGHT_SURFACE,
-          boxShadow: LIGHT_SHADOW,
-          display: "grid",
-          placeItems: "center",
-          cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
-          opacity: slideIdx >= totalSlides - 1 ? 0.5 : 1,
-        }}
-        aria-label="Next"
-      >
-        <ChevronRight className="h-6 w-6" />
-      </button>
+      {/* Bottom chevrons (inside phoneme overlay) */}
+<div
+  style={{
+    marginTop: 12,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  }}
+>
+  <button
+    type="button"
+    onClick={() => {
+      stopAllAudio();
+      goPrev();
+    }}
+    disabled={slideIdx <= 1}
+    style={{
+      width: 44,
+      height: 44,
+      borderRadius: 16,
+      border: "1px solid rgba(255,255,255,0.12)",
+      background: slideIdx <= 1 ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.10)",
+      color: "white",
+      display: "grid",
+      placeItems: "center",
+      cursor: slideIdx <= 1 ? "not-allowed" : "pointer",
+      opacity: slideIdx <= 1 ? 0.45 : 1,
+    }}
+    aria-label="Previous"
+  >
+    <ChevronLeft className="h-6 w-6" />
+  </button>
+
+  <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.70)" }}>
+    {slideIdx + 1} / {totalSlides}
+  </div>
+
+  <button
+    type="button"
+    onClick={() => {
+      stopAllAudio();
+      goNext();
+    }}
+    disabled={slideIdx >= totalSlides - 1}
+    style={{
+      width: 44,
+      height: 44,
+      borderRadius: 16,
+      border: "1px solid rgba(255,255,255,0.12)",
+      background: slideIdx >= totalSlides - 1 ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.10)",
+      color: "white",
+      display: "grid",
+      placeItems: "center",
+      cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
+      opacity: slideIdx >= totalSlides - 1 ? 0.45 : 1,
+    }}
+    aria-label="Next"
+  >
+    <ChevronRight className="h-6 w-6" />
+  </button>
+</div>
+
     </div>
   </>
 )}
@@ -1407,13 +1308,17 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
     </button>
 
     <div style={{ paddingRight: 60 }}>
-      <div style={{ fontSize: 30, fontWeight: 950, letterSpacing: -0.4 }}>
-        {deepDivePhoneme?.letters || "—"} Sound
-      </div>
-      <div style={{ marginTop: 6, color: "rgba(255,255,255,0.72)", fontWeight: 650 }}>
-        {deepDivePhoneme?.code || "—"} • Deep Dive
-      </div>
-    </div>
+  <div style={{ fontSize: 30, fontWeight: 950, letterSpacing: -0.4 }}>{title}</div>
+
+  <div style={{ marginTop: 6, color: "rgba(255,255,255,0.72)", fontWeight: 650 }}>
+    {s.code} • Score {s.score == null ? "—" : Math.round(s.score)}%
+  </div>
+
+  <div style={{ marginTop: 10, color: "rgba(255,255,255,0.78)", fontSize: 16, lineHeight: 1.35 }}>
+    {getShortTipForPhoneme(s.code)}
+  </div>
+</div>
+
 
     <div
       style={{
