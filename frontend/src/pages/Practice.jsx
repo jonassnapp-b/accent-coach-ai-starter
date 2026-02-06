@@ -372,407 +372,392 @@ async function handleStop(rec) {
 return (
   <LayoutGroup id="practice-morph">
     <div
-  className="page"
-  style={{
-    minHeight: "100vh",
-    position: "relative",
-    background: "#2196F3",
-    color: "white",
-  }}
->
-  {/* Force blue backdrop even if parent/shell paints background */}
-  <div
-    aria-hidden
-    style={{
-      position: "fixed",
-      inset: 0,
-      background: "#2196F3",
-      zIndex: 0,
-    }}
-  />
-    <div style={{ position: "relative", zIndex: 1 }}>
-
-{/* Blue header (only title lives here) */}
-<div style={{ maxWidth: 720, margin: "0 auto", padding: "18px 16px 18px", color: "white" }}>
-  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Practice</div>
-</div>
-</div>
-{/* White sheet under blue header */}
-<div
-  style={{
-    maxWidth: 720,
-    margin: "0 auto",
-    background: "#FFFFFF",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
-    padding: "36px 16px 110px",
-    color: "var(--text)",
-  }}
->
-
-
-
-
-      {/* Cards */}
-<div>
-
-        <div style={{ display: "grid", gap: 14 }}>
-          {/* Practice My Text card (special because it has the collapsed input) */}
-         <motion.div
-  layoutId="practice-mytext-card"
-  layout
-
-  onClick={() => {
-    if (!expanded) setExpanded(true);
-  }}
-  role="button"
-  tabIndex={0}
- onLayoutAnimationComplete={() => {
-  if (!expanded && !collapsedReady) setCollapsedReady(true);
-}}
-
-
-transition={{
-  layout: { type: "tween", duration: expanded ? 0.34 : 0.26, ease: [0.22, 1, 0.36, 1] },
-  default: { duration: expanded ? 0.34 : 0.26, ease: [0.22, 1, 0.36, 1] },
-}}
-
-
-  style={{
-    borderRadius: expanded ? 26 : 22,
-    background: "var(--panel-bg)",
-    border: "1px solid var(--panel-border)",
-    boxShadow: expanded ? "0 18px 44px rgba(0,0,0,0.18)" : "0 8px 18px rgba(0,0,0,0.08)",
-    padding: expanded ? 0 : 16,
-    cursor: expanded ? "default" : "pointer",
-    transformOrigin: "center",
-
-  width: "100%",
-  }}
->
-  {!expanded ? (
-    <>
-      {/* COLLAPSED (dit nuværende card-indhold) */}
-
-  <motion.div
-  initial={false}
-  animate={{
-    opacity: collapsedReady ? 1 : 0,
-    y: collapsedReady ? 0 : 6,
-  }}
-  transition={{
-    // softer “iOS-like” ease-out on reveal, quick hide
-    opacity: {
-    duration: collapsedReady ? 0.50 : 0.10,
-      ease: collapsedReady ? [0.16, 1, 0.30, 1] : [0.40, 0, 1, 1],
-    },
-    y: {
-    duration: collapsedReady ? 0.50 : 0.10,
-      ease: collapsedReady ? [0.16, 1, 0.30, 1] : [0.40, 0, 1, 1],
-    },
-  }}
-  style={{
-    pointerEvents: collapsedReady ? "auto" : "none",
-    willChange: "opacity, transform",
-  }}
->
-
-
-  <div style={{ display: "flex", gap: 14, alignItems: "center" }}>        <div
-          style={{
-            width: 54,
-            height: 54,
-            borderRadius: 999,
-            display: "grid",
-            placeItems: "center",
-            background: "rgba(139,92,246,0.14)",
-            border: `1px solid rgba(139,92,246,0.20)`,
-            flex: "0 0 auto",
-          }}
-        >
-          <Mic style={{ width: 22, height: 22, color: "rgba(139,92,246,0.95)" }} />
-        </div>
-
-       <div style={{ flex: 1, minWidth: 0 }}>
-  <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.2 }}>
-    Practice My Text
-  </div>
-</div>
-</div>
-
-</motion.div>
-
+      className="page"
+      style={{
+        minHeight: "100vh",
+        position: "relative",
+        background: "#2196F3",
+        color: "var(--text)",
+      }}
+    >
+      {/* Force blue backdrop even if parent/shell paints background */}
       <div
+        aria-hidden
         style={{
-          marginTop: 14,
-          borderRadius: 18,
-          background: "rgba(17,24,39,0.04)",
-          border: `1px solid rgba(0,0,0,0.08)`,
-          padding: "14px 14px",
-          position: "relative",
-          minHeight: 70,
+          position: "fixed",
+          inset: 0,
+          background: "#2196F3",
+          zIndex: 0,
         }}
-      >
-        <div style={{ color: "rgba(17,24,39,0.38)", fontWeight: 900, fontSize: 20 }}>
-          {text ? text : "Tap to type…"}
+      />
+
+      <div style={{ position: "relative", zIndex: 1 }}>
+        {/* Blue header (only title lives here) */}
+        <div style={{ maxWidth: 720, margin: "0 auto", padding: "18px 16px 18px", color: "white" }}>
+          <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Practice</div>
         </div>
 
+        {/* White sheet under blue header */}
         <div
           style={{
-            marginTop: 10,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            color: "var(--muted)",
-            fontWeight: 800,
+            maxWidth: 720,
+            margin: "0 auto",
+            background: "#FFFFFF",
+            borderTopLeftRadius: 32,
+            borderTopRightRadius: 32,
+            boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
+            padding: "36px 16px 110px",
+            color: "var(--text)",
           }}
         >
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <div
-  style={{
-    width: 22,
-    height: 22,
-    borderRadius: 999,
-    background: `conic-gradient(#2196f3 ${progressDeg}deg, rgba(33,150,243,0.18) 0deg)`,
-    padding: 3,
-    flex: "0 0 auto",
-  }}
->
-  <div
-    style={{
-      width: "100%",
-      height: "100%",
-      borderRadius: 999,
-      background: "var(--panel-bg)",
-    }}
-  />
-</div>
-
-            <div>
-              {Math.min(text.length, MAX_LEN)} / {MAX_LEN}
-            </div>
-          </div>
-
-        
-        </div>
-      </div>
-    </>
-  ) : (
-    <>
-      {/* EXPANDED (samme card, fullscreen) */}
-
-      <div
-  style={{
-    paddingTop: `calc(${safeTop} + 10px)`,
-    minHeight: "100dvh",
-    display: "flex",
-    flexDirection: "column",
-  }}
->
-        <div style={{ maxWidth: 720, margin: "0 auto", width: "100%", padding: "8px 12px 10px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button
-              type="button"
-              onClick={() => setExpanded(false)}
-              aria-label="Back"
+          {/* Cards */}
+          <div style={{ display: "grid", gap: 14 }}>
+            {/* Practice My Text card (special because it has the collapsed input) */}
+            <motion.div
+              layoutId="practice-mytext-card"
+              layout
+              onClick={() => {
+                if (!expanded) setExpanded(true);
+              }}
+              role="button"
+              tabIndex={0}
+              onLayoutAnimationComplete={() => {
+                if (!expanded && !collapsedReady) setCollapsedReady(true);
+              }}
+              transition={{
+                layout: { type: "tween", duration: expanded ? 0.34 : 0.26, ease: [0.22, 1, 0.36, 1] },
+                default: { duration: expanded ? 0.34 : 0.26, ease: [0.22, 1, 0.36, 1] },
+              }}
               style={{
-                width: 42,
-                height: 42,
-                borderRadius: 999,
-                border: "1px solid var(--panel-border)",
+                borderRadius: expanded ? 26 : 22,
                 background: "var(--panel-bg)",
-                boxShadow: "0 8px 18px rgba(0,0,0,0.06)",
-                display: "grid",
-                placeItems: "center",
-                cursor: "pointer",
+                border: "1px solid var(--panel-border)",
+                boxShadow: expanded ? "0 18px 44px rgba(0,0,0,0.18)" : "0 8px 18px rgba(0,0,0,0.08)",
+                padding: expanded ? 0 : 16,
+                cursor: expanded ? "default" : "pointer",
+                transformOrigin: "center",
+                width: "100%",
               }}
             >
-              <ChevronLeft style={{ width: 20, height: 20, color: "var(--text)" }} />
-            </button>
-
-            <div style={{ flex: 1, textAlign: "center", fontWeight: 900, fontSize: 18, color: "var(--text)" }}>
-              Practice your words
-            </div>
-
-            <div style={{ width: 42 }} />
-          </div>
-        </div>
-        
-
-        <div
-  style={{
-    maxWidth: 720,
-    margin: "0 auto",
-    padding: "10px 16px 0",
-    flex: 1,
-    width: "100%",
-    display: "flex",
-    flexDirection: "column",
-  }}
->
-          <div
-            style={{
-              borderRadius: 26,
-              background: "var(--panel-bg)",
-              border: "1px solid var(--panel-border)",
-              boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
-              padding: 18,
-            }}
-          >
-         
-
-            <textarea
-              autoFocus
-              value={text}
-              onChange={(e) => setText(String(e.target.value || "").slice(0, MAX_LEN))}
-maxLength={MAX_LEN}
-              placeholder="Start typing…"
-              style={{
-                width: "100%",
-                minHeight: 220,
-                borderRadius: 18,
-                border: `1px solid rgba(0,0,0,0.10)`,
-                background: "rgba(17,24,39,0.04)",
-                padding: 14,
-                outline: "none",
-                fontSize: 18,
-                fontWeight: 800,
-                color: "var(--text)",
-                resize: "none",
-              }}
-            />
-
-            <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, color: "var(--muted)", fontWeight: 900 }}>
-              <div
-  style={{
-    width: 22,
-    height: 22,
-    borderRadius: 999,
-    background: `conic-gradient(#2196f3 ${progressDeg}deg, rgba(33,150,243,0.18) 0deg)`,
-    padding: 3,
-    flex: "0 0 auto",
-  }}
->
-  <div
-    style={{
-      width: "100%",
-      height: "100%",
-      borderRadius: 999,
-      background: "var(--panel-bg)",
-    }}
-  />
-</div>
-
-              <div>
-                {Math.min(text.length, MAX_LEN)} / {MAX_LEN}
-              </div>
-            </div>
-          </div>
-
-          <div style={{ padding: `14px 0 calc(${safeBottom} + ${kb}px + 14px)` }}>
-            <button
-              type="button"
-             onClick={(e) => {
-  e.stopPropagation();
-  togglePracticeRecord();
-}}
-disabled={!String(text || "").trim() || isAnalyzing}
-
-              style={{
-                width: "100%",
-                height: 56,
-                borderRadius: 18,
-                border: "none",
-                cursor: !String(text || "").trim() ? "not-allowed" : "pointer",
-                opacity: !String(text || "").trim() ? 0.6 : 1,
-                fontWeight: 900,
-                fontSize: 18,
-                color: "white",
-               background: "#2196f3",
-  boxShadow: "0 14px 28px rgba(0,0,0,0.12)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-              }}
-            
-         >
-  {isRecording ? (
-    <>
-      <StopCircle style={{ width: 20, height: 20, color: "white" }} />
-      Stop
-    </>
-  ) : (
-    <>
-      <Mic style={{ width: 20, height: 20, color: "white" }} />
-      {isAnalyzing ? "Analyzing…" : "Record"}
-    </>
-  )}
-</button>
-
-          </div>
-        </div>
-      </div>
-    </>
-  )}
-</motion.div>
-
-
-          {/* Weakness + Bookmarks cards */}
-
-         {!expanded &&
-  cards
-    .filter((c) => c.key !== "practice_my_text")
-    .map((c) => (
-      <div 
-
-                key={c.key}
-                onClick={c.onPress}
-                role="button"
-                tabIndex={0}
-               style={{
-  borderRadius: 22,
-  background: "var(--panel-bg)",
-  border: "1px solid var(--panel-border)",
-  boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
-  padding: 16,
-  cursor: "pointer",
-}}
-              >
-                <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                  <div
+              {!expanded ? (
+                <>
+                  {/* COLLAPSED */}
+                  <motion.div
+                    initial={false}
+                    animate={{
+                      opacity: collapsedReady ? 1 : 0,
+                      y: collapsedReady ? 0 : 6,
+                    }}
+                    transition={{
+                      opacity: {
+                        duration: collapsedReady ? 0.5 : 0.1,
+                        ease: collapsedReady ? [0.16, 1, 0.3, 1] : [0.4, 0, 1, 1],
+                      },
+                      y: {
+                        duration: collapsedReady ? 0.5 : 0.1,
+                        ease: collapsedReady ? [0.16, 1, 0.3, 1] : [0.4, 0, 1, 1],
+                      },
+                    }}
                     style={{
-                      width: 54,
-                      height: 54,
-                      borderRadius: 999,
-                      display: "grid",
-                      placeItems: "center",
-                      background: "rgba(33,150,243,0.10)",
-                      border: `1px solid rgba(33,150,243,0.16)`,
-                      flex: "0 0 auto",
+                      pointerEvents: collapsedReady ? "auto" : "none",
+                      willChange: "opacity, transform",
                     }}
                   >
-                    <c.Icon style={{ width: 22, height: 22, color: "rgba(33,150,243,0.95)" }} />
-                  </div>
+                    <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                      <div
+                        style={{
+                          width: 54,
+                          height: 54,
+                          borderRadius: 999,
+                          display: "grid",
+                          placeItems: "center",
+                          background: "rgba(139,92,246,0.14)",
+                          border: `1px solid rgba(139,92,246,0.20)`,
+                          flex: "0 0 auto",
+                        }}
+                      >
+                        <Mic style={{ width: 22, height: 22, color: "rgba(139,92,246,0.95)" }} />
+                      </div>
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.2 }}>{c.title}</div>
-                    <div style={{ marginTop: 2, color: "var(--muted)", fontWeight: 700 }}>{c.subtitle}</div>
-                  </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.2 }}>Practice My Text</div>
+                      </div>
+                    </div>
+                  </motion.div>
 
-                  <div style={{ color: "rgba(17,24,39,0.35)", fontWeight: 900, fontSize: 20 }}>›</div>
-                </div>
-              </div>
-            ))}
+                  <div
+                    style={{
+                      marginTop: 14,
+                      borderRadius: 18,
+                      background: "rgba(17,24,39,0.04)",
+                      border: `1px solid rgba(0,0,0,0.08)`,
+                      padding: "14px 14px",
+                      position: "relative",
+                      minHeight: 70,
+                    }}
+                  >
+                    <div style={{ color: "rgba(17,24,39,0.38)", fontWeight: 900, fontSize: 20 }}>
+                      {text ? text : "Tap to type…"}
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 10,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        color: "var(--muted)",
+                        fontWeight: 800,
+                      }}
+                    >
+                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <div
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 999,
+                            background: `conic-gradient(#2196f3 ${progressDeg}deg, rgba(33,150,243,0.18) 0deg)`,
+                            padding: 3,
+                            flex: "0 0 auto",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              borderRadius: 999,
+                              background: "var(--panel-bg)",
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          {Math.min(text.length, MAX_LEN)} / {MAX_LEN}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* EXPANDED */}
+                  <div
+                    style={{
+                      paddingTop: `calc(${safeTop} + 10px)`,
+                      minHeight: "100dvh",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <div style={{ maxWidth: 720, margin: "0 auto", width: "100%", padding: "8px 12px 10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <button
+                          type="button"
+                          onClick={() => setExpanded(false)}
+                          aria-label="Back"
+                          style={{
+                            width: 42,
+                            height: 42,
+                            borderRadius: 999,
+                            border: "1px solid var(--panel-border)",
+                            background: "var(--panel-bg)",
+                            boxShadow: "0 8px 18px rgba(0,0,0,0.06)",
+                            display: "grid",
+                            placeItems: "center",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <ChevronLeft style={{ width: 20, height: 20, color: "var(--text)" }} />
+                        </button>
+
+                        <div
+                          style={{
+                            flex: 1,
+                            textAlign: "center",
+                            fontWeight: 900,
+                            fontSize: 18,
+                            color: "var(--text)",
+                          }}
+                        >
+                          Practice your words
+                        </div>
+
+                        <div style={{ width: 42 }} />
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        maxWidth: 720,
+                        margin: "0 auto",
+                        padding: "10px 16px 0",
+                        flex: 1,
+                        width: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                      }}
+                    >
+                      <div
+                        style={{
+                          borderRadius: 26,
+                          background: "var(--panel-bg)",
+                          border: "1px solid var(--panel-border)",
+                          boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
+                          padding: 18,
+                        }}
+                      >
+                        <textarea
+                          autoFocus
+                          value={text}
+                          onChange={(e) => setText(String(e.target.value || "").slice(0, MAX_LEN))}
+                          maxLength={MAX_LEN}
+                          placeholder="Start typing…"
+                          style={{
+                            width: "100%",
+                            minHeight: 220,
+                            borderRadius: 18,
+                            border: `1px solid rgba(0,0,0,0.10)`,
+                            background: "rgba(17,24,39,0.04)",
+                            padding: 14,
+                            outline: "none",
+                            fontSize: 18,
+                            fontWeight: 800,
+                            color: "var(--text)",
+                            resize: "none",
+                          }}
+                        />
+
+                        <div
+                          style={{
+                            marginTop: 12,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            color: "var(--muted)",
+                            fontWeight: 900,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 22,
+                              height: 22,
+                              borderRadius: 999,
+                              background: `conic-gradient(#2196f3 ${progressDeg}deg, rgba(33,150,243,0.18) 0deg)`,
+                              padding: 3,
+                              flex: "0 0 auto",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                borderRadius: 999,
+                                background: "var(--panel-bg)",
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            {Math.min(text.length, MAX_LEN)} / {MAX_LEN}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ padding: `14px 0 calc(${safeBottom} + ${kb}px + 14px)` }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePracticeRecord();
+                          }}
+                          disabled={!String(text || "").trim() || isAnalyzing}
+                          style={{
+                            width: "100%",
+                            height: 56,
+                            borderRadius: 18,
+                            border: "none",
+                            cursor: !String(text || "").trim() ? "not-allowed" : "pointer",
+                            opacity: !String(text || "").trim() ? 0.6 : 1,
+                            fontWeight: 900,
+                            fontSize: 18,
+                            color: "white",
+                            background: "#2196f3",
+                            boxShadow: "0 14px 28px rgba(0,0,0,0.12)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 10,
+                          }}
+                        >
+                          {isRecording ? (
+                            <>
+                              <StopCircle style={{ width: 20, height: 20, color: "white" }} />
+                              Stop
+                            </>
+                          ) : (
+                            <>
+                              <Mic style={{ width: 20, height: 20, color: "white" }} />
+                              {isAnalyzing ? "Analyzing…" : "Record"}
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </motion.div>
+
+            {/* Weakness + Bookmarks cards */}
+            {!expanded &&
+              cards
+                .filter((c) => c.key !== "practice_my_text")
+                .map((c) => (
+                  <div
+                    key={c.key}
+                    onClick={c.onPress}
+                    role="button"
+                    tabIndex={0}
+                    style={{
+                      borderRadius: 22,
+                      background: "var(--panel-bg)",
+                      border: "1px solid var(--panel-border)",
+                      boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
+                      padding: 16,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                      <div
+                        style={{
+                          width: 54,
+                          height: 54,
+                          borderRadius: 999,
+                          display: "grid",
+                          placeItems: "center",
+                          background: "rgba(33,150,243,0.10)",
+                          border: `1px solid rgba(33,150,243,0.16)`,
+                          flex: "0 0 auto",
+                        }}
+                      >
+                        <c.Icon style={{ width: 22, height: 22, color: "rgba(33,150,243,0.95)" }} />
+                      </div>
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.2 }}>{c.title}</div>
+                        <div style={{ marginTop: 2, color: "var(--muted)", fontWeight: 700 }}>{c.subtitle}</div>
+                      </div>
+
+                      <div style={{ color: "rgba(17,24,39,0.35)", fontWeight: 900, fontSize: 20 }}>›</div>
+                    </div>
+                  </div>
+                ))}
+          </div>
         </div>
       </div>
-
-
-  </div>
-
-       </div>
+    </div>
   </LayoutGroup>
 );
+
 }
 
