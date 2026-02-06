@@ -328,6 +328,8 @@ export default function Coach() {
 
 const TABBAR_OFFSET = 64;
 const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
+const SAFE_TOP = "env(safe-area-inset-top, 0px)";
+
 
 // dropdown state
 const [mode, setMode] = useState("words"); // words | sentences
@@ -1827,7 +1829,13 @@ const pickerCenter = {
     pointerEvents: "auto",
   }}
 >
-  <div style={{ maxWidth: 720, margin: "0 auto", padding: "8px 16px 14px" }}>
+  <div
+  style={{
+    maxWidth: 720,
+    margin: "0 auto",
+    padding: `calc(${SAFE_TOP} + 32px) 16px 14px`, // +24px ift før
+  }}
+>
     <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>
       Talk Coach
     </div>
@@ -1835,7 +1843,7 @@ const pickerCenter = {
 </div>
 
 {/* Spacer (EXACT same as Practice) */}
-<div style={{ height: 68 }} />
+<div style={{ height: `calc(${SAFE_TOP} + 92px)` }} />
 
 
 
