@@ -951,7 +951,7 @@ nav("/practice");
     <div
       style={{
         width: "100%",
-        maxWidth: 720,
+    maxWidth: 960,
         margin: "0 auto",
         display: "flex",
         flexDirection: "column",
@@ -1040,17 +1040,18 @@ nav("/practice");
         </div>
 
         <div
-          style={{
-            marginTop: 16,
-            maxWidth: 680,
-            width: "100%",
-            marginLeft: "auto",
-            marginRight: "auto",
-            borderRadius: 24,
-            overflow: "hidden",
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.10)",
-          }}
+         style={{
+  marginTop: 28,          // mere space fra overskrift/tip
+  maxWidth: 920,          // meget større kort
+  width: "100%",
+  marginLeft: "auto",
+  marginRight: "auto",
+  borderRadius: 28,
+  overflow: "hidden",
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.10)",
+}}
+
         >
           {s.mediaKind === "image" ? (
             <img src={s.mediaSrc} alt={`${s.code} visual`} style={{ width: "100%", display: "block" }} />
@@ -1275,12 +1276,15 @@ nav("/practice");
 
       {/* Chevrons (bottom) — IMPORTANT: allow going to Playback + Next */}
       <div
-        style={{
-          marginTop: 12,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
+       style={{
+  marginTop: 12,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  paddingLeft: 12,
+  paddingRight: 12,
+}}
+
       >
         <button
           type="button"
@@ -1291,9 +1295,10 @@ nav("/practice");
           disabled={slideIdx <= 0}
           aria-label="Previous"
           style={{
-            width: 56,
-height: 56,
-borderRadius: 20,
+         width: 64,
+height: 64,
+borderRadius: 24,
+
             border: "1px solid rgba(255,255,255,0.12)",
             background: "rgba(255,255,255,0.08)",
             display: "grid",
@@ -1302,7 +1307,7 @@ borderRadius: 20,
             opacity: slideIdx <= 0 ? 0.45 : 1,
           }}
         >
-<ChevronLeft className="h-7 w-7" />
+<ChevronLeft className="h-8 w-8" />
         </button>
 
      <div
@@ -1326,9 +1331,9 @@ borderRadius: 20,
           disabled={slideIdx >= totalSlides - 1}
           aria-label="Next"
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
+           width: 64,
+  height: 64,
+  borderRadius: 24,
             border: "1px solid rgba(255,255,255,0.12)",
             background: "rgba(255,255,255,0.08)",
             display: "grid",
