@@ -171,12 +171,7 @@ export default function Settings() {
     <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Settings</div>
   </div>
 {/* Spacer (match Practice header → cards gap) */}
-<motion.div
-  initial={false}
-  animate={{ height: 68 }}
-  transition={{ duration: 0.80, ease: [0.22, 1, 0.36, 1] }}
-  style={{ overflow: "hidden" }}
-/>
+
 
   {/* Content (same padding as Practice cards) */}
   <div style={{ padding: "0 16px 110px" }}>
@@ -185,6 +180,7 @@ export default function Settings() {
          
 
           {/* Speaking */}
+          <div style={{ marginTop: 24 }}>
           <Section title="SPEAKING">
             <Row label="Default accent" hint="Used for IPA, target, and native TTS language.">
               <div className="inline-flex items-center gap-2">
@@ -195,6 +191,8 @@ export default function Settings() {
               </div>
             </Row>
           </Section>
+          </div>
+
 
           {/* Audio */}
           <Section title="AUDIO">
