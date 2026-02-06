@@ -142,7 +142,7 @@ const progressDeg = (clampedLen / MAX_LEN) * 360;
   }, [nav, bookmarkCount]);
 function goPracticeMyText() {
   const seedText = String(text || "").replace(/\s+/g, " ").trim();
-  nav("/record", { state: { seedText } });
+  nav("/practice-my-text", { state: { seedText } });
 }
 
 
