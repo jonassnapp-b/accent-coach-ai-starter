@@ -298,6 +298,8 @@ const overallScore = useMemo(() => {
   return n <= 1 ? Math.round(n * 100) : Math.round(n);
 }, [result]);
 
+const words = useMemo(() => normalizeWordsFromResult(result, result?.refText), [result]);
+
 const weakPhonemeSlides = useMemo(() => buildWeakPhonemeSlidesFromWords(words), [words]);
 
 const totalSlides = useMemo(() => {
@@ -424,8 +426,7 @@ function playCorrectTts() {
   const [videoMuted, setVideoMuted] = useState(true);
   const videoRef = useRef(null);
 
-  const words = useMemo(() => normalizeWordsFromResult(result, result?.refText), [result]);
-  const maxIdx = Math.max(0, (words?.length || 1) - 1);
+    const maxIdx = Math.max(0, (words?.length || 1) - 1);
   const safeWordIdx = selectedWordIdx < 0 ? -1 : Math.max(0, Math.min(selectedWordIdx, maxIdx));
   const currentWordObj = safeWordIdx >= 0 ? (words?.[safeWordIdx] || null) : null;
 
