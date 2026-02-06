@@ -24,6 +24,7 @@ const Bookmarks  = lazy(() => import("./pages/Bookmarks.jsx"));
 const Coach = lazy(() => import("./pages/Coach.jsx"));
 const AiChat = lazy(() => import("./pages/AiChat.jsx"));
 const Practice = lazy(() => import("./pages/Practice.jsx"));
+const PracticeMyText = lazy(() => import("./pages/PracticeMyText.jsx"));
 
 
 import { submitReferralOpen } from "./lib/api.js";
@@ -39,6 +40,7 @@ const routePrefetch = {
   "/ai-chat":   () => import("./pages/AiChat.jsx"),
   "/coach":     () => import("./pages/Coach.jsx"),
   "/practice":  () => import("./pages/Practice.jsx"),
+    "/practice-my-text": () => import("./pages/PracticeMyText.jsx"),
   "/imitate":   () => import("./pages/ProgressiveSentenceMastery.jsx"),
   "/weakness":  () => import("./pages/WeaknessLab.jsx"),
   "/bookmarks": () => import("./pages/Bookmarks.jsx"),

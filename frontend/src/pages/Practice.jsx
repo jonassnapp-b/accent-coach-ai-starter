@@ -140,11 +140,11 @@ const progressDeg = (clampedLen / MAX_LEN) * 360;
       },
     ];
   }, [nav, bookmarkCount]);
+function goPracticeMyText() {
+  const seedText = String(text || "").replace(/\s+/g, " ").trim();
+  nav("/practice-my-text", { state: { seedText } });
+}
 
-  function goRecord() {
-    const seedText = String(text || "").replace(/\s+/g, " ").trim();
-    nav("/record", { state: { seedText } });
-  }
 
 return (
   <LayoutGroup id="practice-morph">
@@ -433,9 +433,10 @@ transition={{
             <button
               type="button"
               onClick={() => {
-                setExpanded(false);
-                goRecord();
-              }}
+  setExpanded(false);
+  goPracticeMyText();
+}}
+
               disabled={!String(text || "").trim()}
               style={{
                 width: "100%",
