@@ -179,19 +179,21 @@ export default function Settings() {
 
          
 
-          {/* Speaking */}
-          <div style={{ marginTop: 24 }}>
-          <Section title="SPEAKING">
-            <Row label="Default accent" hint="Used for IPA, target, and native TTS language.">
-              <div className="inline-flex items-center gap-2">
-                <ControlSelect value={s.accentDefault} onChange={(e) => setS({ ...s, accentDefault: e.target.value })}>
-                  <option value="en_us">🇺🇸 American English (US)</option>
-                  <option value="en_br">🇬🇧 British English (UK)</option>
-                </ControlSelect>
-              </div>
-            </Row>
-          </Section>
-          </div>
+       {/* Speaking */}
+<Section title="SPEAKING">
+  <Row label="Default accent" hint="Used for IPA, target, and native TTS language.">
+    <div className="inline-flex items-center gap-2">
+      <ControlSelect
+        value={s.accentDefault}
+        onChange={(e) => setS({ ...s, accentDefault: e.target.value })}
+      >
+        <option value="en_us">🇺🇸 American English (US)</option>
+        <option value="en_br">🇬🇧 British English (UK)</option>
+      </ControlSelect>
+    </div>
+  </Row>
+</Section>
+
 
 
           {/* Audio */}
