@@ -371,37 +371,52 @@ async function handleStop(rec) {
 
 return (
   <LayoutGroup id="practice-morph">
-    <div className="page" style={{ minHeight: "100vh", position: "relative", background: "var(--bg)", color: "var(--text)" }}>
-{/* Header (overlay) */}
-<motion.div
-  initial={false}
-  animate={{ opacity: expanded ? 0 : 1 }}
-transition={{ duration: expanded ? 0.34 : 0.26, ease: [0.22, 1, 0.36, 1] }}
+    <div
+  className="page"
   style={{
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    pointerEvents: expanded ? "none" : "auto",
+    minHeight: "100vh",
+    position: "relative",
+    background: "#2196F3",
+    color: "white",
   }}
 >
-  <div style={{ maxWidth: 720, margin: "0 auto", padding: "8px 16px 14px" }}>
-    <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Practice</div>
-  </div>
-</motion.div>
+  {/* Force blue backdrop even if parent/shell paints background */}
+  <div
+    aria-hidden
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "#2196F3",
+      zIndex: 0,
+    }}
+  />
+    <div style={{ position: "relative", zIndex: 1 }}>
 
-{/* Spacer (this is what actually moves the content up smoothly) */}
-<motion.div
-  initial={false}
-  animate={{ height: expanded ? 0 : 68 }}
-  transition={{ duration: expanded ? 1.0 : 0.50, ease: [0.22, 1, 0.36, 1] }}
-  style={{ overflow: "hidden" }}
-/>
+{/* Blue header (only title lives here) */}
+<div style={{ maxWidth: 720, margin: "0 auto", padding: "18px 16px 18px", color: "white" }}>
+  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Practice</div>
+</div>
+</div>
+{/* White sheet under blue header */}
+<div
+  style={{
+    maxWidth: 720,
+    margin: "0 auto",
+    background: "#FFFFFF",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
+    padding: "36px 16px 110px",
+    color: "var(--text)",
+  }}
+>
+
 
 
 
       {/* Cards */}
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 16px 110px" }}>
+<div>
+
         <div style={{ display: "grid", gap: 14 }}>
           {/* Practice My Text card (special because it has the collapsed input) */}
          <motion.div
@@ -583,6 +598,7 @@ transition={{
             <div style={{ width: 42 }} />
           </div>
         </div>
+        
 
         <div
   style={{
@@ -753,6 +769,7 @@ disabled={!String(text || "").trim() || isAnalyzing}
       </div>
 
 
+  </div>
 
        </div>
   </LayoutGroup>
