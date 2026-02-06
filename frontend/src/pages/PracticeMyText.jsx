@@ -388,6 +388,7 @@ function goNext() {
   setSlideIdx((i) => clampSlide(i + 1));
 }
 const isPhonemeOverlay = slideIdx >= 1 && slideIdx <= weakPhonemeSlides.length;
+const activePhonemeSlide = isPhonemeOverlay ? weakPhonemeSlides[slideIdx - 1] : null;
 
 // Reset slide flow when new result comes in
 useEffect(() => {
@@ -555,6 +556,14 @@ const activeWeakItem = useMemo(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
 
+useEffect(() => {
+  if (!isPhonemeOverlay) return;
+  const prev = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+  return () => {
+    document.body.style.overflow = prev;
+  };
+}, [isPhonemeOverlay]);
 
 
   function disposeRecorder() {
@@ -894,7 +903,115 @@ boxShadow: PAGE_SHADOW,
   </button>
 )}
 
-     
+  {isPhonemeOverlay && activePhonemeSlide && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      height: "100dvh",
+      background: "#0B1220",
+      color: "white",
+      zIndex: 9999,
+      paddingTop: `calc(${SAFE_TOP} + 14px)`,
+      paddingLeft: 18,
+      paddingRight: 18,
+      paddingBottom: `calc(18px + ${SAFE_BOTTOM})`,
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+    }}
+  >
+    {/* Close */}
+    <button
+      type="button"
+      onClick={() => setSlideIdx(0)}
+      aria-label="Close"
+      style={{
+        position: "absolute",
+        top: 14,
+        right: 14,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        border: "none",
+        background: "rgba(255,255,255,0.10)",
+        color: "white",
+        display: "grid",
+        placeItems: "center",
+        cursor: "pointer",
+      }}
+    >
+      <X className="h-5 w-5" />
+    </button>
+
+    {/* Title + description */}
+    <div style={{ paddingRight: 60 }}>
+      <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>
+        {activePhonemeSlide.code} Sound
+      </div>
+
+      <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35 }}>
+        {getShortTipForPhoneme(activePhonemeSlide.code)}
+      </div>
+    </div>
+
+    {/* Media */}
+    <div
+      style={{
+        marginTop: 16,
+        borderRadius: 24,
+        overflow: "hidden",
+        background: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.10)",
+      }}
+    >
+      {activePhonemeSlide.mediaKind === "image" ? (
+        <img
+          src={activePhonemeSlide.mediaSrc}
+          alt={`${activePhonemeSlide.code} visual`}
+          style={{ width: "100%", display: "block" }}
+        />
+      ) : (
+        <video
+          key={activePhonemeSlide.mediaSrc}
+          src={activePhonemeSlide.mediaSrc}
+          playsInline
+          muted
+          autoPlay
+          loop
+          controls
+          style={{ width: "100%", display: "block" }}
+        />
+      )}
+    </div>
+
+    {/* Bottom button */}
+    <button
+      type="button"
+      onClick={() => {
+        setDeepDivePhoneme({ code: activePhonemeSlide.code, letters: activePhonemeSlide.letters });
+        setDeepDiveOpen(true);
+      }}
+      style={{
+        marginTop: "auto",
+        height: 56,
+        borderRadius: 20,
+        border: "none",
+        background: "rgba(255,255,255,0.14)",
+        color: "white",
+        fontWeight: 900,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+      }}
+    >
+      Watch Deep Dive <span style={{ fontSize: 20, lineHeight: 0 }}>→</span>
+    </button>
+  </div>
+)}
+   
 
 {/* Slides */}
 <div style={{ marginTop: 14 }}>
@@ -979,97 +1096,7 @@ boxShadow: PAGE_SHADOW,
             {pickShortLineFromScore(overallScore)}
           </div>
         </div>
-      ) : slideIdx >= 1 && slideIdx <= weakPhonemeSlides.length ? (
-        // ---------------- Phoneme slides: 1 per weak phoneme ----------------
-        (() => {
-          const s = weakPhonemeSlides[slideIdx - 1];
-          const title = `${s.code} Sound`;
 
-return (
-  <div
-    style={{
-      paddingTop: 18,
-      paddingBottom: 10,
-    }}
-  >
-
-    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-      <div>
-        <div style={{ fontWeight: 950, fontSize: 18, lineHeight: 1.1 }}>{title}</div>
-        <div style={{ marginTop: 6, color: PAGE_MUTED, fontWeight: 850 }}>
-          Letters: <span style={{ color: PAGE_TEXT }}>{s.letters}</span>
-          {" • "}
-          Score: <span style={{ color: PAGE_TEXT }}>{s.score == null ? "—" : Math.round(s.score)}%</span>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => {
-          setDeepDivePhoneme({ code: s.code, letters: s.letters });
-          setDeepDiveOpen(true);
-        }}
-        style={{
-          height: 40,
-          padding: "0 12px",
-          borderRadius: 14,
-          border: `1px solid ${PAGE_BORDER}`,
-          background: "rgba(33,150,243,0.10)",
-          boxShadow: PAGE_SHADOW,
-          fontWeight: 950,
-          cursor: "pointer",
-        }}
-      >
-        Tips
-      </button>
-    </div>
-
-        <div
-      style={{
-        marginTop: 12,
-        maxWidth: 520,
-        marginLeft: "auto",
-        marginRight: "auto",
-      }}
-    >
-
-      {s.mediaKind === "image" ? (
-        <img
-          src={s.mediaSrc}
-          alt={`${s.code} visual`}
-          style={{ width: "100%", display: "block" }}
-        />
-      ) : (
-        <video
-          key={s.mediaSrc}
-          src={s.mediaSrc}
-          playsInline
-          muted
-          autoPlay
-          loop
-          controls
-          style={{ width: "100%", display: "block" }}
-        />
-      )}
-    </div>
-
-      <div
-      style={{
-        marginTop: 10,
-        color: PAGE_MUTED,
-        fontWeight: 850,
-        textAlign: "center",
-      }}
-    >
-      {getShortTipForPhoneme(s.code)}
-    </div>
-
-  </div>
-);
-
-
-        
-        })()
       ) : slideIdx === 1 + weakPhonemeSlides.length ? (
         // ---------------- Playback slide ----------------
               <div
