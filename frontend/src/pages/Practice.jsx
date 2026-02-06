@@ -15,7 +15,7 @@ export default function Practice() {
   const [expanded, setExpanded] = useState(false);
   const [collapsedReady, setCollapsedReady] = useState(true);
 // Show collapsed icon/title slightly BEFORE the close animation fully finishes
-const CLOSE_DURATION_MS = 800; // matches your "expanded ? 1.15 : 0.80" close duration
+const CLOSE_DURATION_MS = 600; // matches your "expanded ? 1.15 : 0.80" close duration
 const COLLAPSED_REVEAL_EARLY_MS = 520; // how much earlier it should appear
 const closeRevealTimerRef = React.useRef(null);
 
@@ -142,8 +142,9 @@ const progressDeg = (clampedLen / MAX_LEN) * 360;
   }, [nav, bookmarkCount]);
 function goPracticeMyText() {
   const seedText = String(text || "").replace(/\s+/g, " ").trim();
-  nav("/practice-my-text", { state: { seedText } });
+  nav("/record", { state: { seedText } });
 }
+
 
 
 return (
@@ -171,7 +172,7 @@ return (
 <motion.div
   initial={false}
   animate={{ height: expanded ? 0 : 68 }}
-  transition={{ duration: expanded ? 1.15 : 0.80, ease: [0.22, 1, 0.36, 1] }}
+  transition={{ duration: expanded ? 1.0 : 0.50, ease: [0.22, 1, 0.36, 1] }}
   style={{ overflow: "hidden" }}
 />
 
@@ -196,9 +197,10 @@ return (
 
 
 transition={{
-  layout: { type: "tween", duration: expanded ? 1.15 : 0.80, ease: [0.22, 1, 0.36, 1] },
-  default: { duration: expanded ? 1.15 : 0.80, ease: [0.22, 1, 0.36, 1] },
+  layout: { type: "tween", duration: expanded ? 0.34 : 0.26, ease: [0.22, 1, 0.36, 1] },
+  default: { duration: expanded ? 0.34 : 0.26, ease: [0.22, 1, 0.36, 1] },
 }}
+
 
   style={{
     borderRadius: expanded ? 26 : 22,
