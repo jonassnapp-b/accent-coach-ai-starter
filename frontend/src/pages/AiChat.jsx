@@ -62,148 +62,191 @@ export default function AiChat() {
   const levels = useMemo(() => AI_CHAT_LEVELS, []);
 
   
-  return (
+    return (
     <div
+      className="page"
       style={{
+        position: "relative",
         minHeight: "100vh",
-        color: "rgba(17,24,39,0.92)", // næsten sort
-        background: "transparent",
-        paddingBottom: 88,
+        background: "#2196F3",
+        paddingBottom: 0,
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      {/* Header */}
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "16px 14px 10px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <div />
+      {/* Force blue backdrop even if parent/shell paints background */}
+      <div
+        aria-hidden
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "#2196F3",
+          zIndex: 0,
+        }}
+      />
 
-
-          <button
-            type="button"
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div className="mx-auto max-w-[720px]" style={{ width: "100%" }}>
+          {/* Blue header */}
+          <div
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.10)",
-              background: "rgba(255,255,255,0.06)",
-          color: "rgba(17,24,39,0.85)",
-                        display: "grid",
-              placeItems: "center",
-              fontSize: 18,
+              maxWidth: 720,
+              margin: "0 auto",
+              padding: "18px 16px 18px",
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
             }}
-            title="History"
           >
-            ⏱
-          </button>
-        </div>
-      </div>
+            <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>
+              AI Chat
+            </div>
 
-      {/* Content */}
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "8px 14px" }}>
-        {levels.map((lvl) => {
-  const completedInLevel = lvl.scenarios.filter((s) => readProgress(s.id) >= s.total).length;
-  const totalInLevel = lvl.scenarios.length;
+            <button
+              type="button"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.22)",
+                background: "rgba(255,255,255,0.10)",
+                color: "rgba(255,255,255,0.95)",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 18,
+                cursor: "pointer",
+              }}
+              title="History"
+            >
+              ⏱
+            </button>
+          </div>
 
-  return (
-          <div key={`lvl_${lvl.level}`} style={{ marginTop: 18 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-  <div style={{ fontSize: 40, fontWeight: 950, letterSpacing: -0.6 }}>
-    Level {lvl.level}
-  </div>
+          {/* White sheet */}
+          <div
+            style={{
+              flex: 1,
+              background: "#FFFFFF",
+              borderTopLeftRadius: 32,
+              borderTopRightRadius: 32,
+              boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
+              padding: "24px 16px 16px",
+              paddingBottom: "calc(16px + var(--safe-bottom))",
+            }}
+          >
+            <div style={{ maxWidth: 760, margin: "0 auto" }}>
+              {levels.map((lvl) => {
+                const completedInLevel = lvl.scenarios.filter((s) => readProgress(s.id) >= s.total).length;
+                const totalInLevel = lvl.scenarios.length;
 
-  <div
-    style={{
-      fontSize: 16,
-      fontWeight: 900,
-  color: "rgba(17,24,39,0.55)",    }}
-  >
-    {completedInLevel}/{totalInLevel}
-  </div>
-</div>
-
-
-            <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
-              {lvl.scenarios.map((s, idx) => {
-                const done = readProgress(s.id);
-                
-                                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setActiveScenario({ ...s, level: lvl.level })}
-                    style={{
-                      border: "none",
-                      textAlign: "left",
-                      cursor: "pointer",
-                      background: "transparent",
-                      padding: 0,
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                      {/* left node */}
-                      <div style={{ position: "relative", width: 84, height: 84, flex: "0 0 auto" }}>
-                        <div
-                          style={{
-                            width: 84,
-                            height: 84,
-                            borderRadius: 999,
-                            background:
-                              idx % 2 === 0
-                                ? "radial-gradient(circle at 30% 30%, rgba(99,102,241,0.9), rgba(236,72,153,0.45) 55%, rgba(255,255,255,0.06) 75%)"
-                                : "radial-gradient(circle at 30% 30%, rgba(34,197,94,0.65), rgba(99,102,241,0.35) 55%, rgba(255,255,255,0.06) 75%)",
-                           border: "2px solid rgba(255,255,255,0.16)",
-boxShadow: "0 16px 40px rgba(0,0,0,0.28)",
-
-                            display: "grid",
-                            placeItems: "center",
-                           color: "rgba(255,255,255,0.92)",
-fontSize: 30,
-
-                          }}
-                        >
-                          {s.emoji}
-                        </div>
-
-                       
+                return (
+                  <div key={`lvl_${lvl.level}`} style={{ marginTop: 18 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ fontSize: 40, fontWeight: 950, letterSpacing: -0.6, color: "rgba(17,24,39,0.92)" }}>
+                        Level {lvl.level}
                       </div>
 
-                      {/* right text */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 22, fontWeight: 950, color: "rgba(17,24,39,0.92)" }}>
-                          {s.title}
-                        </div>
-                        <div style={{ marginTop: 4, fontSize: 14, fontWeight: 800, color: "rgba(17,24,39,0.55)" }}>
-                          {s.subtitle}
-                        </div>
+                      <div
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 900,
+                          color: "rgba(17,24,39,0.55)",
+                        }}
+                      >
+                        {completedInLevel}/{totalInLevel}
                       </div>
-
-                      {/* progress */}
-                   
                     </div>
-                  </button>
+
+                    <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
+                      {lvl.scenarios.map((s, idx) => {
+                        const done = readProgress(s.id);
+
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => setActiveScenario({ ...s, level: lvl.level })}
+                            style={{
+                              border: "none",
+                              textAlign: "left",
+                              cursor: "pointer",
+                              background: "transparent",
+                              padding: 0,
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                              {/* left node */}
+                              <div style={{ position: "relative", width: 84, height: 84, flex: "0 0 auto" }}>
+                                <div
+                                  style={{
+                                    width: 84,
+                                    height: 84,
+                                    borderRadius: 999,
+                                    background:
+                                      idx % 2 === 0
+                                        ? "radial-gradient(circle at 30% 30%, rgba(99,102,241,0.9), rgba(236,72,153,0.45) 55%, rgba(255,255,255,0.06) 75%)"
+                                        : "radial-gradient(circle at 30% 30%, rgba(34,197,94,0.65), rgba(99,102,241,0.35) 55%, rgba(255,255,255,0.06) 75%)",
+                                    border: "2px solid rgba(0,0,0,0.06)",
+                                    boxShadow: "0 16px 40px rgba(0,0,0,0.14)",
+                                    display: "grid",
+                                    placeItems: "center",
+                                    color: "rgba(255,255,255,0.92)",
+                                    fontSize: 30,
+                                  }}
+                                >
+                                  {s.emoji}
+                                </div>
+                              </div>
+
+                              {/* right text */}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 22, fontWeight: 950, color: "rgba(17,24,39,0.92)" }}>
+                                  {s.title}
+                                </div>
+                                <div style={{ marginTop: 4, fontSize: 14, fontWeight: 800, color: "rgba(17,24,39,0.55)" }}>
+                                  {s.subtitle}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
             </div>
           </div>
-        );
-      })}
-      </div>
 
-      {/* Scenario modal (chat screen) */}
-      <AnimatePresence>
-        {activeScenario ? (
-          <ScenarioChatModal
-            key={activeScenario.id}
-            scenario={activeScenario}
-            accentUi={accentUi}
-            onClose={() => setActiveScenario(null)}
-            readProgress={() => readProgress(activeScenario.id)}
-            writeProgress={(n) => writeProgress(activeScenario.id, n)}
-            theme={{ LIGHT_TEXT, LIGHT_MUTED, LIGHT_BORDER, CARD, CARD2 }}
-          />
-        ) : null}
-      </AnimatePresence>
+          {/* Scenario modal (chat screen) */}
+          <AnimatePresence>
+            {activeScenario ? (
+              <ScenarioChatModal
+                key={activeScenario.id}
+                scenario={activeScenario}
+                accentUi={accentUi}
+                onClose={() => setActiveScenario(null)}
+                readProgress={() => readProgress(activeScenario.id)}
+                writeProgress={(n) => writeProgress(activeScenario.id, n)}
+                theme={{ LIGHT_TEXT, LIGHT_MUTED, LIGHT_BORDER, CARD, CARD2 }}
+              />
+            ) : null}
+          </AnimatePresence>
+        </div>
+      </div>
     </div>
   );
+
 }
 
 function ScenarioChatModal({ scenario, accentUi, onClose, readProgress, writeProgress, theme }) {
