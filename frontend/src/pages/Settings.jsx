@@ -166,10 +166,26 @@ export default function Settings() {
 
 
 
-      {/* Header (aligned with cards like Practice) */}
-  <div style={{ padding: "8px 16px 14px" }}>
-    <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Settings</div>
+     {/* Header (overlay – same as Practice) */}
+<div
+  style={{
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    pointerEvents: "auto",
+  }}
+>
+  <div style={{ maxWidth: 720, margin: "0 auto", padding: "8px 16px 14px" }}>
+    <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>
+      Settings
+    </div>
   </div>
+</div>
+
+{/* Spacer (EXACT same as Practice) */}
+<div style={{ height: 68 }} />
+
 {/* Spacer (match Practice header → cards gap) */}
 
 
