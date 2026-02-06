@@ -251,11 +251,64 @@ mediaSrc: media.src,
 }
 
 const PHONEME_SHORT_TIPS = {
-  // examples (add more as you want)
-  OW: "Round your lips. Glide from open to rounded as the sound finishes.",
-  IY: "Spread your lips slightly. Keep your tongue high and forward.",
-  K: "Back of the tongue touches the soft palate. Release with a clean burst.",
+  // VOWELS
+  AA: "Drop your jaw and keep the mouth open. The tongue sits low and back, with relaxed lips. Hold it steady—don’t turn it into a glide.",
+  AE: "Open your mouth and keep the tongue low but more forward than AA. The jaw is fairly open, and the sound feels wide and bright. Avoid sliding into EH.",
+  AH: "Keep everything relaxed and neutral. The tongue is centered and the jaw is slightly open. Don’t round the lips or push the sound forward.",
+  AO: "Open your mouth and round your lips slightly. The tongue sits low and back, and the sound should feel ‘rounded’ and full. Don’t drift into OW.",
+  AW: "Start like AA (open jaw), then glide into a small rounded W shape. The lips move forward as the sound finishes. Make the glide smooth, not choppy.",
+  AX: "This is a relaxed ‘uh’ sound in unstressed syllables. Keep the jaw loose and the tongue neutral. It should feel quick and effortless.",
+  AY: "Start with an open AH/AA-like shape, then glide up to a tight ‘ee’ position. The tongue moves high and forward as you finish. Keep the glide continuous.",
+  EH: "Jaw slightly open and lips relaxed (not smiling). The tongue is mid and forward, with a clear ‘bed’ quality. Avoid raising into IY.",
+  ER: "Pull the tongue back and slightly up, and keep the lips lightly rounded. The key is strong tongue tension in the middle/back. Don’t add an extra R at the end.",
+  EY: "Begin with EH and glide lightly upward toward IY. The mouth gets a bit narrower as you finish. Keep it a small glide—don’t overdo it.",
+  IH: "Lips relaxed, jaw slightly open, tongue high but not as high as IY. It’s short and crisp, like ‘bit’. Don’t spread into a full smile.",
+  IX: "This is a relaxed version of IH/IY in unstressed syllables. Keep the tongue high-ish and forward but loose. It should sound quick and reduced.",
+  IY: "Spread your lips slightly like a small smile. Lift the tongue high and forward, close to the hard palate. Keep the sound steady—don’t let it dip into IH.",
+  OH: "Start with a more open O shape, then glide slightly toward a tighter rounded position. The lips round more as you finish. Keep the glide smaller than OW.",
+  OW: "Start with your mouth slightly open. As you produce the sound, round your lips smoothly while the tongue moves back and slightly up. The motion should feel continuous, not abrupt.",
+  OY: "Start with an open ‘oh’ shape, then glide into a tight ‘ee’ position. The lips begin rounded and then relax as the tongue moves forward. Make the glide obvious but smooth.",
+  UH: "Lips lightly rounded and jaw slightly open. The tongue is high-back, creating a compact sound. Don’t let it turn into UW.",
+  UW: "Round your lips into a small ‘oo’ and keep them forward. Raise the back of the tongue toward the soft palate. Avoid starting with a big open mouth—keep it tight.",
+
+  // STOPS
+  P: "Close both lips firmly, build a little air pressure, then release cleanly. Keep voicing OFF (no vibration). Add a small puff of air, especially at the start of a word.",
+  B: "Close both lips and use your voice (vibration) as you release. The burst is softer than P because it’s voiced. Keep it quick—don’t add extra ‘uh’ after it.",
+  T: "Tongue tip touches the ridge behind the upper teeth (alveolar ridge). Release with a crisp burst and no voicing. In American English, between vowels it may sound softer (flap).",
+  D: "Tongue tip touches the alveolar ridge and release while voicing is ON. Keep the release clean and quick. Don’t turn it into a TH by pushing the tongue forward.",
+  K: "Back of the tongue touches the soft palate (velum). Build pressure, then release with a clean burst. Keep it sharp—don’t let the tongue drag.",
+  G: "Back of the tongue touches the soft palate and release with voicing ON. The burst is gentler than K because it’s voiced. Keep it tight and controlled.",
+
+  // AFFRICATES
+  CH: "Start like T, then release into a ‘sh’ friction: ‘t + sh’ in one sound. Lips often round slightly. Make it one clean unit, not two separate sounds.",
+  JH: "Start like D, then release into ‘zh’ friction: ‘d + zh’ in one sound. Keep voicing ON throughout. Don’t let it become a plain Z.",
+
+  // FRICATIVES
+  F: "Top teeth lightly touch the lower lip. Push air through steadily with no tongue involvement. Keep it smooth and controlled, not breathy.",
+  V: "Same shape as F, but turn voicing ON (feel vibration). Keep the airflow steady while the throat vibrates. Don’t let it collapse into B.",
+  S: "Tongue is close to the alveolar ridge without touching. Push air through a narrow groove for a sharp hiss. Keep lips relaxed—don’t round like SH.",
+  Z: "Same shape as S, but add voicing (vibration). The airflow stays narrow and steady. Don’t turn it into JH/zh.",
+  SH: "Lips slightly rounded and tongue pulled a bit back. Air flows through a wider channel for a softer hiss. Keep it smooth—don’t add a T before it.",
+  ZH: "Same as SH but voiced (vibration). It’s like the sound in ‘measure’. Keep it continuous, not a JH.",
+  TH: "Tongue tip gently between the teeth (or lightly against the edge of the upper teeth). Blow air softly through the gap. Keep it unvoiced—no vibration.",
+  DH: "Same tongue position as TH, but add voicing (vibration). It’s common in ‘this’ and ‘that’. Keep it light—don’t bite the tongue.",
+  HH: "Open throat and let air flow freely—like a soft breath. The mouth shape follows the next vowel. Don’t tighten the tongue or add friction like F/S.",
+
+  // NASALS
+  M: "Close the lips and let the sound resonate through the nose. Keep voicing ON and the mouth closed. Don’t release into a vowel unless the next sound requires it.",
+  N: "Tongue tip touches the alveolar ridge and sound goes through the nose. Keep voicing ON. Release cleanly into the next sound without adding an extra ‘uh’.",
+  NG: "Back of the tongue touches the soft palate, and air flows through the nose. Keep the tongue back—don’t end with a hard G. It’s one continuous nasal sound.",
+
+  // LIQUIDS / APPROXIMANTS
+  L: "Tongue tip touches the alveolar ridge while air flows around the sides. Keep it clear and light at the start of words. For ‘dark L’ at the end, the tongue pulls slightly back.",
+  R: "Curl the tongue tip slightly back (or bunch the tongue) without touching the roof. Lips may round a bit, and the tongue stays tense. Avoid adding a vowel after it.",
+  W: "Round lips forward tightly like ‘oo’ and keep the tongue back. The sound is a quick glide into the next vowel. Don’t turn it into UW and hold it too long.",
+  Y: "Tongue is high and forward like the start of IY. It’s a quick glide into the next vowel. Keep lips relaxed—no rounding like W.",
+
+  // OTHER CONSONANTS
+  H: "Use HH for this—open throat and let air flow freely. The mouth shape follows the next vowel. Keep it light and breathy, not harsh.",
 };
+
 function getShortTipForPhoneme(code) {
   const c = String(code || "").toUpperCase();
   return PHONEME_SHORT_TIPS[c] || "Focus on mouth shape and airflow for this sound.";
@@ -974,7 +1027,7 @@ nav("/practice");
   {slideIdx === 0 ? (
     // ----- Intro (CENTERED vertically) -----
     <>
-      <div style={{ height: 170, position: "relative" }}>
+      <div style={{ height: 210, position: "relative" }}>
         <div
           style={{
             position: "absolute",
@@ -997,10 +1050,13 @@ nav("/practice");
 
         <div
           style={{
+             marginTop: 22,
             position: "absolute",
             left: 0,
             right: 0,
             top: 74,
+                marginBottom: 14,
+
             opacity: introPhase >= 1 ? 1 : 0,
             transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
             transition: "all 800ms ease",
@@ -1090,8 +1146,8 @@ nav("/practice");
       height: 56,
       borderRadius: 20,
       border: "none",
-      background: "rgba(255,255,255,0.14)",
-      color: "white",
+     background: "#ffffff",
+color: "#0B1220",
       fontWeight: 900,
       cursor: "pointer",
       display: "flex",
@@ -1113,7 +1169,7 @@ nav("/practice");
       <div style={{ paddingRight: 60 }}>
         <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>Playback</div>
         <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35 }}>
-          Listen to your attempt vs a “correct” reference.
+          Listen to your attempt vs a correct reference.
         </div>
       </div>
 
@@ -1132,11 +1188,12 @@ nav("/practice");
             onClick={playYou}
             style={{
               flex: 1,
-              height: 48,
+height: 56,
               borderRadius: 16,
               border: "none",
-              background: "rgba(255,255,255,0.14)",
-              color: "white",
+           background: "#ffffff",
+color: "#0B1220",
+fontSize: 16,
               fontWeight: 900,
               cursor: "pointer",
             }}
@@ -1275,7 +1332,7 @@ nav("/practice");
             cursor: "pointer",
           }}
         >
-          Back to Record
+          Back to Menu
         </button>
       </div>
 
@@ -1327,7 +1384,7 @@ borderRadius: 20,
     fontWeight: 950,
     fontSize: 16,
     letterSpacing: -0.2,
-    color: "rgba(255,255,255,0.78)",
+    color: "#ffffff",
   }}
 >
   {slideIdx + 1} / {totalSlides}
