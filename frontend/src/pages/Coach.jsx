@@ -1736,7 +1736,11 @@ function onNext() {
     margin: "0 auto",
   };
 
-  const stack = { display: "grid", gap: 30 };
+  const stack = {
+  display: "grid",
+  gap: 30,
+  marginTop: 24, // ✅ matcher Practice visuelt
+};
 const pickerRow = {
   display: "grid",
   gridTemplateColumns: "56px 1fr 56px",
