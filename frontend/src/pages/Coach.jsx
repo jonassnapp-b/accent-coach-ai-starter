@@ -1738,11 +1738,12 @@ function onNext() {
     margin: "0 auto",
   };
 
-  const stack = {
+const stack = {
   display: "grid",
   gap: 30,
-  marginTop: 24, // ✅ matcher Practice visuelt
+  marginTop: 12,
 };
+
 const pickerRow = {
   display: "grid",
   gridTemplateColumns: "56px 1fr 56px",
@@ -1843,7 +1844,7 @@ const pickerCenter = {
 </div>
 
 {/* Spacer (EXACT same as Practice) */}
-<div style={{ height: `calc(${SAFE_TOP} + 92px)` }} />
+<div style={{ height: `calc(${SAFE_TOP} + 76px)` }} />
 
 
 
