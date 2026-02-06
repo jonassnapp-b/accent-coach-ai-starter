@@ -1,10 +1,9 @@
 // src/pages/PracticeMyText.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronDown, ArrowUp, StopCircle } from "lucide-react";
+import { ChevronLeft, ChevronDown, ArrowUp, StopCircle, Volume2, Play } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
-import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 
 const IS_PROD = !!import.meta?.env?.PROD;
 const RESULT_KEY = "ac_practice_my_text_result_v1";
@@ -96,6 +95,68 @@ function pickFeedback(json) {
     Math.floor(Math.random() * 3)
   ];
 }
+/* ---------------- Coach-like feedback helpers ---------------- */
+
+function getScore(obj) {
+  const v =
+    obj?.accuracyScore ??
+    obj?.overallAccuracy ??
+    obj?.accuracy ??
+    obj?.pronunciation ??
+    obj?.score ??
+    obj?.overall ??
+    obj?.pronunciationAccuracy ??
+    obj?.accuracy_score;
+
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return n <= 1 ? Math.round(n * 100) : Math.round(n);
+}
+
+function scoreColor(score) {
+  if (score == null) return "rgba(17,24,39,0.55)";
+  if (score >= 85) return "#16a34a";
+  if (score >= 70) return "#f59e0b";
+  return "#ef4444";
+}
+
+function isGreen(score) {
+  return score != null && score >= 85;
+}
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function getPhonemeCode(p) {
+  return String(p?.phoneme || p?.ipa || p?.symbol || "").trim().toUpperCase();
+}
+
+function normalizePhonemeScore(phonemeScore, wordScore, allPhonemeScores) {
+  if (phonemeScore == null || wordScore == null) return phonemeScore;
+  const scores = (allPhonemeScores || []).filter((x) => Number.isFinite(x));
+  if (!scores.length) return phonemeScore;
+
+  const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const shift = wordScore - mean;
+  return clamp(phonemeScore + shift, 0, 100);
+}
+
+function normalizeWordsFromResult(result, fallbackText) {
+  const arr = Array.isArray(result?.words) ? result.words : null;
+  if (arr?.length) return arr;
+
+  const text = String(fallbackText || "").trim();
+  if (!text) return [];
+  const parts = text.split(/\s+/g).filter(Boolean);
+  return parts.map((w) => ({ word: w, phonemes: [] }));
+}
+
+function resolvePhonemeVideo(code) {
+  const c = String(code || "").trim().toUpperCase();
+  if (!c) return null;
+  return { videoSrc: `/phonemes/Videos/${c}.mp4` };
+}
 
 export default function PracticeMyText() {
   const nav = useNavigate();
@@ -155,6 +216,70 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [location.key]);
 
+  // ---------------- Coach-like overlay state ----------------
+  const [selectedWordIdx, setSelectedWordIdx] = useState(-1);
+  const [activeTab, setActiveTab] = useState("overview"); // "overview" | "phoneme"
+  const [activePhonemeKey, setActivePhonemeKey] = useState(null); // e.g. "UW_3"
+  const [videoMuted, setVideoMuted] = useState(true);
+  const videoRef = useRef(null);
+
+  const words = useMemo(() => normalizeWordsFromResult(result, result?.refText), [result]);
+  const maxIdx = Math.max(0, (words?.length || 1) - 1);
+  const safeWordIdx = selectedWordIdx < 0 ? -1 : Math.max(0, Math.min(selectedWordIdx, maxIdx));
+  const currentWordObj = safeWordIdx >= 0 ? (words?.[safeWordIdx] || null) : null;
+
+  const currentWordText = String(currentWordObj?.word || currentWordObj?.text || "").trim();
+  const currentWordScore = getScore(currentWordObj);
+
+  const phonemeLineItems = useMemo(() => {
+    const ps = Array.isArray(currentWordObj?.phonemes) ? currentWordObj.phonemes : [];
+    const out = [];
+
+    const rawScores = ps.map(getScore).filter((x) => Number.isFinite(x));
+    const wordScore = getScore(currentWordObj);
+
+    for (let i = 0; i < ps.length; i++) {
+      const p = ps[i];
+      const code = getPhonemeCode(p);
+      if (!code) continue;
+
+      const raw = getScore(p);
+      const s = normalizePhonemeScore(raw, wordScore, rawScores);
+
+      const assets = resolvePhonemeVideo(code);
+
+      out.push({
+        key: `${code}_${i}`,
+        code,
+        score: s,
+        rawScore: raw,
+        assets,
+        hasVideo: !!assets?.videoSrc,
+        isWeak: s == null || !isGreen(s),
+      });
+    }
+
+    return out;
+  }, [currentWordObj]);
+
+  const weakItems = useMemo(
+    () => phonemeLineItems.filter((x) => x.hasVideo && x.isWeak),
+    [phonemeLineItems]
+  );
+const activeWeakItem = useMemo(() => {
+  if (!activePhonemeKey) return null;
+  return weakItems.find((x) => x.key === activePhonemeKey) || null;
+}, [weakItems, activePhonemeKey]);
+
+  // auto-select first word when we get a result
+  useEffect(() => {
+    if (!result) return;
+    if (words?.length && selectedWordIdx < 0) setSelectedWordIdx(0);
+    setActiveTab("overview");
+    setActivePhonemeKey(null);
+    setVideoMuted(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result]);
 
 
 
@@ -403,7 +528,7 @@ useEffect(() => {
 
      
 
-      {/* Feedback-only */}
+{/* Coach-like feedback */}
 <div style={{ marginTop: 14 }}>
   {!result ? (
     <div
@@ -421,19 +546,255 @@ useEffect(() => {
       No result yet.
     </div>
   ) : (
-    <div
-      style={{
-        borderRadius: 22,
-        background: LIGHT_SURFACE,
-        border: `1px solid ${LIGHT_BORDER}`,
-        boxShadow: LIGHT_SHADOW,
-        padding: 12,
-      }}
-    >
-      <PhonemeFeedback result={result} />
+    <div style={{ display: "grid", gap: 12 }}>
+      {/* Words list (Overview) */}
+      {activeTab === "overview" ? (
+        <div
+          style={{
+            borderRadius: 22,
+            background: LIGHT_SURFACE,
+            border: `1px solid ${LIGHT_BORDER}`,
+            boxShadow: LIGHT_SHADOW,
+            padding: 12,
+          }}
+        >
+          <div style={{ fontWeight: 950, fontSize: 14, color: LIGHT_MUTED, marginBottom: 10 }}>Words</div>
+
+          <div style={{ display: "grid", gap: 10 }}>
+            {words.map((w, idx) => {
+              const t = String(w?.word || w?.text || "").trim();
+              const s = getScore(w);
+              const active = idx === safeWordIdx;
+
+              return (
+                <button
+                  key={`${t}_${idx}`}
+                  type="button"
+                  onClick={() => {
+                    setSelectedWordIdx(idx);
+                    setActiveTab("overview");
+                    setActivePhonemeKey(null);
+                    setVideoMuted(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    border: "none",
+                    background: active ? "rgba(33,150,243,0.10)" : "transparent",
+                    padding: "12px 12px",
+                    borderRadius: 16,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
+                  <span style={{ fontWeight: 950, color: LIGHT_TEXT }}>{t || `Word ${idx + 1}`}</span>
+                  <span style={{ fontWeight: 950, color: scoreColor(s) }}>{s == null ? "—" : Math.round(s)}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ height: 1, background: "rgba(0,0,0,0.06)", margin: "12px 0" }} />
+
+          {currentWordObj ? (
+            <div style={{ display: "grid", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+                <div style={{ fontWeight: 950, fontSize: 14, color: LIGHT_TEXT }}>
+                  Selected: <span style={{ fontWeight: 950 }}>{currentWordText || "—"}</span>
+                </div>
+                <div style={{ fontWeight: 950, color: scoreColor(currentWordScore) }}>
+                  {currentWordScore == null ? "—" : Math.round(currentWordScore)}
+                </div>
+              </div>
+
+              {weakItems.length ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                  {weakItems.map((it) => (
+                    <button
+                      key={it.key}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab("phoneme");
+                        setActivePhonemeKey(it.key);
+                        setVideoMuted(true);
+                        try {
+                          const v = videoRef.current;
+                          if (v) {
+                            v.pause();
+                            v.currentTime = 0;
+                          }
+                        } catch {}
+                      }}
+                      style={{
+                        border: "none",
+                        background: "rgba(17,24,39,0.06)",
+                        padding: "10px 12px",
+                        borderRadius: 999,
+                        fontWeight: 950,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <span>{it.code}</span>
+                      <span style={{ color: scoreColor(it.score) }}>{it.score == null ? "—" : Math.round(it.score)}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>No weak phonemes with video.</div>
+              )}
+            </div>
+          ) : (
+            <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>Tap a word above to see phonemes.</div>
+          )}
+        </div>
+      ) : null}
+
+      {/* Phoneme view (Coach-like) */}
+      {activeTab === "phoneme" ? (
+        !activeWeakItem ? (
+          <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>No data for this phoneme.</div>
+        ) : (
+          <div
+            style={{
+              marginTop: 0,
+              background: "#0B1220",
+              borderRadius: 28,
+              padding: 18,
+              color: "white",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            {/* back (top-right) */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("overview");
+                setActivePhonemeKey(null);
+                setVideoMuted(true);
+                try {
+                  const v = videoRef.current;
+                  if (v) {
+                    v.pause();
+                    v.currentTime = 0;
+                  }
+                } catch {}
+              }}
+              aria-label="Back"
+              style={{
+                position: "absolute",
+                top: 14,
+                right: 14,
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                border: "none",
+                background: "rgba(255,255,255,0.10)",
+                color: "white",
+                display: "grid",
+                placeItems: "center",
+                cursor: "pointer",
+                fontWeight: 900,
+                fontSize: 18,
+              }}
+            >
+              ×
+            </button>
+
+            <div style={{ paddingRight: 60 }}>
+              <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5 }}>{activeWeakItem.code}</div>
+              <div style={{ marginTop: 6, color: "rgba(255,255,255,0.72)", fontWeight: 650 }}>
+                Score: {activeWeakItem.score == null ? "—" : Math.round(activeWeakItem.score)}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 16, borderRadius: 22, overflow: "hidden", position: "relative", background: "black" }}>
+              <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10" }}>
+                <video
+                  ref={videoRef}
+                  src={activeWeakItem.assets?.videoSrc || ""}
+                  playsInline
+                  muted={videoMuted}
+                  preload="auto"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVideoMuted((m) => {
+                      const next = !m;
+                      try {
+                        const v = videoRef.current;
+                        if (v) v.muted = next;
+                      } catch {}
+                      return next;
+                    });
+                  }}
+                  aria-label="Mute"
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    top: 12,
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    border: "none",
+                    background: "rgba(0,0,0,0.35)",
+                    color: "white",
+                    display: "grid",
+                    placeItems: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <Volume2 className="h-5 w-5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const v = videoRef.current;
+                    if (!v) return;
+                    try {
+                      v.muted = false;
+                      setVideoMuted(false);
+                      v.currentTime = 0;
+                      v.play().catch(() => {});
+                    } catch {}
+                  }}
+                  aria-label="Play"
+                  style={{
+                    position: "absolute",
+                    left: "50%",
+                    top: "50%",
+                    transform: "translate(-50%, -50%)",
+                    width: 78,
+                    height: 78,
+                    borderRadius: 39,
+                    border: "none",
+                    background: "rgba(255,255,255,0.95)",
+                    display: "grid",
+                    placeItems: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <Play className="h-8 w-8" style={{ color: "#0B1220" }} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      ) : null}
     </div>
   )}
 </div>
+
 
       </div>
     </div>
