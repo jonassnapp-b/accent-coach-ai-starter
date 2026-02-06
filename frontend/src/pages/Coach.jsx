@@ -1817,45 +1817,65 @@ const pickerCenter = {
     gap: 12,
   };
 
-  return (
-    <div className="page" style={{ minHeight: "100vh", background: LIGHT_BG, color: LIGHT_TEXT }}>
-{/* Header (aligned like Practice) */}
-{/* Header (overlay – SAME AS PRACTICE) */}
-<div
-  style={{
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    pointerEvents: "auto",
-  }}
->
+return (
   <div
-  style={{
-    maxWidth: 720,
-    margin: "0 auto",
-    padding: `calc(${SAFE_TOP} + 32px) 16px 14px`, // +24px ift før
-  }}
->
-    <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>
-      Talk Coach
-    </div>
-  </div>
-</div>
+    className="page"
+    style={{
+      position: "relative",
+      minHeight: "100vh",
+      background: "#2196F3",
+      paddingBottom: 0,
+      display: "flex",
+      flexDirection: "column",
+      color: LIGHT_TEXT,
+    }}
+  >
+    {/* Force blue backdrop even if parent/shell paints background */}
+    <div
+      aria-hidden
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "#2196F3",
+        zIndex: 0,
+      }}
+    />
 
-{/* Spacer (EXACT same as Practice) */}
-<div style={{ height: `calc(${SAFE_TOP} + 76px)` }} />
-
-
-
+    <div
+      style={{
+        position: "relative",
+        zIndex: 1,
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Blue header (only title lives here) */}
       <div
-        className="mx-auto w-full"
         style={{
           maxWidth: 720,
-      padding: "0 16px",
-          paddingBottom: `calc(${TABBAR_OFFSET}px + 24px + ${SAFE_BOTTOM})`,
+          margin: "0 auto",
+          padding: `calc(${SAFE_TOP} + 18px) 16px 18px`,
+          color: "white",
         }}
       >
+        <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Talk Coach</div>
+      </div>
+
+      {/* White sheet under blue header */}
+      <div
+        style={{
+          flex: 1,
+          background: "#FFFFFF",
+          borderTopLeftRadius: 32,
+          borderTopRightRadius: 32,
+          boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
+          padding: "24px 16px 16px",
+          paddingBottom: `calc(${TABBAR_OFFSET}px + 16px + ${SAFE_BOTTOM})`,
+        }}
+      >
+        <div className="mx-auto w-full" style={{ maxWidth: 720 }}>
+
         <LayoutGroup>
           <AnimatePresence mode="wait">
             {stage === "setup" ? (
@@ -2759,7 +2779,9 @@ style={{
           ) : null}
         </LayoutGroup>
 
-        <audio ref={ttsAudioRef} playsInline preload="auto" />
+               <audio ref={ttsAudioRef} playsInline preload="auto" />
+          </div>
+        </div>
       </div>
     </div>
   );
