@@ -1,5 +1,6 @@
 // src/pages/Settings.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { Trash2, Send } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 
@@ -168,6 +169,13 @@ export default function Settings() {
   <div style={{ padding: "8px 16px 14px" }}>
     <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Settings</div>
   </div>
+{/* Spacer (match Practice header → cards gap) */}
+<motion.div
+  initial={false}
+  animate={{ height: 68 }}
+  transition={{ duration: 0.80, ease: [0.22, 1, 0.36, 1] }}
+  style={{ overflow: "hidden" }}
+/>
 
   {/* Content (same padding as Practice cards) */}
   <div style={{ padding: "0 16px 110px" }}>
