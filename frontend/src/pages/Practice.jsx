@@ -399,16 +399,23 @@ return (
 
         {/* White sheet under blue header */}
         <div
-          style={{
-            maxWidth: 720,
-            margin: "0 auto",
-            background: "#FFFFFF",
-            borderTopLeftRadius: 32,
-            borderTopRightRadius: 32,
-            boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
-            padding: "36px 16px 110px",
-            color: "var(--text)",
-          }}
+        style={{
+  maxWidth: 720,
+  margin: "0 auto",
+  background: "#FFFFFF",
+  borderTopLeftRadius: 32,
+  borderTopRightRadius: 32,
+  boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
+  padding: "36px 16px 16px",
+  color: "var(--text)",
+
+  // ✅ make the sheet reach the bottom
+  minHeight: "calc(100vh - 74px)",
+
+  // (optional) if your iOS shell uses safe-area vars:
+  paddingBottom: "calc(16px + var(--safe-bottom))",
+}}
+
         >
           {/* Cards */}
           <div style={{ display: "grid", gap: 14 }}>
