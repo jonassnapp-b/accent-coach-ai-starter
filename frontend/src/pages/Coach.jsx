@@ -1813,9 +1813,26 @@ const pickerCenter = {
   return (
     <div className="page" style={{ minHeight: "100vh", background: LIGHT_BG, color: LIGHT_TEXT }}>
 {/* Header (aligned like Practice) */}
-<div style={{ maxWidth: 720, margin: "0 auto", padding: "8px 16px 14px" }}>
-  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Talk Coach</div>
+{/* Header (overlay – SAME AS PRACTICE) */}
+<div
+  style={{
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    pointerEvents: "auto",
+  }}
+>
+  <div style={{ maxWidth: 720, margin: "0 auto", padding: "8px 16px 14px" }}>
+    <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>
+      Talk Coach
+    </div>
+  </div>
 </div>
+
+{/* Spacer (EXACT same as Practice) */}
+<div style={{ height: 68 }} />
+
 
 
       <div
