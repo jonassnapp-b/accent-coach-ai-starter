@@ -1812,15 +1812,17 @@ const pickerCenter = {
 
   return (
     <div className="page" style={{ minHeight: "100vh", background: LIGHT_BG, color: LIGHT_TEXT }}>
-<div className="mx-auto w-full" style={{ maxWidth: 720, padding: "14px 12px 28px" }}>
-        <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: LIGHT_TEXT }}>Talk Coach</div>
-      </div>
+{/* Header (aligned like Practice) */}
+<div style={{ maxWidth: 720, margin: "0 auto", padding: "8px 16px 14px" }}>
+  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Talk Coach</div>
+</div>
+
 
       <div
         className="mx-auto w-full"
         style={{
           maxWidth: 720,
-          padding: "12px 12px",
+      padding: "0 16px",
           paddingBottom: `calc(${TABBAR_OFFSET}px + 24px + ${SAFE_BOTTOM})`,
         }}
       >

@@ -71,34 +71,35 @@ export default function AiChat() {
         paddingBottom: 88,
       }}
     >
-      {/* Header */}
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "16px 14px 10px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <div />
+    {/* Header (aligned like Practice) */}
+<div style={{ maxWidth: 760, margin: "0 auto", padding: "8px 16px 14px" }}>
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+    <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Practice</div>
+
+    <button
+      type="button"
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 999,
+        border: "1px solid rgba(255,255,255,0.10)",
+        background: "rgba(255,255,255,0.06)",
+        color: "rgba(17,24,39,0.85)",
+        display: "grid",
+        placeItems: "center",
+        fontSize: 18,
+      }}
+      title="History"
+    >
+      ⏱
+    </button>
+  </div>
+</div>
 
 
-          <button
-            type="button"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.10)",
-              background: "rgba(255,255,255,0.06)",
-          color: "rgba(17,24,39,0.85)",
-                        display: "grid",
-              placeItems: "center",
-              fontSize: 18,
-            }}
-            title="History"
-          >
-            ⏱
-          </button>
-        </div>
-      </div>
+     {/* Content */}
+<div style={{ maxWidth: 760, margin: "0 auto", padding: "0 16px" }}>
 
-      {/* Content */}
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "8px 14px" }}>
         {levels.map((lvl) => {
   const completedInLevel = lvl.scenarios.filter((s) => readProgress(s.id) >= s.total).length;
   const totalInLevel = lvl.scenarios.length;
@@ -523,7 +524,7 @@ if (ai?.nextUserLine) {
         inset: 0,
         zIndex: 9999,
         background: "transparent",
-          padding: 12,
+          padding: 16,
         paddingBottom: 24,
       }}
     >
