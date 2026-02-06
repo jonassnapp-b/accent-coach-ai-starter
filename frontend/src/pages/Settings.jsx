@@ -26,13 +26,13 @@ function Row({ label, children, hint }) {
   );
 }
 
-function Section({ title, children, noPanel = false }) {
+function Section({ title, children, noPanel = false, first = false }) {
   return (
     <div
       className="grid"
       style={{
-        marginTop: 18,      // ✅ mere luft OVER hver section
-        rowGap: 10,         // ✅ mere luft mellem heading og card
+        marginTop: first ? 0 : 18, // ✅ første får 0, resten 18
+        rowGap: 10,
       }}
     >
       {/* heading OUTSIDE the card */}
@@ -44,17 +44,17 @@ function Section({ title, children, noPanel = false }) {
           fontSize: 13,
           color: "var(--muted)",
           paddingLeft: 6,
-          marginTop: 2,      // (valgfrit) lidt ekstra “breathing room”
+          marginTop: 2,
         }}
       >
         {title}
       </div>
 
-      {/* card */}
       {noPanel ? children : <div className="rounded-2xl panel">{children}</div>}
     </div>
   );
 }
+
 
 
 
@@ -238,7 +238,7 @@ export default function Settings() {
          
 
        {/* Speaking */}
-<Section title="SPEAKING">
+<Section title="SPEAKING" first>
   <Row label="Default accent" hint="Used for IPA, target, and native TTS language.">
     <div className="inline-flex items-center gap-2">
       <ControlSelect
