@@ -127,6 +127,31 @@ function isGreen(score) {
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
+function computeHeroFontSize(text, maxPx, minPx) {
+  const t = String(text || "").trim();
+  if (!t) return maxPx;
+
+  // Rough fit: longer text => smaller font
+  const len = t.length;
+
+  // Tuning:
+  // <= 14 chars: keep max
+  // 40 chars: noticeably smaller
+  // 80+ chars: near min
+  const shrink = Math.max(0, len - 14) * 1.05;
+  return clamp(Math.round(maxPx - shrink), minPx, maxPx);
+}
+
+function twoLineClampStyle() {
+  return {
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    wordBreak: "break-word",
+  };
+}
 
 function getPhonemeCode(p) {
   return String(p?.phoneme || p?.ipa || p?.symbol || "").trim().toUpperCase();
@@ -319,7 +344,7 @@ export default function PracticeMyText() {
   const location = useLocation();
   const { settings } = useSettings();
 
-  const MAX_LEN = 220;
+  const MAX_LEN = 120;
 
 // Page (light) + header (dark) like your screenshot
 const PAGE_BG = "#EEF5FF";
@@ -363,6 +388,12 @@ useEffect(() => {
   useEffect(() => setAccentUi(settings.accentDefault || "en_us"), [settings.accentDefault]);
 
   const [refText, setRefText] = useState("");
+  useEffect(() => {
+  if (refText.length > MAX_LEN) {
+    setRefText(refText.slice(0, MAX_LEN));
+  }
+}, [refText, MAX_LEN]);
+
   const [err, setErr] = useState("");
 
 
@@ -420,6 +451,7 @@ const overallScore = useMemo(() => {
   if (!Number.isFinite(n)) return 0;
   return n <= 1 ? Math.round(n * 100) : Math.round(n);
 }, [result]);
+const heroText = useMemo(() => String(result?.refText || "").trim(), [result]);
 
 const words = useMemo(() => normalizeWordsFromResult(result, result?.refText), [result]);
 
@@ -713,7 +745,7 @@ sendToServer(blob, localUrl);
 
   async function sendToServer(audioBlob, localUrl) {
     try {
-      const text = sanitizeTextForSubmit(refText);
+      const text = sanitizeTextForSubmit(refText).slice(0, MAX_LEN);
       const base = getApiBase();
 
       const fd = new FormData();
@@ -1028,25 +1060,29 @@ nav("/practice");
     // ----- Intro (CENTERED vertically) -----
     <>
       <div style={{ height: 210, position: "relative" }}>
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: introPhase >= 1 ? 10 : 34,
-            opacity: 1,
-            transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-            transition: "all 900ms ease",
-            textAlign: "center",
-            fontWeight: 950,
-            fontSize: 84,
-            letterSpacing: -0.4,
-            color: scoreColor(overallScore),
-            textShadow: "0 12px 40px rgba(0,0,0,0.35)",
-          }}
-        >
-          {String(result?.refText || "").trim() || "—"}
-        </div>
+       <div
+  style={{
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: introPhase >= 1 ? 10 : 34,
+    opacity: 1,
+    transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
+    transition: "all 900ms ease",
+    textAlign: "center",
+    fontWeight: 950,
+    fontSize: computeHeroFontSize(heroText, 84, 34),
+    letterSpacing: -0.4,
+    color: scoreColor(overallScore),
+    textShadow: "0 12px 40px rgba(0,0,0,0.35)",
+    paddingLeft: 16,
+    paddingRight: 16,
+    ...twoLineClampStyle(),
+  }}
+>
+  {heroText || "—"}
+</div>
+
 
         <div
           style={{
