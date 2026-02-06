@@ -156,16 +156,7 @@ useEffect(() => {
 }, [location.key]);
 
 
-  // seedText from Practice.jsx
-  useEffect(() => {
-    const seed = String(location?.state?.seedText || "").trim();
-    if (seed) setRefText(seed.slice(0, MAX_LEN));
-    // Always start clean result on entry
-    setResult(null);
-    setErr("");
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.key]);
 
   function disposeRecorder() {
     try {
@@ -410,99 +401,40 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Input card */}
-        <div
-          style={{
-            marginTop: 14,
-            borderRadius: 22,
-            background: LIGHT_SURFACE,
-            border: `1px solid ${LIGHT_BORDER}`,
-            boxShadow: LIGHT_SHADOW,
-            padding: 16,
-          }}
-        >
-          <textarea
-            value={refText}
-            onChange={(e) => setRefText(e.target.value.slice(0, MAX_LEN))}
-            onPaste={(e) => {
-              e.preventDefault();
-              const pasted = e.clipboardData?.getData("text") || "";
-              setRefText(sanitizeTextForPaste(pasted).slice(0, MAX_LEN));
-            }}
-            placeholder="Type or paste text…"
-            style={{
-              width: "100%",
-              minHeight: 140,
-              borderRadius: 18,
-              border: `1px solid rgba(0,0,0,0.10)`,
-              background: "rgba(17,24,39,0.04)",
-              padding: 14,
-              outline: "none",
-              fontSize: 18,
-              fontWeight: 800,
-              color: LIGHT_TEXT,
-              resize: "none",
-            }}
-            disabled={isBusy}
-          />
+     
 
-          <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ color: LIGHT_MUTED, fontWeight: 900 }}>
-              {Math.min(refText.length, MAX_LEN)} / {MAX_LEN}
-            </div>
+      {/* Feedback-only */}
+<div style={{ marginTop: 14 }}>
+  {!result ? (
+    <div
+      style={{
+        borderRadius: 22,
+        background: LIGHT_SURFACE,
+        border: `1px solid ${LIGHT_BORDER}`,
+        boxShadow: LIGHT_SHADOW,
+        padding: 14,
+        color: LIGHT_MUTED,
+        fontWeight: 900,
+        textAlign: "center",
+      }}
+    >
+      No result yet.
+    </div>
+  ) : (
+    <div
+      style={{
+        borderRadius: 22,
+        background: LIGHT_SURFACE,
+        border: `1px solid ${LIGHT_BORDER}`,
+        boxShadow: LIGHT_SHADOW,
+        padding: 12,
+      }}
+    >
+      <PhonemeFeedback result={result} />
+    </div>
+  )}
+</div>
 
-            <button
-              type="button"
-              onClick={togglePronunciationRecord}
-              disabled={!refText.trim() || isAnalyzing}
-              aria-label={isRecording ? "Stop recording" : "Start recording"}
-              style={{
-                height: 46,
-                padding: "0 14px",
-                borderRadius: 16,
-                border: "none",
-                background: SEND_PURPLE,
-                color: "white",
-                fontWeight: 950,
-                cursor: !refText.trim() || isAnalyzing ? "not-allowed" : "pointer",
-                opacity: !refText.trim() || isAnalyzing ? 0.6 : 1,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              {isRecording ? <StopCircle className="h-5 w-5" /> : <ArrowUp className="h-5 w-5" />}
-              {isRecording ? "Stop" : "Record"}
-            </button>
-          </div>
-
-          <div style={{ marginTop: 10, minHeight: 18, textAlign: "center", color: LIGHT_MUTED, fontWeight: 800, fontSize: 12 }}>
-            {isRecording ? "Recording…" : isAnalyzing ? "Analyzing…" : " "}
-          </div>
-
-          {err ? (
-            <div style={{ marginTop: 8, color: "#e5484d", textAlign: "center", fontWeight: 900, fontSize: 13 }}>
-              {err}
-            </div>
-          ) : null}
-        </div>
-
-        {/* Feedback */}
-        <div style={{ marginTop: 14 }}>
-          {!result ? null : (
-            <div
-              style={{
-                borderRadius: 22,
-                background: LIGHT_SURFACE,
-                border: `1px solid ${LIGHT_BORDER}`,
-                boxShadow: LIGHT_SHADOW,
-                padding: 12,
-              }}
-            >
-              <PhonemeFeedback result={result} />
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
