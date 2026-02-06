@@ -959,319 +959,329 @@ nav("/practice");
         flex: "1 1 auto",
       }}
     >
-     {/* CONTENT */}
-{slideIdx === 0 ? (
-  // ----- Intro (keep the old word+% effect + score color) -----
-  <>
-    <div style={{ height: 170, position: "relative", marginTop: 6 }}>
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          top: introPhase >= 1 ? 10 : 34,
-          opacity: 1,
-          transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-          transition: "all 900ms ease",
-          textAlign: "center",
-          fontWeight: 950,
-          fontSize: 44,
-          letterSpacing: -0.4,
-          color: scoreColor(overallScore),
-          textShadow: "0 12px 40px rgba(0,0,0,0.35)",
-        }}
-      >
-        {String(result?.refText || "").trim() || "—"}
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          top: 74,
-          opacity: introPhase >= 1 ? 1 : 0,
-          transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-          transition: "all 800ms ease",
-          textAlign: "center",
-          fontWeight: 950,
-          fontSize: 56,
-          letterSpacing: -0.8,
-          color: scoreColor(overallScore),
-          textShadow: "0 14px 46px rgba(0,0,0,0.38)",
-        }}
-      >
-        {introPct}%
-      </div>
-    </div>
-
-    <div
-      style={{
-        marginTop: 10,
-        textAlign: "center",
-        fontWeight: 900,
-        color: "rgba(255,255,255,0.72)",
-        opacity: introPhase >= 2 ? 1 : 0,
-        transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
-        transition: "all 650ms ease",
-      }}
-    >
-      {pickShortLineFromScore(overallScore)}
-    </div>
-
-    <div style={{ marginTop: "auto" }} />
-  </>
-) : slideIdx >= 1 && slideIdx <= weakPhonemeSlides.length ? (
-  // ----- Phoneme slides (unchanged) -----
-  (() => {
-    const s = weakPhonemeSlides[slideIdx - 1];
-    if (!s) return null;
-
-    return (
-      <>
-        <div style={{ paddingRight: 60 }}>
-          <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>
-            {s.code} Sound
-          </div>
-
-          <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35 }}>
-            {getShortTipForPhoneme(s.code)}
-          </div>
+{/* CONTENT */}
+<div
+  style={{
+    flex: "1 1 auto",
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: slideIdx === 0 ? "center" : "flex-start",
+    paddingTop: slideIdx === 0 ? 0 : 72, // mere space over overskriften på Playback/andre slides
+    paddingBottom: 12,
+  }}
+>
+  {slideIdx === 0 ? (
+    // ----- Intro (CENTERED vertically) -----
+    <>
+      <div style={{ height: 170, position: "relative" }}>
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: introPhase >= 1 ? 10 : 34,
+            opacity: 1,
+            transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
+            transition: "all 900ms ease",
+            textAlign: "center",
+            fontWeight: 950,
+            fontSize: 44,
+            letterSpacing: -0.4,
+            color: scoreColor(overallScore),
+            textShadow: "0 12px 40px rgba(0,0,0,0.35)",
+          }}
+        >
+          {String(result?.refText || "").trim() || "—"}
         </div>
 
         <div
-         style={{
-  marginTop: 28,          // mere space fra overskrift/tip
-  maxWidth: 920,          // meget større kort
-  width: "100%",
-  marginLeft: "auto",
-  marginRight: "auto",
-  borderRadius: 28,
-  overflow: "hidden",
-  background: "rgba(255,255,255,0.06)",
-  border: "1px solid rgba(255,255,255,0.10)",
-}}
-
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: 74,
+            opacity: introPhase >= 1 ? 1 : 0,
+            transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
+            transition: "all 800ms ease",
+            textAlign: "center",
+            fontWeight: 950,
+            fontSize: 56,
+            letterSpacing: -0.8,
+            color: scoreColor(overallScore),
+            textShadow: "0 14px 46px rgba(0,0,0,0.38)",
+          }}
         >
-          {s.mediaKind === "image" ? (
-            <img src={s.mediaSrc} alt={`${s.code} visual`} style={{ width: "100%", display: "block" }} />
-          ) : (
-            <video
-              key={s.mediaSrc}
-              src={s.mediaSrc}
-              playsInline
-              muted
-              autoPlay
-              loop
-              controls
-              style={{ width: "100%", display: "block" }}
-            />
-          )}
+          {introPct}%
         </div>
+      </div>
 
-        <div style={{ marginTop: "auto" }}>
+      <div
+        style={{
+          marginTop: 10,
+          textAlign: "center",
+          fontWeight: 900,
+          color: "rgba(255,255,255,0.72)",
+          opacity: introPhase >= 2 ? 1 : 0,
+          transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
+          transition: "all 650ms ease",
+        }}
+      >
+        {pickShortLineFromScore(overallScore)}
+      </div>
+    </>
+  ) : slideIdx >= 1 && slideIdx <= weakPhonemeSlides.length ? (
+    // ----- Phoneme slides -----
+    (() => {
+      const s = weakPhonemeSlides[slideIdx - 1];
+      if (!s) return null;
+
+      return (
+        <>
+          <div style={{ paddingRight: 60 }}>
+            <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>
+              {s.code} Sound
+            </div>
+
+            <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35 }}>
+              {getShortTipForPhoneme(s.code)}
+            </div>
+          </div>
+
+          <div
+            style={{
+              marginTop: 28,
+              maxWidth: 920,
+              width: "100%",
+              marginLeft: "auto",
+              marginRight: "auto",
+              borderRadius: 28,
+              overflow: "hidden",
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.10)",
+            }}
+          >
+            {s.mediaKind === "image" ? (
+              <img src={s.mediaSrc} alt={`${s.code} visual`} style={{ width: "100%", display: "block" }} />
+            ) : (
+              <video
+                key={s.mediaSrc}
+                src={s.mediaSrc}
+                playsInline
+                muted
+                autoPlay
+                loop
+                controls
+                style={{ width: "100%", display: "block" }}
+              />
+            )}
+          </div>
+
+          <div style={{ marginTop: "auto" }}>
+            <button
+              type="button"
+              onClick={() => {
+                setDeepDivePhoneme({ code: s.code, letters: s.letters });
+                setDeepDiveOpen(true);
+              }}
+              style={{
+                width: "100%",
+                height: 56,
+                borderRadius: 20,
+                border: "none",
+                background: "rgba(255,255,255,0.14)",
+                color: "white",
+                fontWeight: 900,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+              }}
+            >
+              Watch Deep Dive <span style={{ fontSize: 20, lineHeight: 0 }}>→</span>
+            </button>
+          </div>
+        </>
+      );
+    })()
+  ) : slideIdx === 1 + weakPhonemeSlides.length ? (
+    // ----- Playback slide -----
+    <>
+      <div style={{ paddingRight: 60 }}>
+        <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>Playback</div>
+        <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35 }}>
+          Listen to your attempt vs a “correct” reference.
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: 22, // lidt mere luft under overskriften
+          borderRadius: 22,
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          padding: 14,
+        }}
+      >
+        <div style={{ display: "flex", gap: 10 }}>
           <button
             type="button"
-            onClick={() => {
-              setDeepDivePhoneme({ code: s.code, letters: s.letters });
-              setDeepDiveOpen(true);
-            }}
+            onClick={playYou}
             style={{
-              width: "100%",
-              height: 56,
-              borderRadius: 20,
+              flex: 1,
+              height: 48,
+              borderRadius: 16,
               border: "none",
               background: "rgba(255,255,255,0.14)",
               color: "white",
               fontWeight: 900,
               cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
             }}
           >
-            Watch Deep Dive <span style={{ fontSize: 20, lineHeight: 0 }}>→</span>
+            Play You
+          </button>
+
+          <button
+            type="button"
+            onClick={playCorrectTts}
+            style={{
+              flex: 1,
+              height: 48,
+              borderRadius: 16,
+              border: "none",
+              background: "rgba(255,255,255,0.10)",
+              color: "white",
+              fontWeight: 900,
+              cursor: "pointer",
+            }}
+          >
+            Play Correct
           </button>
         </div>
-      </>
-    );
-  })()
-) : slideIdx === 1 + weakPhonemeSlides.length ? (
-  // ----- Playback slide (dark style like the others) -----
-  <>
-    <div style={{ paddingRight: 60 }}>
-      <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>Playback</div>
-      <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35 }}>
-        Listen to your attempt vs a “correct” reference.
-      </div>
-    </div>
 
-    <div
-      style={{
-        marginTop: 18,
-        borderRadius: 22,
-        background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.10)",
-        padding: 14,
-      }}
-    >
-      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+          {[
+            { label: "1.00", v: 1.0 },
+            { label: "0.85", v: 0.85 },
+            { label: "0.75", v: 0.75 },
+          ].map((x) => {
+            const active = Math.abs(playbackRate - x.v) < 0.001;
+            return (
+              <button
+                key={x.label}
+                type="button"
+                onClick={() => setPlaybackRate(x.v)}
+                style={{
+                  flex: 1,
+                  height: 44,
+                  borderRadius: 14,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.08)",
+                  color: "white",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+              >
+                {x.label}
+              </button>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => setLoopOn((v) => !v)}
+            style={{
+              width: 96,
+              height: 44,
+              borderRadius: 14,
+              border: "1px solid rgba(255,255,255,0.10)",
+              background: loopOn ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.08)",
+              color: "white",
+              fontWeight: 900,
+              cursor: "pointer",
+            }}
+          >
+            Loop
+          </button>
+        </div>
+      </div>
+
+      <div style={{ marginTop: "auto" }} />
+    </>
+  ) : (
+    // ----- Actions slide -----
+    <>
+      <div style={{ paddingRight: 60 }}>
+        <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>Next</div>
+        <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35 }}>
+          Want another attempt or go back?
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: 22,
+          display: "grid",
+          gap: 10,
+        }}
+      >
         <button
           type="button"
-          onClick={playYou}
+          onClick={async () => {
+            stopAllAudio();
+            setResult(null);
+            setErr("");
+            setSlideIdx(0);
+            setIntroPhase(0);
+            setIntroPct(0);
+            try {
+              await startPronunciationRecord();
+            } catch {}
+          }}
           style={{
-            flex: 1,
-            height: 48,
-            borderRadius: 16,
+            height: 56,
+            borderRadius: 20,
             border: "none",
             background: "rgba(255,255,255,0.14)",
             color: "white",
             fontWeight: 900,
             cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
           }}
         >
-          Play You
+          <RotateCcw className="h-5 w-5" />
+          Try again
         </button>
 
         <button
           type="button"
-          onClick={playCorrectTts}
-          style={{
-            flex: 1,
-            height: 48,
-            borderRadius: 16,
-            border: "none",
-            background: "rgba(255,255,255,0.10)",
-            color: "white",
-            fontWeight: 900,
-            cursor: "pointer",
+          onClick={() => {
+            stopAllAudio();
+            nav("/practice");
           }}
-        >
-          Play Correct
-        </button>
-      </div>
-
-      <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-        {[
-          { label: "1.00", v: 1.0 },
-          { label: "0.85", v: 0.85 },
-          { label: "0.75", v: 0.75 },
-        ].map((x) => {
-          const active = Math.abs(playbackRate - x.v) < 0.001;
-          return (
-            <button
-              key={x.label}
-              type="button"
-              onClick={() => setPlaybackRate(x.v)}
-              style={{
-                flex: 1,
-                height: 44,
-                borderRadius: 14,
-                border: "1px solid rgba(255,255,255,0.10)",
-                background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.08)",
-                color: "white",
-                fontWeight: 900,
-                cursor: "pointer",
-              }}
-            >
-              {x.label}
-            </button>
-          );
-        })}
-
-        <button
-          type="button"
-          onClick={() => setLoopOn((v) => !v)}
           style={{
-            width: 96,
-            height: 44,
-            borderRadius: 14,
+            height: 56,
+            borderRadius: 20,
             border: "1px solid rgba(255,255,255,0.10)",
-            background: loopOn ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.08)",
+            background: "rgba(255,255,255,0.08)",
             color: "white",
             fontWeight: 900,
             cursor: "pointer",
           }}
         >
-          Loop
+          Back to Record
         </button>
       </div>
-    </div>
 
-    <div style={{ marginTop: "auto" }} />
-  </>
-) : (
-  // ----- Actions / last slide (dark style like the others) -----
-  <>
-    <div style={{ paddingRight: 60 }}>
-      <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>Next</div>
-      <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35 }}>
-        Want another attempt or go back?
-      </div>
-    </div>
+      <div style={{ marginTop: "auto" }} />
+    </>
+  )}
+</div>
 
-    <div
-      style={{
-        marginTop: 18,
-        display: "grid",
-        gap: 10,
-      }}
-    >
-      <button
-        type="button"
-        onClick={async () => {
-          stopAllAudio();
-          setResult(null);
-          setErr("");
-          setSlideIdx(0);
-          setIntroPhase(0);
-          setIntroPct(0);
-          try {
-            await startPronunciationRecord();
-          } catch {}
-        }}
-        style={{
-          height: 56,
-          borderRadius: 20,
-          border: "none",
-          background: "rgba(255,255,255,0.14)",
-          color: "white",
-          fontWeight: 900,
-          cursor: "pointer",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 10,
-        }}
-      >
-        <RotateCcw className="h-5 w-5" />
-        Try again
-      </button>
-
-      <button
-        type="button"
-        onClick={() => {
-          stopAllAudio();
-        nav("/practice");
-        }}
-        style={{
-          height: 56,
-          borderRadius: 20,
-          border: "1px solid rgba(255,255,255,0.10)",
-          background: "rgba(255,255,255,0.08)",
-          color: "white",
-          fontWeight: 900,
-          cursor: "pointer",
-        }}
-      >
-        Back to Record
-      </button>
-    </div>
-
-    <div style={{ marginTop: "auto" }} />
-  </>
-)}
 
 
       {/* Chevrons (bottom) — IMPORTANT: allow going to Playback + Next */}
