@@ -12,6 +12,7 @@ import { SettingsProvider } from "./lib/settings-store.jsx";
 
 import Record from "./pages/Record.jsx";
 import Feedback from "./pages/Feedback.jsx";
+
 import { Mic, AudioWaveform, Target, Settings as SettingsIcon, MessageCircle } from "lucide-react";
 
 
@@ -24,7 +25,7 @@ const Bookmarks  = lazy(() => import("./pages/Bookmarks.jsx"));
 const Coach = lazy(() => import("./pages/Coach.jsx"));
 const AiChat = lazy(() => import("./pages/AiChat.jsx"));
 const Practice = lazy(() => import("./pages/Practice.jsx"));
-const PracticeMyText = lazy(() => import("./pages/PracticeMyText.jsx"));
+const PracticeMyTextPage = lazy(() => import("./pages/PracticeMyText.jsx"));
 
 
 import { submitReferralOpen } from "./lib/api.js";
@@ -221,14 +222,17 @@ function AppInner() {
 
 {/* Feedback (NOT a tab) */}
 <Route path="/feedback" element={<Feedback />} />
+
 {/* Hidden routes (NOT tabs) */}
 <Route path="/record" element={<PracticeGate />} />
+<Route path="/practice-my-text" element={<PracticeMyTextPage />} />
+
 <Route path="/weakness" element={<WeaknessLab />} />
 <Route path="/bookmarks" element={<Bookmarks />} />
 
 
             {/* Catch-alls */}
-            <Route path="*" element={<Navigate to="/practice" replace />} />
+            <Route path="*" element={<div />} />
           </Routes>
         </Suspense>
       </main>
