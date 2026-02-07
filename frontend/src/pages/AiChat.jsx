@@ -314,28 +314,7 @@ function speakTarget() {
     }
   } catch {}
 }
-function overallPctLikeCoach(json) {
-  const raw =
-    json?.overall ??
-    json?.overallAccuracy ??
-    json?.pronunciation ??
-    json?.overall_score ??
-    json?.overall_accuracy ??
-    json?.pronunciation_score ??
-    json?.pronunciation_accuracy ??
-    json?.accuracyScore ??
-    json?.accuracy_score ??
-    0;
 
-  let n = Number(raw);
-  if (!Number.isFinite(n)) n = 0;
-  if (n > 0 && n <= 1) n = n * 100;
-  n = Math.round(n);
-  // keep it sane
-  if (n < 0) n = 0;
-  if (n > 100) n = 100;
-  return n;
-}
 
 function clamp01(v) {
   const n = Number(v);
@@ -398,26 +377,10 @@ function psmSentenceScoreFromApi(json) {
 // PSM-style word scores IN ORDER (keeps duplicates + positions)
 function extractWordScoresInOrder(wordsArr) {
   const ws = Array.isArray(wordsArr) ? wordsArr : [];
-
-  return ws.map((w) => {
-    const raw =
-      w?.accuracyScore ??
-      w?.overallAccuracy ??
-      w?.accuracy ??
-      w?.pronunciation ??
-      w?.score ??
-      w?.overall ??
-      w?.pronunciationAccuracy;
-
-    let n = Number(raw);
-    if (!Number.isFinite(n)) return null;
-    if (n > 0 && n <= 1) n = n * 100;
-    n = Math.round(n);
-    if (n < 0) n = 0;
-    if (n > 100) n = 100;
-    return n;
-  });
+  // ✅ PSM-style word scores in order (keep nulls to preserve positions)
+  return ws.map((w) => wordScore100LikePSM(w));
 }
+
 
 
 function isWordLike(cleaned) {
@@ -610,8 +573,15 @@ const timeoutId = setTimeout(() => {
       const json = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
 
-   // ✅ Coach-style overall scoring (use SpeechSuper overall fields)
-const overall = overallPctLikeCoach(json);
+// ✅ PSM-style sentence scoring (same as Record.jsx)
+const psm = psmSentenceScoreFromApi(json);
+const overall = Number(psm?.overall ?? 0);
+
+// (optional) keep json consistent if reused later
+json.overall = overall;
+json.pronunciation = overall;
+json.overallAccuracy = overall;
+
 
 
       setAnalyzeStatus("");
