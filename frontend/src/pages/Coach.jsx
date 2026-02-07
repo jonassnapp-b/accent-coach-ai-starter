@@ -2304,13 +2304,14 @@ style={{
   ? createPortal(
       <div
         style={{
-          position: "fixed",
-          inset: 0,
-          height: "100dvh",
-          background: "#2196F3",
-          zIndex: 2147483647, // ✅ guaranteed above tabbar
-          overflow: "hidden",
-        }}
+  position: "fixed",
+  inset: 0,
+  height: "100dvh",
+  background: "#2196F3",
+  zIndex: 20000,      // ✅ over tabbar
+  overflow: "hidden", // ✅ som i Practice
+}}
+
       >
            
 
