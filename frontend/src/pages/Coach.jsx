@@ -314,7 +314,8 @@ export default function Coach() {
         cleanupUserUrl();
         return next;
       });
-    }, 900);
+    }, 1200);
+
 
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -441,9 +442,7 @@ export default function Coach() {
         {/* header */}
         <div style={{ maxWidth: 520, margin: "0 auto", padding: `calc(${SAFE_TOP} + 18px) 16px 18px`, color: "white" }}>
           <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Daily Drill</div>
-          <div style={{ marginTop: 6, fontSize: 13, opacity: 0.9, fontWeight: 700 }}>
-            10 quick attempts • instant label • auto-next
-          </div>
+         
         </div>
 
         {/* white sheet */}
@@ -506,7 +505,7 @@ export default function Coach() {
                       >
                         <ChevronLeft className="h-7 w-7" />
                       </button>
-                      <div style={pickerCenter}>{ACCENT_LABEL[accentUi]}</div>
+                      <div style={{ ...pickerCenter, transform: "translateX(6px)" }}>{ACCENT_LABEL[accentUi]}</div>
                       <button
                         type="button"
                         onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, 1))}
@@ -520,9 +519,7 @@ export default function Coach() {
                       <button type="button" onClick={onStartDrill} style={primaryBtn}>
                         Start (10)
                       </button>
-                      <div style={{ marginTop: 10, fontSize: 12, color: LIGHT_MUTED, fontWeight: 800, textAlign: "center" }}>
-                        Accent locks for the session.
-                      </div>
+                    
                     </div>
                   </motion.div>
                 ) : null}
@@ -617,9 +614,7 @@ export default function Coach() {
                         <div style={{ fontSize: 16, fontWeight: 950, color: LIGHT_TEXT }}>
                           {lastAttempt.label}
                         </div>
-                        <div style={{ fontSize: 12, fontWeight: 850, color: LIGHT_MUTED }}>
-                          Next…
-                        </div>
+                       
                       </div>
                     ) : null}
 
