@@ -6,7 +6,7 @@ import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
 
 const IS_PROD = !!import.meta?.env?.PROD;
-const RESULT_KEY = "ac_coach_result_v1";
+const RESULT_KEY = "ac_coach_my_text_result_v1";
 
 /* ------------ API base (web + native) ------------ */
 function isNative() {
@@ -497,6 +497,42 @@ useEffect(() => {
   } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [location.key, settings?.accentDefault]);
+if (!result) {
+  return (
+    <div
+      className="page"
+      style={{
+        minHeight: "100dvh",
+        width: "100%",
+        background: PAGE_BG,
+        color: PAGE_TEXT,
+      }}
+    >
+      <div style={{ maxWidth: 520, margin: "0 auto", padding: "24px 16px" }}>
+        <div style={{ fontWeight: 950, fontSize: 22 }}>No result yet.</div>
+        <div style={{ marginTop: 8, color: PAGE_MUTED, fontWeight: 800 }}>
+          Open this from Coach (after an analysis), or run a new attempt.
+        </div>
+        <button
+          type="button"
+          onClick={() => nav("/coach")}
+          style={{
+            marginTop: 12,
+            height: 46,
+            width: "100%",
+            borderRadius: 16,
+            border: "none",
+            background: "rgba(33,150,243,0.14)",
+            fontWeight: 950,
+            cursor: "pointer",
+          }}
+        >
+          Back to Coach
+        </button>
+      </div>
+    </div>
+  );
+}
 
 
 // ---------------- Slide flow state ----------------
