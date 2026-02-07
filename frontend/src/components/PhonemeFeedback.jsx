@@ -94,6 +94,13 @@ function scoreToColor01(s) {
   return `hsl(${x * 120}deg 75% 45%)`;
 }
 
+export function pfColorForPct(pct) {
+  const n = Number(pct);
+  if (!Number.isFinite(n)) return scoreToColor01(0);
+  return scoreToColor01(Math.max(0, Math.min(1, n / 100)));
+}
+
+
 function splitEvenly(text, n) {
   const s = String(text || "");
   if (!n || n <= 1) return [s];
