@@ -6,7 +6,6 @@ import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
 
 const IS_PROD = !!import.meta?.env?.PROD;
-const RESULT_KEY = "ac_practice_my_text_result_v1";
 
 /* ------------ API base (web + native) ------------ */
 function isNative() {
@@ -343,6 +342,12 @@ export default function PracticeMyText() {
   const nav = useNavigate();
   const location = useLocation();
   const { settings } = useSettings();
+    // -------- shared page: practice + coach --------
+  const mode = location?.state?.mode === "coach" ? "coach" : "practice";
+  const backRoute = location?.state?.backRoute || (mode === "coach" ? "/coach" : "/practice");
+  const title = mode === "coach" ? "Coach My Text" : "Practice My Text";
+  const RESULT_KEY = mode === "coach" ? "ac_coach_my_text_result_v1" : "ac_practice_my_text_result_v1";
+
 
   const MAX_LEN = 120;
 
@@ -614,10 +619,9 @@ function stopLoopTimer() {
 }
 
 function stopAllAudio() {
-  function stopAllAudio() {
   stopLoopTimer();
 
-  // ✅ stop server TTS audio
+  // stop server TTS audio
   stopTtsNow();
 
   try {
@@ -626,35 +630,19 @@ function stopAllAudio() {
       userAudioRef.current.currentTime = 0;
     }
   } catch {}
+
   try {
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
   } catch {}
+
   try {
     phonemeVideoRef.current?.pause();
   } catch {}
   setPhonemeVideoPlaying(false);
 }
 
-  stopLoopTimer();
-  try {
-    if (userAudioRef.current) {
-      userAudioRef.current.pause();
-      userAudioRef.current.currentTime = 0;
-    }
-  } catch {}
-  try {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-  } catch {}
-    try {
-    phonemeVideoRef.current?.pause();
-  } catch {}
-  setPhonemeVideoPlaying(false);
-
-}
 function stopTtsNow() {
   try { ttsAbortRef.current?.abort(); } catch {}
   ttsAbortRef.current = null;
@@ -1195,7 +1183,7 @@ color: HEADER_TEXT,
   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
     <button
       type="button"
-      onClick={() => nav(-1)}
+      onClick={() => nav(backRoute)}
       aria-label="Back"
       style={{
         width: 44,
@@ -1224,7 +1212,7 @@ boxShadow: PAGE_SHADOW,
         flex: "1 1 auto",
       }}
     >
-      Practice My Text
+      {title}
     </div>
 
     <div style={{ position: "relative", flex: "0 0 auto" }}>
@@ -1456,7 +1444,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   type="button"
   onClick={() => {
     stopAllAudio();
-    nav("/practice");
+    nav(backRoute);
   }}
   aria-label="Close"
   style={{
@@ -1803,7 +1791,7 @@ color: "#0B1220",
           type="button"
           onClick={() => {
             stopAllAudio();
-            nav("/practice");
+            nav(backRoute);
           }}
           style={{
             height: 56,

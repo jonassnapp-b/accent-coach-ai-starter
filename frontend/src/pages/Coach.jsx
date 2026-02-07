@@ -1183,14 +1183,18 @@ setOverallPct(overall);
 // ✅ NAVIGATE med ALT det CoachMyText typisk har brug for
 navigate("/coach-my-text", {
   state: {
-    result: payload,
-    overallPct: overall,
-    mode,
-    target,
-    refText: target,
-    accent: accentUi,
-    userAudioUrl: localUrl,
-  },
+  result: payload,
+  overallPct: overall,
+
+  mode: "coach",
+  backRoute: "/coach",
+
+  // behold dine eksisterende felter hvis CoachMyText bruger dem
+  target,
+  refText: target,
+  accent: accentUi,
+  userAudioUrl: localUrl,
+},
 });
 
 

@@ -42,6 +42,8 @@ const routePrefetch = {
   "/coach":     () => import("./pages/Coach.jsx"),
   "/practice":  () => import("./pages/Practice.jsx"),
     "/practice-my-text": () => import("./pages/PracticeMyText.jsx"),
+      "/coach-my-text":    () => import("./pages/PracticeMyText.jsx"),
+
   "/imitate":   () => import("./pages/ProgressiveSentenceMastery.jsx"),
   "/weakness":  () => import("./pages/WeaknessLab.jsx"),
   "/bookmarks": () => import("./pages/Bookmarks.jsx"),
@@ -226,6 +228,8 @@ function AppInner() {
 {/* Hidden routes (NOT tabs) */}
 <Route path="/record" element={<PracticeGate />} />
 <Route path="/practice-my-text" element={<PracticeMyTextPage />} />
+<Route path="/coach-my-text" element={<PracticeMyTextPage />} />
+
 
 <Route path="/weakness" element={<WeaknessLab />} />
 <Route path="/bookmarks" element={<Bookmarks />} />

@@ -362,7 +362,13 @@ async function handleStop(rec) {
     try { sessionStorage.setItem(RESULT_KEY, JSON.stringify(payload)); } catch {}
 
     // IMPORTANT: gå direkte til feedback-siden med resultatet
-    nav("/practice-my-text", { state: { result: payload } });
+    nav("/practice-my-text", {
+  state: {
+    result: payload,
+    mode: "practice",
+    backRoute: "/practice",
+  },
+});
   } catch (e) {
     if (!IS_PROD) console.warn("[Practice] analyze error:", e);
     if (canPlaySfx) sfx.softFail();
