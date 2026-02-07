@@ -7,6 +7,8 @@ import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 import { ingestLocalPhonemeScores } from "../lib/localPhonemeStats.js";
 import PHONEME_EXAMPLES from "../data/phonemeExamples.json";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
+
 
 
 
@@ -314,6 +316,8 @@ function normalizeWordsFromResult(result, fallbackText) {
 /* ---------------- page ---------------- */
 export default function Coach() {
     const { settings } = useSettings();
+    const navigate = useNavigate();
+
 
   // light tokens
   const LIGHT_TEXT = "rgba(17,24,39,0.92)";
@@ -1177,6 +1181,20 @@ overall = clamp(Math.round(overall), 0, 100);
 // (valgfrit) behold local state hvis du vil
 setResult(payload);
 setOverallPct(overall);
+navigate("/practice-my-text", {
+  state: {
+    result: payload,
+    overallPct: overall,
+
+    mode: "coach",
+    backRoute: "/coach",
+
+    target,
+    refText: target,
+    accent: accentUi,
+    userAudioUrl: localUrl,
+  },
+});
 
 
 
@@ -1238,7 +1256,7 @@ if (sentenceLike) {
 
   // don't auto-speak
 } else {
-  setStatus("Try again (listen to the feedback) 🔁");
+  setStatus("Try again");
 }
 
    } catch (e) {
