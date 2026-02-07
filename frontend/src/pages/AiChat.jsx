@@ -574,9 +574,8 @@ if (ai?.nextUserLine) {
         zIndex: 9999,
 
         // backdrop overlay (so the page behind is visually hidden)
-        background: "rgba(0,0,0,0.45)",
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
+       background: "#0B1220", // fully opaque backdrop (nothing behind is visible)
+
 
         padding: 12,
         paddingBottom: 24,
