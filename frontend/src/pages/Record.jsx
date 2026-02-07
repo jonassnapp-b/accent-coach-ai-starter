@@ -7,6 +7,8 @@ import { useSettings } from "../lib/settings-store.jsx";
 import { updateStreak, readStreak } from "../lib/streak.js";
 import * as sfx from "../lib/sfx.js";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
+import { analyzeSpeechPSM } from "../lib/analyzeSpeechPSM.js";
+
 const IS_PROD = !!import.meta?.env?.PROD;
 
 /* ------------ API base (web + native) ------------ */

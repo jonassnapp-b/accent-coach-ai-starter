@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mic, StopCircle, X, ChevronRight, Volume2 } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import { AI_CHAT_LEVELS } from "../data/aiChatScenarios.js";
+import { analyzeSpeechPSM } from "../lib/analyzeSpeechPSM.js";
+
 
 function isNative() {
   return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
@@ -549,46 +551,39 @@ const userText = String(spokenText || "").trim();
 
 setTargetLine("");
 
-const controller = new AbortController();
-const timeoutId = setTimeout(() => {
-  try { controller.abort(); } catch {}
-}, 12000);
+try {
+  const base = getApiBase();
 
-    try {
-      // 1) score pronunciation via SpeechSuper (same endpoint as Coach/Record)
-      const base = getApiBase();
-      const fd = new FormData();
-      fd.append("audio", blob, "clip.webm");
+  const { json, psmOverall, psmWordScoresInOrder } = await analyzeSpeechPSM({
+    base,
+    audioBlob: blob,
+    refText: spokenText,
+    accent: accentUi === "en_br" ? "en_br" : "en_us",
+    timeoutMs: 12000,
+  });
 
-      // IMPORTANT: we score against AI’s "expected short reply"
-      fd.append("refText", spokenText);
+  const overall = Number(psmOverall ?? 0);
+  const orderedWordScores = Array.isArray(psmWordScoresInOrder) ? psmWordScoresInOrder : [];
 
-      fd.append("accent", accentUi === "en_br" ? "en_br" : "en_us");
+  setAnalyzeStatus("");
 
-       const r = await fetch(`${base}/api/analyze-speech`, {
-        method: "POST",
-        body: fd,
-        signal: controller.signal,
-      });
+  // pick worst word (use PSM word scores in-order, aligned with json.words)
+  try {
+    const ws = Array.isArray(json?.words) ? json.words : [];
+    let worst = null;
 
-      // Robust JSON parse (same pattern as Record.jsx)
-      let json = {};
-      const ct = r.headers?.get("content-type") || "";
-      if (ct.includes("application/json")) {
-        json = await r.json().catch(() => ({}));
-      } else {
-        const txt = await r.text().catch(() => "");
-        json = txt ? { error: txt } : {};
-      }
+    for (let i = 0; i < ws.length; i++) {
+      const w = ws[i];
+      const wtxt = String(w?.word || "").trim();
+      const pct = orderedWordScores[i];
 
-      if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
+      if (!wtxt || !Number.isFinite(pct)) continue;
+      if (!worst || pct < worst.pct) worst = { word: wtxt, pct };
+    }
 
-      // ✅ PSM-style sentence scoring (word-avg)
-      const psm = psmSentenceScoreFromApi(json);
-      const overall = Number(psm?.overall ?? 0);
+    if (worst) setImproveWord(worst);
+  } catch {}
 
-      // keep json consistent if reused later
-      json = { ...json, overall, pronunciation: overall, overallAccuracy: overall };
 
 
 
@@ -613,7 +608,6 @@ if (!Number.isFinite(pct)) {
         }
         if (worst) setImproveWord(worst);
       } catch {}
-const orderedWordScores = extractWordScoresInOrder(json?.words);
 
       // 3) Append the user message (we show the expected reply text as what user intended to say)
       // 3) Append the user message (score the line that was visible when recording started)
@@ -669,7 +663,6 @@ if (turn) {
 
 
    } finally {
-  clearTimeout(timeoutId);
   setIsAnalyzing(false);
 }
 
