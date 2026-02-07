@@ -7,8 +7,7 @@ import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 import { ingestLocalPhonemeScores } from "../lib/localPhonemeStats.js";
 import PHONEME_EXAMPLES from "../data/phonemeExamples.json";
 import { createPortal } from "react-dom";
-import CoachMyText from "./CoachMyText.jsx";
-import { useNavigate } from "react-router-dom";
+
 
 
 // -------- Phoneme coaching tips (deterministic, not guessing) --------
@@ -314,8 +313,7 @@ function normalizeWordsFromResult(result, fallbackText) {
 
 /* ---------------- page ---------------- */
 export default function Coach() {
-  const navigate = useNavigate();
-  const { settings } = useSettings();
+    const { settings } = useSettings();
 
   // light tokens
   const LIGHT_TEXT = "rgba(17,24,39,0.92)";
@@ -1179,23 +1177,6 @@ overall = clamp(Math.round(overall), 0, 100);
 // (valgfrit) behold local state hvis du vil
 setResult(payload);
 setOverallPct(overall);
-
-// ✅ NAVIGATE med ALT det CoachMyText typisk har brug for
-navigate("/coach-my-text", {
-  state: {
-  result: payload,
-  overallPct: overall,
-
-  mode: "coach",
-  backRoute: "/coach",
-
-  // behold dine eksisterende felter hvis CoachMyText bruger dem
-  target,
-  refText: target,
-  accent: accentUi,
-  userAudioUrl: localUrl,
-},
-});
 
 
 
