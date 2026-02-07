@@ -565,22 +565,30 @@ const timeoutId = setTimeout(() => {
 
       fd.append("accent", accentUi === "en_br" ? "en_br" : "en_us");
 
-      const r = await fetch(`${base}/api/analyze-speech`, {
-  method: "POST",
-  body: fd,
-  signal: controller.signal,
-});
-      const json = await r.json().catch(() => ({}));
+       const r = await fetch(`${base}/api/analyze-speech`, {
+        method: "POST",
+        body: fd,
+        signal: controller.signal,
+      });
+
+      // Robust JSON parse (same pattern as Record.jsx)
+      let json = {};
+      const ct = r.headers?.get("content-type") || "";
+      if (ct.includes("application/json")) {
+        json = await r.json().catch(() => ({}));
+      } else {
+        const txt = await r.text().catch(() => "");
+        json = txt ? { error: txt } : {};
+      }
+
       if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
 
-// ✅ PSM-style sentence scoring (same as Record.jsx)
-const psm = psmSentenceScoreFromApi(json);
-const overall = Number(psm?.overall ?? 0);
+      // ✅ PSM-style sentence scoring (word-avg)
+      const psm = psmSentenceScoreFromApi(json);
+      const overall = Number(psm?.overall ?? 0);
 
-// (optional) keep json consistent if reused later
-json.overall = overall;
-json.pronunciation = overall;
-json.overallAccuracy = overall;
+      // keep json consistent if reused later
+      json = { ...json, overall, pronunciation: overall, overallAccuracy: overall };
 
 
 
@@ -653,7 +661,7 @@ if (turn) {
       writeProgress(next);
     } catch (e) {
       // if you want: show error as system message
-    setAnalyzeStatus("Analyze failed — try again.");
+    setAnalyzeStatus(e?.name === "AbortError" ? "Analysis timed out. Please try again." : "Analyze failed — try again.");
 
 
       setMessages((prev) => [...prev, { role: "system", speaker: "System", text: String(e?.message || e) }]);
