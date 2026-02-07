@@ -409,6 +409,8 @@ function clearIntroTimers() {
   try { introTimersRef.current.forEach((t) => clearTimeout(t)); } catch {}
   introTimersRef.current = [];
 }
+const pageRef = useRef(null);
+
 useEffect(() => {
 if (introStep !== 3) return;
 
@@ -2022,6 +2024,7 @@ const pickerCenter = {
 return (
   <div
     className="page"
+    ref={pageRef}
     style={{
       position: "relative",
       minHeight: "100vh",
@@ -2304,9 +2307,9 @@ style={{
   ? createPortal(
       <div
         style={{
-  position: "fixed",
+  position: "absolute",
   inset: 0,
-  height: "100dvh",
+height: "100%",
   background: "#2196F3",
   zIndex: 20000,      // ✅ over tabbar
   overflow: "hidden", // ✅ som i Practice
@@ -2983,8 +2986,7 @@ style={{
                 </div>
               </div>
             </div>,
-      document.body
-    )
+(pageRef.current || document.body)    )
   : null}
         </LayoutGroup>
 
