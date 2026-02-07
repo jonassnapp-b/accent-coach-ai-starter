@@ -1334,31 +1334,7 @@ boxShadow: PAGE_SHADOW,
       flexDirection: "column",
     }}
   >
-    {/* Close: go back to Practice page (Playback slide) */}
-    <button
-      type="button"
-onClick={() => {
-  stopAllAudio();
-nav("/practice");
-}}
-      aria-label="Close"
-      style={{
-        position: "absolute",
-        top: `calc(${SAFE_TOP} + 14px)`,
-        right: 14,
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        border: "none",
-        background: "rgba(255,255,255,0.10)",
-        color: "white",
-        display: "grid",
-        placeItems: "center",
-        cursor: "pointer",
-      }}
-    >
-      <X className="h-5 w-5" />
-    </button>
+  
 
     {/* Centered width like other pages */}
     <div
@@ -1463,6 +1439,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
         <>
          <div
   style={{
+    position: "relative",
     background: "#ffffff",
     color: "#0B1220",
     borderBottomLeftRadius: 28,
@@ -1475,6 +1452,31 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
     marginBottom: 22,
   }}
 >
+  <button
+  type="button"
+  onClick={() => {
+    stopAllAudio();
+    nav("/practice");
+  }}
+  aria-label="Close"
+  style={{
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    border: "1px solid rgba(11,18,32,0.10)",
+    background: "rgba(11,18,32,0.04)",
+    color: "#0B1220",
+    display: "grid",
+    placeItems: "center",
+    cursor: "pointer",
+  }}
+>
+  <X className="h-5 w-5" />
+</button>
+
   <div style={{ fontSize: 42, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>
     {s.code} Sound
   </div>
