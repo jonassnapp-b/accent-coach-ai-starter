@@ -181,7 +181,17 @@ export default function AiChat() {
                               padding: 0,
                             }}
                           >
-                            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 14,
+                                padding: "10px 12px",
+                                borderRadius: 18,
+                                border: "1px solid rgba(17,24,39,0.10)",
+                                background: "#FFFFFF",
+                              }}
+                            >
                               {/* left node */}
                               <div style={{ position: "relative", width: 84, height: 84, flex: "0 0 auto" }}>
                                 <div
@@ -193,7 +203,6 @@ export default function AiChat() {
                                       const base = ICON_CIRCLE_COLORS[idx % ICON_CIRCLE_COLORS.length];
                                       return `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.55), rgba(255,255,255,0) 58%), ${base}`;
                                     })(),
-
                                     border: "2px solid rgba(0,0,0,0.06)",
                                     boxShadow: "0 16px 40px rgba(0,0,0,0.14)",
                                     display: "grid",
