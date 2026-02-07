@@ -8,6 +8,8 @@ import { ingestLocalPhonemeScores } from "../lib/localPhonemeStats.js";
 import PHONEME_EXAMPLES from "../data/phonemeExamples.json";
 import { createPortal } from "react-dom";
 import CoachMyText from "./CoachMyText.jsx";
+import { useNavigate } from "react-router-dom";
+
 
 // -------- Phoneme coaching tips (deterministic, not guessing) --------
 // We only show tips for phonemes we have assets for (you already gate that).
@@ -312,6 +314,7 @@ function normalizeWordsFromResult(result, fallbackText) {
 
 /* ---------------- page ---------------- */
 export default function Coach() {
+  const navigate = useNavigate();
   const { settings } = useSettings();
 
   // light tokens
@@ -1152,6 +1155,15 @@ try {
         createdAt: Date.now(),
       };
 setResult(payload);
+navigate("/coach-my-text", {
+  state: {
+    result: payload,
+    target,
+    mode,
+    overallPct: overall,
+  },
+});
+
 setSlideIdx(0);
 
 // ✅ compute overall FIRST (0–100)
@@ -2303,16 +2315,7 @@ style={{
             )}
           </AnimatePresence>
 
-{stage === "flow" && result && (
-  <CoachMyText
-    result={result}
-    target={target}
-    mode={mode}
-    overallPct={overallPct}
-    onTryAgain={onTryAgain}
-    onNext={onNext}
-  />
-)}
+
 
         </LayoutGroup>
 
