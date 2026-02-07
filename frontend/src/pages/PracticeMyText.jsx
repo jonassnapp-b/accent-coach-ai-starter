@@ -1762,18 +1762,24 @@ color: "#0B1220",
          onClick={() => {
   stopAllAudio();
 
+  // ✅ Coach-mode: "Next" = nyt ord i Coach
+  if (mode === "coach") {
+    nav("/coach", { replace: true, state: { coachAction: "next" } });
+    return;
+  }
+
+  // ✅ Practice-mode: behold "Try again" (optag igen her)
   const text = sanitizeTextForSubmit(result?.refText ?? refText).slice(0, MAX_LEN);
   const payload = {
-    mode,                 // "coach" | "practice"
-    backRoute,            // "/coach" | "/practice" (eller hvad du sender ind)
+    mode,
+    backRoute,
     refText: text,
-    accent: accentUi,     // "en_us" | "en_br"
+    accent: accentUi,
     ts: Date.now(),
   };
 
   try { sessionStorage.setItem(RETRY_INTENT_KEY, JSON.stringify(payload)); } catch {}
 
-  // gå tilbage til origin siden og lad den auto-starte
   nav(backRoute, {
     replace: true,
     state: {
@@ -1783,6 +1789,7 @@ color: "#0B1220",
     },
   });
 }}
+
 
           style={{
             height: 56,
@@ -2121,18 +2128,26 @@ color: "#0B1220",
             <button
               type="button"
               onClick={async () => {
-                stopAllAudio();
-                setResult(null);
-                setErr("");
-                setSlideIdx(0);
-                setIntroPhase(0);
-                setIntroPct(0);
+  stopAllAudio();
 
-                // optag igen uden navigation
-                try {
-                  await startPronunciationRecord();
-                } catch {}
-              }}
+  // ✅ Coach-mode: "Next" = nyt ord i Coach
+  if (mode === "coach") {
+    nav("/coach", { replace: true, state: { coachAction: "next" } });
+    return;
+  }
+
+  // ✅ Practice-mode: optag igen her
+  setResult(null);
+  setErr("");
+  setSlideIdx(0);
+  setIntroPhase(0);
+  setIntroPct(0);
+
+  try {
+    await startPronunciationRecord();
+  } catch {}
+}}
+
               style={{
                 height: 48,
                 borderRadius: 16,
@@ -2146,7 +2161,8 @@ color: "#0B1220",
                 gap: 10,
               }}
             >
-              <RotateCcw className="h-5 w-5" />
+<RotateCcw className="h-5 w-5" />
+{mode === "coach" ? "Next" : "Try again"}
               Try again
             </button>
 

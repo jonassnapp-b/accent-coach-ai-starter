@@ -320,16 +320,18 @@ export default function Coach() {
   const { settings } = useSettings();
   const navigate = useNavigate();
   const location = useLocation();
-  useEffect(() => {
-    if (!location.state?.autoStart) return;
+ useEffect(() => {
+  if (location.state?.coachAction !== "next") return;
 
-    // ryd flaget så refresh ikke auto-starter igen
-    navigate("/coach", { replace: true, state: {} });
+  // ryd flaget så refresh/back ikke re-trigger
+  navigate("/coach", { replace: true, state: {} });
 
-    // gå direkte til "flow" (billede 2)
-    onStart();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.key]);
+  // vælg nyt ord/sætning og bliv i flow
+  onNext();
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [location.key]);
+
 
 
   // light tokens
