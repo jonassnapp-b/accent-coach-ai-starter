@@ -5,6 +5,8 @@ import { Mic, StopCircle, X, ChevronRight, Volume2 } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import { AI_CHAT_LEVELS } from "../data/aiChatScenarios.js";
 import { pfColorForPct } from "../components/PhonemeFeedback.jsx";
+import { analyzeSpeechPSM } from "../lib/analyzeSpeechPSM.js";
+
 
 
 function isNative() {
@@ -439,7 +441,7 @@ function renderScoredLine(text, wordScoreMap) {
     const cleaned = tok.replace(/^[^\w']+|[^\w']+$/g, "");
     const pct = cleaned ? wordScoreMap.get(cleaned.toLowerCase()) : null;
 
-    const style = pct == null ? { color: "rgba(255,255,255,0.92)" } : { color: colorForPct(pct) };
+    const style = pct == null ? { color: "rgba(255,255,255,0.92)" } : { color: pfColorForPct(pct) };
     return (
       <span key={`t_${i}`} style={style}>
         {tok}
