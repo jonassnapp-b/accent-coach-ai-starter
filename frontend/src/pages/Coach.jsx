@@ -517,7 +517,7 @@ export default function Coach() {
 
                     <div style={{ display: "grid", placeItems: "center", marginTop: 6 }}>
                       <button type="button" onClick={onStartDrill} style={primaryBtn}>
-                        Start (10)
+                        Start
                       </button>
                     
                     </div>
@@ -534,16 +534,16 @@ export default function Coach() {
                     style={{ display: "grid", gap: 16 }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span style={chip("rgba(17,24,39,0.04)")}>
-                          {idx + 1}/10
-                        </span>
-                        <span style={chip("rgba(17,24,39,0.04)")}>
-                          {lockedAccent === "en_br" ? "British 🇬🇧" : "American 🇺🇸"}
-                        </span>
-                      </div>
+                     <div />
 
-                      <button type="button" onClick={onExit} style={ghostBtn} disabled={phase === "analyzing"}>
+
+                      <button type="button" onClick={onExit} style={{
+  ...ghostBtn,
+  background: "#2196F3",
+  border: "none",
+  color: "white",
+}}
+ disabled={phase === "analyzing"}>
                         Exit
                       </button>
                     </div>
