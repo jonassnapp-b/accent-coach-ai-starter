@@ -6,6 +6,8 @@ import { useSettings } from "../lib/settings-store.jsx";
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 import { ingestLocalPhonemeScores } from "../lib/localPhonemeStats.js";
 import PHONEME_EXAMPLES from "../data/phonemeExamples.json";
+import { createPortal } from "react-dom";
+
 // -------- Phoneme coaching tips (deterministic, not guessing) --------
 // We only show tips for phonemes we have assets for (you already gate that).
 // This does NOT claim what the user did wrong — it gives the best known technique
@@ -2297,21 +2299,19 @@ style={{
             )}
           </AnimatePresence>
 
-          {/* ✅ Overlay-only: appears after we have result */}
-          {stage === "flow" && result ? (
-            <div
-           style={{
-  position: "fixed",
-  inset: 0,
-  height: "100dvh",
-  background: "#2196F3",
-  zIndex: 20000,      // ✅ over tabbar
-  overflow: "hidden", // ✅ som i Practice
-}}
-
-
-
-            >
+        {/* ✅ Overlay-only: appears after we have result */}
+{stage === "flow" && result
+  ? createPortal(
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          height: "100dvh",
+          background: "#2196F3",
+          zIndex: 2147483647, // ✅ guaranteed above tabbar
+          overflow: "hidden",
+        }}
+      >
            
 
               <div
@@ -2972,8 +2972,10 @@ style={{
 
                 </div>
               </div>
-            </div>
-          ) : null}
+            </div>,
+      document.body
+    )
+  : null}
         </LayoutGroup>
 
                <audio ref={ttsAudioRef} playsInline preload="auto" />
