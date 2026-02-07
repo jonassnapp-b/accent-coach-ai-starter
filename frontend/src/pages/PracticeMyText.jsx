@@ -1581,13 +1581,42 @@ color: "#0B1220",
     })()
   ) : slideIdx === 1 + weakPhonemeSlides.length ? (
     // ----- Playback slide -----
-    <>
-      <div style={{ paddingRight: 60 }}>
-        <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>Playback</div>
-        <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35 }}>
-          Listen to your attempt vs a correct reference.
-        </div>
-      </div>
+   <>
+  {/* White header card */}
+  <div
+    style={{
+      background: "#ffffff",
+      color: "#0B1220",
+      borderRadius: 28,
+      padding: "22px 22px 20px",
+      boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
+      marginBottom: 22,
+    }}
+  >
+    <div
+      style={{
+        fontSize: 34,
+        fontWeight: 950,
+        letterSpacing: -0.5,
+        lineHeight: 1.05,
+      }}
+    >
+      Playback
+    </div>
+
+    <div
+      style={{
+        marginTop: 10,
+        color: "rgba(11,18,32,0.60)",
+        fontWeight: 650,
+        lineHeight: 1.35,
+        fontSize: 16,
+      }}
+    >
+      Listen to your attempt vs a correct reference.
+    </div>
+  </div>
+
 
 <div
   style={{
