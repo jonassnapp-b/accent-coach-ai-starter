@@ -2926,12 +2926,12 @@ const showLabel = introStep >= 4;
     position: "fixed",
     left: 0,
     right: 0,
-    bottom: `calc(18px + ${SAFE_BOTTOM})`,
+    bottom: `calc(36px + ${SAFE_BOTTOM})`, // ✅ rykket op (synlig som i billede 2)
     zIndex: 10010,
     display: "grid",
-    gridTemplateColumns: "1fr auto 1fr",
+    gridTemplateColumns: "auto 1fr auto",
     alignItems: "center",
-    padding: "0 18px",
+    padding: "0 22px",
     pointerEvents: "none",
   }}
 >
@@ -2969,12 +2969,10 @@ const showLabel = introStep >= 4;
     </button>
   </div>
 
+  {/* ✅ Kun "1/6" – ingen ekstra tekst */}
   <div style={{ textAlign: "center", pointerEvents: "none" }}>
-    <div style={{ fontSize: 14, fontWeight: 950, color: "white", lineHeight: 1.1 }}>
-      {slideIdx + 1} / {totalSlides}
-    </div>
-    <div style={{ fontSize: 12, fontWeight: 850, color: "rgba(255,255,255,0.70)", marginTop: 2 }}>
-      Swipe left / right
+    <div style={{ fontSize: 16, fontWeight: 950, color: "white", lineHeight: 1 }}>
+      {slideIdx + 1}/{totalSlides}
     </div>
   </div>
 
@@ -3012,6 +3010,7 @@ const showLabel = introStep >= 4;
     </button>
   </div>
 </div>
+
   </div>
 </div>
 
