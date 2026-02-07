@@ -2300,48 +2300,19 @@ style={{
           {/* ✅ Overlay-only: appears after we have result */}
           {stage === "flow" && result ? (
             <div
-              style={{
+           style={{
   position: "fixed",
   inset: 0,
   height: "100dvh",
   background: "#2196F3",
-  zIndex: 9999,
-  overflowY: "auto",
+  zIndex: 20000,      // ✅ over tabbar
+  overflow: "hidden", // ✅ som i Practice
 }}
 
 
+
             >
-              <button
-  type="button"
-  onClick={() => {
-    stopAllAudio();
-    clearIntroTimers();
-    setIntroStep(0);
-    setIntroPhase("idle");
-    setIntroPct(0);
-    setSlideIdx(0);
-    setDeepDiveOpen(false);
-    setVideoMuted(true);
-    setResult(null);
-  }}
-  aria-label="Close"
-  style={{
-    position: "fixed",
-    top: `calc(${SAFE_TOP} + 14px)`,
-    right: 14,
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    border: "none",
-    background: "rgba(255,255,255,0.14)",
-    display: "grid",
-    placeItems: "center",
-    cursor: "pointer",
-    zIndex: 10020,
-  }}
->
-  <ChevronDown className="h-7 w-7" style={{ color: "white" }} />
-</button>
+           
 
               <div
                 style={{
@@ -2408,14 +2379,9 @@ style={{
 {activeSlide?.type === "intro" ? (() => {
   const o = overallPct;
   const label = overallLabel(o);
-  const pct = introPct;
+  const pct = introPct; // (tæller stadig op, men ser ens ud når den står stille)
   const word = String(target || "—").trim();
-
-const showWord = introStep >= 1;
-const wordUp = introStep >= 2;
-const showPct = introStep >= 3;
-const showLabel = introStep >= 4;
-
+  const red = scoreColor(o);
 
   return (
     <div
@@ -2428,47 +2394,33 @@ const showLabel = introStep >= 4;
       }}
     >
       <div style={{ textAlign: "center" }}>
-        {/* WORD: fade in center, then slide up */}
-        <motion.div
-          initial={{ opacity: 0, y: 0 }}
-          animate={{
-            opacity: showWord ? 1 : 0,
-            y: wordUp ? -44 : 0,
-          }}
-          transition={{ duration: 0.22, ease: "easeOut" }}
+        <div
           style={{
             fontWeight: 950,
-            fontSize: 34,
-            color: "rgba(255,255,255,0.96)",
-            letterSpacing: -0.4,
-            lineHeight: 1.05,
-            marginBottom: 6,
+            fontSize: 92,
+            color: red,
+            lineHeight: 0.92,
+            letterSpacing: -0.6,
+            textShadow: "0 10px 26px rgba(0,0,0,0.18)",
           }}
         >
           {word}
-        </motion.div>
+        </div>
 
-        {/* PERCENT: fades in at the same spot where the word started */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: showPct ? 1 : 0 }}
-          transition={{ duration: 0.22, ease: "easeOut" }}
+        <div
           style={{
-            marginTop: 10,
+            marginTop: 6,
             fontWeight: 950,
             fontSize: 72,
-            color: scoreColor(o),
+            color: red,
             lineHeight: 0.95,
+            textShadow: "0 10px 26px rgba(0,0,0,0.18)",
           }}
         >
           {pct}%
-        </motion.div>
+        </div>
 
-        {/* LABEL: fades in under percent */}
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: showLabel ? 1 : 0, y: showLabel ? 0 : 6 }}
-          transition={{ duration: 0.22, ease: "easeOut" }}
+        <div
           style={{
             marginTop: 14,
             fontWeight: 850,
@@ -2477,11 +2429,12 @@ const showLabel = introStep >= 4;
           }}
         >
           {label}
-        </motion.div>
+        </div>
       </div>
     </div>
   );
 })() : null}
+
 
 
 
