@@ -568,14 +568,20 @@ if (ai?.nextUserLine) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 14, scale: 0.98 }}
       transition={{ duration: 0.18 }}
-      style={{
+            style={{
         position: "fixed",
         inset: 0,
         zIndex: 9999,
-        background: "transparent",
-          padding: 12,
+
+        // backdrop overlay (so the page behind is visually hidden)
+        background: "rgba(0,0,0,0.45)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+
+        padding: 12,
         paddingBottom: 24,
       }}
+
     >
       <div
         style={{
