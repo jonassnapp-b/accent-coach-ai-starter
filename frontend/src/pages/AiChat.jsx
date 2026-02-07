@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mic, StopCircle, X, ChevronRight, Volume2 } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import { AI_CHAT_LEVELS } from "../data/aiChatScenarios.js";
-import { analyzeSpeechPSM } from "../lib/analyzeSpeechPSM.js";
+import { pfColorForPct } from "../components/PhonemeFeedback.jsx";
 
 
 function isNative() {
@@ -412,7 +412,7 @@ function renderScoredLineByIndex(text, wordScores) {
     const pct = Array.isArray(wordScores) ? wordScores[wi] : null;
     wi += 1;
 
-    const style = pct == null ? { color: "rgba(255,255,255,0.92)" } : { color: colorForPct(pct) };
+    const style = pct == null ? { color: "rgba(255,255,255,0.92)" } : { color: pfColorForPct(pct) };
     return (
       <span key={`t_${i}`} style={style}>
         {tok}
@@ -428,12 +428,6 @@ function tokenizeWithSeparators(text) {
   return String(text || "").match(/(\s+|[^\s]+)/g) || [];
 }
 
-function colorForPct(pct) {
-  // Tune thresholds to match your look
-  if (pct >= 85) return "rgba(34,197,94,0.95)";   // green
-  if (pct >= 70) return "rgba(245,158,11,0.95)";  // orange
-  return "rgba(239,68,68,0.95)";                  // red
-}
 
 function renderScoredLine(text, wordScoreMap) {
   const tokens = tokenizeWithSeparators(text);
