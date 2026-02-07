@@ -77,19 +77,26 @@ useEffect(() => {
   const prevHtml = document.documentElement.style.overflow;
   const prevBody = document.body.style.overflow;
 
+  const tabBar = document.querySelector("[data-tabbar]");
+  const prevTabbarDisplay = tabBar?.style.display;
+
   if (activeScenario) {
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
+    if (tabBar) tabBar.style.display = "none";
   } else {
     document.documentElement.style.overflow = prevHtml || "";
     document.body.style.overflow = prevBody || "";
+    if (tabBar) tabBar.style.display = prevTabbarDisplay || "";
   }
 
   return () => {
     document.documentElement.style.overflow = prevHtml || "";
     document.body.style.overflow = prevBody || "";
+    if (tabBar) tabBar.style.display = prevTabbarDisplay || "";
   };
 }, [activeScenario]);
+
 
   
     return (
