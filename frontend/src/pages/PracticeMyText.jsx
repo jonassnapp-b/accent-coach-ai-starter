@@ -6,6 +6,7 @@ import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
 
 const IS_PROD = !!import.meta?.env?.PROD;
+const RETRY_INTENT_KEY = "ac_my_text_retry_intent_v1";
 
 /* ------------ API base (web + native) ------------ */
 function isNative() {
@@ -1758,17 +1759,31 @@ color: "#0B1220",
       >
         <button
           type="button"
-          onClick={async () => {
-            stopAllAudio();
-            setResult(null);
-            setErr("");
-            setSlideIdx(0);
-            setIntroPhase(0);
-            setIntroPct(0);
-            try {
-              await startPronunciationRecord();
-            } catch {}
-          }}
+         onClick={() => {
+  stopAllAudio();
+
+  const text = sanitizeTextForSubmit(result?.refText ?? refText).slice(0, MAX_LEN);
+  const payload = {
+    mode,                 // "coach" | "practice"
+    backRoute,            // "/coach" | "/practice" (eller hvad du sender ind)
+    refText: text,
+    accent: accentUi,     // "en_us" | "en_br"
+    ts: Date.now(),
+  };
+
+  try { sessionStorage.setItem(RETRY_INTENT_KEY, JSON.stringify(payload)); } catch {}
+
+  // gå tilbage til origin siden og lad den auto-starte
+  nav(backRoute, {
+    replace: true,
+    state: {
+      ...(location?.state || {}),
+      tryAgain: true,
+      ...payload,
+    },
+  });
+}}
+
           style={{
             height: 56,
             borderRadius: 20,
