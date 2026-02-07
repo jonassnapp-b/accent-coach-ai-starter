@@ -356,6 +356,21 @@ function wordScore100LikePSM(wordObj) {
   return Math.round((num / den) * 100);
 }
 
+// PSM-style: sentence score = avg of word scores (ignore nulls)
+function psmSentenceScoreFromApi(json) {
+  const apiWords = Array.isArray(json?.words) ? json.words : [];
+  const wordScores = apiWords
+    .map((w) => wordScore100LikePSM(w))
+    .filter((v) => Number.isFinite(v));
+
+  const overall = wordScores.length
+    ? Math.round(wordScores.reduce((a, b) => a + b, 0) / wordScores.length)
+    : 0;
+
+  return { overall, wordScores };
+}
+
+
 // Word-level coloring from SpeechSuper words[] (best-effort)
 function buildWordScoreMap(wordsArr) {
   const m = new Map();
@@ -538,22 +553,15 @@ const timeoutId = setTimeout(() => {
       const json = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
 
-      // overall score (best-effort extraction)
-      const rawOverall =
-        json?.overall ??
-        json?.overallAccuracy ??
-        json?.pronunciation ??
-        json?.overall_score ??
-        json?.overall_accuracy ??
-        json?.pronunciation_score ??
-        json?.pronunciation_accuracy ??
-        json?.accuracyScore ??
-        json?.accuracy_score ??
-        0;
+      // ✅ PSM-style scoring (same as PracticeMyText)
+const psm = psmSentenceScoreFromApi(json);
+const overall = Number(psm?.overall ?? 0);
 
-      let overall = Number(rawOverall);
-      if (!Number.isFinite(overall)) overall = 0;
-      if (overall > 0 && overall <= 1) overall = overall * 100;
+// (optional) keep json consistent if you ever reuse it later
+json.overall = overall;
+json.pronunciation = overall;
+json.overallAccuracy = overall;
+
       setAnalyzeStatus("");
 
       // 2) show "You can improve <word> <pct>" like screenshot (placeholder extraction)
