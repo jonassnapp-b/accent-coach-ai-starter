@@ -14,10 +14,10 @@ export const AI_CHAT_LEVELS = [
         partnerName: "Mia",
         partnerTitle: "your Barista",
         opening: "Hi there! What can I get started for you today?",
-        firstUserLine: "Hi — can I get a cappuccino, please?",
+        firstUserLine: "Hi, can I get a cappuccino, please?",
         turns: [
           {
-            assistantText: "Sure! What size would you like — small, medium, or large?",
+            assistantText: "Sure! What size would you like? small, medium, or large?",
             nextUserLine: "A medium, please.",
           },
           {
@@ -26,7 +26,7 @@ export const AI_CHAT_LEVELS = [
           },
           {
             assistantText: "No problem. Any sugar or extra shot?",
-            nextUserLine: "No sugar — and no extra shot, thanks.",
+            nextUserLine: "No sugar and no extra shot, thanks.",
           },
           {
             assistantText: "Perfect. That’ll be $4.50. How would you like to pay?",
@@ -47,27 +47,27 @@ export const AI_CHAT_LEVELS = [
         emoji: "🏠",
         partnerName: "Daniel",
         partnerTitle: "your Neighbor",
-        opening: "Oh hey! Long time no see — how’s it going?",
-        firstUserLine: "Hey! Pretty good — just got back from work. How about you?",
+        opening: "Oh hey! Long time no see, how’s it going?",
+        firstUserLine: "Hey! Pretty good, just got back from work. How about you?",
         turns: [
           {
-            assistantText: "Not bad — just keeping busy. How was work today?",
+            assistantText: "Not bad, just keeping busy. How was work today?",
             nextUserLine: "It was pretty busy, but it went well.",
           },
           {
             assistantText: "Nice. Anything fun planned for tonight?",
-            nextUserLine: "Not really — probably just dinner and relaxing.",
+            nextUserLine: "Not really, probably just dinner and relaxing.",
           },
           {
             assistantText: "Sounds good. By the way, did you get the building email about the water shut-off?",
-            nextUserLine: "Yeah, I saw it — it’s tomorrow morning, right?",
+            nextUserLine: "Yeah, I saw it, it’s tomorrow morning, right?",
           },
           {
             assistantText: "Exactly. I’m going to fill a few bottles tonight just in case.",
-            nextUserLine: "Good idea — I’ll do that too.",
+            nextUserLine: "Good idea, I’ll do that too.",
           },
           {
-            assistantText: "Cool. Alright — good seeing you. Have a nice evening!",
+            assistantText: "Cool. Alright, good seeing you. Have a nice evening!",
             nextUserLine: "",
           },
         ],
@@ -82,15 +82,15 @@ export const AI_CHAT_LEVELS = [
         partnerName: "Sofia",
         partnerTitle: "Store Assistant",
         opening: "Hi! How can I help you today?",
-        firstUserLine: "Hi — I’d like to return this, please.",
+        firstUserLine: "Hi, I’d like to return this, please.",
         turns: [
           {
             assistantText: "Of course. What’s the reason for the return?",
-            nextUserLine: "It doesn’t fit — it’s a bit too small.",
+            nextUserLine: "It doesn’t fit, it’s a bit too small.",
           },
           {
             assistantText: "No worries. Do you have the receipt or order email?",
-            nextUserLine: "Yes — I have the order email on my phone.",
+            nextUserLine: "Yes, I have the order email on my phone.",
           },
           {
             assistantText: "Great. Would you like a refund or an exchange?",
@@ -98,7 +98,7 @@ export const AI_CHAT_LEVELS = [
           },
           {
             assistantText: "Sure. We’ll refund it to the original payment method — it usually takes 2–3 days.",
-            nextUserLine: "Perfect — thank you.",
+            nextUserLine: "Perfect, thank you.",
           },
           {
             assistantText: "You’re welcome. Anything else I can help you with today?",
@@ -115,12 +115,12 @@ export const AI_CHAT_LEVELS = [
         emoji: "🗺️",
         partnerName: "Noah",
         partnerTitle: "a Local",
-        opening: "Hi! You look a bit lost — can I help?",
-        firstUserLine: "Yes, please — how do I get to the train station from here?",
+        opening: "Hi! You look a bit lost, can I help?",
+        firstUserLine: "Yes, pleasem how do I get to the train station from here?",
         turns: [
           {
             assistantText: "Sure. Walk straight for two blocks, then turn left at the traffic light.",
-            nextUserLine: "Okay — straight two blocks, then left at the light.",
+            nextUserLine: "Okay, straight two blocks, then left at the light.",
           },
           {
             assistantText: "Right. After that, you’ll see a big supermarket on your right — the station is just behind it.",
@@ -128,14 +128,14 @@ export const AI_CHAT_LEVELS = [
           },
           {
             assistantText: "Around 8 to 10 minutes.",
-            nextUserLine: "Perfect — thanks a lot.",
+            nextUserLine: "Perfect, thanks a lot.",
           },
           {
             assistantText: "No problem. Do you need the entrance for tickets or the platforms?",
             nextUserLine: "The entrance for tickets, please.",
           },
           {
-            assistantText: "Then go to the main entrance on the front side — you’ll see the ticket machines right inside.",
+            assistantText: "Then go to the main entrance on the front side, you’ll see the ticket machines right inside.",
             nextUserLine: "",
           },
         ],
@@ -149,27 +149,27 @@ export const AI_CHAT_LEVELS = [
         emoji: "🏋️‍♂️",
         partnerName: "Emma",
         partnerTitle: "Front Desk",
-        opening: "Hi! Welcome in — checking in today?",
-        firstUserLine: "Hi — yes, but my membership isn’t showing up when I scan.",
+        opening: "Hi! Welcome in, checking in today?",
+        firstUserLine: "Hi, yes, but my membership isn’t showing up when I scan.",
         turns: [
           {
-            assistantText: "No problem — can I see your membership email or your phone number?",
-            nextUserLine: "Sure — it’s under my phone number.",
+            assistantText: "No problem, can I see your membership email or your phone number?",
+            nextUserLine: "Sure, it’s under my phone number.",
           },
           {
             assistantText: "Thanks. What’s the number?",
             nextUserLine: "It’s 12 34 56 78.",
           },
           {
-            assistantText: "Got it — I see your account. Looks like the app didn’t sync. Let’s refresh it.",
-            nextUserLine: "Okay — what should I do?",
+            assistantText: "Got it, I see your account. Looks like the app didn’t sync. Let’s refresh it.",
+            nextUserLine: "Okay, what should I do?",
           },
           {
-            assistantText: "Close the app полностью and open it again — then try scanning.",
-            nextUserLine: "Alright — I’ll try now.",
+            assistantText: "Close the app and open it again, then try scanning.",
+            nextUserLine: "Alright, I’ll try now.",
           },
           {
-            assistantText: "Perfect — you’re checked in. Have a great workout!",
+            assistantText: "Perfect, you’re checked in. Have a great workout!",
             nextUserLine: "",
           },
         ],
@@ -184,26 +184,26 @@ export const AI_CHAT_LEVELS = [
         partnerName: "Luca",
         partnerTitle: "Waiter",
         opening: "Good evening! Are you ready to order?",
-        firstUserLine: "Almost — I have a nut allergy. Does this dish contain any nuts?",
+        firstUserLine: "Almost, I have a nut allergy. Does this dish contain any nuts?",
         turns: [
           {
-            assistantText: "Thanks for telling me. That dish has a pesto topping — it may contain pine nuts.",
-            nextUserLine: "Okay — is there a safe alternative you recommend?",
+            assistantText: "Thanks for telling me. That dish has a pesto topping, it may contain pine nuts.",
+            nextUserLine: "Okay, is there a safe alternative you recommend?",
           },
           {
-            assistantText: "Yes — the grilled chicken salad is nut-free, and we can keep the dressing simple.",
-            nextUserLine: "Great — I’ll take the grilled chicken salad, please.",
+            assistantText: "Yes, the grilled chicken salad is nut-free, and we can keep the dressing simple.",
+            nextUserLine: "Great, I’ll take the grilled chicken salad, please.",
           },
           {
             assistantText: "Of course. Any other allergies I should know about?",
-            nextUserLine: "No — just nuts.",
+            nextUserLine: "No, just nuts.",
           },
           {
             assistantText: "Perfect. Would you like sparkling or still water?",
             nextUserLine: "Still water, please.",
           },
           {
-            assistantText: "Great — I’ll bring that right out. Thank you!",
+            assistantText: "Great, I’ll bring that right out. Thank you!",
             nextUserLine: "",
           },
         ],
@@ -218,10 +218,10 @@ export const AI_CHAT_LEVELS = [
         partnerName: "Nina",
         partnerTitle: "Receptionist",
         opening: "Hi! How can I help you today?",
-        firstUserLine: "Hi — I’d like to book an appointment for next week, if possible.",
+        firstUserLine: "Hi, I’d like to book an appointment for next week, if possible.",
         turns: [
           {
-            assistantText: "Sure. What day works best for you — Monday to Thursday?",
+            assistantText: "Sure. What day works best for you, Monday to Thursday?",
             nextUserLine: "Tuesday would be great, if you have availability.",
           },
           {
@@ -230,14 +230,14 @@ export const AI_CHAT_LEVELS = [
           },
           {
             assistantText: "Perfect. Can I get your full name and phone number?",
-            nextUserLine: "Yes — it’s Jonas, and my number is 12 34 56 78.",
+            nextUserLine: "Yes, it’s Jonas, and my number is 12 34 56 78.",
           },
           {
-            assistantText: "Great — you’re booked for Tuesday at 14:00. Would you like a confirmation by SMS?",
-            nextUserLine: "Yes, please — that would be helpful.",
+            assistantText: "Great, you’re booked for Tuesday at 14:00. Would you like a confirmation by SMS?",
+            nextUserLine: "Yes, please, that would be helpful.",
           },
           {
-            assistantText: "Done. See you next week — have a nice day!",
+            assistantText: "Done. See you next week, have a nice day!",
             nextUserLine: "",
           },
         ],
@@ -252,19 +252,19 @@ export const AI_CHAT_LEVELS = [
         partnerName: "Omar",
         partnerTitle: "Driver",
         opening: "Hi! How’s your day going so far?",
-        firstUserLine: "Pretty good, thanks — just heading home after a busy day.",
+        firstUserLine: "Pretty good, thanks, just heading home after a busy day.",
         turns: [
           {
             assistantText: "I know that feeling. What do you do for work?",
-            nextUserLine: "I work in finance — mostly analysis and reporting.",
+            nextUserLine: "I work in finance, mostly analysis and reporting.",
           },
           {
             assistantText: "Nice. Do you enjoy it?",
-            nextUserLine: "Yeah — I like it, especially when it’s challenging.",
+            nextUserLine: "Yeah, I like it, especially when it’s challenging.",
           },
           {
-            assistantText: "That’s good. By the way, traffic is a bit heavy — are you in a rush?",
-            nextUserLine: "Not really — it’s fine.",
+            assistantText: "That’s good. By the way, traffic is a bit heavy, are you in a rush?",
+            nextUserLine: "Not really, it’s fine.",
           },
           {
             assistantText: "Perfect. Want the route with fewer stops, or the fastest one?",
@@ -286,11 +286,11 @@ export const AI_CHAT_LEVELS = [
         partnerName: "Rachel",
         partnerTitle: "your Best Friend",
         opening: "Hey! Any plans for the weekend?",
-        firstUserLine: "Not yet — I’m free. Do you want to do something?",
+        firstUserLine: "Not yet, I’m free. Do you want to do something?",
         turns: [
           {
             assistantText: "Yeah! I was thinking brunch or a movie. What do you feel like?",
-            nextUserLine: "Brunch sounds nice — I’m down for that.",
+            nextUserLine: "Brunch sounds nice, I’m down for that.",
           },
           {
             assistantText: "Perfect. Saturday or Sunday?",
@@ -298,11 +298,11 @@ export const AI_CHAT_LEVELS = [
           },
           {
             assistantText: "Cool. Morning or afternoon?",
-            nextUserLine: "Late morning — like around 11?",
+            nextUserLine: "Late morning, like around 11?",
           },
           {
             assistantText: "11 is great. Want to try that new café downtown?",
-            nextUserLine: "Yes — let’s do it. Send me the address.",
+            nextUserLine: "Yes, let’s do it. Send me the address.",
           },
           {
             assistantText: "Awesome. See you Saturday!",
@@ -319,8 +319,8 @@ export const AI_CHAT_LEVELS = [
         emoji: "📞",
         partnerName: "Alex",
         partnerTitle: "Support Agent",
-        opening: "Thanks for calling — how can I help today?",
-        firstUserLine: "Hi Alex — I’m calling because I can’t log into my account.",
+        opening: "Thanks for calling, how can I help today?",
+        firstUserLine: "Hi Alex, I’m calling because I can’t log into my account.",
         turns: [
           {
             assistantText: "I can help. Are you getting an error message, or does it just not accept the password?",
@@ -690,8 +690,8 @@ export const AI_CHAT_LEVELS = [
         emoji: "🕊️",
         partnerName: "Lena",
         partnerTitle: "Colleague",
-        opening: "This is going nowhere — we keep disagreeing.",
-        firstUserLine: "Let’s slow down — can we agree on the goal first, and then compare options calmly?",
+        opening: "This is going nowhere, we keep disagreeing.",
+        firstUserLine: "Let’s slow down, can we agree on the goal first, and then compare options calmly?",
       },
     ],
   },
@@ -707,7 +707,7 @@ export const AI_CHAT_LEVELS = [
         emoji: "🏛️",
         partnerName: "Victor",
         partnerTitle: "Director",
-        opening: "You have five minutes — why should we do this?",
+        opening: "You have five minutes, why should we do this?",
         firstUserLine: "Because it solves a high-cost problem and we can validate it quickly with clear metrics.",
       },
       {
@@ -718,8 +718,8 @@ export const AI_CHAT_LEVELS = [
         emoji: "🤝",
         partnerName: "Alicia",
         partnerTitle: "Vendor Rep",
-        opening: "Here’s our standard pricing — it’s non-negotiable.",
-        firstUserLine: "I understand — but if we commit to a longer term, can you improve the price or add more support?",
+        opening: "Here’s our standard pricing, it’s non-negotiable.",
+        firstUserLine: "I understand, but if we commit to a longer term, can you improve the price or add more support?",
       },
       {
         id: "l5_interview_case_prompt",
@@ -730,7 +730,7 @@ export const AI_CHAT_LEVELS = [
         partnerName: "Adrian",
         partnerTitle: "Interviewer",
         opening: "Let’s do a quick case. Ready?",
-        firstUserLine: "Yes — before I start, can I clarify the goal and any constraints?",
+        firstUserLine: "Yes, before I start, can I clarify the goal and any constraints?",
       },
       {
         id: "l5_difficult_feedback",
@@ -740,8 +740,8 @@ export const AI_CHAT_LEVELS = [
         emoji: "🗣️",
         partnerName: "Sophie",
         partnerTitle: "Teammate",
-        opening: "Hey — you said you had feedback for me?",
-        firstUserLine: "Yes — I want to be direct but helpful: the last update missed key details. Let’s fix it together.",
+        opening: "Hey, you said you had feedback for me?",
+        firstUserLine: "Yes, I want to be direct but helpful: the last update missed key details. Let’s fix it together.",
       },
       {
         id: "l5_customer_retention",
@@ -1354,7 +1354,7 @@ export const AI_CHAT_LEVELS = [
         partnerName: "Asha",
         partnerTitle: "Compliance Lead",
         opening: "We may have an ethics issue. What do you say to the team?",
-        firstUserLine: "We take this seriously — we’ll investigate quickly, share facts, and act decisively based on the findings.",
+        firstUserLine: "We take this seriously, we’ll investigate quickly, share facts, and act decisively based on the findings.",
       },
       {
         id: "l10_lead_massive_change",
@@ -1376,7 +1376,7 @@ export const AI_CHAT_LEVELS = [
         partnerName: "Panel",
         partnerTitle: "Final Interview Panel",
         opening: "Final question: why should we hire you?",
-        firstUserLine: "Because I deliver results, communicate clearly, and learn fast — and I’ll add value from day one.",
+        firstUserLine: "Because I deliver results, communicate clearly, and learn fast and I’ll add value from day one.",
       },
       {
         id: "l10_investor_final_close",

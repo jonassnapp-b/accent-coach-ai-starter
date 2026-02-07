@@ -301,26 +301,77 @@ function speakTarget() {
     }
   } catch {}
 }
+function clamp01(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return n <= 1 ? Math.max(0, Math.min(1, n)) : Math.max(0, Math.min(1, n / 100));
+}
+
+// PSM-style: duration-weighted phoneme score -> word score (0-100)
+function wordScore100LikePSM(wordObj) {
+  const phs = Array.isArray(wordObj?.phonemes) ? wordObj.phonemes : [];
+  if (!phs.length) return null;
+
+  let num = 0;
+  let den = 0;
+
+  for (const ph of phs) {
+    const s01 = clamp01(
+      ph.pronunciation ??
+        ph.accuracy_score ??
+        ph.pronunciation_score ??
+        ph.score ??
+        ph.accuracy ??
+        ph.accuracyScore
+    );
+    if (s01 == null) continue;
+
+    const span = ph.span || ph.time || null;
+    const start10 = span?.start ?? span?.s ?? null;
+    const end10 = span?.end ?? span?.e ?? null;
+
+    const dur =
+      typeof start10 === "number" && typeof end10 === "number" && end10 > start10
+        ? (end10 - start10) * 0.01
+        : 1;
+
+    num += s01 * dur;
+    den += dur;
+  }
+
+  if (!den) return null;
+  return Math.round((num / den) * 100);
+}
 
 // Word-level coloring from SpeechSuper words[] (best-effort)
 function buildWordScoreMap(wordsArr) {
   const m = new Map();
   const ws = Array.isArray(wordsArr) ? wordsArr : [];
+
   for (const w of ws) {
     const rawWord = String(w?.word || "").trim();
     if (!rawWord) continue;
 
-    const sc = Number(w?.accuracyScore ?? w?.overallAccuracy ?? w?.score ?? w?.accuracy ?? NaN);
-    if (!Number.isFinite(sc)) continue;
+    // ✅ Prefer PSM-style (phoneme-based) word score
+    let pct = wordScore100LikePSM(w);
 
-    const pct = sc <= 1 ? Math.round(sc * 100) : Math.round(sc);
+    // Fallback if no phonemes
+    if (!Number.isFinite(pct)) {
+      const sc = Number(w?.accuracyScore ?? w?.overallAccuracy ?? w?.score ?? w?.accuracy ?? NaN);
+      if (Number.isFinite(sc)) pct = sc <= 1 ? Math.round(sc * 100) : Math.round(sc);
+    }
+
+    if (!Number.isFinite(pct)) continue;
+
     // keep the worst score if duplicated
     const key = rawWord.toLowerCase();
     const prev = m.get(key);
     if (prev == null || pct < prev) m.set(key, pct);
   }
+
   return m;
 }
+
 
 // Split text into tokens while preserving spaces/punctuation
 function tokenizeWithSeparators(text) {
@@ -500,8 +551,12 @@ const timeoutId = setTimeout(() => {
 
         for (const w of ws) {
           const wtxt = String(w?.word || "").trim();
-          const sc = Number(w?.accuracyScore ?? w?.overallAccuracy ?? w?.score ?? w?.accuracy ?? NaN);
-          const pct = Number.isFinite(sc) ? (sc <= 1 ? Math.round(sc * 100) : Math.round(sc)) : null;
+        let pct = wordScore100LikePSM(w);
+if (!Number.isFinite(pct)) {
+  const sc = Number(w?.accuracyScore ?? w?.overallAccuracy ?? w?.score ?? w?.accuracy ?? NaN);
+  pct = Number.isFinite(sc) ? (sc <= 1 ? Math.round(sc * 100) : Math.round(sc)) : null;
+}
+
           if (!wtxt || pct == null) continue;
           if (!worst || pct < worst.pct) worst = { word: wtxt, pct };
         }
