@@ -887,23 +887,10 @@ useEffect(() => {
 
 
 useEffect(() => {
-  if (!result) return;
-  if (isBusy) return;
-
-  const currentAccent = (result?.accent || "en_us");
-  const nextAccent = (accentUi === "en_br" ? "en_br" : "en_us");
-  if (currentAccent === nextAccent) return;
-
-  const blob = lastAudioBlobRef.current || result?.userAudioBlob || null;
-  const url  = lastAudioUrlRef.current  || result?.userAudioUrl  || null;
-  if (!blob || !url) return;
-
-  setErr("");
-  setCanRetryAnalyze(false);
-  setIsAnalyzing(true);
-  sendToServer(blob, url);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // NOTE: re-analysis on accent change is disabled here (sendToServer isn't defined in this page).
+  // Keep UI stable and avoid white screen.
 }, [accentUi]);
+
 
  return (
   <div
@@ -1837,19 +1824,11 @@ color: "#0B1220",
           <div style={{ display: "grid", gap: 10 }}>
             <button
               type="button"
-              onClick={async () => {
-                stopAllAudio();
-                setResult(null);
-                setErr("");
-                setSlideIdx(0);
-                setIntroPhase(0);
-                setIntroPct(0);
+           onClick={() => {
+  stopAllAudio();
+  nav(-1); // tilbage til Coach for ny optagelse
+}}
 
-                // optag igen uden navigation
-                try {
-                  await startPronunciationRecord();
-                } catch {}
-              }}
               style={{
                 height: 48,
                 borderRadius: 16,
@@ -1992,17 +1971,20 @@ color: "#0B1220",
       <X className="h-5 w-5" />
     </button>
 
-    <div style={{ paddingRight: 60 }}>
-  <div style={{ fontSize: 30, fontWeight: 950, letterSpacing: -0.4 }}>{title}</div>
+  <div style={{ paddingRight: 60 }}>
+  <div style={{ fontSize: 30, fontWeight: 950, letterSpacing: -0.4 }}>
+    Deep Dive
+  </div>
 
   <div style={{ marginTop: 6, color: "rgba(255,255,255,0.72)", fontWeight: 650 }}>
-    {s.code} • Score {s.score == null ? "—" : Math.round(s.score)}%
+    {deepDivePhoneme?.code || "—"}
   </div>
 
   <div style={{ marginTop: 10, color: "rgba(255,255,255,0.78)", fontSize: 16, lineHeight: 1.35 }}>
-    {getShortTipForPhoneme(s.code)}
+    {getShortTipForPhoneme(deepDivePhoneme?.code)}
   </div>
 </div>
+
 
 
     <div
