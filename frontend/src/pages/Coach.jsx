@@ -159,7 +159,6 @@ function getPhonemeTip(code) {
   return PHONEME_TIPS[c] || null;
 }
 
-const IS_PROD = !!import.meta?.env?.PROD;
 
 /* ------------ API base (web + native) ------------ */
 function isNative() {
@@ -393,7 +392,13 @@ const [videoMuted, setVideoMuted] = useState(true);
 const videoRef = useRef(null);
 
 const [wordsOpen, setWordsOpen] = useState(false); // ✅ dropdown open/closed
-const [activeTabIdx, setActiveTabIdx] = useState(0); // overlayTabs index
+const [slideIdx, setSlideIdx] = useState(0);
+
+// intro count-up (samme idé som PracticeMyText)
+const [introPhase, setIntroPhase] = useState("idle"); // idle | counting | done
+const [introPct, setIntroPct] = useState(0);
+const introRafRef = useRef(0);
+ // overlayTabs index
 
 
   // recording
@@ -458,7 +463,7 @@ useEffect(() => {
   setIsCorrectPlaying(false);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [activeTabIdx]);
+}, [slideIdx]);
 
 
 useEffect(() => {
@@ -615,6 +620,41 @@ function stopABNow() {
     }
   } catch {}
 }
+
+function stopAllAudio() {
+  // stop loops + A/B + TTS
+  disableLoopNow();
+  stopABNow();
+  stopTtsNow();
+
+  // stop overlay player
+  try { overlayAudioRef.current?.pause?.(); } catch {}
+  try {
+    if (overlayAudioRef.current) {
+      overlayAudioRef.current.currentTime = 0;
+    }
+  } catch {}
+
+  // stop example audio
+  try { exampleAudioRef.current?.pause?.(); } catch {}
+  try {
+    if (exampleAudioRef.current) exampleAudioRef.current.currentTime = 0;
+  } catch {}
+
+  // stop video
+  try {
+    const v = videoRef.current;
+    if (v) {
+      v.pause();
+      v.currentTime = 0;
+    }
+  } catch {}
+
+  setIsUserPlaying(false);
+  setIsCorrectPlaying(false);
+  setIsABPlaying(false);
+}
+
 
 function disableLoopNow() {
   loopOnRef.current = false; // stop instantly (no waiting for React state)
@@ -944,7 +984,9 @@ function onBack() {
   setIsUserPlaying(false);
   setIsCorrectPlaying(false);
 
-  setActiveTabIdx(0);
+  setSlideIdx(0);
+setIntroPhase("idle");
+setIntroPct(0);
 }
 
 
@@ -1063,11 +1105,28 @@ try {
         createdAt: Date.now(),
       };
 setResult(payload);
-setActiveTabIdx(0);
+
+setSlideIdx(0);
+setIntroPhase("counting");
+setIntroPct(0);
+try { cancelAnimationFrame(introRafRef.current); } catch {}
+introRafRef.current = requestAnimationFrame(() => {
+  const start = performance.now();
+  const DUR = 850;
+  const step = (now) => {
+    const t = Math.min(1, (now - start) / DUR);
+    setIntroPct(Math.round(t * 100));
+    if (t < 1) introRafRef.current = requestAnimationFrame(step);
+    else setIntroPhase("done");
+  };
+  introRafRef.current = requestAnimationFrame(step);
+});
+
 setDeepDiveOpen(false);
 setVideoMuted(true);
 setIsUserPlaying(false);
 setIsCorrectPlaying(false);
+
 
 const wordsArr = Array.isArray(payload?.words) ? payload.words : [];
 const sentenceLike = (mode === "sentences") || (wordsArr.length > 1);
@@ -1201,42 +1260,96 @@ out.push({
   return out;
 }, [currentWordObj, accentUi, currentWordScore]);
 
-
 const weakItems = useMemo(
   () => phonemeLineItems.filter((x) => x.hasVideo && x.isWeak),
   [phonemeLineItems]
 );
-const overlayTabs = useMemo(() => {
-  const tabs = [{ type: "overview", key: "overview", label: "Overview" }];
 
-  // one tab per weak phoneme (only those with video and not green)
-  for (const it of weakItems) {
-    tabs.push({ type: "phoneme", key: it.key, label: it.code });
+// 1:1 slides: Intro -> weak phonemes (score null/<85) -> Playback -> Actions
+const slides = useMemo(() => {
+  const list = [];
+
+  list.push({ type: "intro", key: "intro" });
+
+  const weakSlides = buildWeakPhonemeSlidesFromWords(words);
+  for (const s of weakSlides) list.push(s);
+
+  list.push({ type: "playback", key: "playback" });
+  list.push({ type: "actions", key: "actions" });
+
+  return list;
+}, [words]);
+
+const totalSlides = slides.length || 1;
+const activeSlide =
+  slides[Math.max(0, Math.min(slideIdx, totalSlides - 1))] || slides[0];
+
+
+function buildWeakPhonemeSlidesFromWords(wordsArr) {
+  const wordsSafe = Array.isArray(wordsArr) ? wordsArr : [];
+
+  // Aggregate to ONE slide per phoneme code (worst score wins)
+  const byCode = new Map(); // code -> { score, rawScore, wordIdx, wordText, assets }
+
+  for (let wIdx = 0; wIdx < wordsSafe.length; wIdx++) {
+    const w = wordsSafe[wIdx];
+    const ps = Array.isArray(w?.phonemes) ? w.phonemes : [];
+    const wordScore = getScore(w);
+    const rawScores = ps.map(getScore).filter((x) => Number.isFinite(x));
+
+    for (let pIdx = 0; pIdx < ps.length; pIdx++) {
+      const p = ps[pIdx];
+      const code = getPhonemeCode(p);
+      if (!code) continue;
+
+      const raw = getScore(p);
+      const norm = normalizePhonemeScore(raw, wordScore, rawScores);
+
+      // weak definition: score == null || < 85
+      const weak = norm == null || norm < 85;
+      if (!weak) continue;
+
+      const assets = resolvePhonemeVideo(code);
+      const hasVideo = !!assets?.videoSrc;
+      if (!hasVideo) continue;
+
+      const existing = byCode.get(code);
+
+      // "worse" = lower score, and null is worst
+      const isWorse =
+        !existing ||
+        existing.score == null ||
+        (norm == null ? true : (existing.score != null && norm < existing.score));
+
+      if (isWorse) {
+        byCode.set(code, {
+          type: "phoneme",
+          key: `${code}`, // one slide per phoneme
+          code,
+          score: norm,
+          rawScore: raw,
+          wordIdx: wIdx,
+          wordText: String(w?.word || w?.text || "").trim(),
+          assets,
+        });
+      }
+    }
   }
 
-  // keep your two existing last tabs
-  tabs.push({ type: "playback", key: "playback", label: "Playback" });
-  tabs.push({ type: "actions", key: "actions", label: "Actions" });
+  // Sort worst -> best (null first)
+  const slides = Array.from(byCode.values()).sort((a, b) => {
+    const as = a.score;
+    const bs = b.score;
+    if (as == null && bs == null) return 0;
+    if (as == null) return -1;
+    if (bs == null) return 1;
+    return as - bs;
+  });
 
-  return tabs;
-}, [weakItems]);
+  return slides;
+}
 
-const activeTab = overlayTabs[Math.max(0, Math.min(activeTabIdx, overlayTabs.length - 1))] || overlayTabs[0];
 
-const activeWeakItem = useMemo(() => {
-  if (activeTab?.type !== "phoneme") return null;
-  return weakItems.find((x) => x.key === activeTab.key) || null;
-}, [activeTab, weakItems]);
-
-const primaryWeakPhoneme = useMemo(() => {
-  // pick lowest RAW score (more honest than normalized)
-  const scored = phonemeLineItems
-    .filter((x) => Number.isFinite(x.rawScore))
-    .slice()
-    .sort((a, b) => (a.rawScore ?? 999) - (b.rawScore ?? 999));
-
-  return scored[0] || null;
-}, [phonemeLineItems]);
 
 function toggleOverlayAudio(src, kind) {
   if (!src) return;
@@ -1697,7 +1810,10 @@ function onTryAgain() {
   setSelectedWordIdx(-1);
   setExpandedPhonemeKey(null);
   setWordsOpen(false);
-  setActiveTabIdx(0);
+  setSlideIdx(0);
+setIntroPhase("idle");
+setIntroPct(0);
+
 
 
   // stop evt. igangværende lyd (så den ikke føles som “correct” spiller igen)
@@ -1720,7 +1836,9 @@ function onNext() {
   setSelectedWordIdx(-1);
   setExpandedPhonemeKey(null);
   setWordsOpen(false);
-  setActiveTabIdx(0);
+  setSlideIdx(0);
+setIntroPhase("idle");
+setIntroPct(0);
 
 
   }
@@ -2102,16 +2220,13 @@ style={{
             <div
               style={{
   position: "fixed",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: `calc(${TABBAR_OFFSET}px + ${SAFE_BOTTOM})`,
- // ✅ efterlader plads til tabbar
+  inset: 0,
+  height: "100dvh",
+  background: "#2196F3",
   zIndex: 9999,
-  background: LIGHT_BG,
   overflowY: "auto",
-  padding: 16,
 }}
+
 
             >
               <div
@@ -2145,7 +2260,7 @@ style={{
   <div style={{ paddingBottom: 88 }}>
     <AnimatePresence mode="wait">
       <motion.div
-        key={`swipe_${activeTab?.key || "x"}`}
+        key={`swipe_${activeSlide?.key || "x"}`}
         initial={{ opacity: 0, x: 12 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -12 }}
@@ -2157,9 +2272,13 @@ style={{
           const dx = info?.offset?.x || 0;
           const TH = 60;
 
-          if (dx > TH) setActiveTabIdx((i) => Math.max(0, i - 1));
-          else if (dx < -TH) setActiveTabIdx((i) => Math.min(overlayTabs.length - 1, i + 1));
-
+         if (dx > TH) {
+  stopAllAudio();
+  setSlideIdx((i) => Math.max(0, i - 1));
+} else if (dx < -TH) {
+  stopAllAudio();
+  setSlideIdx((i) => Math.min(totalSlides - 1, i + 1));
+}
           setDeepDiveOpen(false);
           setVideoMuted(true);
           try {
@@ -2172,102 +2291,47 @@ style={{
         }}
         style={{ marginTop: 8 }}
       >
-{activeTab?.type === "overview" ? (
+        {activeSlide?.type === "intro" ? (
   <div style={{ marginTop: 12, display: "grid", gap: 14 }}>
-    <div style={{ fontWeight: 950, fontSize: 14, color: LIGHT_MUTED }}>Words</div>
+    <div style={{ fontWeight: 950, fontSize: 28, color: "white" }}>
+      {introPhase === "done" ? "Feedback" : "Analyzing…"}
+    </div>
 
-    {words?.length ? (
-      <div style={{ display: "grid", gap: 10 }}>
-        {words.map((w, idx) => {
-          const t = String(w?.word || w?.text || "").trim();
-          const s = getScore(w);
-          const active = idx === safeWordIdx;
+    <div style={{ fontWeight: 900, fontSize: 44, color: "white", lineHeight: 1 }}>
+      {introPct}%
+    </div>
 
-          return (
-            <button
-              key={`${t}_${idx}`}
-              type="button"
-              onClick={() => {
-                setSelectedWordIdx(idx);
-                setActiveTabIdx(0);
-              }}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                border: "none",
-                background: active ? "rgba(33,150,243,0.10)" : "transparent",
-                padding: "12px 12px",
-                borderRadius: 16,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 10,
-              }}
-            >
-              <span style={{ fontWeight: 950, color: LIGHT_TEXT }}>{t || `Word ${idx + 1}`}</span>
-              <span style={{ fontWeight: 950, color: scoreColor(s) }}>{s == null ? "—" : Math.round(s)}</span>
-            </button>
-          );
-        })}
-      </div>
-    ) : (
-      <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>No data yet.</div>
-    )}
+    <div style={{ fontWeight: 850, color: "rgba(255,255,255,0.80)" }}>
+      {status || " "}
+    </div>
 
-    <div style={{ height: 1, background: "rgba(0,0,0,0.06)", marginTop: 6 }} />
-
-    {currentWordObj ? (
-      <div style={{ display: "grid", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-          <div style={{ fontWeight: 950, fontSize: 14, color: LIGHT_TEXT }}>
-            Selected: <span style={{ fontWeight: 950 }}>{currentWordText || "—"}</span>
-          </div>
-          <div style={{ fontWeight: 950, color: scoreColor(currentWordScore) }}>
-            {currentWordScore == null ? "—" : Math.round(currentWordScore)}
-          </div>
-        </div>
-
-        {weakItems?.length ? (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-            {weakItems.map((it) => (
-              <button
-                key={it.key}
-                type="button"
-                onClick={() => {
-                  const idx = overlayTabs.findIndex((t) => t.key === it.key);
-                  if (idx >= 0) setActiveTabIdx(idx);
-                }}
-                style={{
-                  border: "none",
-                  background: "rgba(17,24,39,0.06)",
-                  padding: "10px 12px",
-                  borderRadius: 999,
-                  fontWeight: 950,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <span>{it.code}</span>
-                <span style={{ color: scoreColor(it.score) }}>{it.score == null ? "—" : Math.round(it.score)}</span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>No weak phonemes with video.</div>
-        )}
-      </div>
-    ) : (
-      <div style={{ color: LIGHT_MUTED, fontWeight: 800 }}>Tap a word above to see phonemes.</div>
-    )}
+    <button
+      type="button"
+      onClick={() => {
+        stopAllAudio();
+        setSlideIdx((i) => Math.min(totalSlides - 1, i + 1));
+      }}
+      style={{
+        height: 52,
+        borderRadius: 18,
+        border: "none",
+        background: "rgba(255,255,255,0.18)",
+        color: "white",
+        fontWeight: 950,
+        cursor: "pointer",
+        marginTop: 6,
+      }}
+    >
+      Continue →
+    </button>
   </div>
 ) : null}
 
 
-{activeTab?.type === "phoneme" ? (
-  !activeWeakItem ? (
+
+
+{activeSlide?.type === "phoneme" ? (
+  !activeSlide?.code ? (
     <div style={{ marginTop: 12, color: LIGHT_MUTED, fontWeight: 800 }}>No data for this phoneme.</div>
   ) : (
     <div
@@ -2294,7 +2358,7 @@ style={{
               v.currentTime = 0;
             }
           } catch {}
-          setActiveTabIdx(0);
+          setSlideIdx(0);
         }}
         aria-label="Close"
         style={{
@@ -2320,7 +2384,7 @@ style={{
       {/* Title + desc */}
       <div style={{ paddingRight: 60 }}>
         <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5 }}>
-          {getPhonemeUiCopy(activeWeakItem.code).title}
+          {getPhonemeUiCopy(activeSlide.code).title}
         </div>
         <div
           style={{
@@ -2331,7 +2395,7 @@ style={{
             fontWeight: 650,
           }}
         >
-          {getPhonemeUiCopy(activeWeakItem.code).desc}
+          {getPhonemeUiCopy(activeSlide.code).desc}
         </div>
       </div>
 
@@ -2340,7 +2404,7 @@ style={{
         <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10" }}>
           <video
             ref={videoRef}
-            src={activeWeakItem.assets?.videoSrc || ""}
+            src={activeSlide.assets?.videoSrc || ""}
             playsInline
             muted={videoMuted}
             preload="auto"
@@ -2499,16 +2563,16 @@ style={{
 
             <div style={{ padding: 16, paddingTop: 18, color: "white" }}>
               <div style={{ fontSize: 28, fontWeight: 950 }}>
-                {getPhonemeUiCopy(activeWeakItem.code).title}
+                {getPhonemeUiCopy(activeSlide.code).title}
               </div>
               <div style={{ marginTop: 6, color: "rgba(255,255,255,0.72)", fontWeight: 650 }}>
-                {getPhonemeUiCopy(activeWeakItem.code).desc}
+                {getPhonemeUiCopy(activeSlide.code).desc}
               </div>
             </div>
 
             <div style={{ width: "100%", aspectRatio: "16 / 10", background: "black" }}>
               <video
-                src={activeWeakItem.assets?.videoSrc || ""}
+                src={activeSlide.assets?.videoSrc || ""}
                 playsInline
                 controls
                 autoPlay
@@ -2524,7 +2588,7 @@ style={{
 
 
 
-{activeTab?.type === "playback" ? (
+{activeSlide?.type === "playback" ? (
   <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
     <div
       style={{
@@ -2648,7 +2712,7 @@ style={{
   <button
     type="button"
     onClick={() => {
-      setActiveTabIdx((i) => Math.max(0, i - 1));
+      setSlideIdx((i) => Math.max(0, i - 1));
       setDeepDiveOpen(false);
       setVideoMuted(true);
       try {
@@ -2659,7 +2723,7 @@ style={{
         }
       } catch {}
     }}
-    disabled={activeTabIdx <= 0}
+    disabled={slideIdx <= 0}
     aria-label="Previous"
     style={{
       width: 44,
@@ -2669,8 +2733,8 @@ style={{
       background: "rgba(17,24,39,0.08)",
       display: "grid",
       placeItems: "center",
-      cursor: activeTabIdx <= 0 ? "not-allowed" : "pointer",
-      opacity: activeTabIdx <= 0 ? 0.45 : 1,
+      cursor: slideIdx <= 0 ? "not-allowed" : "pointer",
+      opacity: slideIdx <= 0 ? 0.45 : 1,
       color: LIGHT_TEXT,
     }}
   >
@@ -2678,7 +2742,9 @@ style={{
   </button>
 
   <div style={{ textAlign: "center", fontWeight: 950, color: LIGHT_TEXT }}>
-    <div style={{ fontSize: 14, lineHeight: 1.1 }}>{activeTab?.label || ""}</div>
+    <div style={{ fontSize: 14, lineHeight: 1.1 }}>
+  {slideIdx + 1} / {totalSlides}
+</div>
     <div style={{ fontSize: 12, color: LIGHT_MUTED, fontWeight: 850, marginTop: 2 }}>
       Swipe left / right
     </div>
@@ -2687,7 +2753,7 @@ style={{
   <button
     type="button"
     onClick={() => {
-      setActiveTabIdx((i) => Math.min(overlayTabs.length - 1, i + 1));
+      setSlideIdx((i) => Math.min(totalSlides - 1, i + 1));
       setDeepDiveOpen(false);
       setVideoMuted(true);
       try {
@@ -2698,7 +2764,7 @@ style={{
         }
       } catch {}
     }}
-    disabled={activeTabIdx >= overlayTabs.length - 1}
+    disabled={slideIdx >= totalSlides - 1}
     aria-label="Next"
     style={{
       width: 44,
@@ -2708,15 +2774,15 @@ style={{
       background: "rgba(17,24,39,0.08)",
       display: "grid",
       placeItems: "center",
-      cursor: activeTabIdx >= overlayTabs.length - 1 ? "not-allowed" : "pointer",
-      opacity: activeTabIdx >= overlayTabs.length - 1 ? 0.45 : 1,
+      cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
+      opacity: slideIdx >= totalSlides - 1 ? 0.45 : 1,
       color: LIGHT_TEXT,
     }}
   >
     <ChevronRight className="h-6 w-6" />
   </button>
 </div>
-{activeTab?.type === "actions" ? (
+{activeSlide?.type === "actions" ? (
   <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
     <div
       style={{
