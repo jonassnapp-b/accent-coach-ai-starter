@@ -402,18 +402,7 @@ const [slideIdx, setSlideIdx] = useState(0);
 const [introPhase, setIntroPhase] = useState("idle"); // idle | counting | done
 const [introPct, setIntroPct] = useState(0);
 const [overallPct, setOverallPct] = useState(0); // ✅ real score (0–100)
-useEffect(() => {
-  if (!result) return;
 
-  navigate("/coach-my-text", {
-    state: {
-      result,
-      target,
-      mode,
-      overallPct,
-    },
-  });
-}, [result]);
 
 
 const [introStep, setIntroStep] = useState(0); // 0 idle | 1 word | 2 move | 3 pct | 4 label
@@ -1159,18 +1148,15 @@ try {
         // ignore
       }
 
-      const payload = {
-        ...json,
-        userAudioUrl: localUrl,
-        userAudioBlob: audioBlob,
-        refText: target,
-        accent: accentUi,
-        createdAt: Date.now(),
-      };
-setResult(payload);
-
-
-setSlideIdx(0);
+  
+const payload = {
+  ...json,
+  userAudioUrl: localUrl,
+  userAudioBlob: audioBlob,
+  refText: target,
+  accent: accentUi,
+  createdAt: Date.now(),
+};
 
 // ✅ compute overall FIRST (0–100)
 const rawOverall =
@@ -1189,7 +1175,24 @@ let overall = Number(rawOverall);
 if (!Number.isFinite(overall)) overall = 0;
 if (overall > 0 && overall <= 1) overall = overall * 100;
 overall = clamp(Math.round(overall), 0, 100);
-setOverallPct(overall); // ✅ store real score for intro slide
+
+// (valgfrit) behold local state hvis du vil
+setResult(payload);
+setOverallPct(overall);
+
+// ✅ NAVIGATE med ALT det CoachMyText typisk har brug for
+navigate("/coach-my-text", {
+  state: {
+    result: payload,
+    overallPct: overall,
+    mode,
+    target,
+    refText: target,
+    accent: accentUi,
+    userAudioUrl: localUrl,
+  },
+});
+
 
 
 // ✅ freeze target for intro count-up
