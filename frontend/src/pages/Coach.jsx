@@ -402,6 +402,19 @@ const [slideIdx, setSlideIdx] = useState(0);
 const [introPhase, setIntroPhase] = useState("idle"); // idle | counting | done
 const [introPct, setIntroPct] = useState(0);
 const [overallPct, setOverallPct] = useState(0); // ✅ real score (0–100)
+useEffect(() => {
+  if (!result) return;
+
+  navigate("/coach-my-text", {
+    state: {
+      result,
+      target,
+      mode,
+      overallPct,
+    },
+  });
+}, [result]);
+
 
 const [introStep, setIntroStep] = useState(0); // 0 idle | 1 word | 2 move | 3 pct | 4 label
 
@@ -1155,14 +1168,7 @@ try {
         createdAt: Date.now(),
       };
 setResult(payload);
-navigate("/coach-my-text", {
-  state: {
-    result: payload,
-    target,
-    mode,
-    overallPct: overall,
-  },
-});
+
 
 setSlideIdx(0);
 
