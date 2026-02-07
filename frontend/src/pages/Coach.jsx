@@ -2877,19 +2877,25 @@ style={{
     </AnimatePresence>
 
   <div
-  style={{
-    position: "fixed",
-    left: 0,
-    right: 0,
-    width: "100%",
-    bottom: `calc(36px + ${SAFE_BOTTOM})`,
-    zIndex: 10010,
-    display: "grid",
-    gridTemplateColumns: "auto 1fr auto",
-    alignItems: "center",
-    padding: "0 28px",
-    pointerEvents: "none",
-  }}
+ style={{
+  position: "fixed",
+  left: 0,
+  right: 0,
+  bottom: `calc(36px + ${SAFE_BOTTOM})`,
+  zIndex: 10010,
+
+  // ✅ constrain to same content width
+  width: "100%",
+  maxWidth: 520,
+  margin: "0 auto",
+  padding: "0 16px",
+
+  display: "grid",
+  gridTemplateColumns: "auto 1fr auto",
+  alignItems: "center",
+  pointerEvents: "none",
+}}
+
 >
 
   <div style={{ justifySelf: "start", pointerEvents: "auto" }}>
