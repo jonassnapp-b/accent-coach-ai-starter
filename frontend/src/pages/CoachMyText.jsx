@@ -875,16 +875,19 @@ useEffect(() => {
 }, [accentUi]);
 
 
- return (
-  <div
-    className="page"
-    style={{
-      minHeight: "100dvh",
-      width: "100%",
-      background: PAGE_BG,
-      color: PAGE_TEXT,
-    }}
-  >
+let ui;
+try {
+  ui = (
+    <div
+      className="page"
+      style={{
+        minHeight: "100dvh",
+        width: "100%",
+        background: PAGE_BG,
+        color: PAGE_TEXT,
+      }}
+    >
+
 
      
 
@@ -1992,4 +1995,15 @@ color: "#0B1220",
 
     </div>
   );
+} catch (e) {
+  return (
+    <div style={{ minHeight: "100dvh", padding: 16, background: "#EEF5FF", color: "#0B1220" }}>
+      <div style={{ fontWeight: 950, fontSize: 18, marginBottom: 10 }}>PracticeMyText crashed</div>
+      <pre style={{ whiteSpace: "pre-wrap", fontSize: 12, lineHeight: 1.35 }}>
+        {String(e?.stack || e)}
+      </pre>
+    </div>
+  );
+}
+return ui;
 }
