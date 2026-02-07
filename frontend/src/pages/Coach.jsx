@@ -397,7 +397,7 @@ const [introPhase, setIntroPhase] = useState("idle"); // idle | counting | done
 const [introPct, setIntroPct] = useState(0);
 const [overallPct, setOverallPct] = useState(0); // ✅ real score (0–100)
 
-const [introStep, setIntroStep] = useState("idle"); // idle | word | move | pct | label
+const [introStep, setIntroStep] = useState(0); // 0 idle | 1 word | 2 move | 3 pct | 4 label
 
 const introRafRef = useRef(0);
 const introTargetRef = useRef(0); // ✅ freeze target (0–100)
@@ -408,7 +408,7 @@ function clearIntroTimers() {
   introTimersRef.current = [];
 }
 useEffect(() => {
-  if (introStep !== "pct") return;
+if (introStep !== 3) return;
 
   setIntroPhase("counting");
   setIntroPct(0);
@@ -1026,7 +1026,7 @@ function onBack() {
   setSlideIdx(0);
 setIntroPhase("idle");
 setIntroPct(0);
-setIntroStep("idle");
+setIntroStep(0);
 clearIntroTimers();
 
 }
@@ -1176,11 +1176,12 @@ introTargetRef.current = overall;
 clearIntroTimers();
 setIntroPhase("idle");
 setIntroPct(0);
-setIntroStep("word");
+setIntroStep(1);
 
-introTimersRef.current.push(setTimeout(() => setIntroStep("move"), 380));
-introTimersRef.current.push(setTimeout(() => setIntroStep("pct"), 720));
-introTimersRef.current.push(setTimeout(() => setIntroStep("label"), 900));
+introTimersRef.current.push(setTimeout(() => setIntroStep(2), 380));
+introTimersRef.current.push(setTimeout(() => setIntroStep(3), 720));
+introTimersRef.current.push(setTimeout(() => setIntroStep(4), 900));
+
 
 
 
@@ -1866,7 +1867,7 @@ function onTryAgain() {
   setSlideIdx(0);
 setIntroPhase("idle");
 setIntroPct(0);
-setIntroStep("idle");
+setIntroStep(0);
 clearIntroTimers();
 
 
@@ -1894,7 +1895,7 @@ function onNext() {
   setSlideIdx(0);
 setIntroPhase("idle");
 setIntroPct(0);
-setIntroStep("idle");
+setIntroStep(0);
 clearIntroTimers();
 
 
@@ -2315,7 +2316,7 @@ style={{
   onClick={() => {
     stopAllAudio();
     clearIntroTimers();
-    setIntroStep("idle");
+    setIntroStep(0);
     setIntroPhase("idle");
     setIntroPct(0);
     setSlideIdx(0);
@@ -2410,10 +2411,11 @@ style={{
   const pct = introPct;
   const word = String(target || "—").trim();
 
-  const showWord = introStep !== "idle";
-  const wordUp = introStep === "move" || introStep === "pct" || introStep === "label";
-  const showPct = introStep === "pct" || introStep === "label";
-  const showLabel = introStep === "label";
+const showWord = introStep >= 1;
+const wordUp = introStep >= 2;
+const showPct = introStep >= 3;
+const showLabel = introStep >= 4;
+
 
   return (
     <div
