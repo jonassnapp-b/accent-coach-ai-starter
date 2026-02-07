@@ -57,6 +57,19 @@ export default function AiChat() {
   const CARD = "rgba(255,255,255,0.06)";
   const CARD2 = "rgba(255,255,255,0.08)";
 
+  // cleaner, solid icon circle colors
+  const ICON_CIRCLE_COLORS = [
+    "#FF6B6B", // red
+    "#FFB703", // amber
+    "#34D399", // green
+    "#60A5FA", // blue
+    "#A78BFA", // purple
+    "#F472B6", // pink
+    "#22C55E", // vivid green
+    "#38BDF8", // cyan
+  ];
+
+
   // selected scenario modal
   const [activeScenario, setActiveScenario] = useState(null);
   const levels = useMemo(() => AI_CHAT_LEVELS, []);
@@ -176,10 +189,11 @@ export default function AiChat() {
                                     width: 84,
                                     height: 84,
                                     borderRadius: 999,
-                                    background:
-                                      idx % 2 === 0
-                                        ? "radial-gradient(circle at 30% 30%, rgba(99,102,241,0.9), rgba(236,72,153,0.45) 55%, rgba(255,255,255,0.06) 75%)"
-                                        : "radial-gradient(circle at 30% 30%, rgba(34,197,94,0.65), rgba(99,102,241,0.35) 55%, rgba(255,255,255,0.06) 75%)",
+                                                                       background: (() => {
+                                      const base = ICON_CIRCLE_COLORS[idx % ICON_CIRCLE_COLORS.length];
+                                      return `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.55), rgba(255,255,255,0) 58%), ${base}`;
+                                    })(),
+
                                     border: "2px solid rgba(0,0,0,0.06)",
                                     boxShadow: "0 16px 40px rgba(0,0,0,0.14)",
                                     display: "grid",
