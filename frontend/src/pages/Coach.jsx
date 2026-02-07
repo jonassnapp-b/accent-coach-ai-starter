@@ -397,9 +397,46 @@ const [introPhase, setIntroPhase] = useState("idle"); // idle | counting | done
 const [introPct, setIntroPct] = useState(0);
 const [overallPct, setOverallPct] = useState(0); // ✅ real score (0–100)
 
+const [introStep, setIntroStep] = useState("idle"); // idle | word | move | pct | label
 
 const introRafRef = useRef(0);
 const introTargetRef = useRef(0); // ✅ freeze target (0–100)
+
+const introTimersRef = useRef([]);
+function clearIntroTimers() {
+  try { introTimersRef.current.forEach((t) => clearTimeout(t)); } catch {}
+  introTimersRef.current = [];
+}
+useEffect(() => {
+  if (introStep !== "pct") return;
+
+  setIntroPhase("counting");
+  setIntroPct(0);
+
+  try { cancelAnimationFrame(introRafRef.current); } catch {}
+
+  introRafRef.current = requestAnimationFrame(() => {
+    const start = performance.now();
+    const DUR = 850;
+
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / DUR);
+      const target = introTargetRef.current || 0;
+      setIntroPct(Math.round(target * t));
+
+      if (t < 1) introRafRef.current = requestAnimationFrame(step);
+      else {
+        setIntroPct(target);
+        setIntroPhase("done");
+      }
+    };
+
+    introRafRef.current = requestAnimationFrame(step);
+  });
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [introStep]);
+
  // overlayTabs index
 
 
@@ -989,6 +1026,9 @@ function onBack() {
   setSlideIdx(0);
 setIntroPhase("idle");
 setIntroPct(0);
+setIntroStep("idle");
+clearIntroTimers();
+
 }
 
 
@@ -1107,34 +1147,41 @@ try {
         createdAt: Date.now(),
       };
 setResult(payload);
-
 setSlideIdx(0);
 
-// ✅ freeze target BEFORE animation
-introTargetRef.current = overall; // overall er din clampede 0–100 lige her
+// ✅ compute overall FIRST (0–100)
+const rawOverall =
+  json?.overall ??
+  json?.overallAccuracy ??
+  json?.pronunciation ??
+  json?.overall_score ??
+  json?.overall_accuracy ??
+  json?.pronunciation_score ??
+  json?.pronunciation_accuracy ??
+  json?.accuracyScore ??
+  json?.accuracy_score ??
+  0;
 
-setIntroPhase("counting");
+let overall = Number(rawOverall);
+if (!Number.isFinite(overall)) overall = 0;
+if (overall > 0 && overall <= 1) overall = overall * 100;
+overall = clamp(Math.round(overall), 0, 100);
+setOverallPct(overall); // ✅ store real score for intro slide
+
+
+// ✅ freeze target for intro count-up
+introTargetRef.current = overall;
+
+// ✅ run the exact visual sequence: word fades in → word moves up → % fades in at center → label fades in
+clearIntroTimers();
+setIntroPhase("idle");
 setIntroPct(0);
-try { cancelAnimationFrame(introRafRef.current); } catch {}
+setIntroStep("word");
 
-introRafRef.current = requestAnimationFrame(() => {
-  const start = performance.now();
-  const DUR = 850;
+introTimersRef.current.push(setTimeout(() => setIntroStep("move"), 380));
+introTimersRef.current.push(setTimeout(() => setIntroStep("pct"), 720));
+introTimersRef.current.push(setTimeout(() => setIntroStep("label"), 900));
 
-  const step = (now) => {
-    const t = Math.min(1, (now - start) / DUR);
-    const target = introTargetRef.current || 0;
-    setIntroPct(Math.round(target * t));
-
-    if (t < 1) introRafRef.current = requestAnimationFrame(step);
-    else {
-      setIntroPct(target);     // ✅ end EXACT on target
-      setIntroPhase("done");
-    }
-  };
-
-  introRafRef.current = requestAnimationFrame(step);
-});
 
 
 setDeepDiveOpen(false);
@@ -1161,23 +1208,6 @@ if (sentenceLike) {
   setExpandedPhonemeKey(firstTipKey || null);
 }
 
-      const rawOverall =
-  json?.overall ??
-  json?.overallAccuracy ??
-  json?.pronunciation ??
-  json?.overall_score ??
-  json?.overall_accuracy ??
-  json?.pronunciation_score ??
-  json?.pronunciation_accuracy ??
-  json?.accuracyScore ??
-  json?.accuracy_score ??
-  0;
-
-let overall = Number(rawOverall);
-if (!Number.isFinite(overall)) overall = 0;
-if (overall > 0 && overall <= 1) overall = overall * 100;
-overall = clamp(Math.round(overall), 0, 100);
-setOverallPct(overall); // ✅ store real score for intro slide
 
       const threshold = difficulty === "easy" ? 75 : difficulty === "medium" ? 82 : 88;
 
@@ -1836,6 +1866,8 @@ function onTryAgain() {
   setSlideIdx(0);
 setIntroPhase("idle");
 setIntroPct(0);
+setIntroStep("idle");
+clearIntroTimers();
 
 
 
@@ -1862,6 +1894,8 @@ function onNext() {
   setSlideIdx(0);
 setIntroPhase("idle");
 setIntroPct(0);
+setIntroStep("idle");
+clearIntroTimers();
 
 
   }
@@ -2276,6 +2310,38 @@ style={{
 
 
             >
+              <button
+  type="button"
+  onClick={() => {
+    stopAllAudio();
+    clearIntroTimers();
+    setIntroStep("idle");
+    setIntroPhase("idle");
+    setIntroPct(0);
+    setSlideIdx(0);
+    setDeepDiveOpen(false);
+    setVideoMuted(true);
+    setResult(null);
+  }}
+  aria-label="Close"
+  style={{
+    position: "fixed",
+    top: `calc(${SAFE_TOP} + 14px)`,
+    right: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    border: "none",
+    background: "rgba(255,255,255,0.14)",
+    display: "grid",
+    placeItems: "center",
+    cursor: "pointer",
+    zIndex: 10020,
+  }}
+>
+  <ChevronDown className="h-7 w-7" style={{ color: "white" }} />
+</button>
+
               <div
                 style={{
                   maxWidth: 520,
@@ -2338,12 +2404,16 @@ style={{
         }}
         style={{ marginTop: 8 }}
       >
- {activeSlide?.type === "intro" ? (() => {
-const o = overallPct;                 // ✅ stable
-const label = overallLabel(o);
-const pct = introPct;                 // ✅ already animates to o
+{activeSlide?.type === "intro" ? (() => {
+  const o = overallPct;
+  const label = overallLabel(o);
+  const pct = introPct;
+  const word = String(target || "—").trim();
 
-
+  const showWord = introStep !== "idle";
+  const wordUp = introStep === "move" || introStep === "pct" || introStep === "label";
+  const showPct = introStep === "pct" || introStep === "label";
+  const showLabel = introStep === "label";
 
   return (
     <div
@@ -2356,22 +2426,61 @@ const pct = introPct;                 // ✅ already animates to o
       }}
     >
       <div style={{ textAlign: "center" }}>
-      
+        {/* WORD: fade in center, then slide up */}
+        <motion.div
+          initial={{ opacity: 0, y: 0 }}
+          animate={{
+            opacity: showWord ? 1 : 0,
+            y: wordUp ? -44 : 0,
+          }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+          style={{
+            fontWeight: 950,
+            fontSize: 34,
+            color: "rgba(255,255,255,0.96)",
+            letterSpacing: -0.4,
+            lineHeight: 1.05,
+            marginBottom: 6,
+          }}
+        >
+          {word}
+        </motion.div>
 
-
-        <div style={{ marginTop: 10, fontWeight: 950, fontSize: 72, color: scoreColor(o), lineHeight: 0.95 }}>
+        {/* PERCENT: fades in at the same spot where the word started */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: showPct ? 1 : 0 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+          style={{
+            marginTop: 10,
+            fontWeight: 950,
+            fontSize: 72,
+            color: scoreColor(o),
+            lineHeight: 0.95,
+          }}
+        >
           {pct}%
-        </div>
+        </motion.div>
 
-        <div style={{ marginTop: 14, fontWeight: 850, fontSize: 18, color: "rgba(255,255,255,0.88)" }}>
+        {/* LABEL: fades in under percent */}
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: showLabel ? 1 : 0, y: showLabel ? 0 : 6 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+          style={{
+            marginTop: 14,
+            fontWeight: 850,
+            fontSize: 18,
+            color: "rgba(255,255,255,0.88)",
+          }}
+        >
           {label}
-        </div>
-
-      
+        </motion.div>
       </div>
     </div>
   );
 })() : null}
+
 
 
 
