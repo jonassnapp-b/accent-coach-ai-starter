@@ -579,7 +579,7 @@ if (turn) {
             style={{
         position: "fixed",
         inset: 0,
-        zIndex: 2147483647, // always above tab bar
+    zIndex: 9999999999, // always above tab bar
 
         // backdrop overlay (so the page behind is visually hidden)
        background: "#0B1220", // fully opaque backdrop (nothing behind is visible)
@@ -680,14 +680,14 @@ if (turn) {
 
           <div
             style={{
-              width: "min(360px, 78%)",
-              marginLeft: 40,
+width: "min(440px, 86%)",
+marginLeft: 32,
               marginRight: "auto",
               transform: "none",
               background: "rgba(59,130,246,0.85)",
-             borderRadius: 14,
-padding: "9px 11px",
-fontSize: 16,
+borderRadius: 16,
+padding: "11px 14px",
+fontSize: 18,
               fontSize: 16,
               lineHeight: 1.18,
               boxShadow: "0 18px 46px rgba(0,0,0,0.32)",
@@ -853,8 +853,8 @@ fontSize: 13,
           maxWidth: "100%",
           boxSizing: "border-box",
           marginLeft: "auto",
-          marginRight: 0,
-          transform: "translateX(8px)",
+marginRight: 40,
+transform: "none",
           background: "rgba(255,255,255,0.06)",
           border: "1px solid rgba(255,255,255,0.10)",
       borderRadius: 18,
