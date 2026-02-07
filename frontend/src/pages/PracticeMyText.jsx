@@ -1108,20 +1108,22 @@ nav("/practice");
         </div>
       </div>
 
-      <div
-        style={{
-          marginTop: 10,
-          textAlign: "center",
-          fontWeight: 900,
-          fontSize: 22,
-          color: "rgba(255,255,255,0.72)",
-          opacity: introPhase >= 2 ? 1 : 0,
-          transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
-          transition: "all 650ms ease",
-        }}
-      >
-        {pickShortLineFromScore(overallScore)}
-      </div>
+     <div
+  style={{
+    marginTop: 10,
+    textAlign: "center",
+    fontWeight: 950,
+    fontSize: 24,
+    color: "rgba(255,255,255,0.92)",
+    textShadow: "0 6px 18px rgba(0,0,0,0.18)",
+    opacity: introPhase >= 2 ? 1 : 0,
+    transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
+    transition: "all 650ms ease",
+  }}
+>
+  {pickShortLineFromScore(overallScore)}
+</div>
+
     </>
   ) : slideIdx >= 1 && slideIdx <= weakPhonemeSlides.length ? (
     // ----- Phoneme slides -----
