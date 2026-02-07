@@ -1589,16 +1589,14 @@ color: "#0B1220",
         </div>
       </div>
 
-      <div
-        style={{
-          marginTop: 22, // lidt mere luft under overskriften
-          borderRadius: 22,
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.10)",
-          padding: 14,
-        }}
-      >
-        <div style={{ display: "flex", gap: 10 }}>
+<div
+  style={{
+    marginTop: 22,
+    display: "grid",
+    gap: 10,
+  }}
+>
+  <div style={{ display: "flex", gap: 10 }}>
           <button
             type="button"
             onClick={playYou}
@@ -1636,7 +1634,7 @@ color: "#0B1220",
           </button>
         </div>
 
-        <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+        <div style={{ display: "flex", gap: 10 }}>
           {[
             { label: "1.00", v: 1.0 },
             { label: "0.85", v: 0.85 },
