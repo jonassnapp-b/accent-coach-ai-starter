@@ -2055,7 +2055,7 @@ return (
       {/* Blue header (only title lives here) */}
       <div
         style={{
-          maxWidth: 720,
+maxWidth: 520,
           margin: "0 auto",
           padding: `calc(${SAFE_TOP} + 18px) 16px 18px`,
           color: "white",
@@ -2076,7 +2076,7 @@ return (
           paddingBottom: `calc(${TABBAR_OFFSET}px + 16px + ${SAFE_BOTTOM})`,
         }}
       >
-        <div className="mx-auto w-full" style={{ maxWidth: 720 }}>
+        <div className="mx-auto w-full" style={{ maxWidth: 520 }}>
 
         <LayoutGroup>
           <AnimatePresence mode="wait">
