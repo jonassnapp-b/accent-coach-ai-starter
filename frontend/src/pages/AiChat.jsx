@@ -1,5 +1,5 @@
 // src/pages/AiChat.jsx
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, StopCircle, X, ChevronRight, Volume2 } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
@@ -73,6 +73,23 @@ export default function AiChat() {
   // selected scenario modal
   const [activeScenario, setActiveScenario] = useState(null);
   const levels = useMemo(() => AI_CHAT_LEVELS, []);
+useEffect(() => {
+  const prevHtml = document.documentElement.style.overflow;
+  const prevBody = document.body.style.overflow;
+
+  if (activeScenario) {
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+  } else {
+    document.documentElement.style.overflow = prevHtml || "";
+    document.body.style.overflow = prevBody || "";
+  }
+
+  return () => {
+    document.documentElement.style.overflow = prevHtml || "";
+    document.body.style.overflow = prevBody || "";
+  };
+}, [activeScenario]);
 
   
     return (
@@ -155,7 +172,7 @@ export default function AiChat() {
 
                       <div
                         style={{
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: 900,
                           color: "rgba(17,24,39,0.55)",
                         }}
@@ -347,6 +364,14 @@ function renderScoredLine(text, wordScoreMap) {
 
   const [lastScorePct, setLastScorePct] = useState(null);
   const [improveWord, setImproveWord] = useState({ word: "sales", pct: 76 });
+function wait(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function pushMessage(msg, delayMs = 0) {
+  if (delayMs) await wait(delayMs);
+  setMessages((prev) => [...prev, msg]);
+}
 
   async function ensureMic() {
     if (!navigator?.mediaDevices?.getUserMedia) throw new Error("Microphone not supported on this device.");
@@ -488,56 +513,39 @@ const wordScoreMap = buildWordScoreMap(json?.words);
       // 3) Append the user message (score the line that was visible when recording started)
 
 
-  setMessages((prev) => [
-  ...prev,
+await pushMessage(
   {
     role: "user",
     speaker: "You",
     text: userText,
     score: Math.round(overall),
-    wordScores: Array.from(wordScoreMap.entries()), // serializeable
+    wordScores: Array.from(wordScoreMap.entries()),
   },
-]);
+  0
+);
+
 const turn = scenario.turns?.[turnIndex];
 
 if (turn) {
-  // assistant reply
-  setMessages((prev) => [
-    ...prev,
+  // assistant reply (fade in after the user result)
+  await pushMessage(
     {
       role: "assistant",
       speaker: scenario.partnerName || "AI Partner",
       text: turn.assistantText,
     },
-  ]);
+    420
+  );
 
-  // next expected user line
+  // next expected user line (after assistant appears)
+  await wait(260);
   setTargetLine(turn.nextUserLine || "");
-
   setTurnIndex((i) => i + 1);
 } else {
-  // end of scenario
   setTargetLine("");
 }
 
 
-
-     if (ai && typeof ai.assistantText === "string") {
-  setMessages((prev) => {
- 
-    return [
-      ...prev,
-      { role: "assistant", speaker: scenario.partnerName || "AI Partner", text: ai.assistantText },
-    ];
-  });
-}
-
-
-if (ai?.nextUserLine) {
-  const nextLine = String(ai.nextUserLine).trim();
-  // Don't show the same line again
-  setTargetLine(nextLine && nextLine !== userText ? nextLine : "");
-}
 
 
 
@@ -571,7 +579,7 @@ if (ai?.nextUserLine) {
             style={{
         position: "fixed",
         inset: 0,
-        zIndex: 9999,
+        zIndex: 2147483647, // always above tab bar
 
         // backdrop overlay (so the page behind is visually hidden)
        background: "#0B1220", // fully opaque backdrop (nothing behind is visible)
@@ -663,7 +671,7 @@ if (ai?.nextUserLine) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.18, ease: "easeOut" }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
           style={{ display: "grid", gap: 4 }}
         >
           <div style={{ textAlign: "center", color: "rgba(255,255,255,0.40)", fontWeight: 900, fontSize: 12 }}>
@@ -677,10 +685,10 @@ if (ai?.nextUserLine) {
               marginRight: "auto",
               transform: "none",
               background: "rgba(59,130,246,0.85)",
-              borderRadius: 16,
-              padding: "10px 12px",
-              fontWeight: 900,
-              fontSize: 18,
+             borderRadius: 14,
+padding: "9px 11px",
+fontSize: 16,
+              fontSize: 16,
               lineHeight: 1.18,
               boxShadow: "0 18px 46px rgba(0,0,0,0.32)",
             }}
@@ -698,7 +706,7 @@ if (ai?.nextUserLine) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.18, ease: "easeOut" }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
           style={{ display: "grid", gap: 6 }}
         >
           <div style={{ textAlign: "center", color: "rgba(255,255,255,0.35)", fontWeight: 900, fontSize: 12 }}>
@@ -713,13 +721,13 @@ if (ai?.nextUserLine) {
               transform: "none",
               background: "rgba(255,255,255,0.06)",
               border: "1px solid rgba(255,255,255,0.10)",
-              borderRadius: 16,
-              padding: "10px 12px",
+              borderRadius: 14,
+padding: "9px 11px",
               position: "relative",
               boxShadow: "0 18px 46px rgba(0,0,0,0.32)",
             }}
           >
-            <div style={{ fontWeight: 850, fontSize: 16, lineHeight: 1.22 }}>
+            <div style={{ fontWeight: 850, fontSize: 15, lineHeight: 1.22 }}>
               {m.wordScores ? renderScoredLine(m.text, new Map(m.wordScores)) : (
                 <span style={{ color: "rgba(34,197,94,0.95)" }}>{m.text}</span>
               )}
@@ -729,14 +737,16 @@ if (ai?.nextUserLine) {
               <div
                 style={{
                   position: "absolute",
-                  right: 10,
-                  top: 10,
+                  right: 8,
+                  top: 8,
                   background: "rgba(34,197,94,0.95)",
                   color: "#04110A",
                   fontWeight: 950,
-                  borderRadius: 10,
-                  padding: "6px 10px",
-                  fontSize: 14,
+                  borderRadius: 9,
+                  padding: "4px 8px",
+                  fontSize: 12,
+                  lineHeight: 1,
+
                 }}
               >
                 {Math.round(m.score)}%
@@ -750,13 +760,13 @@ if (ai?.nextUserLine) {
               marginTop: -2,
               margin: "0 auto",
               width: "min(360px, 78%)",
-              marginLeft: "auto",
-              marginRight: 0,
-              transform: "translateX(14px)",
+        marginLeft: "auto",
+marginRight: 40,          // align with user bubble (same marginRight)
+transform: "none",   
               background: "rgba(255,255,255,0.06)",
               border: "1px solid rgba(255,255,255,0.10)",
-              borderRadius: 18,
-              padding: "12px 12px",
+borderRadius: 14,
+padding: "9px 10px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -773,7 +783,7 @@ if (ai?.nextUserLine) {
                   border: "1px solid rgba(255,255,255,0.10)",
                 }}
               />
-              <div style={{ fontWeight: 900, color: "rgba(255,255,255,0.85)" }}>You can improve</div>
+              <div style={{ fontWeight: 900, fontSize: 13, color: "rgba(255,255,255,0.85)" }}>You can improve</div>
             </div>
 
             <div
@@ -784,13 +794,15 @@ if (ai?.nextUserLine) {
                 background: "rgba(255,255,255,0.10)",
                 border: "1px solid rgba(255,255,255,0.12)",
                 borderRadius: 999,
-                padding: "8px 12px",
-                fontWeight: 950,
+               padding: "6px 10px",
+fontWeight: 950,
+fontSize: 13,
+
               }}
             >
               <span style={{ color: "rgba(255,255,255,0.85)" }}>{improveWord.word}</span>
               <span style={{ color: "rgba(245,158,11,0.95)" }}>{improveWord.pct}%</span>
-              <ChevronRight className="h-4 w-4" style={{ color: "rgba(255,255,255,0.65)" }} />
+              <ChevronRight className="h-3.5 w-3.5" style={{ color: "rgba(255,255,255,0.65)" }} />
             </div>
           </div>
         </motion.div>
@@ -804,7 +816,7 @@ if (ai?.nextUserLine) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.18, ease: "easeOut" }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
         style={{ textAlign: "center", color: "rgba(255,255,255,0.50)", fontWeight: 900 }}
       >
         {m.text}
@@ -820,7 +832,7 @@ if (ai?.nextUserLine) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
+      transition={{ duration: 0.45, ease: "easeOut" }}
       style={{ display: "grid", gap: 10 }}
     >
       <div
@@ -845,9 +857,10 @@ if (ai?.nextUserLine) {
           transform: "translateX(8px)",
           background: "rgba(255,255,255,0.06)",
           border: "1px solid rgba(255,255,255,0.10)",
-          borderRadius: 22,
-          padding: "12px 16px 14px",
-          paddingRight: 72,
+      borderRadius: 18,
+padding: "10px 14px 12px",
+paddingRight: 62,
+
           position: "relative",
           boxShadow: "0 22px 60px rgba(0,0,0,0.35)",
         }}
@@ -864,7 +877,7 @@ if (ai?.nextUserLine) {
           Your turn — say this out loud
         </div>
 
-        <div style={{ fontWeight: 850, fontSize: 16, lineHeight: 1.22 }}>
+        <div style={{ fontWeight: 850, fontSize: 15, lineHeight: 1.22 }}>
           <span style={{ color: "rgba(255,255,255,0.92)" }}>{targetLine}</span>
         </div>
 

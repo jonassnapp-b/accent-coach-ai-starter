@@ -370,7 +370,7 @@ export default function Settings() {
       We’re the team behind FluentUp. Like many of our users, we’re non-native English speakers, so we care deeply about making pronunciation practice feel simple, honest, and actually useful.
       <br />
       <br />
-      If something feels confusing, broken, or you have an idea that would make the app better, write it here — we read every message.
+      If something feels confusing, broken, or you have an idea that would make the app better, write it here. we read every message.
     </div>
 
     <div style={{ marginTop: 18 }}>
