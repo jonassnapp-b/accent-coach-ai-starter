@@ -2866,6 +2866,59 @@ style={{
     </div>
   </div>
 ) : null}
+
+
+{activeSlide?.type === "actions" ? (
+  <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+    <div
+      style={{
+        borderRadius: 22,
+        border: `1px solid ${LIGHT_BORDER}`,
+        background: LIGHT_SURFACE,
+        boxShadow: LIGHT_SHADOW,
+        padding: 14,
+        display: "grid",
+        gap: 10,
+      }}
+    >
+      <div style={{ fontWeight: 950, fontSize: 14 }}>Actions</div>
+
+      <button
+        type="button"
+        onClick={onTryAgain}
+        style={{
+          height: 46,
+          borderRadius: 16,
+          border: `1px solid ${LIGHT_BORDER}`,
+          background: "rgba(17,24,39,0.04)",
+          fontWeight: 950,
+          cursor: "pointer",
+        }}
+      >
+        Try again
+      </button>
+
+      <button
+        type="button"
+        onClick={onNext}
+        style={{
+          height: 46,
+          borderRadius: 16,
+          border: "none",
+          background: BTN_BLUE,
+          color: "white",
+          fontWeight: 950,
+          cursor: "pointer",
+        }}
+      >
+        Next
+      </button>
+    </div>
+  </div>
+) : null}
+
+      </motion.div>
+    </AnimatePresence>
 <div
   style={{
     position: "fixed",
@@ -2957,58 +3010,6 @@ style={{
     </button>
   </div>
 </div>
-
-{activeSlide?.type === "actions" ? (
-  <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
-    <div
-      style={{
-        borderRadius: 22,
-        border: `1px solid ${LIGHT_BORDER}`,
-        background: LIGHT_SURFACE,
-        boxShadow: LIGHT_SHADOW,
-        padding: 14,
-        display: "grid",
-        gap: 10,
-      }}
-    >
-      <div style={{ fontWeight: 950, fontSize: 14 }}>Actions</div>
-
-      <button
-        type="button"
-        onClick={onTryAgain}
-        style={{
-          height: 46,
-          borderRadius: 16,
-          border: `1px solid ${LIGHT_BORDER}`,
-          background: "rgba(17,24,39,0.04)",
-          fontWeight: 950,
-          cursor: "pointer",
-        }}
-      >
-        Try again
-      </button>
-
-      <button
-        type="button"
-        onClick={onNext}
-        style={{
-          height: 46,
-          borderRadius: 16,
-          border: "none",
-          background: BTN_BLUE,
-          color: "white",
-          fontWeight: 950,
-          cursor: "pointer",
-        }}
-      >
-        Next
-      </button>
-    </div>
-  </div>
-) : null}
-
-      </motion.div>
-    </AnimatePresence>
   </div>
 </div>
 
