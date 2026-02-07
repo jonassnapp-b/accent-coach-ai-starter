@@ -1804,10 +1804,32 @@ color: "#0B1220",
 
         <button
           type="button"
-          onClick={() => {
-            stopAllAudio();
-            nav(backRoute);
-          }}
+        onClick={async () => {
+  stopAllAudio();
+
+  // ✅ Coach-mode: returnér til /coach og bed den åbne live mic view (billede 2)
+  if (mode === "coach") {
+    nav("/coach", {
+      replace: true,
+      state: {
+        ...(location.state || {}),
+        autoStart: true,
+      },
+    });
+    return;
+  }
+
+  // Practice-mode: bliv her og optag igen
+  setResult(null);
+  setErr("");
+  setSlideIdx(0);
+  setIntroPhase(0);
+  setIntroPct(0);
+  try {
+    await startPronunciationRecord();
+  } catch {}
+}}
+
           style={{
             height: 56,
             borderRadius: 20,

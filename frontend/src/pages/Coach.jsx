@@ -7,7 +7,9 @@ import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 import { ingestLocalPhonemeScores } from "../lib/localPhonemeStats.js";
 import PHONEME_EXAMPLES from "../data/phonemeExamples.json";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+
+
 
 
 
@@ -315,8 +317,19 @@ function normalizeWordsFromResult(result, fallbackText) {
 
 /* ---------------- page ---------------- */
 export default function Coach() {
-    const { settings } = useSettings();
-    const navigate = useNavigate();
+  const { settings } = useSettings();
+  const navigate = useNavigate();
+  const location = useLocation();
+  useEffect(() => {
+    if (!location.state?.autoStart) return;
+
+    // ryd flaget så refresh ikke auto-starter igen
+    navigate("/coach", { replace: true, state: {} });
+
+    // gå direkte til "flow" (billede 2)
+    onStart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
 
 
   // light tokens
