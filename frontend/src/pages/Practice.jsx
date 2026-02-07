@@ -82,6 +82,11 @@ function sanitizeTextForSubmit(raw) {
 export default function Practice() {
   const nav = useNavigate();
     const { settings } = useSettings();
+    const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
+useEffect(() => {
+  setAccentUi(settings?.accentDefault || "en_us");
+}, [settings?.accentDefault]);
+
 
   // keep SFX volume synced (0 = mute)
   useEffect(() => {
@@ -321,7 +326,7 @@ async function handleStop(rec) {
     fd.append("audio", blob, "clip.webm");
     fd.append("refText", refText);
     // Brug din default accent hvis du vil – ellers bare en fast fallback:
-    fd.append("accent", (settings?.accentDefault === "en_br" ? "en_br" : "en_us"));
+    fd.append("accent", (accentUi === "en_br" ? "en_br" : "en_us"));
 
     const controller = new AbortController();
     const timeoutMs = 12000;
@@ -350,7 +355,7 @@ async function handleStop(rec) {
       userAudioUrl: localUrl,
       userAudioBlob: blob,
       refText,
-      accent: settings?.accentDefault === "en_br" ? "en_br" : "en_us",
+      accent: accentUi === "en_br" ? "en_br" : "en_us",
       createdAt: Date.now(),
     };
 
@@ -610,7 +615,45 @@ width: "100%",
                           Practice your words
                         </div>
 
-                        <div style={{ width: 42 }} />
+                      <div style={{ position: "relative" }}>
+  <select
+    aria-label="Accent"
+    value={accentUi}
+    onChange={(e) => !isBusy && setAccentUi(e.target.value)}
+    disabled={isBusy}
+    style={{
+      height: 42,
+      borderRadius: 999,
+      padding: "0 12px",
+      fontWeight: 900,
+      border: "1px solid var(--panel-border)",
+      background: "var(--panel-bg)",
+      boxShadow: "0 8px 18px rgba(0,0,0,0.06)",
+      outline: "none",
+      cursor: isBusy ? "not-allowed" : "pointer",
+      appearance: "none",
+      paddingRight: 34,
+    }}
+    title="Accent"
+  >
+    <option value="en_us">🇺🇸</option>
+    <option value="en_br">🇬🇧</option>
+  </select>
+
+  <span
+    style={{
+      position: "absolute",
+      right: 10,
+      top: "50%",
+      transform: "translateY(-50%)",
+      opacity: 0.55,
+      pointerEvents: "none",
+      fontWeight: 900,
+    }}
+  >
+    ▾
+  </span>
+</div>
                       </div>
                     </div>
 

@@ -385,6 +385,59 @@ useEffect(() => {
   const canPlaySfx = (settings.volume ?? 0) > 0.001;
 
   const [accentUi, setAccentUi] = useState(settings.accentDefault || "en_us");
+  useEffect(() => {
+  // on unmount: stop + cleanup
+  return () => {
+    try { ttsAbortRef.current?.abort(); } catch {}
+    ttsAbortRef.current = null;
+
+    try {
+      const a = ttsAudioRef.current;
+      if (a) {
+        a.pause();
+        a.src = "";
+      }
+    } catch {}
+
+    // revoke current non-cached url
+    try { if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current); } catch {}
+    ttsUrlRef.current = null;
+
+    // revoke cached urls
+    try {
+      for (const url of ttsCacheRef.current.values()) {
+        try { URL.revokeObjectURL(url); } catch {}
+      }
+      ttsCacheRef.current.clear();
+    } catch {}
+  };
+}, []);
+useEffect(() => {
+  try { ttsAbortRef.current?.abort(); } catch {}
+  ttsAbortRef.current = null;
+
+  try {
+    const a = ttsAudioRef.current;
+    if (a) {
+      a.pause();
+      a.src = "";
+    }
+  } catch {}
+  setIsCorrectPlaying(false);
+
+  // revoke current non-cached url
+  try { if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current); } catch {}
+  ttsUrlRef.current = null;
+
+  // revoke cached urls
+  try {
+    for (const url of ttsCacheRef.current.values()) {
+      try { URL.revokeObjectURL(url); } catch {}
+    }
+    ttsCacheRef.current.clear();
+  } catch {}
+}, [accentUi]);
+
   useEffect(() => setAccentUi(settings.accentDefault || "en_us"), [settings.accentDefault]);
 
   const [refText, setRefText] = useState("");
@@ -417,16 +470,34 @@ useEffect(() => {
 
   if (fromState) {
     setResult(fromState);
+
+    // ✅ sync UI with the result we arrived with
+    setAccentUi(fromState?.accent || settings?.accentDefault || "en_us");
+    setRefText(String(fromState?.refText || ""));
+
+    // ✅ keep audio around so accent changes can re-analyze same take
+    lastAudioBlobRef.current = fromState?.userAudioBlob || null;
+    lastAudioUrlRef.current  = fromState?.userAudioUrl  || null;
+
     try { sessionStorage.setItem(RESULT_KEY, JSON.stringify(fromState)); } catch {}
     return;
   }
 
   try {
     const raw = sessionStorage.getItem(RESULT_KEY);
-    if (raw) setResult(JSON.parse(raw));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      setResult(parsed);
+      setAccentUi(parsed?.accent || settings?.accentDefault || "en_us");
+      setRefText(String(parsed?.refText || ""));
+      // NOTE: blob is usually not in sessionStorage; url might be.
+      lastAudioBlobRef.current = parsed?.userAudioBlob || null;
+      lastAudioUrlRef.current  = parsed?.userAudioUrl  || null;
+    }
   } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [location.key]);
+}, [location.key, settings?.accentDefault]);
+
 
 // ---------------- Slide flow state ----------------
 const [slideIdx, setSlideIdx] = useState(0);
@@ -444,6 +515,17 @@ const [deepDivePhoneme, setDeepDivePhoneme] = useState(null); // { code, letters
 
 const userAudioRef = useRef(null);
 const loopTimerRef = useRef(null);
+// ---------------- TTS (server /api/tts) ----------------
+const ttsAudioRef = useRef(null);
+const ttsUrlRef = useRef(null); // current objectURL (non-cached)
+const ttsAbortRef = useRef(null);
+const ttsPlayIdRef = useRef(0);
+
+// cache objectURLs by key: `${accentUi}|${rate}|${text}`
+const ttsCacheRef = useRef(new Map());
+
+const [isCorrectPlaying, setIsCorrectPlaying] = useState(false);
+
 const phonemeVideoRef = useRef(null);
 const [phonemeVideoPlaying, setPhonemeVideoPlaying] = useState(false);
 
@@ -532,6 +614,29 @@ function stopLoopTimer() {
 }
 
 function stopAllAudio() {
+  function stopAllAudio() {
+  stopLoopTimer();
+
+  // ✅ stop server TTS audio
+  stopTtsNow();
+
+  try {
+    if (userAudioRef.current) {
+      userAudioRef.current.pause();
+      userAudioRef.current.currentTime = 0;
+    }
+  } catch {}
+  try {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  } catch {}
+  try {
+    phonemeVideoRef.current?.pause();
+  } catch {}
+  setPhonemeVideoPlaying(false);
+}
+
   stopLoopTimer();
   try {
     if (userAudioRef.current) {
@@ -549,6 +654,192 @@ function stopAllAudio() {
   } catch {}
   setPhonemeVideoPlaying(false);
 
+}
+function stopTtsNow() {
+  try { ttsAbortRef.current?.abort(); } catch {}
+  ttsAbortRef.current = null;
+
+  try {
+    const a = ttsAudioRef.current;
+    if (a) {
+      a.pause();
+      a.currentTime = 0;
+      a.src = "";
+    }
+  } catch {}
+
+  // revoke only non-cached url
+  try { if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current); } catch {}
+  ttsUrlRef.current = null;
+
+  setIsCorrectPlaying(false);
+}
+
+async function ensureTtsUrl({ text, accent, rate }) {
+  const t = String(text || "").trim();
+  if (!t) throw new Error("Missing text");
+
+  const key = `${accent}|${rate}|${t}`;
+  const cached = ttsCacheRef.current.get(key);
+  if (cached) return cached;
+
+  const base = getApiBase();
+  const controller = new AbortController();
+  ttsAbortRef.current = controller;
+
+  const r = await fetch(`${base}/api/tts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal: controller.signal,
+    body: JSON.stringify({ text: t, accent, rate }),
+  });
+
+  if (!r.ok) {
+    const msg = await r.text().catch(() => "");
+    throw new Error(`TTS failed (${r.status}): ${msg || r.statusText}`);
+  }
+
+  const buf = await r.arrayBuffer();
+  const blob = new Blob([buf], { type: "audio/wav" });
+  const url = URL.createObjectURL(blob);
+
+  ttsCacheRef.current.set(key, url);
+  return url;
+}
+
+async function playTtsUrl(url, { rate, loop }) {
+  const a = ttsAudioRef.current;
+  if (!a) return;
+
+  const myPlayId = ++ttsPlayIdRef.current;
+
+  // stop current first
+  stopTtsNow();
+
+  // if url is not cached, we track it in ttsUrlRef so it can be revoked
+  // (here we assume url is cached; but keep the ref logic safe)
+  ttsUrlRef.current = null;
+
+  a.src = url;
+  a.currentTime = 0;
+  a.playbackRate = Number(rate ?? 1.0) || 1.0;
+
+  setIsCorrectPlaying(true);
+
+  a.onended = () => {
+    if (ttsPlayIdRef.current !== myPlayId) return;
+    setIsCorrectPlaying(false);
+    if (loop) {
+      loopTimerRef.current = setTimeout(async () => {
+        if (ttsPlayIdRef.current !== myPlayId) return;
+        try {
+          a.currentTime = 0;
+          a.playbackRate = Number(rate ?? 1.0) || 1.0;
+          await a.play();
+          setIsCorrectPlaying(true);
+        } catch {}
+      }, 220);
+    }
+  };
+
+  try {
+    await a.play();
+  } catch {
+    setIsCorrectPlaying(false);
+  }
+}
+function stopTtsNow() {
+  try { ttsAbortRef.current?.abort(); } catch {}
+  ttsAbortRef.current = null;
+
+  try {
+    const a = ttsAudioRef.current;
+    if (a) {
+      a.pause();
+      a.currentTime = 0;
+      a.src = "";
+    }
+  } catch {}
+
+  // revoke only non-cached url
+  try { if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current); } catch {}
+  ttsUrlRef.current = null;
+
+  setIsCorrectPlaying(false);
+}
+
+async function ensureTtsUrl({ text, accent, rate }) {
+  const t = String(text || "").trim();
+  if (!t) throw new Error("Missing text");
+
+  const key = `${accent}|${rate}|${t}`;
+  const cached = ttsCacheRef.current.get(key);
+  if (cached) return cached;
+
+  const base = getApiBase();
+  const controller = new AbortController();
+  ttsAbortRef.current = controller;
+
+  const r = await fetch(`${base}/api/tts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal: controller.signal,
+    body: JSON.stringify({ text: t, accent, rate }),
+  });
+
+  if (!r.ok) {
+    const msg = await r.text().catch(() => "");
+    throw new Error(`TTS failed (${r.status}): ${msg || r.statusText}`);
+  }
+
+  const buf = await r.arrayBuffer();
+  const blob = new Blob([buf], { type: "audio/wav" });
+  const url = URL.createObjectURL(blob);
+
+  ttsCacheRef.current.set(key, url);
+  return url;
+}
+
+async function playTtsUrl(url, { rate, loop }) {
+  const a = ttsAudioRef.current;
+  if (!a) return;
+
+  const myPlayId = ++ttsPlayIdRef.current;
+
+  // stop current first
+  stopTtsNow();
+
+  // if url is not cached, we track it in ttsUrlRef so it can be revoked
+  // (here we assume url is cached; but keep the ref logic safe)
+  ttsUrlRef.current = null;
+
+  a.src = url;
+  a.currentTime = 0;
+  a.playbackRate = Number(rate ?? 1.0) || 1.0;
+
+  setIsCorrectPlaying(true);
+
+  a.onended = () => {
+    if (ttsPlayIdRef.current !== myPlayId) return;
+    setIsCorrectPlaying(false);
+    if (loop) {
+      loopTimerRef.current = setTimeout(async () => {
+        if (ttsPlayIdRef.current !== myPlayId) return;
+        try {
+          a.currentTime = 0;
+          a.playbackRate = Number(rate ?? 1.0) || 1.0;
+          await a.play();
+          setIsCorrectPlaying(true);
+        } catch {}
+      }, 220);
+    }
+  };
+
+  try {
+    await a.play();
+  } catch {
+    setIsCorrectPlaying(false);
+  }
 }
 
 function playYou() {
@@ -568,25 +859,30 @@ function playYou() {
   } catch {}
 }
 
-function playCorrectTts() {
-  // “Play Correct” via TTS (fallback) — hvis du senere får en rigtig ref-audio-URL, kan du bruge den her i stedet.
+async function playCorrectTts() {
   stopAllAudio();
+
   const text = String(result?.refText || "").trim();
   if (!text) return;
 
-  try {
-    if (!window?.speechSynthesis) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = playbackRate; // 1.0 / 0.85 / 0.75
-    window.speechSynthesis.speak(u);
+  const accent = accentUi === "en_br" ? "en_br" : "en_us";
+  const rate = Number(playbackRate ?? 1.0) || 1.0;
 
-    if (loopOn) {
-      u.onend = () => {
-        loopTimerRef.current = setTimeout(() => playCorrectTts(), 220);
-      };
-    }
-  } catch {}
+  // if already playing the same “correct”, pause/stop
+  if (isCorrectPlaying) {
+    stopTtsNow();
+    return;
+  }
+
+  try {
+    const url = await ensureTtsUrl({ text, accent, rate });
+    await playTtsUrl(url, { rate, loop: loopOn });
+  } catch (e) {
+    if (!IS_PROD) setErr(e?.message || String(e));
+    else setErr("TTS failed. Try again.");
+  }
 }
+
 
 
   // ---------------- Coach-like overlay state ----------------
@@ -823,6 +1119,8 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
       };
 
       setResult(payload);
+      try { sessionStorage.setItem(RESULT_KEY, JSON.stringify(payload)); } catch {}
+
   } catch (e) {
   const isAbort = e?.name === "AbortError" || String(e?.message || "").toLowerCase().includes("timed out");
 
@@ -840,6 +1138,24 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
 }
 
   }
+useEffect(() => {
+  if (!result) return;
+  if (isBusy) return;
+
+  const currentAccent = (result?.accent || "en_us");
+  const nextAccent = (accentUi === "en_br" ? "en_br" : "en_us");
+  if (currentAccent === nextAccent) return;
+
+  const blob = lastAudioBlobRef.current || result?.userAudioBlob || null;
+  const url  = lastAudioUrlRef.current  || result?.userAudioUrl  || null;
+  if (!blob || !url) return;
+
+  setErr("");
+  setCanRetryAnalyze(false);
+  setIsAnalyzing(true);
+  sendToServer(blob, url);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [accentUi]);
 
  return (
   <div
@@ -1900,6 +2216,7 @@ color: "#0B1220",
     </div>
   </div>
 )}
+<audio ref={ttsAudioRef} playsInline preload="auto" />
 
     </div>
   );
