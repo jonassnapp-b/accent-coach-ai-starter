@@ -614,10 +614,9 @@ function stopLoopTimer() {
 }
 
 function stopAllAudio() {
-  function stopAllAudio() {
   stopLoopTimer();
 
-  // ✅ stop server TTS audio
+  // stop server TTS audio
   stopTtsNow();
 
   try {
@@ -626,35 +625,19 @@ function stopAllAudio() {
       userAudioRef.current.currentTime = 0;
     }
   } catch {}
+
   try {
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
   } catch {}
+
   try {
     phonemeVideoRef.current?.pause();
   } catch {}
   setPhonemeVideoPlaying(false);
 }
 
-  stopLoopTimer();
-  try {
-    if (userAudioRef.current) {
-      userAudioRef.current.pause();
-      userAudioRef.current.currentTime = 0;
-    }
-  } catch {}
-  try {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-  } catch {}
-    try {
-    phonemeVideoRef.current?.pause();
-  } catch {}
-  setPhonemeVideoPlaying(false);
-
-}
 
 
 
