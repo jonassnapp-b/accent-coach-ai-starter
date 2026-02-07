@@ -1325,8 +1325,8 @@ boxShadow: PAGE_SHADOW,
       background: "#2196F3",
       color: "white",
       zIndex: 9999,
-      paddingTop: `calc(${SAFE_TOP} + 14px)`,
-      paddingLeft: 16,
+  paddingTop: 0,
+        paddingLeft: 16,
       paddingRight: 16,
       paddingBottom: `calc(14px + ${SAFE_BOTTOM})`,
       overflow: "hidden",
@@ -1344,7 +1344,7 @@ nav("/practice");
       aria-label="Close"
       style={{
         position: "absolute",
-        top: 14,
+        top: `calc(${SAFE_TOP} + 14px)`,
         right: 14,
         width: 44,
         height: 44,
@@ -1380,7 +1380,7 @@ nav("/practice");
     display: "flex",
     flexDirection: "column",
     justifyContent: slideIdx === 0 ? "center" : "flex-start",
-    paddingTop: slideIdx === 0 ? 0 : 38, // mere space over overskriften på Playback/andre slides
+paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over overskriften på Playback/andre slides
     paddingBottom: 12,
   }}
 >
@@ -1461,15 +1461,29 @@ nav("/practice");
 
       return (
         <>
-          <div style={{ paddingRight: 60 }}>
-            <div style={{ fontSize: 42, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>
-              {s.code} Sound
-            </div>
+         <div
+  style={{
+    background: "#ffffff",
+    color: "#0B1220",
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    paddingTop: `calc(${SAFE_TOP} + 18px)`,
+    paddingLeft: 22,
+    paddingRight: 72, // plads til X
+    paddingBottom: 18,
+    boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
+    marginBottom: 22,
+  }}
+>
+  <div style={{ fontSize: 42, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>
+    {s.code} Sound
+  </div>
 
-            <div style={{ marginTop: 8, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35, fontSize: 18 }}>
-              {getShortTipForPhoneme(s.code)}
-            </div>
-          </div>
+  <div style={{ marginTop: 8, color: "rgba(11,18,32,0.60)", fontWeight: 650, lineHeight: 1.35, fontSize: 16 }}>
+    {getShortTipForPhoneme(s.code)}
+  </div>
+</div>
+
 
           <div
             style={{
@@ -1585,13 +1599,18 @@ color: "#0B1220",
   {/* White header card */}
   <div
     style={{
-      background: "#ffffff",
-      color: "#0B1220",
-      borderRadius: 28,
-      padding: "22px 22px 20px",
-      boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
-      marginBottom: 22,
-    }}
+  background: "#ffffff",
+  color: "#0B1220",
+  borderBottomLeftRadius: 28,
+  borderBottomRightRadius: 28,
+  paddingTop: `calc(${SAFE_TOP} + 18px)`,
+  paddingLeft: 22,
+  paddingRight: 72, // plads til X
+  paddingBottom: 18,
+  boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
+  marginBottom: 22,
+}}
+
   >
     <div
       style={{
@@ -1716,12 +1735,29 @@ color: "#0B1220",
   ) : (
     // ----- Actions slide -----
     <>
-      <div style={{ paddingRight: 60 }}>
-        <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>Next</div>
-        <div style={{ marginTop: 10, color: "rgba(255,255,255,0.72)", fontWeight: 650, lineHeight: 1.35 }}>
-          Want another attempt or go back?
-        </div>
-      </div>
+   <div
+  style={{
+    background: "#ffffff",
+    color: "#0B1220",
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    paddingTop: `calc(${SAFE_TOP} + 18px)`,
+    paddingLeft: 22,
+    paddingRight: 72, // plads til X
+    paddingBottom: 18,
+    boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
+    marginBottom: 22,
+  }}
+>
+  <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>
+    Next
+  </div>
+
+  <div style={{ marginTop: 10, color: "rgba(11,18,32,0.60)", fontWeight: 650, lineHeight: 1.35, fontSize: 16 }}>
+    Want another attempt or go back?
+  </div>
+</div>
+
 
       <div
         style={{
