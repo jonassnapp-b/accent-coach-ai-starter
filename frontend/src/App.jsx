@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useEffect, Suspense, lazy } from "react";
+import React, { useEffect, useState, Suspense, lazy } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -107,7 +107,14 @@ function isOnboardingDone() {
 /* ---------------- App ---------------- */
 function AppInner() {
   const location = useLocation();
-  const showTabs = true;
+  const [scenarioOverlayOpen, setScenarioOverlayOpen] = useState(false);
+const showTabs = !scenarioOverlayOpen;
+
+useEffect(() => {
+  const on = (e) => setScenarioOverlayOpen(!!e?.detail?.open);
+  window.addEventListener("ac:scenarioOverlay", on);
+  return () => window.removeEventListener("ac:scenarioOverlay", on);
+}, []);
   const done = isOnboardingDone();
 
   // Capture referral code (?ref=XYZ) once

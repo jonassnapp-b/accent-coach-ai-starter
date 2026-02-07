@@ -292,6 +292,12 @@ const [messages, setMessages] = useState(() => [
 ]);
 const [turnIndex, setTurnIndex] = useState(0);
 
+useEffect(() => {
+  window.dispatchEvent(new CustomEvent("ac:scenarioOverlay", { detail: { open: true } }));
+  return () => {
+    window.dispatchEvent(new CustomEvent("ac:scenarioOverlay", { detail: { open: false } }));
+  };
+}, []);
 
   // AI returns an "expected short reply" that you score against
   const [targetLine, setTargetLine] = useState(() => scenario.firstUserLine || "");
