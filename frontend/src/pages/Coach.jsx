@@ -209,21 +209,16 @@ function pickRandom(arr) {
  * If missing -> we skip feedback for that phoneme (as requested).
  */
 
-
-function resolvePhonemeVideo(code) {
+function resolvePhonemeAssets(code) {
   const c = String(code || "").trim().toUpperCase();
-  if (!c) return null;
+  if (!c) return { videoSrc: null, imageSrc: null };
 
-  // You said you added videos for all SpeechSuper CMU phonemes here:
-  // frontend/public/phonemes/Videos/<CODE>.mp4
-  return { videoSrc: `/phonemes/Videos/${c}.mp4` };
+  return {
+    videoSrc: `/phonemes/Videos/${c}.mp4`,
+    imageSrc: `/phonemes/images/${c}.png`,
+  };
 }
 
-function resolvePhonemeDiagramImage(code) {
-  const c = String(code || "").trim().toUpperCase();
-  if (!c) return null;
-  return `/phonemes/images/${c}.png`; // public/phonemes/images/<CODE>.png
-}
 
 /* ---------------- SpeechSuper parsing helpers ---------------- */
 function getPhonemeCode(p) {
@@ -389,6 +384,9 @@ useEffect(() => {
   const [expandedPhonemeKey, setExpandedPhonemeKey] = useState(null); // e.g. "UW_3"
   const [deepDiveOpen, setDeepDiveOpen] = useState(false);
 const [videoMuted, setVideoMuted] = useState(true);
+const [badVideoByCode, setBadVideoByCode] = useState({});
+const [badImageByCode, setBadImageByCode] = useState({});
+
 const videoRef = useRef(null);
 
 const [wordsOpen, setWordsOpen] = useState(false); // ✅ dropdown open/closed
@@ -1242,7 +1240,8 @@ const phonemeLineItems = useMemo(() => {
     const raw = getScore(p);
     const s = normalizePhonemeScore(raw, currentWordScore, rawScores);
 
-const assets = resolvePhonemeVideo(code);
+const assets = resolvePhonemeAssets(code);
+const hasAnyAsset = !!assets?.videoSrc || !!assets?.imageSrc;
 
 out.push({
   key: `${code}_${i}`,
@@ -1250,10 +1249,11 @@ out.push({
   score: s,
   rawScore: raw,
   letters: getPhonemeLetters(p),
-  assets, // { videoSrc }
-  hasVideo: !!assets?.videoSrc,
-  isWeak: s == null || !isGreen(s), // <= NOT green
+  assets, // { videoSrc, imageSrc }
+  hasAsset: hasAnyAsset,
+  isWeak: s == null || !isGreen(s),
 });
+
 
   }
 
@@ -1261,7 +1261,8 @@ out.push({
 }, [currentWordObj, accentUi, currentWordScore]);
 
 const weakItems = useMemo(
-  () => phonemeLineItems.filter((x) => x.hasVideo && x.isWeak),
+  () => phonemeLineItems.filter((x) => x.hasAsset && x.isWeak)
+,
   [phonemeLineItems]
 );
 
@@ -1309,9 +1310,10 @@ function buildWeakPhonemeSlidesFromWords(wordsArr) {
       const weak = norm == null || norm < 85;
       if (!weak) continue;
 
-      const assets = resolvePhonemeVideo(code);
-      const hasVideo = !!assets?.videoSrc;
-      if (!hasVideo) continue;
+const assets = resolvePhonemeAssets(code);
+const hasAnyAsset = !!assets?.videoSrc || !!assets?.imageSrc;
+if (!hasAnyAsset) continue;
+
 
       const existing = byCode.get(code);
 
@@ -1783,8 +1785,9 @@ function getFirstTipKeyForWord(wordObj) {
 
     const raw = getScore(p);
     const s = normalizePhonemeScore(raw, wordScore, rawScores);
-const assets = resolvePhonemeVideo(code);
-const hasTip = !!assets?.videoSrc && (s == null || !isGreen(s));
+const assets = resolvePhonemeAssets(code);
+const hasTip = (!!assets?.videoSrc || !!assets?.imageSrc) && (s == null || !isGreen(s));
+
 
     if (hasTip) return `${code}_${i}`;
   }
@@ -1843,6 +1846,30 @@ setIntroPct(0);
 
   }
 
+function getOverallFromResult(r) {
+  const raw =
+    r?.overall ??
+    r?.overallAccuracy ??
+    r?.pronunciation ??
+    r?.overall_score ??
+    r?.overall_accuracy ??
+    r?.pronunciation_score ??
+    r?.pronunciation_accuracy ??
+    r?.accuracyScore ??
+    r?.accuracy_score;
+
+  let n = Number(raw);
+  if (!Number.isFinite(n)) return null;
+  if (n > 0 && n <= 1) n = n * 100;
+  return Math.round(n);
+}
+
+function overallLabel(n) {
+  if (n == null) return "Needs work.";
+  if (n >= 85) return "Great.";
+  if (n >= 70) return "Ok";
+  return "Needs work.";
+}
 
   /* ---------------- styles ---------------- */
   const bigCardStyle = {
@@ -2291,41 +2318,64 @@ style={{
         }}
         style={{ marginTop: 8 }}
       >
-        {activeSlide?.type === "intro" ? (
-  <div style={{ marginTop: 12, display: "grid", gap: 14 }}>
-    <div style={{ fontWeight: 950, fontSize: 28, color: "white" }}>
-      {introPhase === "done" ? "Feedback" : "Analyzing…"}
-    </div>
+ {activeSlide?.type === "intro" ? (() => {
+  const o = getOverallFromResult(result);
+  const label = overallLabel(o);
+  const pct = introPct; // count-up
 
-    <div style={{ fontWeight: 900, fontSize: 44, color: "white", lineHeight: 1 }}>
-      {introPct}%
-    </div>
-
-    <div style={{ fontWeight: 850, color: "rgba(255,255,255,0.80)" }}>
-      {status || " "}
-    </div>
-
-    <button
-      type="button"
-      onClick={() => {
-        stopAllAudio();
-        setSlideIdx((i) => Math.min(totalSlides - 1, i + 1));
-      }}
+  return (
+    <div
       style={{
-        height: 52,
-        borderRadius: 18,
-        border: "none",
-        background: "rgba(255,255,255,0.18)",
-        color: "white",
-        fontWeight: 950,
-        cursor: "pointer",
-        marginTop: 6,
+        minHeight: "calc(100dvh - 150px)",
+        display: "grid",
+        placeItems: "center",
+        paddingTop: `calc(${SAFE_TOP} + 10px)`,
+        paddingBottom: `calc(90px + ${SAFE_BOTTOM})`,
       }}
     >
-      Continue →
-    </button>
-  </div>
-) : null}
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontWeight: 950, fontSize: 56, color: scoreColor(o) }}>
+          {(label || "Ok").toLowerCase()}
+        </div>
+
+        <div style={{ marginTop: 10, fontWeight: 950, fontSize: 72, color: scoreColor(o), lineHeight: 0.95 }}>
+          {pct}%
+        </div>
+
+        <div style={{ marginTop: 14, fontWeight: 850, fontSize: 18, color: "rgba(255,255,255,0.88)" }}>
+          {label}
+        </div>
+
+        {status ? (
+          <div style={{ marginTop: 8, fontWeight: 850, color: "rgba(255,255,255,0.72)" }}>
+            {status}
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => {
+            stopAllAudio();
+            setSlideIdx((i) => Math.min(totalSlides - 1, i + 1));
+          }}
+          style={{
+            marginTop: 26,
+            height: 54,
+            padding: "0 22px",
+            borderRadius: 18,
+            border: "none",
+            background: "rgba(255,255,255,0.18)",
+            color: "white",
+            fontWeight: 950,
+            cursor: "pointer",
+          }}
+        >
+          Continue →
+        </button>
+      </div>
+    </div>
+  );
+})() : null}
 
 
 
@@ -2399,85 +2449,100 @@ style={{
         </div>
       </div>
 
-      {/* Video */}
-      <div style={{ marginTop: 16, borderRadius: 22, overflow: "hidden", position: "relative", background: "black" }}>
-        <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10" }}>
-          <video
-            ref={videoRef}
-            src={activeSlide.assets?.videoSrc || ""}
-            playsInline
-            muted={videoMuted}
-            preload="auto"
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          />
+    {/* Media (video preferred, image fallback) */}
+<div style={{ marginTop: 16, borderRadius: 22, overflow: "hidden", position: "relative", background: "black" }}>
+  <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10" }}>
+    {activeSlide.assets?.videoSrc && !badVideoByCode[activeSlide.code] ? (
+      <>
+        <video
+          ref={videoRef}
+          src={activeSlide.assets?.videoSrc}
+          playsInline
+          muted={videoMuted}
+          preload="auto"
+          onError={() => setBadVideoByCode((m) => ({ ...m, [activeSlide.code]: true }))}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
 
-         
-
-          {/* mute icon (top-right) */}
-          <button
-            type="button"
-            onClick={() => {
-              setVideoMuted((m) => {
-                const next = !m;
-                try {
-                  const v = videoRef.current;
-                  if (v) v.muted = next;
-                } catch {}
-                return next;
-              });
-            }}
-            aria-label="Mute"
-            style={{
-              position: "absolute",
-              right: 12,
-              top: 12,
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              border: "none",
-              background: "rgba(0,0,0,0.35)",
-              color: "white",
-              display: "grid",
-              placeItems: "center",
-              cursor: "pointer",
-            }}
-          >
-            <Volume2 className="h-5 w-5" />
-          </button>
-
-          {/* play (center) */}
-          <button
-            type="button"
-            onClick={() => {
-              const v = videoRef.current;
-              if (!v) return;
+        {/* mute icon (top-right) */}
+        <button
+          type="button"
+          onClick={() => {
+            setVideoMuted((m) => {
+              const next = !m;
               try {
-                v.muted = false;
-                setVideoMuted(false);
-                v.currentTime = 0;
-                v.play().catch(() => {});
+                const v = videoRef.current;
+                if (v) v.muted = next;
               } catch {}
-            }}
-            aria-label="Play"
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "50%",
-              transform: "translate(-50%, -50%)",
-              width: 78,
-              height: 78,
-              borderRadius: 39,
-              border: "none",
-              background: "rgba(255,255,255,0.95)",
-              display: "grid",
-              placeItems: "center",
-              cursor: "pointer",
-            }}
-          >
-            <Play className="h-8 w-8" style={{ color: "#0B1220" }} />
-          </button>
-        </div>
+              return next;
+            });
+          }}
+          aria-label="Mute"
+          style={{
+            position: "absolute",
+            right: 12,
+            top: 12,
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            border: "none",
+            background: "rgba(0,0,0,0.35)",
+            color: "white",
+            display: "grid",
+            placeItems: "center",
+            cursor: "pointer",
+          }}
+        >
+          <Volume2 className="h-5 w-5" />
+        </button>
+
+        {/* play (center) */}
+        <button
+          type="button"
+          onClick={() => {
+            const v = videoRef.current;
+            if (!v) return;
+            try {
+              v.muted = false;
+              setVideoMuted(false);
+              v.currentTime = 0;
+              v.play().catch(() => {});
+            } catch {}
+          }}
+          aria-label="Play"
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 78,
+            height: 78,
+            borderRadius: 39,
+            border: "none",
+            background: "rgba(255,255,255,0.95)",
+            display: "grid",
+            placeItems: "center",
+            cursor: "pointer",
+          }}
+        >
+          <Play className="h-8 w-8" style={{ color: "#0B1220" }} />
+        </button>
+      </>
+    ) : activeSlide.assets?.imageSrc && !badImageByCode[activeSlide.code] ? (
+      <img
+        src={activeSlide.assets?.imageSrc}
+        alt={`${activeSlide.code} diagram`}
+        onError={() => setBadImageByCode((m) => ({ ...m, [activeSlide.code]: true }))}
+        style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "black" }}
+      />
+    ) : (
+      <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "rgba(255,255,255,0.70)", fontWeight: 800 }}>
+        Missing media for {activeSlide.code}
       </div>
+    )}
+  </div>
+</div>
+
 
       {/* ONLY card/pill allowed: Watch Deep Dive */}
       <button
@@ -2698,90 +2763,96 @@ style={{
 ) : null}
 <div
   style={{
-    marginTop: 14,
+    position: "fixed",
+    left: 0,
+    right: 0,
+    bottom: `calc(18px + ${SAFE_BOTTOM})`,
+    zIndex: 10010,
     display: "grid",
-    gridTemplateColumns: "44px 1fr 44px",
+    gridTemplateColumns: "1fr auto 1fr",
     alignItems: "center",
-    gap: 10,
-    padding: 12,
-    borderRadius: 20,
-    background: "rgba(17,24,39,0.06)", // (optional: nicer on light tabs)
-    border: `1px solid ${LIGHT_BORDER}`, // (optional)
+    padding: "0 18px",
+    pointerEvents: "none",
   }}
 >
-  <button
-    type="button"
-    onClick={() => {
-      setSlideIdx((i) => Math.max(0, i - 1));
-      setDeepDiveOpen(false);
-      setVideoMuted(true);
-      try {
-        const v = videoRef.current;
-        if (v) {
-          v.pause();
-          v.currentTime = 0;
-        }
-      } catch {}
-    }}
-    disabled={slideIdx <= 0}
-    aria-label="Previous"
-    style={{
-      width: 44,
-      height: 44,
-      borderRadius: 16,
-      border: "none",
-      background: "rgba(17,24,39,0.08)",
-      display: "grid",
-      placeItems: "center",
-      cursor: slideIdx <= 0 ? "not-allowed" : "pointer",
-      opacity: slideIdx <= 0 ? 0.45 : 1,
-      color: LIGHT_TEXT,
-    }}
-  >
-    <ChevronLeft className="h-6 w-6" />
-  </button>
+  <div style={{ justifySelf: "start", pointerEvents: "auto" }}>
+    <button
+      type="button"
+      onClick={() => {
+        stopAllAudio();
+        setSlideIdx((i) => Math.max(0, i - 1));
+        setDeepDiveOpen(false);
+        setVideoMuted(true);
+        try {
+          const v = videoRef.current;
+          if (v) {
+            v.pause();
+            v.currentTime = 0;
+          }
+        } catch {}
+      }}
+      disabled={slideIdx <= 0}
+      aria-label="Previous"
+      style={{
+        width: 56,
+        height: 56,
+        borderRadius: 18,
+        border: "none",
+        background: "rgba(255,255,255,0.14)",
+        display: "grid",
+        placeItems: "center",
+        cursor: slideIdx <= 0 ? "not-allowed" : "pointer",
+        opacity: slideIdx <= 0 ? 0.35 : 1,
+      }}
+    >
+      <ChevronLeft className="h-7 w-7" style={{ color: "white" }} />
+    </button>
+  </div>
 
-  <div style={{ textAlign: "center", fontWeight: 950, color: LIGHT_TEXT }}>
-    <div style={{ fontSize: 14, lineHeight: 1.1 }}>
-  {slideIdx + 1} / {totalSlides}
-</div>
-    <div style={{ fontSize: 12, color: LIGHT_MUTED, fontWeight: 850, marginTop: 2 }}>
+  <div style={{ textAlign: "center", pointerEvents: "none" }}>
+    <div style={{ fontSize: 14, fontWeight: 950, color: "white", lineHeight: 1.1 }}>
+      {slideIdx + 1} / {totalSlides}
+    </div>
+    <div style={{ fontSize: 12, fontWeight: 850, color: "rgba(255,255,255,0.70)", marginTop: 2 }}>
       Swipe left / right
     </div>
   </div>
 
-  <button
-    type="button"
-    onClick={() => {
-      setSlideIdx((i) => Math.min(totalSlides - 1, i + 1));
-      setDeepDiveOpen(false);
-      setVideoMuted(true);
-      try {
-        const v = videoRef.current;
-        if (v) {
-          v.pause();
-          v.currentTime = 0;
-        }
-      } catch {}
-    }}
-    disabled={slideIdx >= totalSlides - 1}
-    aria-label="Next"
-    style={{
-      width: 44,
-      height: 44,
-      borderRadius: 16,
-      border: "none",
-      background: "rgba(17,24,39,0.08)",
-      display: "grid",
-      placeItems: "center",
-      cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
-      opacity: slideIdx >= totalSlides - 1 ? 0.45 : 1,
-      color: LIGHT_TEXT,
-    }}
-  >
-    <ChevronRight className="h-6 w-6" />
-  </button>
+  <div style={{ justifySelf: "end", pointerEvents: "auto" }}>
+    <button
+      type="button"
+      onClick={() => {
+        stopAllAudio();
+        setSlideIdx((i) => Math.min(totalSlides - 1, i + 1));
+        setDeepDiveOpen(false);
+        setVideoMuted(true);
+        try {
+          const v = videoRef.current;
+          if (v) {
+            v.pause();
+            v.currentTime = 0;
+          }
+        } catch {}
+      }}
+      disabled={slideIdx >= totalSlides - 1}
+      aria-label="Next"
+      style={{
+        width: 56,
+        height: 56,
+        borderRadius: 18,
+        border: "none",
+        background: "rgba(255,255,255,0.14)",
+        display: "grid",
+        placeItems: "center",
+        cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
+        opacity: slideIdx >= totalSlides - 1 ? 0.35 : 1,
+      }}
+    >
+      <ChevronRight className="h-7 w-7" style={{ color: "white" }} />
+    </button>
+  </div>
 </div>
+
 {activeSlide?.type === "actions" ? (
   <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
     <div
