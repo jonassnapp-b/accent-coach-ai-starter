@@ -1,7 +1,7 @@
 // src/pages/PracticeMyText.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, ChevronDown, Volume2, Play, X, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Volume2, Play, Pause, X, RotateCcw } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
 
@@ -444,6 +444,8 @@ const [deepDivePhoneme, setDeepDivePhoneme] = useState(null); // { code, letters
 
 const userAudioRef = useRef(null);
 const loopTimerRef = useRef(null);
+const phonemeVideoRef = useRef(null);
+const [phonemeVideoPlaying, setPhonemeVideoPlaying] = useState(false);
 
 const overallScore = useMemo(() => {
   const v = result?.overall ?? result?.pronunciation ?? result?.overallAccuracy ?? null;
@@ -467,11 +469,16 @@ function clampSlide(i) {
 }
 
 function goPrev() {
+  setPhonemeVideoPlaying(false);
+  try { phonemeVideoRef.current?.pause(); } catch {}
   setSlideIdx((i) => clampSlide(i - 1));
 }
 function goNext() {
+  setPhonemeVideoPlaying(false);
+  try { phonemeVideoRef.current?.pause(); } catch {}
   setSlideIdx((i) => clampSlide(i + 1));
 }
+
 const isPhonemeOverlay = slideIdx >= 1 && slideIdx <= weakPhonemeSlides.length;
 const activePhonemeSlide = isPhonemeOverlay ? weakPhonemeSlides[slideIdx - 1] : null;
 
@@ -537,6 +544,11 @@ function stopAllAudio() {
       window.speechSynthesis.cancel();
     }
   } catch {}
+    try {
+    phonemeVideoRef.current?.pause();
+  } catch {}
+  setPhonemeVideoPlaying(false);
+
 }
 
 function playYou() {
@@ -1159,16 +1171,66 @@ nav("/practice");
             {s.mediaKind === "image" ? (
               <img src={s.mediaSrc} alt={`${s.code} visual`} style={{ width: "100%", display: "block" }} />
             ) : (
-              <video
-                key={s.mediaSrc}
-                src={s.mediaSrc}
-                playsInline
-                muted
-                autoPlay
-                loop
-                controls
-                style={{ width: "100%", display: "block" }}
-              />
+           <div style={{ position: "relative" }}>
+  <video
+    key={s.mediaSrc}
+    ref={phonemeVideoRef}
+    src={s.mediaSrc}
+    playsInline
+    muted={false}
+    controls={false}
+    loop={false}
+    autoPlay={false}
+    style={{ width: "100%", display: "block" }}
+    onEnded={() => setPhonemeVideoPlaying(false)}
+  />
+
+  <button
+    type="button"
+    onClick={async () => {
+      const v = phonemeVideoRef.current;
+      if (!v) return;
+
+      try {
+        if (v.paused) {
+          // reset til start for “fresh play”
+          v.currentTime = 0;
+          await v.play();
+          setPhonemeVideoPlaying(true);
+        } else {
+          v.pause();
+          setPhonemeVideoPlaying(false);
+        }
+      } catch {}
+    }}
+    aria-label={phonemeVideoPlaying ? "Pause video" : "Play video"}
+    style={{
+      position: "absolute",
+      inset: 0,
+      display: "grid",
+      placeItems: "center",
+      background: "transparent",
+      border: "none",
+      cursor: "pointer",
+    }}
+  >
+    <div
+      style={{
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        background: "rgba(0,0,0,0.30)",
+        border: "1px solid rgba(255,255,255,0.22)",
+        display: "grid",
+        placeItems: "center",
+        backdropFilter: "blur(6px)",
+      }}
+    >
+      {phonemeVideoPlaying ? <Pause className="h-7 w-7" /> : <Play className="h-7 w-7" />}
+    </div>
+  </button>
+</div>
+
             )}
           </div>
 
@@ -1247,8 +1309,9 @@ fontSize: 16,
               height: 48,
               borderRadius: 16,
               border: "none",
-              background: "rgba(255,255,255,0.10)",
-              color: "white",
+           background: "#ffffff",
+color: "#0B1220",
+
               fontWeight: 900,
               cursor: "pointer",
             }}
@@ -1273,9 +1336,10 @@ fontSize: 16,
                   flex: 1,
                   height: 44,
                   borderRadius: 14,
-                  border: "1px solid rgba(255,255,255,0.10)",
-                  background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.08)",
-                  color: "white",
+                border: "1px solid rgba(11,18,32,0.12)",
+background: "#ffffff",
+color: "#0B1220",
+
                   fontWeight: 900,
                   cursor: "pointer",
                 }}
@@ -1292,9 +1356,9 @@ fontSize: 16,
               width: 96,
               height: 44,
               borderRadius: 14,
-              border: "1px solid rgba(255,255,255,0.10)",
-              background: loopOn ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.08)",
-              color: "white",
+             border: "1px solid rgba(11,18,32,0.12)",
+background: "#ffffff",
+color: "#0B1220",
               fontWeight: 900,
               cursor: "pointer",
             }}
@@ -1563,7 +1627,8 @@ borderRadius: 20,
                   height: 46,
                   borderRadius: 16,
                   border: "none",
-                  background: "rgba(33,150,243,0.12)",
+background: "#ffffff",
+color: "#0B1220",
                   fontWeight: 950,
                   cursor: "pointer",
                 }}
@@ -1579,7 +1644,8 @@ borderRadius: 20,
                   height: 46,
                   borderRadius: 16,
                   border: "none",
-                  background: "rgba(17,24,39,0.06)",
+                  background: "#ffffff",
+color: "#0B1220",
                   fontWeight: 950,
                   cursor: "pointer",
                 }}
@@ -1605,7 +1671,8 @@ borderRadius: 20,
                       height: 42,
                       borderRadius: 14,
                       border: "none",
-                      background: active ? "rgba(33,150,243,0.14)" : "rgba(17,24,39,0.06)",
+                      background: "#ffffff",
+color: "#0B1220",
                       fontWeight: 950,
                       cursor: "pointer",
                     }}
@@ -1622,7 +1689,8 @@ borderRadius: 20,
                   height: 42,
                   borderRadius: 14,
                   border: "none",
-                  background: loopOn ? "rgba(33,150,243,0.14)" : "rgba(17,24,39,0.06)",
+                  background: "#ffffff",
+color: "#0B1220",
                   fontWeight: 950,
                   cursor: "pointer",
                 }}
