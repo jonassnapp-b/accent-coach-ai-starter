@@ -314,6 +314,29 @@ function speakTarget() {
     }
   } catch {}
 }
+function overallPctLikeCoach(json) {
+  const raw =
+    json?.overall ??
+    json?.overallAccuracy ??
+    json?.pronunciation ??
+    json?.overall_score ??
+    json?.overall_accuracy ??
+    json?.pronunciation_score ??
+    json?.pronunciation_accuracy ??
+    json?.accuracyScore ??
+    json?.accuracy_score ??
+    0;
+
+  let n = Number(raw);
+  if (!Number.isFinite(n)) n = 0;
+  if (n > 0 && n <= 1) n = n * 100;
+  n = Math.round(n);
+  // keep it sane
+  if (n < 0) n = 0;
+  if (n > 100) n = 100;
+  return n;
+}
+
 function clamp01(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return null;
@@ -375,19 +398,27 @@ function psmSentenceScoreFromApi(json) {
 // PSM-style word scores IN ORDER (keeps duplicates + positions)
 function extractWordScoresInOrder(wordsArr) {
   const ws = Array.isArray(wordsArr) ? wordsArr : [];
+
   return ws.map((w) => {
-    // ✅ Prefer PSM-style (phoneme-based) word score
-    let pct = wordScore100LikePSM(w);
+    const raw =
+      w?.accuracyScore ??
+      w?.overallAccuracy ??
+      w?.accuracy ??
+      w?.pronunciation ??
+      w?.score ??
+      w?.overall ??
+      w?.pronunciationAccuracy;
 
-    // Fallback if no phonemes
-    if (!Number.isFinite(pct)) {
-      const sc = Number(w?.accuracyScore ?? w?.overallAccuracy ?? w?.score ?? w?.accuracy ?? NaN);
-      if (Number.isFinite(sc)) pct = sc <= 1 ? Math.round(sc * 100) : Math.round(sc);
-    }
-
-    return Number.isFinite(pct) ? pct : null;
+    let n = Number(raw);
+    if (!Number.isFinite(n)) return null;
+    if (n > 0 && n <= 1) n = n * 100;
+    n = Math.round(n);
+    if (n < 0) n = 0;
+    if (n > 100) n = 100;
+    return n;
   });
 }
+
 
 function isWordLike(cleaned) {
   // "sales", "I'm", "2026" => true. Pure punctuation => false.
@@ -579,14 +610,9 @@ const timeoutId = setTimeout(() => {
       const json = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
 
-      // ✅ PSM-style scoring (same as PracticeMyText)
-const psm = psmSentenceScoreFromApi(json);
-const overall = Number(psm?.overall ?? 0);
+   // ✅ Coach-style overall scoring (use SpeechSuper overall fields)
+const overall = overallPctLikeCoach(json);
 
-// (optional) keep json consistent if you ever reuse it later
-json.overall = overall;
-json.pronunciation = overall;
-json.overallAccuracy = overall;
 
       setAnalyzeStatus("");
 
