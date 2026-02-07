@@ -395,6 +395,8 @@ const [slideIdx, setSlideIdx] = useState(0);
 // intro count-up (samme idé som PracticeMyText)
 const [introPhase, setIntroPhase] = useState("idle"); // idle | counting | done
 const [introPct, setIntroPct] = useState(0);
+const [overallPct, setOverallPct] = useState(0); // ✅ real score (0–100)
+
 const introRafRef = useRef(0);
  // overlayTabs index
 
@@ -1159,6 +1161,9 @@ if (sentenceLike) {
 let overall = Number(rawOverall);
 if (!Number.isFinite(overall)) overall = 0;
 if (overall > 0 && overall <= 1) overall = overall * 100;
+overall = clamp(Math.round(overall), 0, 100);
+setOverallPct(overall); // ✅ store real score for intro slide
+
       const threshold = difficulty === "easy" ? 75 : difficulty === "medium" ? 82 : 88;
 
     if (overall >= threshold + 7) {
@@ -2321,7 +2326,8 @@ style={{
  {activeSlide?.type === "intro" ? (() => {
   const o = getOverallFromResult(result);
   const label = overallLabel(o);
-  const pct = introPct; // count-up
+  const pct = introPhase === "done" ? (o ?? 0) : introPct;
+
 
   return (
     <div
@@ -2334,9 +2340,10 @@ style={{
       }}
     >
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontWeight: 950, fontSize: 56, color: scoreColor(o) }}>
-          {(label || "Ok").toLowerCase()}
-        </div>
+       <div style={{ fontWeight: 950, fontSize: 56, color: scoreColor(o) }}>
+  ok
+</div>
+
 
         <div style={{ marginTop: 10, fontWeight: 950, fontSize: 72, color: scoreColor(o), lineHeight: 0.95 }}>
           {pct}%
@@ -2346,32 +2353,7 @@ style={{
           {label}
         </div>
 
-        {status ? (
-          <div style={{ marginTop: 8, fontWeight: 850, color: "rgba(255,255,255,0.72)" }}>
-            {status}
-          </div>
-        ) : null}
-
-        <button
-          type="button"
-          onClick={() => {
-            stopAllAudio();
-            setSlideIdx((i) => Math.min(totalSlides - 1, i + 1));
-          }}
-          style={{
-            marginTop: 26,
-            height: 54,
-            padding: "0 22px",
-            borderRadius: 18,
-            border: "none",
-            background: "rgba(255,255,255,0.18)",
-            color: "white",
-            fontWeight: 950,
-            cursor: "pointer",
-          }}
-        >
-          Continue →
-        </button>
+      
       </div>
     </div>
   );
