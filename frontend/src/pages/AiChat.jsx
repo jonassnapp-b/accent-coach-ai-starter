@@ -372,14 +372,10 @@ function psmSentenceScoreFromApi(json) {
 
 
 // Word-level coloring from SpeechSuper words[] (best-effort)
-function buildWordScoreMap(wordsArr) {
-  const m = new Map();
+// PSM-style word scores IN ORDER (keeps duplicates + positions)
+function extractWordScoresInOrder(wordsArr) {
   const ws = Array.isArray(wordsArr) ? wordsArr : [];
-
-  for (const w of ws) {
-    const rawWord = String(w?.word || "").trim();
-    if (!rawWord) continue;
-
+  return ws.map((w) => {
     // ✅ Prefer PSM-style (phoneme-based) word score
     let pct = wordScore100LikePSM(w);
 
@@ -389,16 +385,46 @@ function buildWordScoreMap(wordsArr) {
       if (Number.isFinite(sc)) pct = sc <= 1 ? Math.round(sc * 100) : Math.round(sc);
     }
 
-    if (!Number.isFinite(pct)) continue;
-
-    // keep the worst score if duplicated
-    const key = rawWord.toLowerCase();
-    const prev = m.get(key);
-    if (prev == null || pct < prev) m.set(key, pct);
-  }
-
-  return m;
+    return Number.isFinite(pct) ? pct : null;
+  });
 }
+
+function isWordLike(cleaned) {
+  // "sales", "I'm", "2026" => true. Pure punctuation => false.
+  return !!String(cleaned || "").match(/[A-Za-z0-9]/);
+}
+
+// Render text by consuming wordScores[] sequentially (index-based, keeps duplicates)
+function renderScoredLineByIndex(text, wordScores) {
+  const tokens = tokenizeWithSeparators(text);
+  let wi = 0;
+
+  return tokens.map((tok, i) => {
+    if (/^\s+$/.test(tok)) return <span key={`t_${i}`}>{tok}</span>;
+
+    const cleaned = tok.replace(/^[^\w']+|[^\w']+$/g, "");
+
+    // punctuation-only token (don’t consume a word score)
+    if (!isWordLike(cleaned)) {
+      return (
+        <span key={`t_${i}`} style={{ color: "rgba(255,255,255,0.92)" }}>
+          {tok}
+        </span>
+      );
+    }
+
+    const pct = Array.isArray(wordScores) ? wordScores[wi] : null;
+    wi += 1;
+
+    const style = pct == null ? { color: "rgba(255,255,255,0.92)" } : { color: colorForPct(pct) };
+    return (
+      <span key={`t_${i}`} style={style}>
+        {tok}
+      </span>
+    );
+  });
+}
+
 
 
 // Split text into tokens while preserving spaces/punctuation
@@ -583,7 +609,7 @@ if (!Number.isFinite(pct)) {
         }
         if (worst) setImproveWord(worst);
       } catch {}
-const wordScoreMap = buildWordScoreMap(json?.words);
+const orderedWordScores = extractWordScoresInOrder(json?.words);
 
       // 3) Append the user message (we show the expected reply text as what user intended to say)
       // 3) Append the user message (score the line that was visible when recording started)
@@ -595,10 +621,11 @@ await pushMessage(
     speaker: "You",
     text: userText,
     score: Math.round(overall),
-    wordScores: Array.from(wordScoreMap.entries()),
+    wordScores: orderedWordScores, // ✅ per-index scores (keeps duplicates)
   },
   0
 );
+
 
 const turn = scenario.turns?.[turnIndex];
 
@@ -804,9 +831,10 @@ padding: "9px 11px",
             }}
           >
             <div style={{ fontWeight: 850, fontSize: 15, lineHeight: 1.22 }}>
-              {m.wordScores ? renderScoredLine(m.text, new Map(m.wordScores)) : (
-                <span style={{ color: "rgba(34,197,94,0.95)" }}>{m.text}</span>
-              )}
+             {Array.isArray(m.wordScores) ? renderScoredLineByIndex(m.text, m.wordScores) : (
+  <span style={{ color: "rgba(255,255,255,0.92)" }}>{m.text}</span>
+)}
+
             </div>
 
             {Number.isFinite(m.score) ? (
