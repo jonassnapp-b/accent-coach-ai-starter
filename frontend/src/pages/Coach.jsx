@@ -397,7 +397,9 @@ const [introPhase, setIntroPhase] = useState("idle"); // idle | counting | done
 const [introPct, setIntroPct] = useState(0);
 const [overallPct, setOverallPct] = useState(0); // ✅ real score (0–100)
 
+
 const introRafRef = useRef(0);
+const introTargetRef = useRef(0); // ✅ freeze target (0–100)
  // overlayTabs index
 
 
@@ -1107,20 +1109,33 @@ try {
 setResult(payload);
 
 setSlideIdx(0);
+
+// ✅ freeze target BEFORE animation
+introTargetRef.current = overall; // overall er din clampede 0–100 lige her
+
 setIntroPhase("counting");
 setIntroPct(0);
 try { cancelAnimationFrame(introRafRef.current); } catch {}
+
 introRafRef.current = requestAnimationFrame(() => {
   const start = performance.now();
   const DUR = 850;
+
   const step = (now) => {
     const t = Math.min(1, (now - start) / DUR);
-    setIntroPct(Math.round(t * 100));
+    const target = introTargetRef.current || 0;
+    setIntroPct(Math.round(target * t));
+
     if (t < 1) introRafRef.current = requestAnimationFrame(step);
-    else setIntroPhase("done");
+    else {
+      setIntroPct(target);     // ✅ end EXACT on target
+      setIntroPhase("done");
+    }
   };
+
   introRafRef.current = requestAnimationFrame(step);
 });
+
 
 setDeepDiveOpen(false);
 setVideoMuted(true);
@@ -2324,9 +2339,10 @@ style={{
         style={{ marginTop: 8 }}
       >
  {activeSlide?.type === "intro" ? (() => {
-  const o = getOverallFromResult(result);
-  const label = overallLabel(o);
-  const pct = introPhase === "done" ? (o ?? 0) : introPct;
+const o = overallPct;                 // ✅ stable
+const label = overallLabel(o);
+const pct = introPct;                 // ✅ already animates to o
+
 
 
   return (
@@ -2340,9 +2356,7 @@ style={{
       }}
     >
       <div style={{ textAlign: "center" }}>
-       <div style={{ fontWeight: 950, fontSize: 56, color: scoreColor(o) }}>
-  ok
-</div>
+      
 
 
         <div style={{ marginTop: 10, fontWeight: 950, fontSize: 72, color: scoreColor(o), lineHeight: 0.95 }}>
