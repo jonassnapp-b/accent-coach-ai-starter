@@ -1074,7 +1074,7 @@ nav("/practice");
     fontSize: computeHeroFontSize(heroText, 84, 34),
     letterSpacing: -0.4,
     color: scoreColor(overallScore),
-    textShadow: "0 12px 40px rgba(0,0,0,0.35)",
+    textShadow: "0 6px 18px rgba(0,0,0,0.18)",
     paddingLeft: 16,
     paddingRight: 16,
     ...twoLineClampStyle(),
@@ -1101,7 +1101,7 @@ nav("/practice");
             fontSize: 84,
             letterSpacing: -0.8,
             color: scoreColor(overallScore),
-            textShadow: "0 14px 46px rgba(0,0,0,0.38)",
+            textShadow: "0 7px 22px rgba(0,0,0,0.20)",
           }}
         >
           {introPct}%
