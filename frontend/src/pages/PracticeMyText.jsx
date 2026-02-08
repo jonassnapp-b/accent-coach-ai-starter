@@ -1237,7 +1237,21 @@ const CloseSlidesX = ({ top = "12px", right = "12px" }) => (
     type="button"
     onClick={() => {
       stopAllAudio();
-      nav(backRoute);
+
+      // ✅ ensure slides overlay cannot persist after route change
+      try { sessionStorage.removeItem(RESULT_KEY); } catch {}
+      setDeepDiveOpen(false);
+      setDeepDivePhoneme(null);
+      setSlideIdx(0);
+      setIntroPhase(0);
+      setIntroPct(0);
+      setLevelPctAnim(0);
+      setErr("");
+      setCanRetryAnalyze(false);
+      setResult(null);
+
+      // ✅ go back (replace so history doesn’t keep the slides route)
+      nav(backRoute, { replace: true });
     }}
     aria-label="Close"
     style={{
@@ -1259,6 +1273,7 @@ const CloseSlidesX = ({ top = "12px", right = "12px" }) => (
     <X className="h-5 w-5" />
   </button>
 );
+
 
  return (
   <div
