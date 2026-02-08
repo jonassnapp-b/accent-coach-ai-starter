@@ -139,6 +139,15 @@ function computeHeroFontSize(text, maxPx, minPx) {
   const shrink = Math.max(0, len - 14) * 1.05;
   return clamp(Math.round(maxPx - shrink), minPx, maxPx);
 }
+function computePctFontSize(text, maxPx, minPx) {
+  const t = String(text || "").trim();
+  if (!t) return maxPx;
+
+  // længere sætning => lidt mindre procent-tal
+  const len = t.length;
+  const shrink = Math.max(0, len - 18) * 0.45; // tuning
+  return clamp(Math.round(maxPx - shrink), minPx, maxPx);
+}
 
 function twoLineClampStyle() {
   return {
@@ -1350,54 +1359,54 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   {slideIdx === 0 ? (
     // ----- Intro (CENTERED vertically) -----
     <>
-      <div style={{ height: 210, position: "relative" }}>
-       <div
+     <div
   style={{
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: introPhase >= 1 ? 10 : 34,
-    opacity: 1,
-    transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-    transition: "all 900ms ease",
+    width: "100%",
+    maxWidth: 720,
+    margin: "0 auto",
     textAlign: "center",
-    fontWeight: 950,
-    fontSize: computeHeroFontSize(heroText, 84, 34),
-    letterSpacing: -0.4,
-    color: pfColorForPct(overallScore),
-    textShadow: "0 6px 18px rgba(0,0,0,0.18)",
     paddingLeft: 16,
     paddingRight: 16,
-    ...twoLineClampStyle(),
   }}
 >
-  {heroText || "—"}
+  {/* HERO TEXT (max 2 lines, never overlaps) */}
+  <div
+    style={{
+      marginTop: introPhase >= 1 ? 4 : 18,
+      opacity: 1,
+      transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
+      transition: "all 900ms ease",
+      fontWeight: 950,
+      fontSize: computeHeroFontSize(heroText, 84, 34),
+      lineHeight: 1.05,
+      letterSpacing: -0.4,
+      color: pfColorForPct(overallScore),
+      textShadow: "0 6px 18px rgba(0,0,0,0.18)",
+      ...twoLineClampStyle(),
+    }}
+  >
+    {heroText || "—"}
+  </div>
+
+  {/* PERCENT (below text, adaptive size) */}
+  <div
+    style={{
+      marginTop: 14,
+      opacity: introPhase >= 1 ? 1 : 0,
+      transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
+      transition: "all 800ms ease",
+      fontWeight: 950,
+      fontSize: computePctFontSize(heroText, 84, 56),
+      lineHeight: 1,
+      letterSpacing: -0.8,
+      color: pfColorForPct(overallScore),
+      textShadow: "0 7px 22px rgba(0,0,0,0.20)",
+    }}
+  >
+    {introPct}%
+  </div>
 </div>
 
-
-        <div
-          style={{
-             marginTop: 22,
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: 74,
-                marginBottom: 14,
-
-            opacity: introPhase >= 1 ? 1 : 0,
-            transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-            transition: "all 800ms ease",
-            textAlign: "center",
-            fontWeight: 950,
-            fontSize: 84,
-            letterSpacing: -0.8,
-            color: pfColorForPct(overallScore),
-            textShadow: "0 7px 22px rgba(0,0,0,0.20)",
-          }}
-        >
-          {introPct}%
-        </div>
-      </div>
 
      <div
   style={{
