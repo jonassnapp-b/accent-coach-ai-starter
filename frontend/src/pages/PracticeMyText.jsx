@@ -109,30 +109,6 @@ function heroColorForPct(pct) {
   if (n >= 75) return "#eab308";  // yellow
   return "#ef4444";               // red
 }
-function renderColoredTextOnly(result) {
-  const words = Array.isArray(result?.words) ? result.words : [];
-  if (!words.length) return String(result?.refText || "").trim() || "—";
-
-  // Each word object is what PhonemeFeedback already knows how to score via getScore(...)
-  return (
-    <>
-      {words.map((w, idx) => {
-        const text = String(w?.word || w?.text || "").trim();
-        if (!text) return null;
-
-        const s = getScore(w); // 0-100
-        const color = heroColorForPct(s);
-
-        return (
-          <span key={idx} style={{ color }}>
-            {text}
-            {idx < words.length - 1 ? " " : ""}
-          </span>
-        );
-      })}
-    </>
-  );
-}
 
 /* ---------------- Coach-like feedback helpers ---------------- */
 
@@ -1412,7 +1388,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
       maxWidth: "100%",
     }}
   >
-    {renderColoredTextOnly(result)}
+    <PhonemeFeedback result={result} embed={true} hideBookmark={true} />
   </div>
 </div>
 
