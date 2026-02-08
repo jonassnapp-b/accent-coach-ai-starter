@@ -1281,19 +1281,25 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
     // ----- Intro (CENTERED vertically) -----
     <>
      <div
-  style={{
-    width: "100%",
-    maxWidth: 720,
-    margin: "0 auto",
-    textAlign: "center",
-    paddingLeft: 16,
-    paddingRight: 16,
-  }}
+ style={{
+  width: "100%",
+  maxWidth: 720,
+  margin: "0 auto",
+  textAlign: "center",
+  paddingLeft: 16,
+  paddingRight: 16,
+
+  // ✅ equal spacing between hero, % and line
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: 14,
+}}
 >
   {/* HERO TEXT (max 2 lines, never overlaps) */}
 <div
   style={{
-    marginTop: introPhase >= 1 ? 4 : 18,
+    marginTop: 0,
     opacity: 1,
     transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
     transition: "all 900ms ease",
@@ -1329,7 +1335,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   {/* PERCENT (below text, adaptive size) */}
   <div
     style={{
-      marginTop: 14,
+      marginTop: 0,
       opacity: introPhase >= 1 ? 1 : 0,
       transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
       transition: "all 800ms ease",
@@ -1348,7 +1354,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 
      <div
   style={{
-    marginTop: 10,
+    marginTop: 0,
     textAlign: "center",
     fontWeight: 950,
     fontSize: 24,
