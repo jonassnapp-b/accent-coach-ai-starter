@@ -1301,8 +1301,14 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
     maxWidth: 720,
     marginLeft: "auto",
     marginRight: "auto",
+
+    // ✅ Never split a word like "pl" + "ease"
+    wordBreak: "normal",
+    overflowWrap: "normal",
+    hyphens: "none",
   }}
 >
+
   <div
     style={{
       // hold det stort som din hero
@@ -1329,7 +1335,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   {/* PERCENT (below text, adaptive size) */}
   <div
     style={{
-      marginTop: 14,
+  marginTop: 16,
       opacity: introPhase >= 1 ? 1 : 0,
       transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
       transition: "all 800ms ease",
@@ -1348,7 +1354,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 
      <div
   style={{
-    marginTop: 10,
+    marginTop: 16,
     textAlign: "center",
     fontWeight: 950,
     fontSize: 24,
