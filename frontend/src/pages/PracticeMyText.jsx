@@ -1388,7 +1388,10 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
       maxWidth: "100%",
     }}
   >
-    <PhonemeFeedback result={result} embed={true} hideBookmark={true} />
+<PhonemeFeedback
+  result={result}
+  mode="wordOnly"
+/>
   </div>
 </div>
 
