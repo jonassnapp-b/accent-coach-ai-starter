@@ -753,25 +753,7 @@ async function playTtsUrl(url, { rate, loop }) {
     setIsCorrectPlaying(false);
   }
 }
-function stopTtsNow() {
-  try { ttsAbortRef.current?.abort(); } catch {}
-  ttsAbortRef.current = null;
 
-  try {
-    const a = ttsAudioRef.current;
-    if (a) {
-      a.pause();
-      a.currentTime = 0;
-      a.src = "";
-    }
-  } catch {}
-
-  // revoke only non-cached url
-  try { if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current); } catch {}
-  ttsUrlRef.current = null;
-
-  setIsCorrectPlaying(false);
-}
 
 async function ensureTtsUrl({ text, accent, rate }) {
   const t = String(text || "").trim();
@@ -1575,7 +1557,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   <button
     type="button"
     onClick={() => {
-      setDeepDivePhoneme({ code: s.code, letters: s.letters });
+      setDeepDivePhoneme({ code: s.code, letters: s.letters, score: s.score });
       setDeepDiveOpen(true);
     }}
     style={{
@@ -1987,7 +1969,7 @@ borderRadius: 20,
                 fontWeight: 950,
                 fontSize: 44,
                 letterSpacing: -0.4,
-                color: pfColorForPct(overallScore)
+                color: heroColorForPct(overallScore)
 ,
               }}
             >
@@ -2296,11 +2278,11 @@ color: "#0B1220",
   <div style={{ fontSize: 30, fontWeight: 950, letterSpacing: -0.4 }}>{title}</div>
 
   <div style={{ marginTop: 6, color: "rgba(255,255,255,0.72)", fontWeight: 650 }}>
-    {s.code} • Score {s.score == null ? "—" : Math.round(s.score)}%
-  </div>
+    {deepDivePhoneme?.code || "—"} • Score{" "}
+{deepDivePhoneme?.score == null ? "—" : Math.round(deepDivePhoneme.score)}%  </div>
 
   <div style={{ marginTop: 10, color: "rgba(255,255,255,0.78)", fontSize: 16, lineHeight: 1.35 }}>
-    {getShortTipForPhoneme(s.code)}
+    {getShortTipForPhoneme(deepDivePhoneme?.code)}
   </div>
 </div>
 
