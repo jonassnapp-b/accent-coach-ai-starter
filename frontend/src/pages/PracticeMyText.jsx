@@ -1571,7 +1571,7 @@ const dotTopPx = yForLevel(idx);
 <div
   style={{
     position: "absolute",
-    top: 26,
+    top: 46,
     left: "50%",
     transform: "translateX(-50%)",
     background: "transparent",
