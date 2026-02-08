@@ -1299,7 +1299,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   {/* HERO TEXT (max 2 lines, never overlaps) */}
 <div
   style={{
-    marginTop: 25,
+    marginTop: 0,
     opacity: 1,
     transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
     transition: "all 900ms ease",
@@ -1335,7 +1335,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   {/* PERCENT (below text, adaptive size) */}
   <div
     style={{
-      marginTop: 25,
+      marginTop: 0,
       opacity: introPhase >= 1 ? 1 : 0,
       transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
       transition: "all 800ms ease",
@@ -1354,7 +1354,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 
      <div
   style={{
-    marginTop: 0,
+    marginTop: 10,
     textAlign: "center",
     fontWeight: 950,
     fontSize: 24,
@@ -1938,7 +1938,7 @@ borderRadius: 20,
 
     <div
       style={{
-        marginTop: 14,
+        marginTop: 10,
         borderRadius: 22,
         background: "rgba(255,255,255,0.06)",
         border: "1px solid rgba(255,255,255,0.10)",
