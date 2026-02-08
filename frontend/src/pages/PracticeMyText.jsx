@@ -594,8 +594,12 @@ const [canRetryAnalyze, setCanRetryAnalyze] = useState(false);
 
 
   const [result, setResult] = useState(null);
+  const [isClosingSlides, setIsClosingSlides] = useState(false);
+
   // Load analysis result from Practice.jsx (via navigate state or sessionStorage)
 useEffect(() => {
+    if (isClosingSlides) return;
+
   const fromState = location?.state?.result || null;
 
   if (fromState) {
@@ -1235,24 +1239,30 @@ useEffect(() => {
 const CloseSlidesX = ({ top = "12px", right = "12px" }) => (
   <button
     type="button"
-    onClick={() => {
-      stopAllAudio();
+   onClick={() => {
+  stopAllAudio();
 
-      // ✅ ensure slides overlay cannot persist after route change
-      try { sessionStorage.removeItem(RESULT_KEY); } catch {}
-      setDeepDiveOpen(false);
-      setDeepDivePhoneme(null);
-      setSlideIdx(0);
-      setIntroPhase(0);
-      setIntroPct(0);
-      setLevelPctAnim(0);
-      setErr("");
-      setCanRetryAnalyze(false);
-      setResult(null);
+  // ✅ hide overlay immediately (even if route transition keeps component mounted)
+  setIsClosingSlides(true);
 
-      // ✅ go back (replace so history doesn’t keep the slides route)
-      nav(backRoute, { replace: true });
-    }}
+  // cleanup so it can't re-open
+  try { sessionStorage.removeItem(RESULT_KEY); } catch {}
+  setDeepDiveOpen(false);
+  setDeepDivePhoneme(null);
+  setSlideIdx(0);
+  setIntroPhase(0);
+  setIntroPct(0);
+  setLevelPctAnim(0);
+  setErr("");
+  setCanRetryAnalyze(false);
+  setResult(null);
+
+  // ✅ navigate after overlay is hidden
+  requestAnimationFrame(() => {
+    nav(backRoute, { replace: true });
+  });
+}}
+
     aria-label="Close"
     style={{
       position: "absolute",
@@ -1434,7 +1444,7 @@ boxShadow: PAGE_SHADOW,
   </button>
 )}
 
-{!!result && (
+{!!result && !isClosingSlides && (
   <div
     style={{
       position: "fixed",
