@@ -439,11 +439,24 @@ export default function Coach() {
       <div aria-hidden style={{ position: "fixed", inset: 0, background: "#2196F3", zIndex: 0 }} />
 
       <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* header */}
-        <div style={{ maxWidth: 520, margin: "0 auto", padding: `calc(${SAFE_TOP} + 18px) 16px 18px`, color: "white" }}>
-          <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Daily Drill</div>
-         
-        </div>
+       {/* header */}
+<div
+  style={{
+    maxWidth: 520,
+    margin: "0 auto",
+    width: "100%",
+    padding: `calc(${SAFE_TOP} + 18px) 16px 18px`,
+    color: "white",
+    display: "flex",
+    justifyContent: "flex-start",
+    textAlign: "left",
+  }}
+>
+  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>
+    Daily Drill
+  </div>
+</div>
+
 
         {/* white sheet */}
         <div
