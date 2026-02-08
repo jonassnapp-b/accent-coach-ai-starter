@@ -4,6 +4,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, ChevronDown, Volume2, Play, Pause, X, RotateCcw } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
+import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
+
 
 
 const IS_PROD = !!import.meta?.env?.PROD;
@@ -1361,23 +1363,35 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   }}
 >
   {/* HERO TEXT (max 2 lines, never overlaps) */}
+<div
+  style={{
+    marginTop: introPhase >= 1 ? 4 : 18,
+    opacity: 1,
+    transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
+    transition: "all 900ms ease",
+    textAlign: "center",
+    maxWidth: 720,
+    marginLeft: "auto",
+    marginRight: "auto",
+  }}
+>
   <div
     style={{
-      marginTop: introPhase >= 1 ? 4 : 18,
-      opacity: 1,
-      transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-      transition: "all 900ms ease",
+      // hold det stort som din hero
       fontWeight: 950,
       fontSize: computeHeroFontSize(heroText, 84, 34),
       lineHeight: 1.05,
       letterSpacing: -0.4,
-      color: heroColorForPct(overallScore),
       textShadow: "0 6px 18px rgba(0,0,0,0.18)",
-      ...twoLineClampStyle(),
+      // så det ikke “spilder” layout
+      display: "inline-block",
+      maxWidth: "100%",
     }}
   >
-    {heroText || "—"}
+    <PhonemeFeedback result={result} embed={true} hideBookmark={true} />
   </div>
+</div>
+
 
   {/* PERCENT (below text, adaptive size) */}
   <div
@@ -1924,311 +1938,7 @@ borderRadius: 20,
   </div>
 )}
 
-   
 
-{/* Slides */}
-<div style={{ marginTop: 14 }}>
-  {!result ? (
-    <div
-      style={{
-        paddingTop: 28,
-        paddingBottom: 12,
-        color: PAGE_MUTED,
-        fontWeight: 900,
-        textAlign: "center",
-      }}
-    >
-      No result yet.
-    </div>
-
-  ) : (
-    <div style={{ position: "relative" }}>
-     
-
-      {/* Slide content */}
-      {slideIdx === 0 ? (
-        // ---------------- Slide 1: word/sentence -> % count-up -> line ----------------
-               <div
-          style={{
-            paddingTop: 18,
-            paddingBottom: 10,
-          }}
-        >
-
-          <div style={{ height: 120, position: "relative" }}>
-            <div
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                top: introPhase >= 1 ? 8 : 28,
-                opacity: introPhase >= 0 ? 1 : 0,
-                transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-                transition: "all 900ms ease",
-                textAlign: "center",
-                fontWeight: 950,
-                fontSize: 44,
-                letterSpacing: -0.4,
-                color: heroColorForPct(overallScore)
-,
-              }}
-            >
-              {String(result?.refText || "").trim() || "—"}
-            </div>
-
-            <div
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                top: 56,
-                opacity: introPhase >= 1 ? 1 : 0,
-                transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-                transition: "all 800ms ease",
-                textAlign: "center",
-                fontWeight: 950,
-                fontSize: 44,
-                letterSpacing: -0.6,
-                color: heroColorForPct(overallScore),
-              }}
-            >
-              {introPct}%
-            </div>
-          </div>
-
-          <div
-            style={{
-              marginTop: 6,
-              textAlign: "center",
-              fontWeight: 900,
-              color: PAGE_MUTED,
-              opacity: introPhase >= 2 ? 1 : 0,
-              transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
-              transition: "all 650ms ease",
-            }}
-          >
-            {pickShortLineFromScore(overallScore)}
-          </div>
-        </div>
-
-      ) : slideIdx === 1 + weakPhonemeSlides.length ? (
-        // ---------------- Playback slide ----------------
-              <div
-          style={{
-            paddingTop: 10,
-            paddingBottom: 10,
-          }}
-        >
-
-          <div style={{ fontWeight: 950, fontSize: 18, marginBottom: 12 }}>Playback</div>
-
-          <div style={{ display: "grid", gap: 10 }}>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                type="button"
-                onClick={playYou}
-                style={{
-                  flex: 1,
-                  height: 46,
-                  borderRadius: 16,
-                  border: "none",
-background: "#ffffff",
-color: "#0B1220",
-                  fontWeight: 950,
-                  cursor: "pointer",
-                }}
-              >
-                Play You
-              </button>
-
-              <button
-                type="button"
-                onClick={playCorrectTts}
-                style={{
-                  flex: 1,
-                  height: 46,
-                  borderRadius: 16,
-                  border: "none",
-                  background: "#ffffff",
-color: "#0B1220",
-                  fontWeight: 950,
-                  cursor: "pointer",
-                }}
-              >
-                Play Correct
-              </button>
-            </div>
-
-            <div style={{ display: "flex", gap: 10 }}>
-              {[
-                { label: "1.00", v: 1.0 },
-                { label: "0.85", v: 0.85 },
-                { label: "0.75", v: 0.75 },
-              ].map((x) => {
-                const active = Math.abs(playbackRate - x.v) < 0.001;
-                return (
-                  <button
-                    key={x.label}
-                    type="button"
-                    onClick={() => setPlaybackRate(x.v)}
-                    style={{
-                      flex: 1,
-                      height: 42,
-                      borderRadius: 14,
-                      border: "none",
-                      background: "#ffffff",
-color: "#0B1220",
-                      fontWeight: 950,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {x.label}
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                onClick={() => setLoopOn((v) => !v)}
-                style={{
-                  width: 92,
-                  height: 42,
-                  borderRadius: 14,
-                  border: "none",
-                  background: "#ffffff",
-color: "#0B1220",
-                  fontWeight: 950,
-                  cursor: "pointer",
-                }}
-              >
-                Loop
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        // ---------------- Actions slide ----------------
-                <div
-          style={{
-            paddingTop: 10,
-            paddingBottom: 10,
-          }}
-        >
-
-          <div style={{ fontWeight: 950, fontSize: 18, marginBottom: 12 }}>Next</div>
-
-          <div style={{ display: "grid", gap: 10 }}>
-            <button
-              type="button"
-              onClick={async () => {
-                stopAllAudio();
-                setResult(null);
-                setErr("");
-                setSlideIdx(0);
-                setIntroPhase(0);
-                setIntroPct(0);
-
-                // optag igen uden navigation
-                try {
-                  await startPronunciationRecord();
-                } catch {}
-              }}
-              style={{
-                height: 48,
-                borderRadius: 16,
-                border: "none",
-                background: "rgba(33,150,243,0.12)",
-                fontWeight: 950,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-              }}
-            >
-              <RotateCcw className="h-5 w-5" />
-              Try again
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                stopAllAudio();
-                nav(-1);
-              }}
-              style={{
-                height: 48,
-                borderRadius: 16,
-                border: "none",
-                background: "rgba(17,24,39,0.06)",
-                fontWeight: 950,
-                cursor: "pointer",
-              }}
-            >
-              Back to Menu
-            </button>
-          </div>
-        </div>
-      )}
-{!isPhonemeOverlay && (
-  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
-    <button
-      type="button"
-      onClick={() => {
-        stopAllAudio();
-        goPrev();
-      }}
-      disabled={slideIdx <= 0}
-      style={{
-        width: 44,
-        height: 44,
-        borderRadius: 16,
-        border: `1px solid ${PAGE_BORDER}`,
-        background: slideIdx <= 0 ? "rgba(255,255,255,0.65)" : PAGE_SURFACE,
-        boxShadow: PAGE_SHADOW,
-        display: "grid",
-        placeItems: "center",
-        cursor: slideIdx <= 0 ? "not-allowed" : "pointer",
-        opacity: slideIdx <= 0 ? 0.5 : 1,
-      }}
-      aria-label="Previous"
-    >
-      <ChevronLeft className="h-6 w-6" />
-    </button>
-
-    <div style={{ fontWeight: 900, color: PAGE_MUTED }}>
-      {slideIdx + 1} / {totalSlides}
-    </div>
-
-    <button
-      type="button"
-      onClick={() => {
-        stopAllAudio();
-        goNext();
-      }}
-      disabled={slideIdx >= totalSlides - 1}
-      style={{
-        width: 44,
-        height: 44,
-        borderRadius: 16,
-        border: `1px solid ${PAGE_BORDER}`,
-        background: slideIdx >= totalSlides - 1 ? "rgba(255,255,255,0.65)" : PAGE_SURFACE,
-        boxShadow: PAGE_SHADOW,
-        display: "grid",
-        placeItems: "center",
-        cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
-        opacity: slideIdx >= totalSlides - 1 ? 0.5 : 1,
-      }}
-      aria-label="Next"
-    >
-      <ChevronRight className="h-6 w-6" />
-    </button>
-  </div>
-)}
-
-
-    </div>
-  )}
-</div>
 
 
 
