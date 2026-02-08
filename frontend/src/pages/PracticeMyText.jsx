@@ -1434,173 +1434,184 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 </div>
 
     </>
-  ) : slideIdx === 1 ? (
-  // ----- Speech Level (SLIDE 2 – MATCH ORIGINAL) -----
+) : slideIdx === 1 ? (
+  // ----- Speech Level (SLIDE 2 – MATCH IMAGE 2) -----
   (() => {
     const tracked = levelEma ?? overallScore;
-    const pos = clamp(100 - tracked, 0, 100);
 
-    const LEVELS = [
-      "Native",
-      "Proficient",
-      "Advanced",
-      "Intermediate",
-      "Beginner",
-      "Novice",
-    ];
+    const LEVELS = ["Native", "Proficient", "Advanced", "Intermediate", "Beginner", "Novice"];
+    const n = LEVELS.length;
+
+    // 100 = top (Native), 0 = bottom (Novice)
+    const idx = clamp(Math.round(((100 - tracked) / 100) * (n - 1)), 0, n - 1);
+    const dotTopPct = (idx / (n - 1)) * 100;
 
     return (
-     <div
-  style={{
-    flex: "1 1 auto",
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "center",
-    paddingTop: `calc(${SAFE_TOP} + 24px)`,
-  }}
->
+      <div
+        style={{
+          position: "relative",
+          flex: "1 1 auto",
+          minHeight: 0,
+          height: "100%",
+          paddingTop: `calc(${SAFE_TOP} + 22px)`,
+          paddingLeft: 24,
+          paddingRight: 24,
+        }}
+      >
+        {/* LEFT TITLE (top-left) */}
         <div
           style={{
-            width: "100%",
-            maxWidth: 720,
-            display: "grid",
-            gridTemplateColumns: "1fr 72px 1fr",
-            gap: 32,
-            alignItems: "center",
+            position: "absolute",
+            left: 24,
+            top: `calc(${SAFE_TOP} + 22px)`,
+            fontSize: 52,
+            fontWeight: 950,
+            lineHeight: 1.02,
+            letterSpacing: -0.6,
+            maxWidth: 280,
           }}
         >
-          {/* LEFT TEXT */}
-          <div>
-            <div
-              style={{
-                fontSize: 52,
-                fontWeight: 950,
-                lineHeight: 1.02,
-                letterSpacing: -0.6,
-              }}
-            >
-             Your
-<br />
-Speaking
-<br />
-Progress
-            </div>
-          </div>
+          Your
+          <br />
+          Speech
+          <br />
+          Level
+        </div>
 
-          {/* LEVEL LADDER */}
+        {/* RIGHT STACK (ladder + labels) */}
+        <div
+          style={{
+            position: "absolute",
+            right: 24,
+            top: `calc(${SAFE_TOP} + 80px)`,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 18,
+          }}
+        >
+          {/* LADDER */}
           <div
             style={{
               position: "relative",
-              height: 420,
+              height: 560,
               width: 64,
               borderRadius: 36,
-              background: "rgba(255,255,255,0.22)", // semi-transparent
+              background: "rgba(11,18,32,0.22)", // dark translucent like image 2
+              border: "1px solid rgba(255,255,255,0.14)",
+              boxShadow: "0 18px 46px rgba(0,0,0,0.22)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
             }}
           >
-            {/* trophy */}
+            {/* Trophy badge */}
             <div
               style={{
                 position: "absolute",
                 top: 10,
                 left: "50%",
                 transform: "translateX(-50%)",
-                opacity: 0.9,
-                fontSize: 20,
+                width: 30,
+                height: 30,
+                borderRadius: 15,
+                background: "rgba(255,255,255,0.14)",
+                border: "1px solid rgba(255,255,255,0.16)",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 14,
+                opacity: 0.95,
               }}
             >
               🏆
             </div>
 
-            {/* ticks */}
-            {Array.from({ length: 9 }).map((_, i) => (
+            {/* small ticks */}
+            {Array.from({ length: 14 }).map((_, i) => (
               <div
                 key={i}
                 style={{
                   position: "absolute",
                   left: "50%",
                   transform: "translateX(-50%)",
-                  top: `${12 + i * 10}%`,
-                  width: 14,
+                  top: `${12 + i * 6}%`,
+                  width: 12,
                   height: 2,
                   borderRadius: 2,
-                  background: "rgba(255,255,255,0.45)",
+                  background: "rgba(255,255,255,0.22)",
                 }}
               />
             ))}
 
-{/* level dots */}
-{LEVELS.map((_, i) => (
-  <div
-    key={`dot_${i}`}
-    style={{
-      position: "absolute",
-      left: "50%",
-      transform: "translateX(-50%)",
-      top: `${(i / (LEVELS.length - 1)) * 100}%`,
-      width: 12,
-      height: 12,
-      borderRadius: 6,
-      background: "rgba(255,255,255,0.95)",
-    }}
-  />
-))}
+            {/* level dots */}
+            {LEVELS.map((_, i) => {
+              const topPct = (i / (n - 1)) * 100;
+              const active = i === idx;
+              return (
+                <div
+                  key={`dot_${i}`}
+                  style={{
+                    position: "absolute",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    top: `calc(${topPct}% - ${active ? 7 : 5}px)`,
+                    width: active ? 14 : 10,
+                    height: active ? 14 : 10,
+                    borderRadius: active ? 7 : 5,
+                    background: "rgba(255,255,255,0.92)",
+                    opacity: active ? 1 : 0.55,
+                    boxShadow: active ? "0 10px 22px rgba(0,0,0,0.20)" : "none",
+                  }}
+                />
+              );
+            })}
 
-            {/* marker */}
+            {/* speech bubble (left of ladder) */}
             <div
               style={{
                 position: "absolute",
-                left: "50%",
-                transform: "translateX(-50%)",
-                top: `calc(${pos}% - 9px)`,
-                width: 18,
-                height: 18,
-                borderRadius: 9,
-                background: "#fff",
-              }}
-            />
-
-            {/* speech bubble */}
-            <div
-              style={{
-                position: "absolute",
-                left: -132,
-                top: `calc(${pos}% - 34px)`,
-                background: "#fff",
+                left: -182,
+                top: `calc(${dotTopPct}% - 36px)`,
+                background: "rgba(255,255,255,0.96)",
                 color: "#0B1220",
-                borderRadius: 16,
-                padding: "10px 14px",
-                fontWeight: 900,
-                boxShadow: "0 10px 26px rgba(0,0,0,0.18)",
+                borderRadius: 18,
+                padding: "12px 16px",
+                fontWeight: 950,
+                boxShadow: "0 18px 46px rgba(0,0,0,0.22)",
+                minWidth: 140,
               }}
             >
-              <div style={{ color: "#f97316" }}>You</div>
-              <div>{tracked}%</div>
+              <div style={{ color: "#fb923c", fontSize: 26, lineHeight: 1.0 }}>You</div>
+              <div style={{ fontSize: 26, lineHeight: 1.0 }}>{tracked}%</div>
 
-              {/* arrow */}
+              {/* bubble pointer */}
               <div
                 style={{
                   position: "absolute",
                   right: -8,
                   top: "50%",
                   transform: "translateY(-50%) rotate(45deg)",
-                  width: 12,
-                  height: 12,
-                  background: "#fff",
+                  width: 14,
+                  height: 14,
+                  background: "rgba(255,255,255,0.96)",
                 }}
               />
             </div>
           </div>
 
-          {/* RIGHT LABELS */}
+          {/* RIGHT LABELS (tight to ladder) */}
           <div
             style={{
+              height: 560,
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
-              height: 420,
+              paddingTop: 6,
+              paddingBottom: 6,
               fontWeight: 850,
-              opacity: 0.9,
+              fontSize: 16,
               letterSpacing: -0.2,
+              opacity: 0.78,
+              color: "rgba(255,255,255,0.92)",
+              minWidth: 120,
             }}
           >
             {LEVELS.map((l) => (
@@ -1611,6 +1622,7 @@ Progress
       </div>
     );
   })()
+
 
 
   ) : slideIdx >= 2 && slideIdx <= 1 + weakPhonemeSlides.length ? (
