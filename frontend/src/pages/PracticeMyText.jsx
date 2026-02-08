@@ -1462,7 +1462,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
         <div
           style={{
             position: "absolute",
-            left: 24,
+            left: 44,
             top: `calc(${SAFE_TOP} + 22px)`,
             fontSize: 52,
             fontWeight: 950,
@@ -1473,7 +1473,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
         >
           Your
           <br />
-          Speech
+          Speaking
           <br />
           Level
         </div>
@@ -1482,7 +1482,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
         <div
           style={{
             position: "absolute",
-            right: 24,
+            right: 64,
             top: `calc(${SAFE_TOP} + 80px)`,
             display: "flex",
             alignItems: "flex-start",
