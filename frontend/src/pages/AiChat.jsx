@@ -296,6 +296,26 @@ const [messages, setMessages] = useState(() => [
   },
 ]);
 const [turnIndex, setTurnIndex] = useState(0);
+const [isComplete, setIsComplete] = useState(false);
+
+function resetScenario() {
+  try { window?.speechSynthesis?.cancel?.(); } catch {}
+  stopAll();
+
+  setMessages([
+    {
+      role: "assistant",
+      speaker: scenario.partnerName || "AI Partner",
+      text: scenario.opening || "Hi! Ready to start?",
+    },
+  ]);
+  setTurnIndex(0);
+  setTargetLine(scenario.firstUserLine || "");
+  setIsComplete(false);
+  setAnalyzeStatus("");
+  setIsAnalyzing(false);
+  setIsRecording(false);
+}
 
 useEffect(() => {
   window.dispatchEvent(new CustomEvent("ac:scenarioOverlay", { detail: { open: true } }));
@@ -669,7 +689,9 @@ if (turn) {
   setTurnIndex((i) => i + 1);
 } else {
   setTargetLine("");
+  setIsComplete(true);
 }
+
 
 
 
@@ -963,13 +985,10 @@ padding: "9px 11px",
   }}
   disabled={!m?.practicePayload}
 >
- <span style={{ color: "rgba(255,255,255,0.85)" }}>
-  {(m?.improveWord?.word || "—").replace(/^hi\s+/i, "")}
+<span style={{ color: "rgba(245,158,11,0.95)" }}>
+  {Number.isFinite(m?.improveWord?.pct) ? `${m.improveWord.pct}%` : "—"}
 </span>
 
-  <span style={{ color: "rgba(245,158,11,0.95)" }}>
-    {Number.isFinite(m?.improveWord?.pct) ? `${m.improveWord.pct}%` : "—"}
-  </span>
   <ChevronRight className="h-3.5 w-3.5" style={{ color: "rgba(255,255,255,0.65)" }} />
 </button>
 
@@ -1087,8 +1106,48 @@ paddingRight: 62,
   @keyframes acPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
 `}</style>
 
-       {/* Mic */}
-<div style={{ display: "grid", placeItems: "center", paddingBottom: 6 }}>
+{/* Mic / Completion actions */}
+{isComplete ? (
+  <div style={{ display: "flex", justifyContent: "center", gap: 12, paddingBottom: 8 }}>
+    <button
+      type="button"
+      onClick={() => {
+        try { window?.speechSynthesis?.cancel?.(); } catch {}
+        stopAll();
+        onClose();
+      }}
+      style={{
+        padding: "12px 16px",
+        borderRadius: 999,
+        border: "1px solid rgba(255,255,255,0.14)",
+        background: "rgba(255,255,255,0.06)",
+        color: "rgba(255,255,255,0.88)",
+        fontWeight: 950,
+        cursor: "pointer",
+      }}
+    >
+      Exit
+    </button>
+
+    <button
+      type="button"
+      onClick={resetScenario}
+      style={{
+        padding: "12px 16px",
+        borderRadius: 999,
+        border: "1px solid rgba(255,255,255,0.14)",
+        background: "rgba(255,255,255,0.10)",
+        color: "rgba(255,255,255,0.92)",
+        fontWeight: 950,
+        cursor: "pointer",
+      }}
+    >
+      Try again
+    </button>
+  </div>
+) : (
+  <div style={{ display: "grid", placeItems: "center", paddingBottom: 6 }}>
+
   <div style={{ position: "relative", width: 92, height: 92 }}>
     <button
       type="button"
@@ -1160,6 +1219,7 @@ paddingRight: 62,
     ) : null}
   </div>
 </div>
+)}
 
       </div>
     </motion.div>
