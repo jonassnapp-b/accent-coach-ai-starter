@@ -94,33 +94,11 @@ function scoreToColor01(s) {
   return `hsl(${x * 120}deg 75% 45%)`;
 }
 
-// Hardere "overall"-kurve: 71% må IKKE se grøn ud.
-// 60..95 mappes til 0..1 og så slows den tidligt via pow().
-// Softere kurve: under ~35% er rød, 50-60% bliver orange/gul-ish, først grøn ved ~85+
-function overallPctToColor(pct) {
+export function pfColorForPct(pct) {
   const n = Number(pct);
   if (!Number.isFinite(n)) return scoreToColor01(0);
-
-  const x = Math.max(0, Math.min(100, n));
-
-  // was: 60..95 -> 0..1 (too harsh)
-  const MIN = 35;
-  const MAX = 95;
-
-  let t = (x - MIN) / (MAX - MIN); // 35 => 0, 95 => 1
-  t = Math.max(0, Math.min(1, t));
-
-  // gentler easing (lower = softer)
-  t = Math.pow(t, 1.35);
-
-  return `hsl(${t * 120}deg 85% 45%)`;
+  return scoreToColor01(Math.max(0, Math.min(1, n / 100)));
 }
-
-
-export function pfColorForPct(pct) {
-  return overallPctToColor(pct);
-}
-
 
 
 function splitEvenly(text, n) {
@@ -953,26 +931,6 @@ const modelBOverall = useMemo(() => {
 
   const targetText = oneWord ? wordText || "" : displaySentence || "";
 const targetScorePct = modelBOverall.pct;
-if (!IS_PROD) {
-  console.log("PF score sources:", {
-    targetScorePct, // det du viser (Model B)
-    modelBOverall,
-    api_overall: result?.overall,
-    api_pronunciation: result?.pronunciation,
-    api_overallAccuracy: result?.overallAccuracy,
-    api_score: result?.score,
-    oneWord: result?.words?.length === 1 ? result.words[0] : null,
-    phoneme_scores_preview: (result?.words?.[0]?.phonemes || []).slice(0, 8).map((p) => ({
-      pronunciation: p?.pronunciation,
-      accuracy_score: p?.accuracy_score,
-      pronunciation_score: p?.pronunciation_score,
-      score: p?.score,
-      accuracy: p?.accuracy,
-      accuracyScore: p?.accuracyScore,
-    })),
-  });
-}
-
 const hasSpoken =
   Number(targetScorePct) > 0 &&
   Array.isArray(wordPhs) &&
@@ -1640,7 +1598,7 @@ return (
                   height: "100%",
                   width: `${animatedOverallPct}%`,
                   borderRadius: 999,
-                  background: pfColorForPct(animatedOverallPct),
+                  background: scoreToColor01(animatedOverallPct / 100),
                   transition: "width 60ms linear",
                 }}
               />
