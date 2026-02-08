@@ -10,6 +10,60 @@ import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 
 const IS_PROD = !!import.meta?.env?.PROD;
 const RETRY_INTENT_KEY = "ac_my_text_retry_intent_v1";
+const DEVICE_ID_KEY = "ac_device_id_v1";
+const LEVEL_EMA_KEY = "ac_speech_level_ema_v1";
+
+// smoothing: 0.10 = meget glidende, 0.20 = mere responsiv
+const EMA_ALPHA = 0.15;
+
+function getOrCreateDeviceId() {
+  try {
+    const existing = localStorage.getItem(DEVICE_ID_KEY);
+    if (existing) return existing;
+    const id = (crypto?.randomUUID?.() || `${Date.now()}_${Math.random().toString(16).slice(2)}`);
+    localStorage.setItem(DEVICE_ID_KEY, id);
+    return id;
+  } catch {
+    // fallback hvis storage er blokeret
+    return "anonymous";
+  }
+}
+
+function loadLevelEma() {
+  try {
+    const raw = localStorage.getItem(LEVEL_EMA_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveLevelEma(obj) {
+  try {
+    localStorage.setItem(LEVEL_EMA_KEY, JSON.stringify(obj));
+  } catch {}
+}
+
+function updateLevelEmaWithScore(score100) {
+  const s = Number(score100);
+  if (!Number.isFinite(s)) return null;
+
+  const prev = loadLevelEma();
+  const prevEma = Number(prev?.ema);
+  const nextEma = Number.isFinite(prevEma) ? (EMA_ALPHA * s + (1 - EMA_ALPHA) * prevEma) : s;
+
+  const next = {
+    deviceId: getOrCreateDeviceId(),
+    ema: Math.round(nextEma),
+    lastScore: Math.round(s),
+    n: (Number(prev?.n) || 0) + 1,
+    updatedAt: Date.now(),
+  };
+
+  saveLevelEma(next);
+  return next;
+}
+
 
 /* ------------ API base (web + native) ------------ */
 function isNative() {
@@ -559,6 +613,13 @@ const overallScore = useMemo(() => {
   if (!Number.isFinite(n)) return 0;
   return n <= 1 ? Math.round(n * 100) : Math.round(n);
 }, [result]);
+
+const levelEma = useMemo(() => {
+  const v = loadLevelEma();
+  const n = Number(v?.ema);
+  return Number.isFinite(n) ? n : null;
+}, [result]); // opdater når du får nyt result
+
 const heroText = useMemo(() => String(result?.refText || "").trim(), [result]);
 
 const words = useMemo(() => normalizeWordsFromResult(result, result?.refText), [result]);
@@ -1036,6 +1097,8 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
       };
 
       setResult(payload);
+      updateLevelEmaWithScore(payload.overall);
+
       try { sessionStorage.setItem(RESULT_KEY, JSON.stringify(payload)); } catch {}
 
   } catch (e) {
