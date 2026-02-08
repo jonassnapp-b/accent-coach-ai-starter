@@ -1251,17 +1251,7 @@ boxShadow: PAGE_SHADOW,
       flexDirection: "column",
     }}
   >
-  <style>{`
-  .heroTextWrap, .heroTextWrap * {
-    word-break: keep-all !important;
-    overflow-wrap: normal !important;
-    hyphens: none !important;
-  }
-  .heroTextWrap wbr {
-    display: none !important;
-  }
-`}</style>
-
+  
 
     {/* Centered width like other pages */}
     <div
@@ -1302,7 +1292,6 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 >
   {/* HERO TEXT (max 2 lines, never overlaps) */}
 <div
-  className="heroTextWrap"
   style={{
     marginTop: introPhase >= 1 ? 4 : 18,
     opacity: 1,
@@ -1312,15 +1301,8 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
     maxWidth: 720,
     marginLeft: "auto",
     marginRight: "auto",
-
-    // hard override
-    wordBreak: "keep-all",
-    overflowWrap: "normal",
-    hyphens: "none",
   }}
 >
-
-
   <div
     style={{
       // hold det stort som din hero
@@ -1347,7 +1329,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   {/* PERCENT (below text, adaptive size) */}
   <div
     style={{
-      marginTop: 12,
+      marginTop: 14,
       opacity: introPhase >= 1 ? 1 : 0,
       transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
       transition: "all 800ms ease",
@@ -1366,7 +1348,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 
      <div
   style={{
-    marginTop: 12,
+    marginTop: 10,
     textAlign: "center",
     fontWeight: 950,
     fontSize: 24,
