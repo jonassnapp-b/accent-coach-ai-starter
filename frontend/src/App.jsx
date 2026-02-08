@@ -218,7 +218,7 @@ useEffect(() => {
             {/* Onboarding always reachable */}
             
             {/* Default route */}
-           <Route path="/" element={<Navigate to="/practice" replace />} />
+           <Route path="/" element={<Navigate to="/ai-chat" replace />} />
 
 
             {/* Tabs */}
