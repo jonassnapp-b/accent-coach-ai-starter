@@ -1491,7 +1491,7 @@ const n = LEVELS.length;
 
 // Baren: lidt højere/opad + ekstra plads for 🏆 + 3 ticks over første dot
 const LADDER_H = 600;
-const STACK_TOP = `calc(${SAFE_TOP} + 52px)`; // baren 12px højere
+const STACK_TOP = `calc(${SAFE_TOP} + 80px)`; // baren 12px højere
 
 // “usable” skalaområde inde i baren (så ticks/dots ikke klemmes top/bund)
 const SCALE_TOP_PAD = 64;   // plads til trophy + luft + ticks
@@ -1571,7 +1571,7 @@ const dotTopPx = yForLevel(idx);
 <div
   style={{
     position: "absolute",
-    top: 64, // 🏆 12px længere nede inde i baren -> samme globale placering som før
+    top: 52,
     left: "50%",
     transform: "translateX(-50%)",
     background: "transparent",
