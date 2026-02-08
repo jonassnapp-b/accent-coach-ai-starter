@@ -1450,14 +1450,15 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
     ];
 
     return (
-      <div
-        style={{
-          flex: "1 1 auto",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+     <div
+  style={{
+    flex: "1 1 auto",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    paddingTop: `calc(${SAFE_TOP} + 24px)`,
+  }}
+>
         <div
           style={{
             width: "100%",
@@ -1478,11 +1479,11 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
                 letterSpacing: -0.6,
               }}
             >
-              Your
-              <br />
-              Speech
-              <br />
-              Level
+             Your
+<br />
+Speaking
+<br />
+Progress
             </div>
           </div>
 
@@ -1527,6 +1528,23 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
               />
             ))}
 
+{/* level dots */}
+{LEVELS.map((_, i) => (
+  <div
+    key={`dot_${i}`}
+    style={{
+      position: "absolute",
+      left: "50%",
+      transform: "translateX(-50%)",
+      top: `${(i / (LEVELS.length - 1)) * 100}%`,
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      background: "rgba(255,255,255,0.95)",
+    }}
+  />
+))}
+
             {/* marker */}
             <div
               style={{
@@ -1545,7 +1563,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
             <div
               style={{
                 position: "absolute",
-                left: -150,
+                left: -132,
                 top: `calc(${pos}% - 34px)`,
                 background: "#fff",
                 color: "#0B1220",
@@ -1562,7 +1580,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
               <div
                 style={{
                   position: "absolute",
-                  right: -6,
+                  right: -8,
                   top: "50%",
                   transform: "translateY(-50%) rotate(45deg)",
                   width: 12,
