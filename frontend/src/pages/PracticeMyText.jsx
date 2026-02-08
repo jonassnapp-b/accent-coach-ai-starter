@@ -1439,13 +1439,16 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   (() => {
     const tracked = levelEma ?? overallScore;
 
-    const LEVELS = ["Native", "Proficient", "Advanced", "Intermediate", "Beginner", "Novice"];
-    const n = LEVELS.length;
+ const LEVELS = ["Native", "Proficient", "Advanced", "Intermediate", "Beginner", "Novice"];
+const n = LEVELS.length;
 
-    // 100 = top (Native), 0 = bottom (Novice)
-    const idx = clamp(Math.round(((100 - tracked) / 100) * (n - 1)), 0, n - 1);
-    const dotTopPctRaw = (idx / (n - 1)) * 100;
-    const dotTopPct = idx === n - 1 ? 96 : dotTopPctRaw; // Novice lidt op
+// Fixed Y positions to match ref (and keep Novice slightly above bottom)
+const levelTopPcts = [0, 20, 40, 60, 80, 96];
+
+// 100 = top (Native), 0 = bottom (Novice)
+const idx = clamp(Math.round(((100 - tracked) / 100) * (n - 1)), 0, n - 1);
+const dotTopPct = levelTopPcts[idx];
+
 
     return (
       <div
@@ -1463,7 +1466,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
         <div
           style={{
             position: "absolute",
-            left: 54,
+            left: 60,
             top: `calc(${SAFE_TOP} + 22px)`,
             fontSize: 52,
             fontWeight: 950,
@@ -1525,48 +1528,58 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
               🏆
             </div>
 
-            {/* small ticks */}
-            {Array.from({ length: 14 }).map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  position: "absolute",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  top: `${12 + i * 6}%`,
-                  width: 12,
-                  height: 2,
-                  borderRadius: 2,
-                  background: "rgba(255,255,255,0.22)",
-                }}
-              />
-            ))}
+           {/* 3 ticks between each level dot (like ref) */}
+{Array.from({ length: n - 1 }).flatMap((_, seg) => {
+  const a = levelTopPcts[seg];
+  const b = levelTopPcts[seg + 1];
+  return [1, 2, 3].map((k) => {
+    const t = k / 4; // 3 ticks between => 1/4, 2/4, 3/4
+    const topPct = a + (b - a) * t;
+    return (
+      <div
+        key={`tick_${seg}_${k}`}
+        style={{
+          position: "absolute",
+          left: "50%",
+          transform: "translateX(-50%)",
+          top: `calc(${topPct}% - 1px)`,
+          width: 12,
+          height: 3,
+          borderRadius: 999,
+          background: "rgba(255,255,255,0.22)",
+        }}
+      />
+    );
+  });
+})}
+
 
             {/* level dots */}
-            {LEVELS.map((_, i) => {
-              const topPctRaw = (i / (n - 1)) * 100;
-              const topPct = i === n - 1 ? 96 : topPctRaw; // Novice dot lidt op
-              const active = i === idx;
-               if (i === 0) return null; // fjern Native dot øverst
+{LEVELS.map((_, i) => {
+  if (i === 0) return null; // no Native dot at top
 
-              return (
-                <div
-                  key={`dot_${i}`}
-                  style={{
-                    position: "absolute",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    top: `calc(${topPct}% - ${active ? 7 : 5}px)`,
-                    width: active ? 14 : 10,
-                    height: active ? 14 : 10,
-                    borderRadius: active ? 7 : 5,
-                    background: "rgba(255,255,255,0.92)",
-                    opacity: active ? 1 : 0.55,
-                    boxShadow: active ? "0 10px 22px rgba(0,0,0,0.20)" : "none",
-                  }}
-                />
-              );
-            })}
+  const topPct = levelTopPcts[i];
+  const active = i === idx;
+
+  return (
+    <div
+      key={`dot_${i}`}
+      style={{
+        position: "absolute",
+        left: "50%",
+        transform: "translateX(-50%)",
+        top: `calc(${topPct}% - ${active ? 7 : 5}px)`,
+        width: active ? 14 : 10,
+        height: active ? 14 : 10,
+        borderRadius: active ? 7 : 5,
+        background: "rgba(255,255,255,0.92)",
+        opacity: active ? 1 : 0.55,
+        boxShadow: active ? "0 10px 22px rgba(0,0,0,0.20)" : "none",
+      }}
+    />
+  );
+})}
+
 
             {/* speech bubble (left of ladder) */}
             <div
@@ -1601,33 +1614,35 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
             </div>
           </div>
 
-          {/* RIGHT LABELS (tight to ladder) */}
-          <div
-            style={{
-              height: 560,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              paddingTop: 6,
-              paddingBottom: 6,
-              fontWeight: 850,
-              fontSize: 16,
-              letterSpacing: -0.2,
-              opacity: 0.78,
-              color: "rgba(255,255,255,0.92)",
-              minWidth: 120,
-            }}
-          >
-           {LEVELS.map((l) => (
-  <div
-     key={l}
-     style={l === "Novice" ? { transform: "translateY(-8px)" } : undefined}
-   >
-     {l}
-   </div>
- ))}
+         {/* RIGHT LABELS (absolute positioned to align exactly with dots) */}
+<div
+  style={{
+    position: "relative",
+    height: 560,
+    minWidth: 120,
+    fontWeight: 850,
+    fontSize: 16,
+    letterSpacing: -0.2,
+    opacity: 0.78,
+    color: "rgba(255,255,255,0.92)",
+  }}
+>
+  {LEVELS.map((l, i) => (
+    <div
+      key={l}
+      style={{
+        position: "absolute",
+        top: `calc(${levelTopPcts[i]}% )`,
+        transform: "translateY(-50%)",
+        left: 0,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {l}
+    </div>
+  ))}
+</div>
 
-          </div>
         </div>
       </div>
     );
