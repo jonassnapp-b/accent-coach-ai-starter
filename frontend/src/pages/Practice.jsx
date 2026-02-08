@@ -422,9 +422,24 @@ flex: 1,
   }}
 >
         {/* Blue header (only title lives here) */}
-        <div style={{ maxWidth: 720, margin: "0 auto", padding: "18px 16px 18px", color: "white" }}>
-          <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Practice</div>
-        </div>
+       {/* Blue header (only title lives here) */}
+<div
+  style={{
+    maxWidth: 720,
+    margin: "0 auto",
+    width: "100%",
+    padding: "18px 16px 18px",
+    color: "white",
+    display: "flex",
+    justifyContent: "flex-start",
+    textAlign: "left",
+  }}
+>
+  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>
+    Practice
+  </div>
+</div>
+
 
         {/* White sheet under blue header */}
         <div
