@@ -1447,7 +1447,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   {/* PERCENT (below text, adaptive size) */}
   <div
     style={{
-      marginTop: -7,
+      marginTop: -15,
       opacity: introPhase >= 1 ? 1 : 0,
       transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
       transition: "all 800ms ease",
