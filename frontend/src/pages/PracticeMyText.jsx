@@ -12,6 +12,8 @@ const IS_PROD = !!import.meta?.env?.PROD;
 const RETRY_INTENT_KEY = "ac_my_text_retry_intent_v1";
 const DEVICE_ID_KEY = "ac_device_id_v1";
 const LEVEL_EMA_KEY = "ac_speech_level_ema_v1";
+const TROPHY_REACHED_KEY = "ac_trophy_reached_v1";
+const TROPHY_REACHED_PCT = 95; // justér hvis du vil gøre den hårdere/lettere
 
 // smoothing: 0.10 = meget glidende, 0.20 = mere responsiv
 const EMA_ALPHA = 0.15;
@@ -62,6 +64,19 @@ function updateLevelEmaWithScore(score100) {
 
   saveLevelEma(next);
   return next;
+}
+function hasTrophyCelebrated() {
+  try {
+    return localStorage.getItem(TROPHY_REACHED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markTrophyCelebrated() {
+  try {
+    localStorage.setItem(TROPHY_REACHED_KEY, "1");
+  } catch {}
 }
 
 
@@ -461,6 +476,25 @@ useEffect(() => {
     sfx.setVolume(settings.volume ?? 0.6);
   }, [settings.volume]);
   const canPlaySfx = (settings.volume ?? 0) > 0.001;
+const [trophyCelebration, setTrophyCelebration] = useState(false);
+const trophyTimerRef = useRef(null);
+
+function triggerTrophyCelebration() {
+  // kun én gang per device
+  if (hasTrophyCelebrated()) return;
+
+  markTrophyCelebrated();
+
+  if (canPlaySfx) sfx.success({ strength: 2 });
+
+  setTrophyCelebration(true);
+
+  try { if (trophyTimerRef.current) clearTimeout(trophyTimerRef.current); } catch {}
+  trophyTimerRef.current = setTimeout(() => {
+    setTrophyCelebration(false);
+    trophyTimerRef.current = null;
+  }, 2400);
+}
 
   const [accentUi, setAccentUi] = useState(settings.accentDefault || "en_us");
   useEffect(() => {
@@ -1002,6 +1036,8 @@ sendToServer(blob, localUrl);
 
   async function startPronunciationRecord() {
     if (!refText.trim()) {
+        setTrophyCelebration(false);
+
       setErr("Type something first.");
       return;
     }
@@ -1099,9 +1135,20 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
       };
 
       setResult(payload);
-      updateLevelEmaWithScore(payload.overall);
 
-      try { sessionStorage.setItem(RESULT_KEY, JSON.stringify(payload)); } catch {}
+// opdater EMA og brug EMA som “trophy gate” (så det matcher din level logic)
+const nextEmaObj = updateLevelEmaWithScore(payload.overall);
+const emaNow = Number(nextEmaObj?.ema);
+
+const trophyReached =
+  Number.isFinite(emaNow) ? emaNow >= TROPHY_REACHED_PCT : Number(payload.overall) >= TROPHY_REACHED_PCT;
+
+if (trophyReached) {
+  triggerTrophyCelebration();
+}
+
+try { sessionStorage.setItem(RESULT_KEY, JSON.stringify(payload)); } catch {}
+
 
   } catch (e) {
   const isAbort = e?.name === "AbortError" || String(e?.message || "").toLowerCase().includes("timed out");
@@ -1437,17 +1484,30 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 ) : slideIdx === 1 ? (
   // ----- Speech Level (SLIDE 2 – MATCH IMAGE 2) -----
   (() => {
-    const tracked = levelEma ?? overallScore;
+   const tracked = levelEma ?? overallScore;
 
- const LEVELS = ["Native", "Proficient", "Advanced", "Intermediate", "Beginner", "Novice"];
+const LEVELS = ["Native", "Proficient", "Advanced", "Intermediate", "Beginner", "Novice"];
 const n = LEVELS.length;
 
-// Fixed Y positions to match ref (and keep Novice slightly above bottom)
-const levelTopPcts = [0, 20, 40, 60, 80, 96];
+// Baren: lidt højere/opad + ekstra plads for 🏆 + 3 ticks over første dot
+const LADDER_H = 600;
+const STACK_TOP = `calc(${SAFE_TOP} + 64px)`;
 
-// 100 = top (Native), 0 = bottom (Novice)
+// “usable” skalaområde inde i baren (så ticks/dots ikke klemmes top/bund)
+const SCALE_TOP_PAD = 64;   // plads til trophy + luft + ticks
+const SCALE_BOTTOM_PAD = 26;
+
+const usableH = LADDER_H - SCALE_TOP_PAD - SCALE_BOTTOM_PAD;
+
+function yForLevel(i) {
+  // i = 0..n-1 (Native..Novice)
+  return SCALE_TOP_PAD + (usableH * (i / (n - 1)));
+}
+
+// 100 = Native (top), 0 = Novice (bund)
 const idx = clamp(Math.round(((100 - tracked) / 100) * (n - 1)), 0, n - 1);
-const dotTopPct = levelTopPcts[idx];
+const dotTopPx = yForLevel(idx);
+
 
 
     return (
@@ -1466,7 +1526,7 @@ const dotTopPct = levelTopPcts[idx];
         <div
           style={{
             position: "absolute",
-            left: 60,
+            left: 70,
             top: `calc(${SAFE_TOP} + 22px)`,
             fontSize: 52,
             fontWeight: 950,
@@ -1487,7 +1547,7 @@ const dotTopPct = levelTopPcts[idx];
           style={{
             position: "absolute",
             right: 74,
-            top: `calc(${SAFE_TOP} + 80px)`,
+        top: STACK_TOP,
             display: "flex",
             alignItems: "flex-start",
             gap: 18,
@@ -1497,7 +1557,7 @@ const dotTopPct = levelTopPcts[idx];
           <div
             style={{
               position: "relative",
-              height: 560,
+              height: LADDER_H,
               width: 64,
               borderRadius: 36,
               background: "rgba(11,18,32,0.22)", // dark translucent like image 2
@@ -1507,34 +1567,35 @@ const dotTopPct = levelTopPcts[idx];
               WebkitBackdropFilter: "blur(10px)",
             }}
           >
-            {/* Trophy badge */}
-            <div
-              style={{
-                position: "absolute",
-                top: 10,
-                left: "50%",
-                transform: "translateX(-50%)",
-                width: 30,
-                height: 30,
-                borderRadius: 15,
-                background: "rgba(255,255,255,0.14)",
-                border: "none",
-                display: "grid",
-                placeItems: "center",
-                fontSize: 14,
-                opacity: 0.95,
-              }}
-            >
-              🏆
-            </div>
+       {/* Trophy (no badge background) */}
+<div
+  style={{
+    position: "absolute",
+    top: 12,
+    left: "50%",
+    transform: "translateX(-50%)",
+    background: "transparent",
+    border: "none",
+    fontSize: 18,
+    lineHeight: 1,
+    opacity: 0.98,
+    pointerEvents: "none",
+  }}
+>
+  🏆
+</div>
+
 
            {/* 3 ticks between each level dot (like ref) */}
+{/* 3 ticks mellem hver level — ens spacing i alle segments */}
 {Array.from({ length: n - 1 }).flatMap((_, seg) => {
-  const a = levelTopPcts[seg];
-  const b = levelTopPcts[seg + 1];
+  const yA = yForLevel(seg);
+  const yB = yForLevel(seg + 1);
+
   return [1, 2, 3].map((k) => {
-    const t = k / 4; // 3 ticks between => 1/4, 2/4, 3/4
-    const topPct = a + (b - a) * t;
+    const t = k / 4; // 3 ticks => 1/4, 2/4, 3/4
+    const y = yA + (yB - yA) * t;
+
     return (
       <div
         key={`tick_${seg}_${k}`}
@@ -1542,7 +1603,7 @@ const dotTopPct = levelTopPcts[idx];
           position: "absolute",
           left: "50%",
           transform: "translateX(-50%)",
-          top: `calc(${topPct}% - 1px)`,
+          top: `${y - 1}px`,
           width: 12,
           height: 3,
           borderRadius: 999,
@@ -1554,12 +1615,17 @@ const dotTopPct = levelTopPcts[idx];
 })}
 
 
-            {/* level dots */}
-{LEVELS.map((_, i) => {
-  if (i === 0) return null; // no Native dot at top
 
-  const topPct = levelTopPcts[i];
+            {/* level dots */}
+{/* level dots (no Native dot at top) */}
+{LEVELS.map((_, i) => {
+  if (i === 0) return null;
+
+  const y = yForLevel(i);
   const active = i === idx;
+
+  const size = active ? 14 : 10;
+  const r = size / 2;
 
   return (
     <div
@@ -1568,10 +1634,10 @@ const dotTopPct = levelTopPcts[idx];
         position: "absolute",
         left: "50%",
         transform: "translateX(-50%)",
-        top: `calc(${topPct}% - ${active ? 7 : 5}px)`,
-        width: active ? 14 : 10,
-        height: active ? 14 : 10,
-        borderRadius: active ? 7 : 5,
+        top: `${y - r}px`,
+        width: size,
+        height: size,
+        borderRadius: r,
         background: "rgba(255,255,255,0.92)",
         opacity: active ? 1 : 0.55,
         boxShadow: active ? "0 10px 22px rgba(0,0,0,0.20)" : "none",
@@ -1586,7 +1652,7 @@ const dotTopPct = levelTopPcts[idx];
               style={{
                 position: "absolute",
                 left: -140,
-                top: `calc(${dotTopPct}% - 36px)`,
+                top: `${dotTopPx - 36}px`,
                 background: "rgba(255,255,255,0.96)",
                 color: "#0B1220",
                 borderRadius: 18,
@@ -1618,7 +1684,7 @@ const dotTopPct = levelTopPcts[idx];
 <div
   style={{
     position: "relative",
-    height: 560,
+    height: LADDER_H,
     minWidth: 120,
     fontWeight: 850,
     fontSize: 16,
@@ -1632,7 +1698,7 @@ const dotTopPct = levelTopPcts[idx];
       key={l}
       style={{
         position: "absolute",
-        top: `calc(${levelTopPcts[i]}% )`,
+        top: `${yForLevel(i)}px`,
         transform: "translateY(-50%)",
         left: 0,
         whiteSpace: "nowrap",
@@ -1767,6 +1833,48 @@ const dotTopPct = levelTopPcts[idx];
       cursor: "pointer",
     }}
   >
+    {trophyCelebration && (
+  <>
+    <style>{`
+      @keyframes trophyPop {
+        0%   { transform: translateY(10px) scale(0.98); opacity: 0; }
+        15%  { transform: translateY(0px)  scale(1.00); opacity: 1; }
+        75%  { transform: translateY(0px)  scale(1.00); opacity: 1; }
+        100% { transform: translateY(-6px) scale(0.99); opacity: 0; }
+      }
+    `}</style>
+
+    <div
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        top: `calc(${SAFE_TOP} + 12px)`,
+        display: "flex",
+        justifyContent: "center",
+        zIndex: 10001,
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          padding: "10px 14px",
+          borderRadius: 18,
+          background: "rgba(255,255,255,0.16)",
+          border: "1px solid rgba(255,255,255,0.22)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          fontWeight: 950,
+          letterSpacing: -0.2,
+          animation: "trophyPop 2400ms ease both",
+        }}
+      >
+        🏆 Trophy reached!
+      </div>
+    </div>
+  </>
+)}
+
     <div
       style={{
         width: 64,
@@ -2053,6 +2161,7 @@ color: "#0B1220",
 
   // Practice-mode: bliv her og optag igen
   setResult(null);
+  setTrophyCelebration(false);
   setErr("");
   setSlideIdx(0);
   setIntroPhase(0);
