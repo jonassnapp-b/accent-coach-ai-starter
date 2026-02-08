@@ -442,7 +442,7 @@ export default function Coach() {
        {/* header */}
 <div
   style={{
-    maxWidth: 520,
+    maxWidth: 720,
     margin: "0 auto",
     width: "100%",
     padding: `calc(${SAFE_TOP} + 18px) 16px 18px`,
@@ -452,25 +452,29 @@ export default function Coach() {
     textAlign: "left",
   }}
 >
-  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>
-    Daily Drill
-  </div>
+  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Daily Drill</div>
 </div>
+
 
 
         {/* white sheet */}
         <div
-          style={{
-            flex: 1,
-            background: "#FFFFFF",
-            borderTopLeftRadius: 32,
-            borderTopRightRadius: 32,
-            boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
-            padding: "24px 16px 16px",
-            paddingBottom: `calc(${TABBAR_OFFSET}px + 16px + ${SAFE_BOTTOM})`,
-          }}
-        >
-          <div className="mx-auto w-full" style={{ maxWidth: 520 }}>
+  style={{
+    flex: 1,
+    width: "100%",
+    maxWidth: 720,
+    margin: "0 auto",
+
+    background: "#FFFFFF",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
+    padding: "24px 16px 16px",
+    paddingBottom: `calc(${TABBAR_OFFSET}px + 16px + ${SAFE_BOTTOM})`,
+  }}
+>
+
+          <div className="mx-auto w-full" style={{ maxWidth: 720 }}>
             <LayoutGroup>
               <AnimatePresence mode="wait">
                 {phase === "setup" ? (
