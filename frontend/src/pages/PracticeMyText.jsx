@@ -1494,7 +1494,7 @@ const LADDER_H = 600;
 const STACK_TOP = `calc(${SAFE_TOP} + 64px)`;
 
 // “usable” skalaområde inde i baren (så ticks/dots ikke klemmes top/bund)
-const SCALE_TOP_PAD = 64;   // plads til trophy + luft + ticks
+const SCALE_TOP_PAD = 44;
 const SCALE_BOTTOM_PAD = 26;
 
 const usableH = LADDER_H - SCALE_TOP_PAD - SCALE_BOTTOM_PAD;
