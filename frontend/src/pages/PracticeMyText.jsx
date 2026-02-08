@@ -627,9 +627,10 @@ const words = useMemo(() => normalizeWordsFromResult(result, result?.refText), [
 const weakPhonemeSlides = useMemo(() => buildWeakPhonemeSlidesFromWords(words), [words]);
 
 const totalSlides = useMemo(() => {
-  // 1 intro + phonemeSlides + 1 playback + 1 actions
-  return 1 + weakPhonemeSlides.length + 1 + 1;
+  // 1 intro + 1 level + phonemeSlides + 1 playback + 1 actions
+  return 1 + 1 + weakPhonemeSlides.length + 1 + 1;
 }, [weakPhonemeSlides.length]);
+
 
 function clampSlide(i) {
   return Math.max(0, Math.min(i, totalSlides - 1));
@@ -646,7 +647,8 @@ function goNext() {
   setSlideIdx((i) => clampSlide(i + 1));
 }
 
-const isPhonemeOverlay = slideIdx >= 1 && slideIdx <= weakPhonemeSlides.length;
+const isPhonemeOverlay =
+  slideIdx >= 2 && slideIdx <= 1 + weakPhonemeSlides.length;
 const activePhonemeSlide = isPhonemeOverlay ? weakPhonemeSlides[slideIdx - 1] : null;
 
 // Reset slide flow when new result comes in
@@ -1432,7 +1434,120 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 </div>
 
     </>
-  ) : slideIdx >= 1 && slideIdx <= weakPhonemeSlides.length ? (
+    ) : slideIdx === 1 ? (
+  // ----- Speech Level (SLIDE 2) -----
+  (() => {
+    const tracked = levelEma ?? overallScore;
+    const pos = clamp(100 - tracked, 0, 100);
+
+    const LEVELS = [
+      "Native",
+      "Proficient",
+      "Advanced",
+      "Intermediate",
+      "Beginner",
+      "Novice",
+    ];
+
+    return (
+      <div
+        style={{
+          flex: "1 1 auto",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 720,
+            display: "grid",
+            gridTemplateColumns: "1fr 80px 1fr",
+            gap: 24,
+            alignItems: "center",
+          }}
+        >
+          {/* LEFT */}
+          <div>
+            <div
+              style={{
+                fontSize: 46,
+                fontWeight: 950,
+                lineHeight: 1.05,
+              }}
+            >
+              Your
+              <br />
+              Speech
+              <br />
+              Level
+            </div>
+          </div>
+
+          {/* METER */}
+          <div
+            style={{
+              position: "relative",
+              height: 420,
+              borderRadius: 40,
+              background: "rgba(255,255,255,0.25)",
+              width: 64,
+            }}
+          >
+            {/* marker */}
+            <div
+              style={{
+                position: "absolute",
+                left: "50%",
+                transform: "translateX(-50%)",
+                top: `calc(${pos}% - 10px)`,
+                width: 16,
+                height: 16,
+                borderRadius: 8,
+                background: "#fff",
+              }}
+            />
+
+            {/* bubble */}
+            <div
+              style={{
+                position: "absolute",
+                left: -140,
+                top: `calc(${pos}% - 26px)`,
+                background: "#fff",
+                color: "#0B1220",
+                borderRadius: 14,
+                padding: "10px 14px",
+                fontWeight: 900,
+              }}
+            >
+              <div style={{ color: "#ef4444" }}>You</div>
+              <div>{tracked}%</div>
+            </div>
+          </div>
+
+          {/* RIGHT LABELS */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              height: 420,
+              fontWeight: 800,
+              opacity: 0.85,
+            }}
+          >
+            {LEVELS.map((l) => (
+              <div key={l}>{l}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  })()
+
+  ) : slideIdx >= 2 && slideIdx <= 1 + weakPhonemeSlides.length ? (
     // ----- Phoneme slides -----
     (() => {
       const s = weakPhonemeSlides[slideIdx - 1];
@@ -1598,7 +1713,7 @@ color: "#0B1220",
         </>
       );
     })()
-  ) : slideIdx === 1 + weakPhonemeSlides.length ? (
+  ) : slideIdx === 2 + weakPhonemeSlides.length ? (
     // ----- Playback slide -----
    <>
   {/* White header card */}
