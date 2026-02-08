@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, ChevronDown, Volume2, Play, Pause, X, RotateCcw } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
-import { pfColorForPct } from "../components/PhonemeFeedback.jsx";
 
 
 const IS_PROD = !!import.meta?.env?.PROD;
@@ -99,6 +98,16 @@ function pickFeedback(json) {
     Math.floor(Math.random() * 3)
   ];
 }
+function heroColorForPct(pct) {
+  const n = Number(pct);
+  if (!Number.isFinite(n)) return "rgba(255,255,255,0.92)";
+
+  // ✅ Hard thresholds (så 63% aldrig bliver grøn)
+  if (n >= 85) return "#22c55e";  // green
+  if (n >= 75) return "#eab308";  // yellow
+  return "#ef4444";               // red
+}
+
 /* ---------------- Coach-like feedback helpers ---------------- */
 
 function getScore(obj) {
@@ -1380,7 +1389,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
       fontSize: computeHeroFontSize(heroText, 84, 34),
       lineHeight: 1.05,
       letterSpacing: -0.4,
-      color: pfColorForPct(overallScore),
+      color: heroColorForPct(overallScore),
       textShadow: "0 6px 18px rgba(0,0,0,0.18)",
       ...twoLineClampStyle(),
     }}
@@ -1399,7 +1408,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
       fontSize: computePctFontSize(heroText, 84, 56),
       lineHeight: 1,
       letterSpacing: -0.8,
-      color: pfColorForPct(overallScore),
+      color: heroColorForPct(overallScore),
       textShadow: "0 7px 22px rgba(0,0,0,0.20)",
     }}
   >
@@ -1998,7 +2007,7 @@ borderRadius: 20,
                 fontWeight: 950,
                 fontSize: 44,
                 letterSpacing: -0.6,
-                color: pfColorForPct(overallScore),
+                color: heroColorForPct(overallScore),
               }}
             >
               {introPct}%
