@@ -103,13 +103,18 @@ function clamp01(v) {
 
 // PSM-style: duration-weighted phoneme score -> word score (0-100)
 function wordScore100LikePSM(wordObj) {
-  const phs = Array.isArray(wordObj?.phonemes) ? wordObj.phonemes : [];
-  if (!phs.length) return null;
+  const phsRaw =
+    (Array.isArray(wordObj?.phonemes) && wordObj.phonemes) ||
+    (Array.isArray(wordObj?.phoneme) && wordObj.phoneme) ||
+    (Array.isArray(wordObj?.phones) && wordObj.phones) ||
+    [];
+
+  if (!phsRaw.length) return null;
 
   let num = 0;
   let den = 0;
 
-  for (const ph of phs) {
+  for (const ph of phsRaw) {
     const s01 = clamp01(
       ph.pronunciation ??
         ph.accuracy_score ??
@@ -117,13 +122,13 @@ function wordScore100LikePSM(wordObj) {
         ph.score ??
         ph.accuracy ??
         ph.accuracyScore ??
-        ph.accuracyScore
+        ph.overallAccuracy
     );
     if (s01 == null) continue;
 
-    const span = ph.span || ph.time || null;
-    const start10 = span?.start ?? span?.s ?? null;
-    const end10 = span?.end ?? span?.e ?? null;
+    const span = ph.span || ph.time || ph.times || null;
+    const start10 = span?.start ?? span?.s ?? span?.begin ?? null;
+    const end10 = span?.end ?? span?.e ?? span?.finish ?? null;
 
     const dur =
       typeof start10 === "number" && typeof end10 === "number" && end10 > start10
@@ -140,13 +145,26 @@ function wordScore100LikePSM(wordObj) {
 
 
 
+
 // PSM-style: sentence score = avg of word scores (ignore nulls)
 function psmSentenceScoreFromApi(json) {
-  const apiWords = Array.isArray(json?.words) ? json.words : [];
-  const wordScores = apiWords.map((w) => wordScore100LikePSM(w)).filter((v) => Number.isFinite(v));
-  const overall = wordScores.length ? Math.round(wordScores.reduce((a, b) => a + b, 0) / wordScores.length) : 0;
+  const apiWords =
+    (Array.isArray(json?.words) && json.words) ||
+    (Array.isArray(json?.result?.words) && json.result.words) ||
+    (Array.isArray(json?.data?.words) && json.data.words) ||
+    [];
+
+  const wordScores = apiWords
+    .map((w) => wordScore100LikePSM(w))
+    .filter((v) => Number.isFinite(v));
+
+  const overall = wordScores.length
+    ? Math.round(wordScores.reduce((a, b) => a + b, 0) / wordScores.length)
+    : 0;
+
   return { overall, wordScores };
 }
+
 
 function sanitizeTextForSubmit(raw) {
   return String(raw || "").replace(/\s+/g, " ").trim();
@@ -686,7 +704,7 @@ function goNext() {
 
 const isPhonemeOverlay =
   slideIdx >= 2 && slideIdx <= 1 + weakPhonemeSlides.length;
-const activePhonemeSlide = isPhonemeOverlay ? weakPhonemeSlides[slideIdx - 1] : null;
+const activePhonemeSlide = isPhonemeOverlay ? weakPhonemeSlides[slideIdx - 2] : null;
 
 // Reset slide flow when new result comes in
 useEffect(() => {
@@ -1794,7 +1812,7 @@ const dotTopPx = yForPct(levelPctAnim);
   ) : slideIdx >= 2 && slideIdx <= 1 + weakPhonemeSlides.length ? (
     // ----- Phoneme slides -----
     (() => {
-      const s = weakPhonemeSlides[slideIdx - 1];
+      const s = weakPhonemeSlides[slideIdx - 2];
       if (!s) return null;
 
       return (
