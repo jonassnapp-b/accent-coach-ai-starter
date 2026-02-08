@@ -879,8 +879,7 @@ padding: "9px 11px",
               </div>
             ) : null}
           </div>
-
-       {/* Improve bar like screenshot */}
+{/* Improve bar like screenshot */}
 <button
   type="button"
   onClick={() => {
@@ -902,73 +901,57 @@ padding: "9px 11px",
   disabled={!m?.practicePayload}
   style={{
     marginTop: -2,
-    margin: "0 auto",
-    width: "min(360px, 78%)",
+
+    // ✅ make it only as wide as content
+    width: "fit-content",
+    maxWidth: "min(360px, 78%)",
+
+    // keep same alignment as the user bubble
     marginLeft: "auto",
     marginRight: 40,
+
     transform: "none",
     background: "rgba(255,255,255,0.06)",
     border: "1px solid rgba(255,255,255,0.10)",
     borderRadius: 14,
     padding: "9px 10px",
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
     cursor: m?.practicePayload ? "pointer" : "not-allowed",
   }}
 >
-
-           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-  <div style={{ fontWeight: 900, fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
-    You can improve
+  <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+    <div style={{ fontWeight: 900, fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+      You can improve
+    </div>
   </div>
-</div>
 
-
-           <button
-  type="button"
-  onClick={() => {
-    const payload = m?.practicePayload || null;
-    if (!payload) return;
-
-    // close the overlay first so it doesn't sit on top of PracticeMyText
-    try { window?.speechSynthesis?.cancel?.(); } catch {}
-    stopAll();
-    onClose();
-
-    nav("/practice-my-text", {
-      state: {
-        mode: "coach",
-        backRoute: "/ai-chat",
-        result: payload,
-      },
-    });
-  }}
-  style={{
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    background: "rgba(255,255,255,0.10)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: 999,
-    padding: "6px 10px",
-    fontWeight: 950,
-    fontSize: 13,
-    cursor: m?.practicePayload ? "pointer" : "not-allowed",
-  }}
-  disabled={!m?.practicePayload}
->
-  <span style={{ color: "rgba(255,255,255,0.85)" }}>
-    {m?.improveWord?.word || "—"}
-  </span>
-  <span style={{ color: "rgba(245,158,11,0.95)" }}>
-    {Number.isFinite(m?.improveWord?.pct) ? `${m.improveWord.pct}%` : "—"}
-  </span>
-  <ChevronRight className="h-3.5 w-3.5" style={{ color: "rgba(255,255,255,0.65)" }} />
+  <div
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 8,
+      background: "rgba(255,255,255,0.10)",
+      border: "1px solid rgba(255,255,255,0.12)",
+      borderRadius: 999,
+      padding: "6px 10px",
+      fontWeight: 950,
+      fontSize: 13,
+      whiteSpace: "nowrap",
+    }}
+  >
+    <span style={{ color: "rgba(255,255,255,0.85)" }}>
+      {m?.improveWord?.word || "—"}
+    </span>
+    <span style={{ color: "rgba(245,158,11,0.95)" }}>
+      {Number.isFinite(m?.improveWord?.pct) ? `${m.improveWord.pct}%` : "—"}
+    </span>
+    <ChevronRight className="h-3.5 w-3.5" style={{ color: "rgba(255,255,255,0.65)" }} />
+  </div>
 </button>
 
-        </button>
         </motion.div>
       );
     }
