@@ -4,6 +4,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, ChevronDown, Volume2, Play, Pause, X, RotateCcw } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
+import { pfColorForPct } from "../components/PhonemeFeedback.jsx";
+
 
 const IS_PROD = !!import.meta?.env?.PROD;
 const RETRY_INTENT_KEY = "ac_my_text_retry_intent_v1";
@@ -115,12 +117,6 @@ function getScore(obj) {
   return n <= 1 ? Math.round(n * 100) : Math.round(n);
 }
 
-function scoreColor(score) {
-  if (score == null) return "rgba(17,24,39,0.55)";
-  if (score >= 85) return "#16a34a";
-  if (score >= 70) return "#f59e0b";
-  return "#ef4444";
-}
 
 function isGreen(score) {
   return score != null && score >= 85;
@@ -1368,7 +1364,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
     fontWeight: 950,
     fontSize: computeHeroFontSize(heroText, 84, 34),
     letterSpacing: -0.4,
-    color: scoreColor(overallScore),
+    color: pfColorForPct(overallScore),
     textShadow: "0 6px 18px rgba(0,0,0,0.18)",
     paddingLeft: 16,
     paddingRight: 16,
@@ -1395,7 +1391,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
             fontWeight: 950,
             fontSize: 84,
             letterSpacing: -0.8,
-            color: scoreColor(overallScore),
+            color: pfColorForPct(overallScore),
             textShadow: "0 7px 22px rgba(0,0,0,0.20)",
           }}
         >
@@ -1973,7 +1969,8 @@ borderRadius: 20,
                 fontWeight: 950,
                 fontSize: 44,
                 letterSpacing: -0.4,
-                color: scoreColor(overallScore),
+                color: pfColorForPct(overallScore)
+,
               }}
             >
               {String(result?.refText || "").trim() || "—"}
@@ -1992,7 +1989,7 @@ borderRadius: 20,
                 fontWeight: 950,
                 fontSize: 44,
                 letterSpacing: -0.6,
-                color: scoreColor(overallScore),
+                color: pfColorForPct(overallScore),
               }}
             >
               {introPct}%
