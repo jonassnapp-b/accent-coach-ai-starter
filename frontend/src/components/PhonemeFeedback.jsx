@@ -1436,9 +1436,10 @@ return (
   if (mode === "wordOnly") {
   return <WordOnly />;
 }
-if (mode === "textOnly") {
-  return <TextOnly />;
+if (mode === "wordOnly" || mode === "textOnly") {
+  return <WordOnly />;
 }
+
 
 
   return (
