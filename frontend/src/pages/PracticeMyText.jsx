@@ -1442,6 +1442,8 @@ boxShadow: PAGE_SHADOW,
     {/* Centered width like other pages */}
     <div
       style={{
+            position: "relative", // ✅ gør CloseSlidesX (slide 1) relativ til denne bredde
+
         width: "100%",
     maxWidth: 760,
         margin: "0 auto",
