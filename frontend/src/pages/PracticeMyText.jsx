@@ -618,6 +618,9 @@ const [slideIdx, setSlideIdx] = useState(0);
 // 0 = show word fade in, 1 = word moved up + start counting, 2 = show message
 const [introPhase, setIntroPhase] = useState(0);
 const [introPct, setIntroPct] = useState(0);
+// Slide 2 (Speaking Level) animation
+const [levelPctAnim, setLevelPctAnim] = useState(0);
+
 
 const [loopOn, setLoopOn] = useState(false);
 const [playbackRate, setPlaybackRate] = useState(1.0);
@@ -726,6 +729,31 @@ useEffect(() => {
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
 }, [result, introPhase, slideIdx, overallScore]);
+// Slide 2: bubble + percent count up (0 -> tracked)
+useEffect(() => {
+  if (!result) return;
+  if (slideIdx !== 1) return;
+
+  const target = Math.max(0, Math.min(100, Number(levelEma ?? overallScore) || 0));
+
+  setLevelPctAnim(0);
+
+  let raf = 0;
+  const start = performance.now();
+  const dur = 1400; // ms (tweak if needed)
+
+  const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+  const tick = (now) => {
+    const p = Math.min(1, (now - start) / dur);
+    const eased = easeOutCubic(p);
+    setLevelPctAnim(Math.round(target * eased));
+    if (p < 1) raf = requestAnimationFrame(tick);
+  };
+
+  raf = requestAnimationFrame(tick);
+  return () => cancelAnimationFrame(raf);
+}, [result, slideIdx, levelEma, overallScore]);
 
 function stopLoopTimer() {
   if (loopTimerRef.current) {
@@ -1447,7 +1475,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   {/* PERCENT (below text, adaptive size) */}
   <div
     style={{
-      marginTop: -20,
+      marginTop: -21,
       opacity: introPhase >= 1 ? 1 : 0,
       transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
       transition: "all 800ms ease",
@@ -1512,10 +1540,15 @@ function yForLevel(i) {
   // i = 0..n-1 (Native..Novice)
   return SCALE_TOP_PAD + (usableH * (i / (n - 1)));
 }
+function yForPct(pct) {
+  const p = clamp(Number(pct) || 0, 0, 100);
+  // 100 => top, 0 => bottom
+  return SCALE_TOP_PAD + (usableH * ((100 - p) / 100));
+}
 
 // 100 = Native (top), 0 = Novice (bund)
 const idx = clamp(Math.round(((100 - tracked) / 100) * (n - 1)), 0, n - 1);
-const dotTopPx = yForLevel(idx);
+const dotTopPx = yForPct(levelPctAnim);
 
 
 
@@ -1536,7 +1569,7 @@ const dotTopPx = yForLevel(idx);
           style={{
             position: "absolute",
             left: 70,
-            top: `calc(${SAFE_TOP} + 22px)`,
+            top: `calc(${SAFE_TOP} + 40px)`,
             fontSize: 52,
             fontWeight: 950,
             lineHeight: 1.02,
@@ -1672,7 +1705,7 @@ const dotTopPx = yForLevel(idx);
               }}
             >
               <div style={{ color: "#fb923c", fontSize: 26, lineHeight: 1.0 }}>You</div>
-              <div style={{ fontSize: 26, lineHeight: 1.0 }}>{tracked}%</div>
+              <div style={{ fontSize: 26, lineHeight: 1.0 }}>{levelPctAnim}%</div>
 
               {/* bubble pointer */}
               <div
