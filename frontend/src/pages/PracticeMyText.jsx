@@ -752,7 +752,7 @@ useEffect(() => {
   if (!result) return;
   if (slideIdx !== 1) return;
 
-  const target = Math.max(0, Math.min(100, Number(levelEma ?? overallScore) || 0));
+  const target = Math.max(0, Math.min(100, Number(overallScore) || 0));
 
   setLevelPctAnim(0);
 
@@ -1560,7 +1560,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 ) : slideIdx === 1 ? (
   // ----- Speech Level (SLIDE 2 – MATCH IMAGE 2) -----
   (() => {
-   const tracked = levelEma ?? overallScore;
+   const tracked = overallScore;
 
 const LEVELS = ["Native", "Proficient", "Advanced", "Intermediate", "Beginner", "Novice"];
 const n = LEVELS.length;
@@ -2203,18 +2203,19 @@ color: "#0B1220",
 }}
 
           style={{
-            height: 56,
-            borderRadius: 20,
-            border: "none",
-            background: "transparent",
-            color: "white",
-            fontWeight: 900,
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-          }}
+  height: 56,
+  borderRadius: 20,
+  border: "1px solid rgba(255,255,255,0.10)",
+  background: "rgba(255,255,255,0.08)",
+  color: "white",
+  fontWeight: 900,
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 10,
+}}
+
         >
           <RotateCcw className="h-5 w-5" />
           Try again
