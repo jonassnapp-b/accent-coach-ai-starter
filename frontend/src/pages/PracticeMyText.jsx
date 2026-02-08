@@ -1540,7 +1540,6 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 <PhonemeFeedback
   result={result}
   mode="textOnly"
-  improveChipMode="pctOnly"
 />
 
 
