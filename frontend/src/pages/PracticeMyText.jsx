@@ -1444,7 +1444,8 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 
     // 100 = top (Native), 0 = bottom (Novice)
     const idx = clamp(Math.round(((100 - tracked) / 100) * (n - 1)), 0, n - 1);
-    const dotTopPct = (idx / (n - 1)) * 100;
+    const dotTopPctRaw = (idx / (n - 1)) * 100;
+    const dotTopPct = idx === n - 1 ? 96 : dotTopPctRaw; // Novice lidt op
 
     return (
       <div
@@ -1462,7 +1463,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
         <div
           style={{
             position: "absolute",
-            left: 44,
+            left: 54,
             top: `calc(${SAFE_TOP} + 22px)`,
             fontSize: 52,
             fontWeight: 950,
@@ -1482,7 +1483,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
         <div
           style={{
             position: "absolute",
-            right: 64,
+            right: 74,
             top: `calc(${SAFE_TOP} + 80px)`,
             display: "flex",
             alignItems: "flex-start",
@@ -1543,8 +1544,11 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 
             {/* level dots */}
             {LEVELS.map((_, i) => {
-              const topPct = (i / (n - 1)) * 100;
+              const topPctRaw = (i / (n - 1)) * 100;
+              const topPct = i === n - 1 ? 96 : topPctRaw; // Novice dot lidt op
               const active = i === idx;
+               if (i === 0) return null; // fjern Native dot øverst
+
               return (
                 <div
                   key={`dot_${i}`}
