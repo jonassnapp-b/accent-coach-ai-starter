@@ -1515,7 +1515,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
                 height: 30,
                 borderRadius: 15,
                 background: "rgba(255,255,255,0.14)",
-                border: "1px solid rgba(255,255,255,0.16)",
+                border: "none",
                 display: "grid",
                 placeItems: "center",
                 fontSize: 14,
@@ -1572,7 +1572,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
             <div
               style={{
                 position: "absolute",
-                left: -182,
+                left: -140,
                 top: `calc(${dotTopPct}% - 36px)`,
                 background: "rgba(255,255,255,0.96)",
                 color: "#0B1220",
@@ -1618,9 +1618,15 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
               minWidth: 120,
             }}
           >
-            {LEVELS.map((l) => (
-              <div key={l}>{l}</div>
-            ))}
+           {LEVELS.map((l) => (
+  <div
+     key={l}
+     style={l === "Novice" ? { transform: "translateY(-8px)" } : undefined}
+   >
+     {l}
+   </div>
+ ))}
+
           </div>
         </div>
       </div>
@@ -1999,7 +2005,7 @@ color: "#0B1220",
             height: 56,
             borderRadius: 20,
             border: "none",
-            background: "rgba(255,255,255,0.14)",
+            background: "transparent",
             color: "white",
             fontWeight: 900,
             cursor: "pointer",
