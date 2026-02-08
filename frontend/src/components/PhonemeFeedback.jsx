@@ -1433,12 +1433,25 @@ return (
 
 
 
-  if (mode === "wordOnly") {
+if (mode === "textOnly") {
+  // sentence
+  if (words.length > 1) {
+    return (
+      <SentenceHeroWord
+        words={words}
+        ui={ui}
+      />
+    );
+  }
+
+  // single word
   return <WordOnly />;
 }
-if (mode === "wordOnly" || mode === "textOnly") {
+
+if (mode === "wordOnly") {
   return <WordOnly />;
 }
+
 
 
 
