@@ -298,6 +298,8 @@ const [messages, setMessages] = useState(() => [
 const [turnIndex, setTurnIndex] = useState(0);
 const [isComplete, setIsComplete] = useState(false);
 
+const totalTurns = Array.isArray(scenario?.turns) ? scenario.turns.length : 0;
+
 function resetScenario() {
   try { window?.speechSynthesis?.cancel?.(); } catch {}
   stopAll();
@@ -670,7 +672,7 @@ await pushMessage(
 );
 
 
-const turn = scenario.turns?.[turnIndex];
+const turn = (Array.isArray(scenario?.turns) ? scenario.turns : [])[turnIndex];
 
 if (turn) {
   // assistant reply (fade in after the user result)
@@ -688,10 +690,13 @@ if (turn) {
   setTargetLine(turn.nextUserLine || "");
   setTurnIndex((i) => i + 1);
 } else {
-  setTargetLine("");
-  setIsComplete(true);
+ setTargetLine("");
+setIsComplete(true);
 }
 
+if (turnIndex + 1 >= totalTurns) {
+  setIsComplete(true);
+}
 
 
 
