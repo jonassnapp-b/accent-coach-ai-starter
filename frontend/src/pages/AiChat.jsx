@@ -469,6 +469,22 @@ async function pushMessage(msg, delayMs = 0) {
   if (delayMs) await wait(delayMs);
   setMessages((prev) => [...prev, msg]);
 }
+function TinySpinner() {
+  return (
+    <span
+      aria-hidden
+      style={{
+        width: 14,
+        height: 14,
+        borderRadius: 999,
+        border: "2px solid rgba(255,255,255,0.28)",
+        borderTopColor: "rgba(255,255,255,0.92)",
+        display: "inline-block",
+        animation: "acSpin 0.9s linear infinite",
+      }}
+    />
+  );
+}
 
   async function ensureMic() {
     if (!navigator?.mediaDevices?.getUserMedia) throw new Error("Microphone not supported on this device.");
@@ -1010,33 +1026,85 @@ paddingRight: 62,
         </div>
 
 
+<style>{`
+  @keyframes acSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes acPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+`}</style>
 
-        {/* Mic */}
-        <div style={{ display: "grid", placeItems: "center", paddingBottom: 6 }}>
-          <button
-            type="button"
-            onClick={toggleRecord}
-            disabled={isAnalyzing}
-            style={{
-              width: 92,
-              height: 92,
-              borderRadius: 999,
-              border: "none",
-              background: "radial-gradient(circle at 30% 30%, rgba(244,63,94,0.95), rgba(99,102,241,0.80))",
-              boxShadow: "0 26px 70px rgba(0,0,0,0.45)",
-              display: "grid",
-              placeItems: "center",
-              cursor: isAnalyzing ? "not-allowed" : "pointer",
-              opacity: isAnalyzing ? 0.65 : 1,
-            }}
-            title={isRecording ? "Stop" : "Record"}
-          >
-            {isRecording ? <StopCircle className="h-10 w-10" style={{ color: "white" }} /> : <Mic className="h-10 w-10" style={{ color: "white" }} />}
-          </button>
+       {/* Mic */}
+<div style={{ display: "grid", placeItems: "center", paddingBottom: 6 }}>
+  <div style={{ position: "relative", width: 92, height: 92 }}>
+    <button
+      type="button"
+      onClick={toggleRecord}
+      disabled={isAnalyzing}
+      style={{
+        width: 92,
+        height: 92,
+        borderRadius: 999,
+        border: "none",
+        background: "radial-gradient(circle at 30% 30%, rgba(244,63,94,0.95), rgba(99,102,241,0.80))",
+        boxShadow: "0 26px 70px rgba(0,0,0,0.45)",
+        display: "grid",
+        placeItems: "center",
+        cursor: isAnalyzing ? "not-allowed" : "pointer",
+        opacity: isAnalyzing ? 0.65 : 1,
+      }}
+      title={isRecording ? "Stop" : "Record"}
+    >
+      {isRecording ? (
+        <StopCircle className="h-10 w-10" style={{ color: "white" }} />
+      ) : (
+        <Mic className="h-10 w-10" style={{ color: "white" }} />
+      )}
+    </button>
 
-        {isRecording ? "Recording…" : isAnalyzing ? (analyzeStatus || "Analyzing…") : ""}
+    {/* Overlay når analyzing */}
+    {isAnalyzing && (
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: 999,
+          background: "rgba(0,0,0,0.22)",
+          border: "1px solid rgba(255,255,255,0.14)",
+          display: "grid",
+          placeItems: "center",
+          pointerEvents: "none",
+          animation: "acPulse 1.2s ease-in-out infinite",
+          backdropFilter: "blur(2px)",
+        }}
+      >
+        <TinySpinner />
+      </div>
+    )}
+  </div>
 
-        </div>
+  {/* Label under knappen */}
+  <div
+    style={{
+      marginTop: 10,
+      minHeight: 18, // så layout ikke hopper
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 8,
+      fontWeight: 900,
+      fontSize: 13,
+      color: "rgba(255,255,255,0.72)",
+    }}
+  >
+    {isRecording ? (
+      <>Recording…</>
+    ) : isAnalyzing ? (
+      <>
+        <TinySpinner />
+        <span>{analyzeStatus || "Analyzing…"}</span>
+      </>
+    ) : null}
+  </div>
+</div>
+
       </div>
     </motion.div>
   );
