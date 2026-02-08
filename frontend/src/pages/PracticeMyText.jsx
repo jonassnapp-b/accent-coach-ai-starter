@@ -1434,8 +1434,8 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 </div>
 
     </>
-  ) : slideIdx === 1 ? (
-  // ----- Speech Level (SLIDE 2 – MATCH ORIGINAL) -----
+) : slideIdx === 1 ? (
+  // ----- Speech Level (EXACT 1:1 TO REF IMAGE) -----
   (() => {
     const tracked = levelEma ?? overallScore;
     const pos = clamp(100 - tracked, 0, 100);
@@ -1450,77 +1450,77 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
     ];
 
     return (
-     <div
-  style={{
-    flex: "1 1 auto",
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "center",
-    paddingTop: `calc(${SAFE_TOP} + 24px)`,
-  }}
->
+      <div
+        style={{
+          flex: "1 1 auto",
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "center",
+          paddingTop: `calc(${SAFE_TOP} + 28px)`,
+        }}
+      >
         <div
           style={{
             width: "100%",
-            maxWidth: 720,
+            maxWidth: 760,
             display: "grid",
-            gridTemplateColumns: "1fr 72px 1fr",
-            gap: 32,
+            gridTemplateColumns: "1fr 96px 1fr",
+            columnGap: 36,
             alignItems: "center",
           }}
         >
-          {/* LEFT TEXT */}
+          {/* LEFT TITLE — EXACT POSITION */}
           <div>
             <div
               style={{
-                fontSize: 52,
+                fontSize: 56,
                 fontWeight: 950,
                 lineHeight: 1.02,
-                letterSpacing: -0.6,
+                letterSpacing: -0.8,
               }}
             >
-             Your
-<br />
-Speaking
-<br />
-Progress
+              Your
+              <br />
+              Speech
+              <br />
+              Level
             </div>
           </div>
 
-          {/* LEVEL LADDER */}
+          {/* CENTER LADDER */}
           <div
             style={{
               position: "relative",
-              height: 420,
-              width: 64,
-              borderRadius: 36,
-              background: "rgba(255,255,255,0.22)", // semi-transparent
+              height: 460,
+              width: 72,
+              borderRadius: 40,
+              background: "rgba(255,255,255,0.28)",
             }}
           >
             {/* trophy */}
             <div
               style={{
                 position: "absolute",
-                top: 10,
+                top: 12,
                 left: "50%",
                 transform: "translateX(-50%)",
-                opacity: 0.9,
-                fontSize: 20,
+                fontSize: 22,
+                opacity: 0.95,
               }}
             >
               🏆
             </div>
 
-            {/* ticks */}
-            {Array.from({ length: 9 }).map((_, i) => (
+            {/* tick marks */}
+            {Array.from({ length: 11 }).map((_, i) => (
               <div
                 key={i}
                 style={{
                   position: "absolute",
                   left: "50%",
                   transform: "translateX(-50%)",
-                  top: `${12 + i * 10}%`,
-                  width: 14,
+                  top: `${10 + i * 8}%`,
+                  width: 16,
                   height: 2,
                   borderRadius: 2,
                   background: "rgba(255,255,255,0.45)",
@@ -1528,53 +1528,55 @@ Progress
               />
             ))}
 
-{/* level dots */}
-{LEVELS.map((_, i) => (
-  <div
-    key={`dot_${i}`}
-    style={{
-      position: "absolute",
-      left: "50%",
-      transform: "translateX(-50%)",
-      top: `${(i / (LEVELS.length - 1)) * 100}%`,
-      width: 12,
-      height: 12,
-      borderRadius: 6,
-      background: "rgba(255,255,255,0.95)",
-    }}
-  />
-))}
+            {/* level dots */}
+            {LEVELS.map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  top: `${(i / (LEVELS.length - 1)) * 100}%`,
+                  width: 14,
+                  height: 14,
+                  borderRadius: 7,
+                  background: "rgba(255,255,255,0.95)",
+                }}
+              />
+            ))}
 
-            {/* marker */}
+            {/* moving marker */}
             <div
               style={{
                 position: "absolute",
                 left: "50%",
                 transform: "translateX(-50%)",
-                top: `calc(${pos}% - 9px)`,
-                width: 18,
-                height: 18,
-                borderRadius: 9,
-                background: "#fff",
+                top: `calc(${pos}% - 10px)`,
+                width: 20,
+                height: 20,
+                borderRadius: 10,
+                background: "#ffffff",
+                zIndex: 3,
               }}
             />
 
-            {/* speech bubble */}
+            {/* speech bubble — LAYERED ABOVE LADDER */}
             <div
               style={{
                 position: "absolute",
-                left: -132,
-                top: `calc(${pos}% - 34px)`,
-                background: "#fff",
+                left: -150,
+                top: `calc(${pos}% - 38px)`,
+                background: "#ffffff",
                 color: "#0B1220",
-                borderRadius: 16,
-                padding: "10px 14px",
+                borderRadius: 18,
+                padding: "12px 16px",
                 fontWeight: 900,
-                boxShadow: "0 10px 26px rgba(0,0,0,0.18)",
+                boxShadow: "0 14px 32px rgba(0,0,0,0.22)",
+                zIndex: 4,
               }}
             >
-              <div style={{ color: "#f97316" }}>You</div>
-              <div>{tracked}%</div>
+              <div style={{ color: "#f97316", fontSize: 14 }}>You</div>
+              <div style={{ fontSize: 22 }}>{tracked}%</div>
 
               {/* arrow */}
               <div
@@ -1583,24 +1585,25 @@ Progress
                   right: -8,
                   top: "50%",
                   transform: "translateY(-50%) rotate(45deg)",
-                  width: 12,
-                  height: 12,
-                  background: "#fff",
+                  width: 14,
+                  height: 14,
+                  background: "#ffffff",
                 }}
               />
             </div>
           </div>
 
-          {/* RIGHT LABELS */}
+          {/* RIGHT LABELS — EXACT ALIGNMENT */}
           <div
             style={{
+              height: 460,
               display: "flex",
               flexDirection: "column",
               justifyContent: "space-between",
-              height: 420,
+              fontSize: 18,
               fontWeight: 850,
+              letterSpacing: -0.3,
               opacity: 0.9,
-              letterSpacing: -0.2,
             }}
           >
             {LEVELS.map((l) => (
@@ -1611,6 +1614,7 @@ Progress
       </div>
     );
   })()
+
 
 
   ) : slideIdx >= 2 && slideIdx <= 1 + weakPhonemeSlides.length ? (
