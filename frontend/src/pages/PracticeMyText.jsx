@@ -1491,10 +1491,19 @@ const n = LEVELS.length;
 
 // Baren: lidt højere/opad + ekstra plads for 🏆 + 3 ticks over første dot
 const LADDER_H = 600;
-const STACK_TOP = `calc(${SAFE_TOP} + 64px)`;
 
-// “usable” skalaområde inde i baren (så ticks/dots ikke klemmes top/bund)
-const SCALE_TOP_PAD = 64;   // plads til trophy + luft + ticks
+// hvor højt 🏆 sidder inde i baren (lavere tal = mindre luft over 🏆)
+const TROPHY_TOP = 18;
+
+// før var trophy top = 52, så vi “trimmer” 34px af top-luften
+const TOP_TRIM = 52 - TROPHY_TOP;
+
+// flyt hele baren NED med samme trim, så 🏆 ender samme sted på skærmen
+const STACK_TOP = `calc(${SAFE_TOP} + 64px + ${TOP_TRIM}px)`;
+
+// flyt skalaen (ticks/dots) OP tilsvarende, så den også ender samme sted på skærmen
+const SCALE_TOP_PAD = 64 - TOP_TRIM; // = 30
+
 const SCALE_BOTTOM_PAD = 26;
 
 const usableH = LADDER_H - SCALE_TOP_PAD - SCALE_BOTTOM_PAD;
@@ -1571,7 +1580,7 @@ const dotTopPx = yForLevel(idx);
 <div
   style={{
     position: "absolute",
-    top: 52,
+    top: TROPHY_TOP,
     left: "50%",
     transform: "translateX(-50%)",
     background: "transparent",
@@ -1584,20 +1593,6 @@ const dotTopPx = yForLevel(idx);
 >
   🏆
 </div>
-{/* Mask bar top so it ends above trophy */}
-<div
-  style={{
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 44, // justér 40–50
-    background: "#2196F3", // samme som page bg
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 36,
-    pointerEvents: "none",
-  }}
-/>
 
 
            {/* 3 ticks between each level dot (like ref) */}
