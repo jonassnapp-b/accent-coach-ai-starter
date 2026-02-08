@@ -6,7 +6,7 @@ import { useSettings } from "../lib/settings-store.jsx";
 import { AI_CHAT_LEVELS } from "../data/aiChatScenarios.js";
 import { pfColorForPct } from "../components/PhonemeFeedback.jsx";
 import { analyzeSpeechPSM } from "../lib/analyzeSpeechPSM.js";
-
+import { useNavigate } from "react-router-dom";
 
 
 function isNative() {
@@ -286,6 +286,7 @@ useEffect(() => {
 
 function ScenarioChatModal({ scenario, accentUi, onClose, readProgress, writeProgress, theme }) {
   const { settings } = useSettings();
+const nav = useNavigate();
 
 const [messages, setMessages] = useState(() => [
   {
@@ -552,6 +553,7 @@ function TinySpinner() {
 
     const type = chunks[0]?.type || rec?.mimeType || "audio/webm";
     const blob = new Blob(chunks, { type });
+const userAudioUrl = URL.createObjectURL(blob);
 
 setIsAnalyzing(true);
 setAnalyzeStatus("Analyzing…");
@@ -579,22 +581,18 @@ try {
 
   setAnalyzeStatus("");
 
-  // pick worst word (use PSM word scores in-order, aligned with json.words)
+  // pick worst word (aligned with json.words via orderedWordScores index)
+  let worstWord = null;
   try {
     const ws = Array.isArray(json?.words) ? json.words : [];
-    let worst = null;
-
     for (let i = 0; i < ws.length; i++) {
-      const w = ws[i];
-      const wtxt = String(w?.word || "").trim();
-      const pct = orderedWordScores[i];
-
-      if (!wtxt || !Number.isFinite(pct)) continue;
-      if (!worst || pct < worst.pct) worst = { word: wtxt, pct };
+     const wtxt = String(ws[i]?.word || "").trim();
+     const pct = orderedWordScores[i];
+    if (!wtxt || !Number.isFinite(pct)) continue;
+    if (!worstWord || pct < worstWord.pct) worstWord = { word: wtxt, pct };
     }
-
-    if (worst) setImproveWord(worst);
   } catch {}
+ if (worstWord) setImproveWord(worstWord);
 
 
 
@@ -624,6 +622,19 @@ if (!Number.isFinite(pct)) {
       // 3) Append the user message (we show the expected reply text as what user intended to say)
       // 3) Append the user message (score the line that was visible when recording started)
 
+ const practicePayload = {
+   ...json,
+   // PracticeMyText expects these fields:
+   overall: Math.round(overall),
+   pronunciation: Math.round(overall),
+   overallAccuracy: Math.round(overall),
+  words: Array.isArray(json?.words) ? json.words : [],
+  refText: userText,
+  accent: accentUi === "en_br" ? "en_br" : "en_us",
+  userAudioBlob: blob,
+  userAudioUrl,
+ createdAt: Date.now(),
+ };
 
 await pushMessage(
   {
@@ -632,6 +643,8 @@ await pushMessage(
     text: userText,
     score: Math.round(overall),
     wordScores: orderedWordScores, // ✅ per-index scores (keeps duplicates)
+    improveWord: worstWord,
+   practicePayload,
   },
   0
 );
@@ -899,24 +912,48 @@ padding: "9px 10px",
               <div style={{ fontWeight: 900, fontSize: 13, color: "rgba(255,255,255,0.85)" }}>You can improve</div>
             </div>
 
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                background: "rgba(255,255,255,0.10)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: 999,
-               padding: "6px 10px",
-fontWeight: 950,
-fontSize: 13,
+           <button
+  type="button"
+  onClick={() => {
+    const payload = m?.practicePayload || null;
+    if (!payload) return;
 
-              }}
-            >
-              <span style={{ color: "rgba(255,255,255,0.85)" }}>{improveWord.word}</span>
-              <span style={{ color: "rgba(245,158,11,0.95)" }}>{improveWord.pct}%</span>
-              <ChevronRight className="h-3.5 w-3.5" style={{ color: "rgba(255,255,255,0.65)" }} />
-            </div>
+    // close the overlay first so it doesn't sit on top of PracticeMyText
+    try { window?.speechSynthesis?.cancel?.(); } catch {}
+    stopAll();
+    onClose();
+
+    nav("/practice-my-text", {
+      state: {
+        mode: "coach",
+        backRoute: "/ai-chat",
+        result: payload,
+      },
+    });
+  }}
+  style={{
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    background: "rgba(255,255,255,0.10)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 999,
+    padding: "6px 10px",
+    fontWeight: 950,
+    fontSize: 13,
+    cursor: m?.practicePayload ? "pointer" : "not-allowed",
+  }}
+  disabled={!m?.practicePayload}
+>
+  <span style={{ color: "rgba(255,255,255,0.85)" }}>
+    {m?.improveWord?.word || "—"}
+  </span>
+  <span style={{ color: "rgba(245,158,11,0.95)" }}>
+    {Number.isFinite(m?.improveWord?.pct) ? `${m.improveWord.pct}%` : "—"}
+  </span>
+  <ChevronRight className="h-3.5 w-3.5" style={{ color: "rgba(255,255,255,0.65)" }} />
+</button>
+
           </div>
         </motion.div>
       );
