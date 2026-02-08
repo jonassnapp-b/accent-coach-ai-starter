@@ -94,11 +94,27 @@ function scoreToColor01(s) {
   return `hsl(${x * 120}deg 75% 45%)`;
 }
 
-export function pfColorForPct(pct) {
+// Hardere "overall"-kurve: 71% må IKKE se grøn ud.
+// 60..95 mappes til 0..1 og så slows den tidligt via pow().
+function overallPctToColor(pct) {
   const n = Number(pct);
   if (!Number.isFinite(n)) return scoreToColor01(0);
-  return scoreToColor01(Math.max(0, Math.min(1, n / 100)));
+
+  const x = Math.max(0, Math.min(100, n));
+
+  let t = (x - 60) / (95 - 60); // 60 => 0, 95 => 1
+  t = Math.max(0, Math.min(1, t));
+
+  t = Math.pow(t, 1.8); // højere = hårdere (mindre grøn ved ~70)
+
+  // Hue 0(red) -> 120(green)
+  return `hsl(${t * 120}deg 85% 45%)`;
 }
+
+export function pfColorForPct(pct) {
+  return overallPctToColor(pct);
+}
+
 
 
 function splitEvenly(text, n) {
@@ -1598,7 +1614,7 @@ return (
                   height: "100%",
                   width: `${animatedOverallPct}%`,
                   borderRadius: 999,
-                  background: scoreToColor01(animatedOverallPct / 100),
+                  background: pfColorForPct(animatedOverallPct),
                   transition: "width 60ms linear",
                 }}
               />
