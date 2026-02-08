@@ -757,79 +757,7 @@ async function playTtsUrl(url, { rate, loop }) {
 }
 
 
-async function ensureTtsUrl({ text, accent, rate }) {
-  const t = String(text || "").trim();
-  if (!t) throw new Error("Missing text");
 
-  const key = `${accent}|${rate}|${t}`;
-  const cached = ttsCacheRef.current.get(key);
-  if (cached) return cached;
-
-  const base = getApiBase();
-  const controller = new AbortController();
-  ttsAbortRef.current = controller;
-
-  const r = await fetch(`${base}/api/tts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    signal: controller.signal,
-    body: JSON.stringify({ text: t, accent, rate }),
-  });
-
-  if (!r.ok) {
-    const msg = await r.text().catch(() => "");
-    throw new Error(`TTS failed (${r.status}): ${msg || r.statusText}`);
-  }
-
-  const buf = await r.arrayBuffer();
-  const blob = new Blob([buf], { type: "audio/wav" });
-  const url = URL.createObjectURL(blob);
-
-  ttsCacheRef.current.set(key, url);
-  return url;
-}
-
-async function playTtsUrl(url, { rate, loop }) {
-  const a = ttsAudioRef.current;
-  if (!a) return;
-
-  const myPlayId = ++ttsPlayIdRef.current;
-
-  // stop current first
-  stopTtsNow();
-
-  // if url is not cached, we track it in ttsUrlRef so it can be revoked
-  // (here we assume url is cached; but keep the ref logic safe)
-  ttsUrlRef.current = null;
-
-  a.src = url;
-  a.currentTime = 0;
-  a.playbackRate = Number(rate ?? 1.0) || 1.0;
-
-  setIsCorrectPlaying(true);
-
-  a.onended = () => {
-    if (ttsPlayIdRef.current !== myPlayId) return;
-    setIsCorrectPlaying(false);
-    if (loop) {
-      loopTimerRef.current = setTimeout(async () => {
-        if (ttsPlayIdRef.current !== myPlayId) return;
-        try {
-          a.currentTime = 0;
-          a.playbackRate = Number(rate ?? 1.0) || 1.0;
-          await a.play();
-          setIsCorrectPlaying(true);
-        } catch {}
-      }, 220);
-    }
-  };
-
-  try {
-    await a.play();
-  } catch {
-    setIsCorrectPlaying(false);
-  }
-}
 
 function playYou() {
   stopAllAudio();
