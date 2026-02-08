@@ -1214,6 +1214,34 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [accentUi]);
 
+const CloseSlidesX = ({ top = "12px", right = "12px" }) => (
+  <button
+    type="button"
+    onClick={() => {
+      stopAllAudio();
+      nav(backRoute);
+    }}
+    aria-label="Close"
+    style={{
+      position: "absolute",
+      top,
+      right,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      border: "1px solid rgba(11,18,32,0.10)",
+      background: "rgba(11,18,32,0.04)",
+      color: "#0B1220",
+      display: "grid",
+      placeItems: "center",
+      cursor: "pointer",
+      zIndex: 10002,
+    }}
+  >
+    <X className="h-5 w-5" />
+  </button>
+);
+
  return (
   <div
     className="page"
@@ -1420,6 +1448,8 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   {slideIdx === 0 ? (
     // ----- Intro (CENTERED vertically) -----
     <>
+    <CloseSlidesX top={`calc(${SAFE_TOP} + 12px)`} right="12px" />
+
      <div
  style={{
   width: "100%",
@@ -1552,19 +1582,22 @@ const dotTopPx = yForPct(levelPctAnim);
 
 
 
-    return (
-      <div
-        style={{
-          position: "relative",
-          flex: "1 1 auto",
-          minHeight: 0,
-          height: "100%",
-          paddingTop: `calc(${SAFE_TOP} + 22px)`,
-          paddingLeft: 24,
-          paddingRight: 24,
-        }}
-      >
-        {/* LEFT TITLE (top-left) */}
+  return (
+  <div
+    style={{
+      position: "relative",
+      flex: "1 1 auto",
+      minHeight: 0,
+      height: "100%",
+      paddingTop: `calc(${SAFE_TOP} + 22px)`,
+      paddingLeft: 24,
+      paddingRight: 24,
+    }}
+  >
+    <CloseSlidesX top={`calc(${SAFE_TOP} + 12px)`} right="12px" />
+
+    {/* LEFT TITLE (top-left) */}
+
         <div
           style={{
             position: "absolute",
@@ -1781,30 +1814,8 @@ const dotTopPx = yForPct(levelPctAnim);
     marginBottom: 22,
   }}
 >
-  <button
-  type="button"
-  onClick={() => {
-    stopAllAudio();
-    nav(backRoute);
-  }}
-  aria-label="Close"
-  style={{
-    position: "absolute",
-    top: 12,
-    right: 12,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    border: "1px solid rgba(11,18,32,0.10)",
-    background: "rgba(11,18,32,0.04)",
-    color: "#0B1220",
-    display: "grid",
-    placeItems: "center",
-    cursor: "pointer",
-  }}
->
-  <X className="h-5 w-5" />
-</button>
+ <CloseSlidesX />
+
 
   <div style={{ fontSize: 42, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>
     {s.code} Sound
@@ -1970,31 +1981,34 @@ color: "#0B1220",
     // ----- Playback slide -----
    <>
   {/* White header card */}
+<div
+  style={{
+    position: "relative",
+    background: "#ffffff",
+    color: "#0B1220",
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    paddingTop: `calc(${SAFE_TOP} + 18px)`,
+    paddingLeft: 22,
+    paddingRight: 72, // plads til X
+    paddingBottom: 18,
+    boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
+    marginBottom: 22,
+  }}
+>
+  <CloseSlidesX />
+
   <div
     style={{
-  background: "#ffffff",
-  color: "#0B1220",
-  borderBottomLeftRadius: 28,
-  borderBottomRightRadius: 28,
-  paddingTop: `calc(${SAFE_TOP} + 18px)`,
-  paddingLeft: 22,
-  paddingRight: 72, // plads til X
-  paddingBottom: 18,
-  boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
-  marginBottom: 22,
-}}
-
+      fontSize: 34,
+      fontWeight: 950,
+      letterSpacing: -0.5,
+      lineHeight: 1.05,
+    }}
   >
-    <div
-      style={{
-        fontSize: 34,
-        fontWeight: 950,
-        letterSpacing: -0.5,
-        lineHeight: 1.05,
-      }}
-    >
-      Playback
-    </div>
+    Playback
+  </div>
+
 
     <div
       style={{
@@ -2108,8 +2122,9 @@ color: "#0B1220",
   ) : (
     // ----- Actions slide -----
     <>
-   <div
+  <div
   style={{
+    position: "relative",
     background: "#ffffff",
     color: "#0B1220",
     borderBottomLeftRadius: 28,
@@ -2122,9 +2137,12 @@ color: "#0B1220",
     marginBottom: 22,
   }}
 >
+  <CloseSlidesX />
+
   <div style={{ fontSize: 34, fontWeight: 950, letterSpacing: -0.5, lineHeight: 1.05 }}>
     Next
   </div>
+
 
   <div style={{ marginTop: 10, color: "rgba(11,18,32,0.60)", fontWeight: 650, lineHeight: 1.35, fontSize: 16 }}>
     Want another attempt or go back?
