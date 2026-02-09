@@ -149,7 +149,7 @@ useEffect(() => {
               gap: 12,
             }}
           >
-            <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4, marginLeft: -6 }}>
+            <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4, marginLeft: -8 }}>
   AI Chat
 </div>
 
