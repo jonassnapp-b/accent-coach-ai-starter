@@ -1,4 +1,4 @@
-// src/pages/AiChat.jsx
+//src/pages/AiChat.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, StopCircle, X, ChevronRight, Volume2 } from "lucide-react";
