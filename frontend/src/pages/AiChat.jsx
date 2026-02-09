@@ -104,17 +104,19 @@ useEffect(() => {
 
   
     return (
-    <div
-      className="page"
-      style={{
-        position: "relative",
-        minHeight: "100vh",
-        background: "#2196F3",
-        paddingBottom: 0,
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
+   <div
+  className="page"
+  style={{
+    position: "relative",
+    minHeight: "100vh",
+    background: "#2196F3",
+    paddingBottom: 0,
+    paddingTop: 0, // ✅ override .page padding-top
+    display: "flex",
+    flexDirection: "column",
+    overflowX: "hidden",
+  }}
+>
       {/* Force blue backdrop even if parent/shell paints background */}
       <div
         aria-hidden
