@@ -135,7 +135,7 @@ useEffect(() => {
           flexDirection: "column",
         }}
       >
-        <div className="mx-auto max-w-[720px]" style={{ width: "100%" }}>
+        <div className="mx-auto max-w-[860px]" style={{ width: "100%" }}>
           {/* Blue header */}
           <div
             style={{
@@ -149,9 +149,10 @@ useEffect(() => {
               gap: 12,
             }}
           >
-            <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>
-              AI Chat
-            </div>
+            <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4, marginLeft: -6 }}>
+  AI Chat
+</div>
+
 
           
 
@@ -169,7 +170,7 @@ useEffect(() => {
               paddingBottom: "calc(16px + var(--safe-bottom))",
             }}
           >
-            <div style={{ maxWidth: 760, margin: "0 auto" }}>
+            <div style={{ maxWidth: 900, margin: "0 auto" }}>
               {levels.map((lvl) => {
                 const completedInLevel = lvl.scenarios.filter((s) => readProgress(s.id) >= s.total).length;
                 const totalInLevel = lvl.scenarios.length;

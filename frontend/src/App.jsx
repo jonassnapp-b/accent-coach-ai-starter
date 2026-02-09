@@ -14,6 +14,7 @@ import Record from "./pages/Record.jsx";
 import Feedback from "./pages/Feedback.jsx";
 
 import { Mic, AudioWaveform, Target, Settings as SettingsIcon, MessageCircle } from "lucide-react";
+import SplashSequence from "./components/SplashSequence";
 
 
 
@@ -54,6 +55,7 @@ const routePrefetch = {
 function prefetchRoute(path) {
   try { routePrefetch[path]?.(); } catch {}
 }
+
 
 /* ✅ Practice Gate (prevents flash by redirecting BEFORE Record renders) */
 const PRACTICE_LAST_ROUTE_KEY = "ac_practice_last_route_v1";
@@ -105,7 +107,13 @@ function isOnboardingDone() {
 }
 
 /* ---------------- App ---------------- */
+
+
 function AppInner() {
+  const [showSplash, setShowSplash] = useState(() => {
+  try { return sessionStorage.getItem("ac_splash_done_v1") !== "1"; }
+  catch { return true; }
+});
   const location = useLocation();
   const [scenarioOverlayOpen, setScenarioOverlayOpen] = useState(false);
 const showTabs = !scenarioOverlayOpen;
@@ -210,72 +218,66 @@ useEffect(() => {
     };
   }, []);
 
-  return (
-    <div className="app-shell">
-      <main className="content with-bottom-tabs">
-        <Suspense fallback={<div style={{padding:16, color:"var(--muted)"}}>Loading…</div>}>
-          <Routes>
-            {/* Onboarding always reachable */}
-            
-            {/* Default route */}
-           <Route path="/" element={<Navigate to="/ai-chat" replace />} />
-
-
-            {/* Tabs */}
-{TABS.map((t) => (
-  <Route key={t.path} path={t.path} element={t.element} />
-))}
-
-{/* Hidden route (NOT a tab) */}
-<Route path="/imitate" element={<ProgressiveSentenceMastery />} />
-
-{/* Feedback (NOT a tab) */}
-<Route path="/feedback" element={<Feedback />} />
-
-{/* Hidden routes (NOT tabs) */}
-<Route path="/record" element={<PracticeGate />} />
-<Route path="/practice-my-text" element={<PracticeMyTextPage />} />
-<Route path="/coach-my-text" element={<PracticeMyTextPage />} />
-
-
-<Route path="/weakness" element={<WeaknessLab />} />
-<Route path="/bookmarks" element={<Bookmarks />} />
-
-
-            {/* Catch-alls */}
-            <Route path="*" element={<div />} />
-          </Routes>
-        </Suspense>
-      </main>
-
-            {showTabs && (
-        <nav className="tabbar">
-          {TABS.map((t) => (
-           <NavLink
-  key={t.path}
-  to={t.path}
-  aria-label={t.label}
-  onMouseEnter={() => prefetchRoute(t.path)}
-  onTouchStart={() => prefetchRoute(t.path)}
-  onClick={() => {
-    if (t.path === "/coach") {
-      sessionStorage.setItem("ac_last_nav_click", String(Date.now()));
-    }
+   return (
+    <>
+      {showSplash && (
+        <SplashSequence
+  onDone={() => {
+    try { sessionStorage.setItem("ac_splash_done_v1", "1"); } catch {}
+    setShowSplash(false);
   }}
-  className={({ isActive }) => "tabbtn" + (isActive ? " active" : "")}
->
-<t.Icon className="tabicon" />
-
-
-
-
-</NavLink>
-
-          ))}
-        </nav>
+/>
       )}
-    </div>
+
+      {!showSplash && (
+        <div className="app-shell">
+          <main className="content with-bottom-tabs">
+            <Suspense fallback={<div style={{padding:16, color:"var(--muted)"}}>Loading…</div>}>
+              <Routes>
+                <Route path="/" element={<Navigate to="/ai-chat" replace />} />
+
+                {TABS.map((t) => (
+                  <Route key={t.path} path={t.path} element={t.element} />
+                ))}
+
+                <Route path="/imitate" element={<ProgressiveSentenceMastery />} />
+                <Route path="/feedback" element={<Feedback />} />
+                <Route path="/record" element={<PracticeGate />} />
+                <Route path="/practice-my-text" element={<PracticeMyTextPage />} />
+                <Route path="/coach-my-text" element={<PracticeMyTextPage />} />
+                <Route path="/weakness" element={<WeaknessLab />} />
+                <Route path="/bookmarks" element={<Bookmarks />} />
+                <Route path="*" element={<div />} />
+              </Routes>
+            </Suspense>
+          </main>
+
+          {showTabs && (
+            <nav className="tabbar">
+              {TABS.map((t) => (
+                <NavLink
+                  key={t.path}
+                  to={t.path}
+                  aria-label={t.label}
+                  onMouseEnter={() => prefetchRoute(t.path)}
+                  onTouchStart={() => prefetchRoute(t.path)}
+                  onClick={() => {
+                    if (t.path === "/coach") {
+                      sessionStorage.setItem("ac_last_nav_click", String(Date.now()));
+                    }
+                  }}
+                  className={({ isActive }) => "tabbtn" + (isActive ? " active" : "")}
+                >
+                  <t.Icon className="tabicon" />
+                </NavLink>
+              ))}
+            </nav>
+          )}
+        </div>
+      )}
+    </>
   );
+
 }
 
 export default function App() {
@@ -287,3 +289,6 @@ export default function App() {
     </SettingsProvider>
   );
 }
+
+
+
