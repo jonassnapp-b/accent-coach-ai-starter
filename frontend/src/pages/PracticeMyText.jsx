@@ -2420,7 +2420,7 @@ gap: 0,
       fontSize: computeHeroFontSize(heroText, 72, 32),
       lineHeight: 1.05,
       letterSpacing: -0.4,
-      textShadow: "0 6px 14px rgba(0,0,0,0.18)",
+      textShadow: "none",
       // så det ikke “spilder” layout
       display: "inline-block",
       maxWidth: "100%",
@@ -2449,7 +2449,7 @@ marginBottom: 18,
       lineHeight: 1,
       letterSpacing: -0.8,
       color: pfColorForPct(overallScore),
-      textShadow: "0 6px 18px rgba(0,0,0,0.18)",
+      textShadow: "none",
     }}
   >
     {introPct}%
@@ -2460,10 +2460,11 @@ marginBottom: 18,
     style={{
       marginTop: 0,
       textAlign: "center",
-      fontWeight: 950,
-      fontSize: 22,
-      color: "rgba(255,255,255,0.92)",
-      textShadow: "0 4px 10px rgba(0,0,0,0.14)",
+ fontWeight: 700,
+fontSize: 18,
+color: "rgba(255,255,255,0.85)",
+
+      textShadow: "none",
       opacity: introPhase >= 2 ? 1 : 0,
       transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
       transition: "all 650ms ease",
