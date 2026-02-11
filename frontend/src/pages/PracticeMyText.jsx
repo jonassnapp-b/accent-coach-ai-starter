@@ -2433,16 +2433,16 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   {/* PERCENT (below text, adaptive size) */}
   <div
     style={{
-      marginTop: -21,
+      marginTop: -14,
       opacity: introPhase >= 1 ? 1 : 0,
       transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
       transition: "all 800ms ease",
       fontWeight: 950,
-      fontSize: computePctFontSize(heroText, 84, 56),
+      fontSize: computePctFontSize(heroText, 100, 66),
       lineHeight: 1,
       letterSpacing: -0.8,
       color: pfColorForPct(overallScore),
-      textShadow: "0 7px 22px rgba(0,0,0,0.20)",
+      textShadow: "0 10px 28px rgba(0,0,0,0.22)",
     }}
   >
     {introPct}%
