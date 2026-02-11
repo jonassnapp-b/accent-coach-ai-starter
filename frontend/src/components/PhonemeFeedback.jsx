@@ -489,11 +489,16 @@ function SentenceHeroWord({ words, ui }) {
 
   return (
     <div className="pf-hero-word" style={{ color: ui.textStrong }}>
-      {words.map((w, wi) => (
-        <span key={`sw-${wi}`} className="mr-2">
-          {coloredGraphemesOfWord(w)}
-        </span>
-      ))}
+     {words.map((w, wi) => (
+  <span
+    key={`sw-${wi}`}
+    className="mr-2"
+    style={{ display: "inline-block", whiteSpace: "nowrap" }}
+  >
+    {coloredGraphemesOfWord(w)}
+  </span>
+))}
+
     </div>
   );
 }
