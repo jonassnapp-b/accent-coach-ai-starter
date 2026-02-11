@@ -2390,11 +2390,13 @@ paddingTop: slideIdx === 0 ? 0 : 0, // mere space over overskriften på Playback
   // ✅ equal spacing between hero, % and line
 display: "flex",
 flexDirection: "column",
-justifyContent: "space-between",
-paddingTop: 80,
-paddingBottom: 80,
+display: "flex",
+flexDirection: "column",
+justifyContent: "flex-start",
+paddingTop: 60,
+paddingBottom: 100,
+gap: 0,
 
-  gap: 10,
 }}
 >
   {/* HERO TEXT (max 2 lines, never overlaps) */}
@@ -2436,7 +2438,8 @@ paddingBottom: 80,
   {/* PERCENT (below text, adaptive size) */}
     <div
     style={{
-      marginBottom: 0,
+      marginTop: 8,
+marginBottom: 32,
       opacity: introPhase >= 1 ? 1 : 0,
       transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
       transition: "all 800ms ease",
