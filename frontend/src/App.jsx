@@ -86,7 +86,7 @@ function PracticeGate() {
 /* ---------------- Tabs ---------------- */
 /* ---------------- Tabs ---------------- */
 const TABS = [
-    { path: "/ai-chat",  label: "AI Chat",  Icon: MessageCircle, element: <AiChat /> },
+  { path: "/ai-chat",  label: "Scenarios",  Icon: MessageCircle, element: <AiChat /> },
   { path: "/coach",    label: "Talk",     Icon: AudioWaveform, element: <Coach /> },
   { path: "/practice", label: "Practice", Icon: Mic,           element: <Practice /> },
   { path: "/settings", label: "Settings", Icon: SettingsIcon,  element: <Settings /> },

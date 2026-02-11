@@ -2737,7 +2737,7 @@ fontSize: 14,
          <div
   style={{
     position: "relative",
-    background: "#ffffff",
+background: "#E8F2FF",
     color: "#0B1220",
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
@@ -2784,36 +2784,40 @@ marginRight: -16,
             ) : (
            <div style={{ position: "relative" }}>
   <video
-    key={s.mediaSrc}
-    ref={phonemeVideoRef}
-    src={s.mediaSrc}
-    playsInline
-    muted={false}
-    controls={false}
-    loop={false}
-    autoPlay={false}
-    style={{ width: "100%", display: "block" }}
-    onEnded={() => setPhonemeVideoPlaying(false)}
-  />
+  key={s.mediaSrc}
+  ref={phonemeVideoRef}
+  src={s.mediaSrc}
+  poster={`/phonemes/Videos/${s.code}.jpg`}   // ✅ preview før play (hvis filen findes)
+  playsInline
+  muted={false}
+  controls={false}
+  loop={false}
+  autoPlay={false}
+preload="auto"
+  style={{ width: "100%", display: "block" }}
+  onEnded={() => setPhonemeVideoPlaying(false)}
+/>
+
 
   <button
     type="button"
-    onClick={async () => {
-      const v = phonemeVideoRef.current;
-      if (!v) return;
+   onClick={async () => {
+  const v = phonemeVideoRef.current;
+  if (!v) return;
 
-      try {
-        if (v.paused) {
-          // reset til start for “fresh play”
-          v.currentTime = 0;
-          await v.play();
-          setPhonemeVideoPlaying(true);
-        } else {
-          v.pause();
-          setPhonemeVideoPlaying(false);
-        }
-      } catch {}
-    }}
+  try {
+    if (v.paused) {
+      v.muted = false;     // ✅ unmute når user klikker play
+      v.currentTime = 0;
+      await v.play();
+      setPhonemeVideoPlaying(true);
+    } else {
+      v.pause();
+      setPhonemeVideoPlaying(false);
+    }
+  } catch {}
+}}
+
     aria-label={phonemeVideoPlaying ? "Pause video" : "Play video"}
     style={{
       position: "absolute",
@@ -2923,7 +2927,7 @@ color: "#0B1220",
 <div
   style={{
     position: "relative",
-    background: "#ffffff",
+background: "#E8F2FF",
     color: "#0B1220",
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
@@ -3068,7 +3072,7 @@ color: "#0B1220",
   <div
   style={{
     position: "relative",
-    background: "#ffffff",
+background: "#E8F2FF",
     color: "#0B1220",
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,

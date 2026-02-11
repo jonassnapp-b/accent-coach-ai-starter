@@ -718,7 +718,7 @@ if (turnIndex + 1 >= totalTurns) {
         paddingTop: "calc(var(--safe-top) + 12px)",
 paddingLeft: 12,
 paddingRight: 12,
-paddingBottom: "calc(24px + var(--safe-bottom))",
+paddingBottom: "calc(6px + var(--safe-bottom))",
 
       }}
 
@@ -1133,16 +1133,16 @@ paddingRight: 62,
     </button>
   </div>
 ) : (
-  <div style={{ display: "grid", placeItems: "center", paddingBottom: 6 }}>
+  <div style={{ display: "grid", placeItems: "center", paddingBottom: 0, marginTop: 6 }}>
 
-  <div style={{ position: "relative", width: 92, height: 92 }}>
-    <button
+  <div style={{ position: "relative", width: 76, height: 76 }}>
+        <button
       type="button"
       onClick={toggleRecord}
       disabled={isAnalyzing}
       style={{
-        width: 92,
-        height: 92,
+        width: 76,
+        height: 76,
         borderRadius: 999,
         border: "none",
         background: "radial-gradient(circle at 30% 30%, rgba(244,63,94,0.95), rgba(99,102,241,0.80))",
@@ -1155,9 +1155,9 @@ paddingRight: 62,
       title={isRecording ? "Stop" : "Record"}
     >
       {isRecording ? (
-        <StopCircle className="h-10 w-10" style={{ color: "white" }} />
+        <StopCircle className="h-8 w-8" style={{ color: "white" }} />
       ) : (
-        <Mic className="h-10 w-10" style={{ color: "white" }} />
+        <Mic className="h-8 w-8" style={{ color: "white" }} />
       )}
     </button>
 
