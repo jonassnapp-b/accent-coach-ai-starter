@@ -2392,10 +2392,11 @@ display: "flex",
 flexDirection: "column",
 display: "flex",
 flexDirection: "column",
-justifyContent: "flex-start",
-paddingTop: 60,
-paddingBottom: 100,
+justifyContent: "center",
+paddingTop: 28,
+paddingBottom: 28,
 gap: 0,
+
 
 }}
 >
@@ -2438,8 +2439,8 @@ gap: 0,
   {/* PERCENT (below text, adaptive size) */}
     <div
     style={{
-      marginTop: 8,
-marginBottom: 32,
+      marginTop: 14,
+marginBottom: 14,
       opacity: introPhase >= 1 ? 1 : 0,
       transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
       transition: "all 800ms ease",
