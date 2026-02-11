@@ -2439,8 +2439,8 @@ gap: 0,
   {/* PERCENT (below text, adaptive size) */}
     <div
     style={{
-      marginTop: 4,
-marginBottom: 24,
+      marginTop: 2,
+marginBottom: 18,
       opacity: introPhase >= 1 ? 1 : 0,
       transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
       transition: "all 800ms ease",
