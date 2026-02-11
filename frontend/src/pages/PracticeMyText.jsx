@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, ChevronDown, Volume2, Play, Pause, X, RotateCcw } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
-import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
+import PhonemeFeedback, { pfColorForPct } from "../components/PhonemeFeedback.jsx";
 
 
 
@@ -2441,7 +2441,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
       fontSize: computePctFontSize(heroText, 84, 56),
       lineHeight: 1,
       letterSpacing: -0.8,
-      color: heroColorForPct(overallScore),
+      color: pfColorForPct(overallScore),
       textShadow: "0 7px 22px rgba(0,0,0,0.20)",
     }}
   >
