@@ -2148,7 +2148,7 @@ const CloseSlidesX = ({ top = `calc(${SAFE_TOP} + 24px)`, right = "12px" }) => (
 
     aria-label="Close"
     style={{
-      position: "fixed",
+      position: "absolute",
       top,
       right,
       width: 40,
@@ -2369,7 +2369,7 @@ boxShadow: PAGE_SHADOW,
     display: "flex",
     flexDirection: "column",
     justifyContent: slideIdx === 0 ? "center" : "flex-start",
-paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over overskriften på Playback/andre slides
+paddingTop: slideIdx === 0 ? 0 : 0, // mere space over overskriften på Playback/andre slides
     paddingBottom: 12,
   }}
 >
@@ -2388,9 +2388,12 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   paddingRight: 16,
 
   // ✅ equal spacing between hero, % and line
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
+display: "flex",
+flexDirection: "column",
+justifyContent: "space-between",
+paddingTop: 80,
+paddingBottom: 80,
+
   gap: 10,
 }}
 >
@@ -2431,9 +2434,9 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 
 
   {/* PERCENT (below text, adaptive size) */}
-  <div
+    <div
     style={{
-marginBottom: 0,
+      marginBottom: 0,
       opacity: introPhase >= 1 ? 1 : 0,
       transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
       transition: "all 800ms ease",
@@ -2447,24 +2450,25 @@ marginBottom: 0,
   >
     {introPct}%
   </div>
+
+  {/* ✅ MOVE THIS INSIDE THE WRAPPER (so space-between works) */}
+  <div
+    style={{
+      marginTop: 0,
+      textAlign: "center",
+      fontWeight: 950,
+      fontSize: 24,
+      color: "rgba(255,255,255,0.92)",
+      textShadow: "0 6px 18px rgba(0,0,0,0.18)",
+      opacity: introPhase >= 2 ? 1 : 0,
+      transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
+      transition: "all 650ms ease",
+    }}
+  >
+    {pickShortLineFromScore(overallScore)}
+  </div>
 </div>
 
-
-     <div
-  style={{
-    marginTop: 12,
-    textAlign: "center",
-    fontWeight: 950,
-    fontSize: 24,
-    color: "rgba(255,255,255,0.92)",
-    textShadow: "0 6px 18px rgba(0,0,0,0.18)",
-    opacity: introPhase >= 2 ? 1 : 0,
-    transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
-    transition: "all 650ms ease",
-  }}
->
-  {pickShortLineFromScore(overallScore)}
-</div>
 
     </>
 ) : slideIdx === 1 ? (
