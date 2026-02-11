@@ -2154,9 +2154,10 @@ const CloseSlidesX = ({ top = `calc(${SAFE_TOP} + 24px)`, right = "12px" }) => (
       width: 40,
       height: 40,
       borderRadius: 20,
-      border: "1px solid rgba(11,18,32,0.10)",
-      background: "rgba(11,18,32,0.04)",
-      color: "#0B1220",
+           border: "1px solid rgba(11,18,32,0.12)",
+      background: "rgba(255,255,255,0.96)",
+      boxShadow: "0 12px 26px rgba(0,0,0,0.18)",
+
       display: "grid",
       placeItems: "center",
       cursor: "pointer",
@@ -2414,7 +2415,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
       fontSize: computeHeroFontSize(heroText, 84, 34),
       lineHeight: 1.05,
       letterSpacing: -0.4,
-      textShadow: "0 6px 18px rgba(0,0,0,0.18)",
+      textShadow: "0 8px 18px rgba(0,0,0,0.12)",
       // så det ikke “spilder” layout
       display: "inline-block",
       maxWidth: "100%",
@@ -2452,7 +2453,7 @@ marginBottom: 10,
 
      <div
   style={{
-    marginTop: 0,
+    marginTop: 4,
     textAlign: "center",
     fontWeight: 950,
     fontSize: 24,
