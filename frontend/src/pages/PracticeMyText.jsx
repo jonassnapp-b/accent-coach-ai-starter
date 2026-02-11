@@ -1612,7 +1612,7 @@ const t2 = setTimeout(() => setIntroPhase(2), 2400);
 useEffect(() => {
   if (!result) return;
   if (slideIdx !== 0) return;
-  if (introPhase < 1) return;
+  if (introPhase !== 1) return;
 
   const target = Math.max(0, Math.min(100, Number(overallScore) || 0));
   let raf = 0;
