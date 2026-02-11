@@ -549,45 +549,60 @@ function trainPhoneme(rawPhoneme) {
     zIndex: 9999,
     background: "#2196F3",
     borderBottom: "1px solid rgba(0,0,0,0.06)",
+    paddingTop: "var(--safe-top)",      // ✅ ryk header-indhold ned + blå op i notch
+    paddingBottom: 10,                  // ✅ gør det blå felt højere
   }}
 >
-  <div className="mx-auto w-full max-w-[820px]" style={{ padding: "22px 16px 18px" }}>
-    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
+  <div className="mx-auto w-full max-w-[820px]" style={{ padding: "14px 16px 22px" }}>
+
+    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
   <div>
     <button
       type="button"
       onClick={() => navigate("/practice")}
       className="btn btn-ghost btn-sm"
-      style={{
-        borderRadius: 14,
-        padding: "10px 14px",
-        fontWeight: 900,
-        color: "white",
-        background: "rgba(255,255,255,0.18)",
-        border: "1px solid rgba(255,255,255,0.28)",
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
-        boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.26)")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.18)")}
+     style={{
+  borderRadius: 14,
+  padding: "10px 14px",
+  fontWeight: 900,
+  color: "white",
+  background: "rgba(255,255,255,0.18)",
+  border: "1px solid rgba(255,255,255,0.28)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
+}}
     >
       Back
     </button>
   </div>
 
-  <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: "#FFFFFF" }}>
-    Train your weakest sounds
+  <div
+    style={{
+      position: "absolute",
+      left: "50%",
+      transform: "translateX(calc(-50% + 8px))",
+      textAlign: "center",
+      fontWeight: 900,
+      fontSize: 18,
+      color: "#FFFFFF",
+      pointerEvents: "none",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      maxWidth: "70%",
+    }}
+  >
+    Weakest sounds
   </div>
-
-  <div />
 </div>
+
 
   </div>
 </div>
 
 {/* Spacer so content doesn't go under fixed header */}
-<div style={{ height: 68 }} />
+<div style={{ height: "calc(var(--safe-top) + 38px)" }} />
 
 
 

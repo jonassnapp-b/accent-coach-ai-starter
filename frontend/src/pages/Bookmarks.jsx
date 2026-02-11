@@ -48,9 +48,11 @@ export default function Bookmarks() {
     zIndex: 9999,
     background: "#2196F3",
     borderBottom: "1px solid rgba(0,0,0,0.06)",
+    paddingTop: "var(--safe-top)",
+  paddingBottom: 10,
   }}
 >
-  <div className="mx-auto w-full max-w-[720px] px-4" style={{ paddingTop: 22, paddingBottom: 18 }}>
+  <div className="mx-auto w-full max-w-[720px] px-4" style={{ padding: "14px 16px 22px" }}>
     <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
     <div>
   <button
@@ -86,7 +88,7 @@ export default function Bookmarks() {
 </div>
 
 {/* Spacer so content doesn't go under fixed header */}
-<div style={{ height: 68 }} />
+<div style={{ height: "calc(var(--safe-top) + 38px)" }} />
 
 <div className="h-2" />
 

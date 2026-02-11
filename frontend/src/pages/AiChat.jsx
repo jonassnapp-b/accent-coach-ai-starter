@@ -106,27 +106,19 @@ useEffect(() => {
     return (
    <div
   className="page"
-  style={{
-    position: "relative",
-    minHeight: "100vh",
-    background: "#2196F3",
-    paddingBottom: 0,
-    paddingTop: 0, // ✅ override .page padding-top
-    display: "flex",
-    flexDirection: "column",
-    overflowX: "hidden",
-  }}
+ style={{
+  position: "relative",
+  minHeight: "100vh",
+  background: "#FFFFFF",
+  paddingBottom: 0,
+  paddingTop: "var(--safe-top)",
+  display: "flex",
+  flexDirection: "column",
+  overflowX: "hidden",
+}}
+
 >
-      {/* Force blue backdrop even if parent/shell paints background */}
-      <div
-        aria-hidden
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "#2196F3",
-          zIndex: 0,
-        }}
-      />
+ 
 
       <div
         style={{
@@ -138,39 +130,21 @@ useEffect(() => {
         }}
       >
         <div className="mx-auto max-w-[860px]" style={{ width: "100%" }}>
-          {/* Blue header */}
-          <div
-            style={{
-              maxWidth: 720,
-              margin: "0 auto",
-              padding: "18px 16px 18px",
-              color: "white",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-            }}
-          >
-            <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4, marginLeft: -8 }}>
-  AI Chat
-</div>
-
-
-          
-
-          </div>
+       
 
           {/* White sheet */}
           <div
             style={{
-              flex: 1,
-              background: "#FFFFFF",
-              borderTopLeftRadius: 32,
-              borderTopRightRadius: 32,
-              boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
-              padding: "24px 16px 16px",
-              paddingBottom: "calc(16px + var(--safe-bottom))",
-            }}
+  flex: 1,
+  background: "transparent",
+  borderRadius: 0,
+  boxShadow: "none",
+  padding: "0 16px",
+  paddingTop: 12,
+  paddingBottom: "calc(16px + var(--safe-bottom))",
+}}
+
+
           >
             <div style={{ maxWidth: 900, margin: "0 auto" }}>
               {levels.map((lvl) => {
@@ -178,7 +152,7 @@ useEffect(() => {
                 const totalInLevel = lvl.scenarios.length;
 
                 return (
-                  <div key={`lvl_${lvl.level}`} style={{ marginTop: 18 }}>
+                  <div key={`lvl_${lvl.level}`} style={{ marginTop: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ fontSize: 40, fontWeight: 950, letterSpacing: -0.6, color: "rgba(17,24,39,0.92)" }}>
                         Level {lvl.level}
@@ -195,7 +169,7 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
+                    <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
                       {lvl.scenarios.map((s, idx) => {
                         const done = readProgress(s.id);
 
@@ -213,22 +187,23 @@ useEffect(() => {
                             }}
                           >
                             <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 14,
-                                padding: "10px 12px",
-                                borderRadius: 18,
-                                border: "1px solid rgba(17,24,39,0.10)",
-                                background: "#FFFFFF",
-                              }}
+                             style={{
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  padding: "8px 10px",
+  borderRadius: 16,
+  border: "1px solid rgba(17,24,39,0.10)",
+  background: "#FFFFFF",
+}}
+
                             >
                               {/* left node */}
-                              <div style={{ position: "relative", width: 84, height: 84, flex: "0 0 auto" }}>
+                              <div style={{ position: "relative", width: 72, height: 72, flex: "0 0 auto" }}>
                                 <div
                                   style={{
-                                    width: 84,
-                                    height: 84,
+                                    width: 72,
+height: 72,
                                     borderRadius: 999,
                                                                        background: (() => {
                                       const base = ICON_CIRCLE_COLORS[idx % ICON_CIRCLE_COLORS.length];
@@ -239,7 +214,7 @@ useEffect(() => {
                                     display: "grid",
                                     placeItems: "center",
                                     color: "rgba(255,255,255,0.92)",
-                                    fontSize: 30,
+                                    fontSize: 26,
                                   }}
                                 >
                                   {s.emoji}
@@ -740,8 +715,11 @@ if (turnIndex + 1 >= totalTurns) {
        background: "#0B1220", // fully opaque backdrop (nothing behind is visible)
 
 
-        padding: 12,
-        paddingBottom: 24,
+        paddingTop: "calc(var(--safe-top) + 12px)",
+paddingLeft: 12,
+paddingRight: 12,
+paddingBottom: "calc(24px + var(--safe-bottom))",
+
       }}
 
     >
@@ -838,7 +816,7 @@ if (turnIndex + 1 >= totalTurns) {
     display: "inline-block",
     width: "fit-content",
     maxWidth: "min(440px, 86%)",
-    marginLeft: 32,
+    marginLeft: 6,
     marginRight: "auto",
     transform: "none",
     background: "rgba(59,130,246,0.85)",
@@ -876,7 +854,7 @@ if (turnIndex + 1 >= totalTurns) {
             style={{
               width: "min(360px, 78%)",
               marginLeft: "auto",
-              marginRight: 40,
+              marginRight: 8,
               transform: "none",
               background: "rgba(255,255,255,0.06)",
               border: "1px solid rgba(255,255,255,0.10)",
@@ -939,7 +917,8 @@ padding: "9px 11px",
     margin: "0 auto",
     width: "min(360px, 78%)",
     marginLeft: "auto",
-    marginRight: 40,
+    marginRight: 8,
+
     transform: "none",
     background: "rgba(255,255,255,0.06)",
     border: "1px solid rgba(255,255,255,0.10)",
@@ -1049,7 +1028,7 @@ padding: "9px 11px",
           maxWidth: "100%",
           boxSizing: "border-box",
           marginLeft: "auto",
-marginRight: 40,
+marginRight: 8,
 transform: "none",
           background: "rgba(255,255,255,0.06)",
           border: "1px solid rgba(255,255,255,0.10)",

@@ -424,55 +424,40 @@ export default function Coach() {
 
   return (
     <div
-      className="page"
-      style={{
-        position: "relative",
-        minHeight: "100vh",
-        background: "#2196F3",
-        paddingBottom: 0,
-        display: "flex",
-        flexDirection: "column",
-        color: LIGHT_TEXT,
-      }}
-    >
-      {/* blue backdrop */}
-      <div aria-hidden style={{ position: "fixed", inset: 0, background: "#2196F3", zIndex: 0 }} />
-
-      <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
-       {/* header */}
-<div
+  className="page"
   style={{
-    maxWidth: 720,
-    margin: "0 auto",
-    width: "100%",
-    padding: `calc(${SAFE_TOP} + 18px) 16px 18px`,
-    color: "white",
+    position: "relative",
+    minHeight: "100vh",
+    background: "#FFFFFF",
+    paddingBottom: 0,
+    paddingTop: "var(--safe-top)",
     display: "flex",
-    justifyContent: "flex-start",
-    textAlign: "left",
+    flexDirection: "column",
+    color: LIGHT_TEXT,
   }}
 >
-  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>Daily Drill</div>
-</div>
+
+      <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
+     
 
 
 
-        {/* white sheet */}
-        <div
+     <div
   style={{
     flex: 1,
     width: "100%",
     maxWidth: 720,
     margin: "0 auto",
 
-    background: "#FFFFFF",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
-    padding: "24px 16px 16px",
+    background: "transparent",
+    borderRadius: 0,
+    boxShadow: "none",
+    padding: "0 16px",
+    paddingTop: 12,
     paddingBottom: `calc(${TABBAR_OFFSET}px + 16px + ${SAFE_BOTTOM})`,
   }}
 >
+
 
           <div className="mx-auto w-full" style={{ maxWidth: 720 }}>
             <LayoutGroup>
@@ -484,7 +469,14 @@ export default function Coach() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.98 }}
                     transition={{ duration: 0.18 }}
-                    style={{ display: "grid", gap: 22 }}
+                    style={{
+  display: "grid",
+  gap: 22,
+
+  // 👇 gør at indholdet kan centreres i den tilgængelige højde
+  minHeight: `calc(100vh - var(--safe-top) - ${TABBAR_OFFSET}px - ${SAFE_BOTTOM} - 24px)`,
+  alignContent: "center",
+}}
                   >
                     <div style={pickerRow}>
                       <button type="button" onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, -1))} style={pickerBtn}>

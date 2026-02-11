@@ -4,7 +4,7 @@ import logoArrow from "../assets/logo-arrow-hq.png";
 
 export default function SplashSequence({ onDone }) {
   useEffect(() => {
-    const t = setTimeout(() => onDone?.(), 2000);
+    const t = setTimeout(() => onDone?.(), 2300);
     return () => clearTimeout(t);
   }, [onDone]);
 

@@ -229,30 +229,37 @@ input, textarea { -webkit-user-select: text; user-select: text; }
   z-index: 50;
 }
 
-
-
-.tabbtn {
-  height: 100%;
-  display: grid;
-  place-items: center;
-  gap: 0;
-  text-decoration: none;
-  position: relative;
-  color: var(--muted);
-  min-width: 0;
-}
-
 .tabbtn.active {
   color: var(--primary);
 }
+.tabbtn.active { color: var(--primary); }
 
 /* Force outline-only icons everywhere */
-.tabbtn .tabicon {
-  fill: none !important;
-  stroke: currentColor !important;
+.tabbtn .tabicon{
+  width: 28px;
+  height: 28px;
+  display: block;
+  margin: 0 auto;              /* hard center */
+  transform: translateX(0.5px); /* optisk center */
 }
 
-.tabbtn .tablabel { display: none; }
+/* Tab labels under icons */
+.tabbtn{
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;      /* ← centrer horisontalt */
+  justify-content: center;  /* ← centrer vertikalt */
+  gap: 6px;
+  text-align: center;
+}
+
+.tabbtn .tablabel{
+  font-size: 12px;
+  line-height: 1;
+  text-align: center;
+}
+
 .tabbtn .tabicon {
   width: 28px;
   height: 28px;
@@ -954,7 +961,11 @@ input[type="range"].range-blue-white::-moz-range-thumb{
 
 /* Tabs: “fill gear teeth” when active (without filling the center hole) */
 .tabbtn.active .tabicon {
-  fill: #2196F3;            /* fills the gear shape */
-  fill-rule: evenodd;       /* keeps the inner hole unfilled */
-  stroke: #2196F3;
+  fill: none !important;          /* ← fjerner fill */
+  stroke: var(--primary) !important;
+}
+
+
+.tabbtn:first-child .tabicon{
+  transform: translateX(1px);
 }

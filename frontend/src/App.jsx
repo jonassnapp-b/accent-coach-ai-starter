@@ -256,20 +256,22 @@ useEffect(() => {
             <nav className="tabbar">
               {TABS.map((t) => (
                 <NavLink
-                  key={t.path}
-                  to={t.path}
-                  aria-label={t.label}
-                  onMouseEnter={() => prefetchRoute(t.path)}
-                  onTouchStart={() => prefetchRoute(t.path)}
-                  onClick={() => {
-                    if (t.path === "/coach") {
-                      sessionStorage.setItem("ac_last_nav_click", String(Date.now()));
-                    }
-                  }}
-                  className={({ isActive }) => "tabbtn" + (isActive ? " active" : "")}
-                >
-                  <t.Icon className="tabicon" />
-                </NavLink>
+  key={t.path}
+  to={t.path}
+  aria-label={t.label}
+  onMouseEnter={() => prefetchRoute(t.path)}
+  onTouchStart={() => prefetchRoute(t.path)}
+  onClick={() => {
+    if (t.path === "/coach") {
+      sessionStorage.setItem("ac_last_nav_click", String(Date.now()));
+    }
+  }}
+  className={({ isActive }) => "tabbtn" + (isActive ? " active" : "")}
+>
+  <t.Icon className="tabicon" />
+  <div className="tablabel">{t.label}</div>
+</NavLink>
+
               ))}
             </nav>
           )}

@@ -341,9 +341,13 @@ function fallbackLettersFromWord(wordText, phonemeIndex, phonemeCount) {
 }
 
 function buildWeakPhonemeSlidesFromWords(wordsArr) {
-  const slides = [];
+  // One slide per phoneme code (e.g. "K"), even if it appears multiple times.
+  // Keep the FIRST appearance order, but store the WORST (lowest) score instance.
+  const byCode = new Map(); // code -> { order, slide }
 
   const words = Array.isArray(wordsArr) ? wordsArr : [];
+  let orderCounter = 0;
+
   for (const w of words) {
     const wordText = String(w?.word || w?.text || "").trim();
     const ps = Array.isArray(w?.phonemes) ? w.phonemes : [];
@@ -358,91 +362,936 @@ function buildWeakPhonemeSlidesFromWords(wordsArr) {
       if (!isWeak) continue;
 
       const media = resolvePhonemeMedia(code);
-if (!media?.src) continue;
+      if (!media?.src) continue;
 
       const letters =
-  getPhonemeLetters(p) ||
-  fallbackLettersFromWord(wordText, i, ps.length) ||
-  code;
+        getPhonemeLetters(p) ||
+        fallbackLettersFromWord(wordText, i, ps.length) ||
+        code;
 
-      slides.push({
+      const candidate = {
         type: "phoneme",
-        key: `${code}_${i}_${wordText || "w"}`,
+        key: `${code}`, // unique per code
         code,
         letters,
         score,
         mediaKind: media.kind,
-mediaSrc: media.src,    
-  });
+        mediaSrc: media.src,
+      };
+
+      const existing = byCode.get(code);
+
+      // First time we see this phoneme: keep its order.
+      if (!existing) {
+        byCode.set(code, { order: orderCounter++, slide: candidate });
+        continue;
+      }
+
+      // Already seen: keep the WORST (lowest) score.
+      // Treat null as "worst possible".
+      const prevScore = existing.slide?.score;
+      const prevIsFinite = Number.isFinite(prevScore);
+      const nextIsFinite = Number.isFinite(score);
+
+      const shouldReplace =
+        !nextIsFinite
+          ? prevIsFinite // null beats a number (worse)
+          : !prevIsFinite
+            ? false // existing is null already (can't get worse)
+            : score < prevScore;
+
+      if (shouldReplace) {
+        // preserve original order, only replace slide content
+        byCode.set(code, { order: existing.order, slide: candidate });
+      }
     }
   }
 
-  return slides;
+  // Return slides in first-appearance order
+  return Array.from(byCode.values())
+    .sort((a, b) => a.order - b.order)
+    .map((x) => x.slide);
 }
 
 const PHONEME_SHORT_TIPS = {
-  // VOWELS
+  /* ---------------- VOWELS ---------------- */
   AA: "Drop your jaw and keep the mouth open. The tongue sits low and back, with relaxed lips. Hold it steady—don’t turn it into a glide.",
   AE: "Open your mouth and keep the tongue low but more forward than AA. The jaw is fairly open, and the sound feels wide and bright. Avoid sliding into EH.",
   AH: "Keep everything relaxed and neutral. The tongue is centered and the jaw is slightly open. Don’t round the lips or push the sound forward.",
-  AO: "Open your mouth and round your lips slightly. The tongue sits low and back, and the sound should feel ‘rounded’ and full. Don’t drift into OW.",
+  AO: "Open your mouth and round your lips slightly. The tongue sits low and back, and the sound should feel rounded and full. Don’t drift into OW.",
   AW: "Start like AA (open jaw), then glide into a small rounded W shape. The lips move forward as the sound finishes. Make the glide smooth, not choppy.",
-  AX: "This is a relaxed ‘uh’ sound in unstressed syllables. Keep the jaw loose and the tongue neutral. It should feel quick and effortless.",
   AY: "Start with an open AH/AA-like shape, then glide up to a tight ‘ee’ position. The tongue moves high and forward as you finish. Keep the glide continuous.",
   EH: "Jaw slightly open and lips relaxed (not smiling). The tongue is mid and forward, with a clear ‘bed’ quality. Avoid raising into IY.",
-  ER: "Pull the tongue back and slightly up, and keep the lips lightly rounded. The key is strong tongue tension in the middle/back. Don’t add an extra R at the end.",
-  EY: "Begin with EH and glide lightly upward toward IY. The mouth gets a bit narrower as you finish. Keep it a small glide—don’t overdo it.",
-  IH: "Lips relaxed, jaw slightly open, tongue high but not as high as IY. It’s short and crisp, like ‘bit’. Don’t spread into a full smile.",
-  IX: "This is a relaxed version of IH/IY in unstressed syllables. Keep the tongue high-ish and forward but loose. It should sound quick and reduced.",
-  IY: "Spread your lips slightly like a small smile. Lift the tongue high and forward, close to the hard palate. Keep the sound steady—don’t let it dip into IH.",
-  OH: "Start with a more open O shape, then glide slightly toward a tighter rounded position. The lips round more as you finish. Keep the glide smaller than OW.",
-  OW: "Start with your mouth slightly open. As you produce the sound, round your lips smoothly while the tongue moves back and slightly up. The motion should feel continuous, not abrupt.",
-  OY: "Start with an open ‘oh’ shape, then glide into a tight ‘ee’ position. The lips begin rounded and then relax as the tongue moves forward. Make the glide obvious but smooth.",
-  UH: "Lips lightly rounded and jaw slightly open. The tongue is high-back, creating a compact sound. Don’t let it turn into UW.",
-  UW: "Round your lips into a small ‘oo’ and keep them forward. Raise the back of the tongue toward the soft palate. Avoid starting with a big open mouth—keep it tight.",
+  ER: "Pull the tongue back and slightly up, and keep the lips lightly rounded. Keep it as one r-colored vowel—don’t add an extra R sound after it.",
+  EY: "Begin with EH and glide lightly upward toward IY. The mouth narrows a bit as you finish. Keep it a small glide—don’t overdo it.",
+  IH: "Lips relaxed, jaw slightly open, tongue high but not as high as IY. It’s short and crisp, like ‘bit’. Don’t stretch into a big smile.",
+  IY: "Spread your lips slightly like a small smile. Lift the tongue high and forward, close to the hard palate. Keep it steady—don’t dip into IH.",
+  OW: "Start with your mouth slightly open. Round your lips smoothly while the tongue moves back and slightly up. The motion should feel continuous, not abrupt.",
+  OY: "Start with a rounded ‘oh’ shape, then glide into a tight ‘ee’ position. The lips begin rounded and then relax as the tongue moves forward. Make it smooth.",
+  UH: "Lips lightly rounded and jaw slightly open. The tongue is high-back, making a compact sound. Don’t let it turn into a tense UW.",
+  UW: "Round your lips into a small ‘oo’ and keep them forward. Raise the back of the tongue toward the soft palate. Keep it tight, not wide open.",
 
-  // STOPS
-  P: "Close both lips firmly, build a little air pressure, then release cleanly. Keep voicing OFF (no vibration). Add a small puff of air, especially at the start of a word.",
-  B: "Close both lips and use your voice (vibration) as you release. The burst is softer than P because it’s voiced. Keep it quick—don’t add extra ‘uh’ after it.",
-  T: "Tongue tip touches the ridge behind the upper teeth (alveolar ridge). Release with a crisp burst and no voicing. In American English, between vowels it may sound softer (flap).",
-  D: "Tongue tip touches the alveolar ridge and release while voicing is ON. Keep the release clean and quick. Don’t turn it into a TH by pushing the tongue forward.",
-  K: "Back of the tongue touches the soft palate (velum). Build pressure, then release with a clean burst. Keep it sharp—don’t let the tongue drag.",
-  G: "Back of the tongue touches the soft palate and release with voicing ON. The burst is gentler than K because it’s voiced. Keep it tight and controlled.",
+  // Common CMU “reduced/extra” vowels
+  AX:  "Schwa: relaxed ‘uh’ in unstressed syllables. Keep the jaw loose and tongue neutral. Quick and effortless.",
+  IX:  "Reduced high vowel (between IH/IY). Keep tongue high-ish and forward but loose. Very short and unstressed.",
+  AXR: "Reduced ‘er’ (schwa+r) in endings like ‘teacher’. Keep it quick and unstressed—light R-coloring, not a strong ER.",
+  OH:  "A smaller ‘oh’ glide (often like a shorter OW). Start more open, then round a bit more as you finish—don’t over-glide.",
+  UX:  "Lax ‘oo’ (as in ‘book’). Lips only lightly rounded; tongue high-back but relaxed. Keep it short—don’t tense into UW.",
 
-  // AFFRICATES
-  CH: "Start like T, then release into a ‘sh’ friction: ‘t + sh’ in one sound. Lips often round slightly. Make it one clean unit, not two separate sounds.",
-  JH: "Start like D, then release into ‘zh’ friction: ‘d + zh’ in one sound. Keep voicing ON throughout. Don’t let it become a plain Z.",
+  /* ---------------- STOPS ---------------- */
+  P: "Close both lips, build a little air pressure, then release cleanly. Voicing OFF (no vibration). Often a small puff of air at word start.",
+  B: "Close both lips and release with voicing ON (vibration). Softer burst than P. Keep it quick—don’t add an extra ‘uh’.",
+  T: "Tongue tip touches the ridge behind upper teeth. Release with a crisp burst, voicing OFF. Between vowels it may become a soft tap in American English.",
+  D: "Tongue tip at the ridge behind upper teeth. Release with voicing ON. Keep it clean—don’t push the tongue forward into TH/DH territory.",
+  K: "Back of the tongue touches the soft palate. Build pressure, then release sharply. Don’t let the tongue drag on release.",
+  G: "Back of the tongue at the soft palate; release with voicing ON. Gentle, controlled burst—keep it tight.",
 
-  // FRICATIVES
-  F: "Top teeth lightly touch the lower lip. Push air through steadily with no tongue involvement. Keep it smooth and controlled, not breathy.",
-  V: "Same shape as F, but turn voicing ON (feel vibration). Keep the airflow steady while the throat vibrates. Don’t let it collapse into B.",
-  S: "Tongue is close to the alveolar ridge without touching. Push air through a narrow groove for a sharp hiss. Keep lips relaxed—don’t round like SH.",
-  Z: "Same shape as S, but add voicing (vibration). The airflow stays narrow and steady. Don’t turn it into JH/zh.",
-  SH: "Lips slightly rounded and tongue pulled a bit back. Air flows through a wider channel for a softer hiss. Keep it smooth—don’t add a T before it.",
-  ZH: "Same as SH but voiced (vibration). It’s like the sound in ‘measure’. Keep it continuous, not a JH.",
-  TH: "Tongue tip gently between the teeth (or lightly against the edge of the upper teeth). Blow air softly through the gap. Keep it unvoiced—no vibration.",
-  DH: "Same tongue position as TH, but add voicing (vibration). It’s common in ‘this’ and ‘that’. Keep it light—don’t bite the tongue.",
-  HH: "Open throat and let air flow freely—like a soft breath. The mouth shape follows the next vowel. Don’t tighten the tongue or add friction like F/S.",
+  /* ---------------- AFFRICATES ---------------- */
+  CH: "One sound: start like T, then release into ‘sh’ friction (t+sh together). Lips may round slightly. Don’t separate it into two sounds.",
+  JH: "One sound: start like D, then release into ‘zh’ friction (d+zh together). Keep voicing ON throughout. Don’t turn it into plain Z.",
 
-  // NASALS
-  M: "Close the lips and let the sound resonate through the nose. Keep voicing ON and the mouth closed. Don’t release into a vowel unless the next sound requires it.",
-  N: "Tongue tip touches the alveolar ridge and sound goes through the nose. Keep voicing ON. Release cleanly into the next sound without adding an extra ‘uh’.",
-  NG: "Back of the tongue touches the soft palate, and air flows through the nose. Keep the tongue back—don’t end with a hard G. It’s one continuous nasal sound.",
+  /* ---------------- FRICATIVES ---------------- */
+  F:  "Top teeth lightly touch the lower lip. Push air through steadily. Smooth airflow—avoid a ‘puff’ burst.",
+  V:  "Same as F but with voicing ON (feel vibration). Keep the airflow steady—don’t collapse into B.",
+  S:  "Tongue close to the ridge without touching. Narrow groove for a sharp hiss. Lips relaxed—don’t round like SH.",
+  Z:  "Same as S, but add voicing (vibration). Keep it continuous—don’t turn it into JH/zh.",
+  SH: "Lips slightly rounded; tongue slightly back. Softer hiss than S. Continuous airflow—don’t add a T before it.",
+  ZH: "Like SH but voiced (vibration), as in ‘measure’. Keep it continuous—don’t ‘pop’ it like JH.",
+  TH: "Tongue tip gently between teeth (or at the edge). Blow air softly through the gap. Unvoiced—no vibration.",
+  DH: "Same tongue position as TH, but voiced (vibration). Keep it light—don’t bite the tongue.",
+  HH: "Open throat and let air flow like a soft breath. Mouth shape follows the next vowel. Don’t tighten into F/S-like friction.",
 
-  // LIQUIDS / APPROXIMANTS
-  L: "Tongue tip touches the alveolar ridge while air flows around the sides. Keep it clear and light at the start of words. For ‘dark L’ at the end, the tongue pulls slightly back.",
-  R: "Curl the tongue tip slightly back (or bunch the tongue) without touching the roof. Lips may round a bit, and the tongue stays tense. Avoid adding a vowel after it.",
-  W: "Round lips forward tightly like ‘oo’ and keep the tongue back. The sound is a quick glide into the next vowel. Don’t turn it into UW and hold it too long.",
-  Y: "Tongue is high and forward like the start of IY. It’s a quick glide into the next vowel. Keep lips relaxed—no rounding like W.",
+  /* ---------------- NASALS ---------------- */
+  M:  "Close lips and let sound resonate through the nose (voicing ON). Keep it steady and smooth into the next sound.",
+  N:  "Tongue tip at the ridge; sound through the nose (voicing ON). Release cleanly into the next sound.",
+  NG: "Back of tongue at soft palate; air through the nose. It’s one nasal sound—don’t add a hard G at the end.",
 
-  // OTHER CONSONANTS
-  H: "Use HH for this—open throat and let air flow freely. The mouth shape follows the next vowel. Keep it light and breathy, not harsh.",
+  /* ---------------- LIQUIDS / APPROXIMANTS ---------------- */
+  L: "Tongue tip touches the ridge while air flows around the sides. Start-of-word L is clear; end-of-word ‘dark L’ pulls the tongue back slightly.",
+  R: "Curl the tongue tip slightly back (or bunch the tongue) without touching. Lips may round a bit. Keep it tense—don’t add a vowel after it.",
+  W: "Round lips forward tightly like ‘oo’ and keep tongue back. Quick glide into the next vowel—don’t hold it like UW.",
+  Y: "Tongue high and forward like the start of IY. Quick glide into the next vowel. Lips relaxed—no rounding like W.",
+
+  /* ---------------- COMMON CMU “variants” (often appear in forced alignment / ASR) ---------------- */
+  DX: "Flap/tap (American ‘t/d’ between vowels): tongue quickly taps the ridge once (like in ‘water’). Very short—no strong burst.",
+  EL: "Syllabic dark L (as in ‘bottle’). Tongue tip may touch lightly, but the back of tongue stays pulled back. Keep it smooth—don’t insert a big vowel.",
+  EM: "Syllabic M (as in some ‘rhythm’-like reductions). Lips closed; voicing ON; nasal resonance carries the syllable. Don’t add an extra vowel.",
+  EN: "Syllabic N (like a reduced ‘n’ syllable). Tongue at the ridge; voicing ON; nasal resonance carries it. Keep it short.",
+  NX: "Nasal flap (rare). Similar to a quick N-like tap in very fast speech. Keep it extremely short and light—avoid over-articulating.",
+  Q:  "Glottal stop (as in some ‘uh-oh’ cuts). Brief throat closure, then release. No tongue/lip shaping—just a quick stop.",
 };
+
 
 function getShortTipForPhoneme(code) {
   const c = String(code || "").toUpperCase();
   return PHONEME_SHORT_TIPS[c] || "Focus on mouth shape and airflow for this sound.";
 }
+
+// ---------------- Deep Dive examples (TTS-driven) ----------------
+// NOTE: This supports ALL phonemes via fallback. Add more entries over time.
+const PHONEME_DEEP_DIVE = {
+  /* ---------------- VOWELS ---------------- */
+
+  AA: {
+    contrastLabel: "AA vs AE",
+    minimalPairs: [
+      ["cot", "cat"],
+      ["sock", "sack"],
+      ["Don", "Dan"],
+      ["hot", "hat"],
+    ],
+    positions: {
+      start: ["odd", "on", "ox", "honest"],
+      mid: ["father", "college", "problem"],
+      end: ["spa", "bra", "ma", "blah"],
+    },
+    drills: ["Hot coffee, not tea.", "Don got the job."],
+  },
+
+  AO: {
+    contrastLabel: "AO vs AA",
+    minimalPairs: [
+      ["caught", "cot"],
+      ["law", "la"],
+      ["talk", "tock"],
+      ["dawn", "Don"],
+    ],
+    positions: {
+      start: ["all", "often", "ought", "always"],
+      mid: ["author", "coffee", "laundry"],
+      end: ["saw", "law", "raw", "jaw"],
+    },
+    drills: ["I saw Paul draw a tall wall.", "Talk slower, not louder."],
+  },
+
+  OH: {
+    contrastLabel: "OH vs OW",
+    minimalPairs: [
+      ["oh", "owe"],
+      ["role", "roll"],
+      ["stole", "stow"],
+      ["close", "clothes"],
+    ],
+    positions: {
+      start: ["open", "old", "over", "only"],
+      mid: ["moment", "hotel", "robot"],
+      end: ["go", "no", "so", "show"],
+    },
+    drills: ["Oh no—go home slowly.", "Open the old door."],
+  },
+
+  AH: {
+    contrastLabel: "AH vs AA",
+    minimalPairs: [
+      ["cut", "cot"],
+      ["luck", "lock"],
+      ["buck", "bock"],
+      ["sun", "son"],
+    ],
+    positions: {
+      start: ["up", "under", "other", "uncle"],
+      mid: ["money", "summer", "public"],
+      end: ["huh", "duh", "uh", "bruh"],
+    },
+    drills: ["A fun lunch on Sunday.", "Cut the sum in half."],
+  },
+
+  AX: {
+    contrastLabel: "AX (schwa) vs AH",
+    minimalPairs: [
+      ["sofa", "suffer"],
+      ["about", "a-bout"],
+      ["ago", "ugh"],
+      ["support", "sup-port"],
+    ],
+    positions: {
+      start: ["about", "alone", "awake", "aside"],
+      mid: ["sofa", "comma", "banana"],
+      end: ["Russia", "America", "idea"],
+    },
+    drills: ["About a minute ago.", "I can do it in a second."],
+  },
+
+  AXR: {
+    contrastLabel: "AXR (schwa+r) vs ER",
+    minimalPairs: [
+      ["teacher", "techer"], // practice target is the -er ending
+      ["baker", "barker"],
+      ["butter", "better"],
+      ["runner", "renter"],
+    ],
+    positions: {
+      start: ["arise", "around", "arrive"], // r-colored reduction often shows up after /ə/
+      mid: ["teacher", "doctor", "better", "butter"],
+      end: ["mother", "father", "teacher", "runner"],
+    },
+    drills: ["The teacher talked faster.", "A runner and a baker."],
+  },
+
+  AE: {
+    contrastLabel: "AE vs EH",
+    minimalPairs: [
+      ["bat", "bet"],
+      ["had", "head"],
+      ["pack", "peck"],
+      ["bad", "bed"],
+    ],
+    positions: {
+      start: ["ask", "add", "after", "animal"],
+      mid: ["happy", "cabin", "basket"],
+      end: ["cat", "hat", "flat", "trap"],
+    },
+    drills: ["Pack that black backpack.", "Dan has a bad habit."],
+  },
+
+  EH: {
+    contrastLabel: "EH vs IH",
+    minimalPairs: [
+      ["bet", "bit"],
+      ["pen", "pin"],
+      ["set", "sit"],
+      ["sell", "sill"],
+    ],
+    positions: {
+      start: ["end", "enter", "every", "else"],
+      mid: ["better", "message", "tennis"],
+      end: ["bed", "red", "said", "fed"],
+    },
+    drills: ["Ben said yes.", "Send the letter next."],
+  },
+
+  IH: {
+    contrastLabel: "IH vs IY",
+    minimalPairs: [
+      ["bit", "beet"],
+      ["sit", "seat"],
+      ["live", "leave"],
+      ["ship", "sheep"],
+    ],
+    positions: {
+      start: ["in", "is", "if", "image"],
+      mid: ["city", "minute", "finish"],
+      end: ["sit", "hit", "six", "kick"],
+    },
+    drills: ["Six big fish in a bin.", "This is it."],
+  },
+
+  IX: {
+    contrastLabel: "IX (reduced high vowel) vs IH",
+    minimalPairs: [
+      ["roses", "Ross"], // reduced vowel in plural/suffix
+      ["wanted", "want"], // reduced vowel in -ed
+      ["boxes", "box"],
+      ["rabbits", "rab"], // suffix reduction target
+    ],
+    positions: {
+      start: ["enough", "effect", "event"],
+      mid: ["roses", "boxes", "wanted", "rabbit"],
+      end: ["happy", "pretty", "city"], // final reduced vowel feel
+    },
+    drills: ["He wanted it quickly.", "Roses and boxes."],
+  },
+
+  IY: {
+    contrastLabel: "IY vs IH",
+    minimalPairs: [
+      ["beet", "bit"],
+      ["seat", "sit"],
+      ["leave", "live"],
+      ["sheep", "ship"],
+    ],
+    positions: {
+      start: ["eat", "each", "even", "easy"],
+      mid: ["people", "needed", "reason"],
+      end: ["see", "me", "free", "key"],
+    },
+    drills: ["Please keep it clean.", "We need three seats."],
+  },
+
+  EY: {
+    contrastLabel: "EY vs EH",
+    minimalPairs: [
+      ["late", "let"],
+      ["bait", "bet"],
+      ["pain", "pen"],
+      ["sale", "sell"],
+    ],
+    positions: {
+      start: ["aim", "age", "eight", "able"],
+      mid: ["paper", "later", "basic"],
+      end: ["day", "say", "play", "way"],
+    },
+    drills: ["Pay the same rate.", "Take a break today."],
+  },
+
+  AY: {
+    contrastLabel: "AY vs EY",
+    minimalPairs: [
+      ["bite", "bait"],
+      ["price", "praise"],
+      ["line", "lane"],
+      ["time", "tame"],
+    ],
+    positions: {
+      start: ["ice", "idea", "item", "I"],
+      mid: ["private", "silent", "tiny"],
+      end: ["my", "try", "buy", "sky"],
+    },
+    drills: ["I like the bright light.", "My time is tight."],
+  },
+
+  OW: {
+    contrastLabel: "OW vs OH",
+    minimalPairs: [
+      ["owe", "oh"],
+      ["boat", "bought"],
+      ["coat", "caught"],
+      ["load", "laud"],
+    ],
+    positions: {
+      start: ["oat", "open", "over", "only"],
+      mid: ["hotel", "moment", "focus"],
+      end: ["go", "so", "no", "show"],
+    },
+    drills: ["Go home slowly.", "Don’t overdo it."],
+  },
+
+  AW: {
+    contrastLabel: "AW vs AO",
+    minimalPairs: [
+      ["loud", "laud"],
+      ["out", "ought"],
+      ["cow", "caw"],
+      ["down", "dawn"],
+    ],
+    positions: {
+      start: ["out", "our", "owl", "outside"],
+      mid: ["power", "tower", "hour"],
+      end: ["now", "how", "wow", "cow"],
+    },
+    drills: ["How now? Slow down.", "Our house is out of town."],
+  },
+
+  OY: {
+    contrastLabel: "OY vs OW",
+    minimalPairs: [
+      ["boy", "bow"],
+      ["soy", "so"],
+      ["coin", "cone"],
+      ["toys", "toes"],
+    ],
+    positions: {
+      start: ["oil", "oyster", "oy!"],
+      mid: ["choice", "point", "voice"],
+      end: ["boy", "toy", "joy", "ploy"],
+    },
+    drills: ["The boy’s choice is noisy.", "Point to the coin."],
+  },
+
+  UH: {
+    contrastLabel: "UH vs UW",
+    minimalPairs: [
+      ["pull", "pool"],
+      ["full", "fool"],
+      ["look", "Luke"],
+      ["could", "cooed"],
+    ],
+    positions: {
+      start: ["book", "bull", "could", "cook"],
+      mid: ["cookie", "looking", "footprint"],
+      end: ["pull", "full", "look", "hook"],
+    },
+    drills: ["Look at the good book.", "Pull the hood up."],
+  },
+
+  UW: {
+    contrastLabel: "UW vs UH",
+    minimalPairs: [
+      ["pool", "pull"],
+      ["fool", "full"],
+      ["Luke", "look"],
+      ["food", "foot"],
+    ],
+    positions: {
+      start: ["too", "two", "tool", "truth"],
+      mid: ["moving", "student", "music"],
+      end: ["blue", "do", "you", "true"],
+    },
+    drills: ["You do it too soon.", "Move the food to the room."],
+  },
+
+  UX: {
+    contrastLabel: "UX vs UW (lax vs tense)",
+    minimalPairs: [
+      ["boot", "book"],
+      ["Luke", "look"],
+      ["food", "foot"],
+      ["pool", "pull"],
+    ],
+    positions: {
+      start: ["foot", "look", "book", "good"],
+      mid: ["cookie", "looking", "footage"],
+      end: ["took", "cook", "hook", "look"],
+    },
+    drills: ["Good look—book it.", "He took the cook book."],
+  },
+
+  ER: {
+    contrastLabel: "ER vs AH",
+    minimalPairs: [
+      ["bird", "bud"],
+      ["hurt", "hut"],
+      ["her", "huh"],
+      ["sir", "suh"],
+    ],
+    positions: {
+      start: ["earth", "earn", "early"],
+      mid: ["perfect", "person", "service"],
+      end: ["her", "sir", "fur", "curb"],
+    },
+    drills: ["Her work is perfect.", "Turn first, then circle."],
+  },
+
+  /* ---------------- CONSONANTS ---------------- */
+
+  P: {
+    contrastLabel: "P vs B",
+    minimalPairs: [
+      ["pat", "bat"],
+      ["cap", "cab"],
+      ["rip", "rib"],
+      ["pear", "bear"],
+    ],
+    positions: {
+      start: ["pay", "pin", "pack", "paper"],
+      mid: ["happy", "open", "supper"],
+      end: ["cap", "ship", "stop", "sleep"],
+    },
+    drills: ["Pack the paper properly.", "Pick a proper path."],
+  },
+
+  B: {
+    contrastLabel: "B vs P",
+    minimalPairs: [
+      ["bat", "pat"],
+      ["cab", "cap"],
+      ["rib", "rip"],
+      ["bear", "pear"],
+    ],
+    positions: {
+      start: ["be", "big", "back", "best"],
+      mid: ["maybe", "about", "ribbon"],
+      end: ["cab", "job", "rib", "web"],
+    },
+    drills: ["Bob bought a big bag.", "Bring back the book."],
+  },
+
+  T: {
+    contrastLabel: "T vs D",
+    minimalPairs: [
+      ["two", "do"],
+      ["ten", "den"],
+      ["bet", "bed"],
+      ["tie", "die"],
+    ],
+    positions: {
+      start: ["time", "take", "top", "team"],
+      mid: ["water", "pretty", "later"],
+      end: ["cat", "seat", "wait", "right"],
+    },
+    drills: ["Take two tiny tasks.", "Put it on the table."],
+  },
+
+  D: {
+    contrastLabel: "D vs T",
+    minimalPairs: [
+      ["do", "two"],
+      ["den", "ten"],
+      ["bed", "bet"],
+      ["die", "tie"],
+    ],
+    positions: {
+      start: ["day", "do", "deep", "door"],
+      mid: ["ladder", "ready", "body"],
+      end: ["bad", "need", "road", "side"],
+    },
+    drills: ["Do it today.", "Add a little detail."],
+  },
+
+  K: {
+    contrastLabel: "K vs G",
+    minimalPairs: [
+      ["coat", "goat"],
+      ["back", "bag"],
+      ["cold", "gold"],
+      ["cap", "gap"],
+    ],
+    positions: {
+      start: ["cat", "key", "keep", "kind"],
+      mid: ["baker", "soccer", "vacant"],
+      end: ["back", "talk", "weak", "luck"],
+    },
+    drills: ["Kate keeps a calm pace.", "I packed a quick snack."],
+  },
+
+  G: {
+    contrastLabel: "G vs K",
+    minimalPairs: [
+      ["goat", "coat"],
+      ["bag", "back"],
+      ["gold", "cold"],
+      ["gap", "cap"],
+    ],
+    positions: {
+      start: ["go", "game", "good", "give"],
+      mid: ["bigger", "again", "eagle"],
+      end: ["bag", "big", "dog", "log"],
+    },
+    drills: ["Go get a good bag.", "I got a big dog."],
+  },
+
+  CH: {
+    contrastLabel: "CH vs SH",
+    minimalPairs: [
+      ["chew", "shoo"],
+      ["chin", "shin"],
+      ["cheap", "sheep"],
+      ["choke", "shoal"],
+    ],
+    positions: {
+      start: ["cheese", "check", "chair", "choice"],
+      mid: ["teacher", "kitchen", "nature"],
+      end: ["match", "peach", "watch", "reach"],
+    },
+    drills: ["Choose a cheap chair.", "Watch the teacher check."],
+  },
+
+  JH: {
+    contrastLabel: "JH vs CH",
+    minimalPairs: [
+      ["gin", "chin"],
+      ["jeep", "cheap"],
+      ["jam", "cham"],
+      ["joke", "choke"],
+    ],
+    positions: {
+      start: ["job", "just", "joke", "June"],
+      mid: ["major", "agent", "enjoy", "rejoice"],
+      end: ["badge", "edge", "page", "bridge"],
+    },
+    drills: ["Just change the joke.", "Enjoy the jam in June."],
+  },
+
+
+  F: {
+    contrastLabel: "F vs V",
+    minimalPairs: [
+      ["fan", "van"],
+      ["fine", "vine"],
+      ["safe", "save"],
+      ["leaf", "leave"],
+    ],
+    positions: {
+      start: ["fish", "fast", "feel", "fun"],
+      mid: ["coffee", "before", "offer"],
+      end: ["leaf", "life", "off", "safe"],
+    },
+    drills: ["Feel the fresh air.", "Five fast friends."],
+  },
+
+  V: {
+    contrastLabel: "V vs F",
+    minimalPairs: [
+      ["van", "fan"],
+      ["vine", "fine"],
+      ["save", "safe"],
+      ["leave", "leaf"],
+    ],
+    positions: {
+      start: ["very", "voice", "view", "visit"],
+      mid: ["movie", "never", "even"],
+      end: ["save", "love", "move", "give"],
+    },
+    drills: ["Very vivid views.", "Save five minutes."],
+  },
+
+  TH: {
+    contrastLabel: "TH vs T",
+    minimalPairs: [
+      ["thin", "tin"],
+      ["thank", "tank"],
+      ["thought", "taught"],
+      ["three", "tree"],
+    ],
+    positions: {
+      start: ["thin", "think", "thank", "three"],
+      mid: ["author", "method", "healthy"],
+      end: ["bath", "teeth", "mouth", "truth"],
+    },
+    drills: ["Think through the thin thread.", "Three things to thank them for."],
+  },
+
+  DH: {
+    contrastLabel: "DH vs D",
+    minimalPairs: [
+      ["then", "den"],
+      ["they", "day"],
+      ["these", "dees"],
+      ["those", "doze"],
+    ],
+    positions: {
+      start: ["this", "that", "they", "these"],
+      mid: ["mother", "weather", "bother"],
+      end: ["breathe", "bathe", "smooth"],
+    },
+    drills: ["This and that—those are theirs.", "They’re there this time."],
+  },
+
+  S: {
+    contrastLabel: "S vs SH",
+    minimalPairs: [
+      ["sip", "ship"],
+      ["see", "she"],
+      ["sock", "shock"],
+      ["seal", "sheal"],
+    ],
+    positions: {
+      start: ["see", "sun", "safe", "simple"],
+      mid: ["basic", "racing", "lesson"],
+      end: ["bus", "miss", "ice", "peace"],
+    },
+    drills: ["Sam sees six sunny seats.", "Stop and sit still."],
+  },
+
+  Z: {
+    contrastLabel: "Z vs S",
+    minimalPairs: [
+      ["zip", "sip"],
+      ["zeal", "seal"],
+      ["buzz", "bus"],
+      ["rise", "rice"],
+    ],
+    positions: {
+      start: ["zoo", "zip", "zero", "zone"],
+      mid: ["music", "reason", "lazy"],
+      end: ["buzz", "raise", "phase", "nose"],
+    },
+    drills: ["Zoe zooms to the zoo.", "These days, I rise early."],
+  },
+
+  SH: {
+    contrastLabel: "SH vs S",
+    minimalPairs: [
+      ["ship", "sip"],
+      ["she", "see"],
+      ["shock", "sock"],
+      ["wish", "wiss"],
+    ],
+    positions: {
+      start: ["she", "show", "ship", "shade"],
+      mid: ["nation", "fashion", "washing"],
+      end: ["wish", "fish", "push", "cash"],
+    },
+    drills: ["She should show six shoes.", "Push the trash."],
+  },
+
+  ZH: {
+    contrastLabel: "ZH vs SH (voiced vs unvoiced)",
+    minimalPairs: [
+      ["measure", "mesher"],
+      ["vision", "vicious"],   // contrast target: voiced ZH vs unvoiced SH-like feel
+      ["pleasure", "plusher"], // closer contrast pair
+      ["beige", "bash"],       // not a perfect minimal pair, but strong contrast for practice
+    ],
+    positions: {
+      start: ["genre", "Zsa Zsa"], // rare; names/loanwords
+      mid: ["measure", "vision", "usual", "pleasure"],
+      end: ["beige", "rouge"],
+    },
+    drills: ["Measure the pleasure.", "His usual vision was clear."],
+  },
+
+
+  HH: {
+    contrastLabel: "HH vs (no H)",
+    minimalPairs: [
+      ["heat", "eat"],
+      ["hill", "ill"],
+      ["hat", "at"],
+      ["hold", "old"],
+    ],
+    positions: {
+      start: ["he", "home", "happy", "help"],
+      mid: ["ahead", "behave", "perhaps"],
+      end: ["ahh"], // rare
+    },
+    drills: ["He held his hat.", "Help her hurry home."],
+  },
+
+  M: {
+    contrastLabel: "M vs N",
+    minimalPairs: [
+      ["map", "nap"],
+      ["sum", "sun"],
+      ["team", "teen"],
+      ["rum", "run"],
+    ],
+    positions: {
+      start: ["me", "make", "more", "maybe"],
+      mid: ["summer", "common", "remember"],
+      end: ["time", "home", "team", "room"],
+    },
+    drills: ["Make more money tomorrow.", "My mom made a meal."],
+  },
+
+  N: {
+    contrastLabel: "N vs NG",
+    minimalPairs: [
+      ["thin", "thing"],
+      ["ran", "rang"],
+      ["sin", "sing"],
+      ["ban", "bang"],
+    ],
+    positions: {
+      start: ["no", "need", "nice", "next"],
+      mid: ["tennis", "money", "under"],
+      end: ["ten", "rain", "seen", "down"],
+    },
+    drills: ["No need to panic.", "Ten nice notes."],
+  },
+
+  NG: {
+    contrastLabel: "NG vs N",
+    minimalPairs: [
+      ["sin", "sing"],
+      ["thin", "thing"],
+      ["ran", "rang"],
+      ["ban", "bang"],
+    ],
+  positions: {
+  start: ["Nguyen", "ngoni", "ngoma"], // rare in English; common in names/loanwords
+  mid: ["finger", "anger", "single"],
+  end: ["sing", "long", "wrong", "ring"],
+},
+
+    drills: ["Sing a long song.", "Bring the thing along."],
+  },
+
+  L: {
+    contrastLabel: "L vs R",
+    minimalPairs: [
+      ["light", "right"],
+      ["load", "road"],
+      ["lice", "rice"],
+      ["glass", "grass"],
+    ],
+    positions: {
+      start: ["light", "look", "love", "late"],
+      mid: ["yellow", "alive", "belly"],
+      end: ["ball", "feel", "tall", "small"],
+    },
+    drills: ["Let Lily lead the line.", "I feel a little better."],
+  },
+
+  R: {
+    contrastLabel: "R vs L",
+    minimalPairs: [
+      ["right", "light"],
+      ["road", "load"],
+      ["rice", "lice"],
+      ["glass", "grass"],
+    ],
+    positions: {
+      start: ["red", "right", "river", "road"],
+      mid: ["carry", "around", "correct"],
+      end: ["car", "far", "more", "door"],
+    },
+    drills: ["Run right down the road.", "A rare red bird."],
+  },
+
+  W: {
+    contrastLabel: "W vs Y",
+    minimalPairs: [
+      ["wet", "yet"],
+      ["wine", "yine"], // conceptual
+      ["witch", "which"], // classic
+      ["Wes", "yes"],
+    ],
+    positions: {
+  start: ["we", "way", "work", "window"],
+  mid: ["always", "away", "between"],
+  end: [], // word-final /w/ is not typical in English; it’s usually part of diphthongs (AW/OW/UW)
+},
+
+    drills: ["We will win.", "Walk away slowly."],
+  },
+
+  Y: {
+    contrastLabel: "Y vs W",
+    minimalPairs: [
+      ["yet", "wet"],
+      ["yell", "well"],
+      ["yawn", "won"],
+      ["year", "wear"],
+    ],
+   positions: {
+  start: ["yes", "you", "year", "yellow"],
+  mid: ["beyond", "music", "million"],
+  end: [], // word-final /y/ isn't typical; it’s usually an IY/AY ending instead
+},
+
+    drills: ["Yes, you can.", "A yellow yearbook."],
+  },
+};
+
+
+// ---------------- Confusable partners (for showing "X vs Y" for ALL relevant CMU phonemes) ----------------
+const CONFUSABLE_PARTNER = {
+  // Vowels
+  AA: "AE",
+  AE: "EH",
+  AH: "AA",
+  AO: "AA",
+  AY: "EY",
+  EH: "IH",
+  ER: "AH",
+  EY: "EH",
+  IH: "IY",
+  IY: "IH",
+  AX: "AH",
+  OH: "OW",
+  OW: "OH",
+  UH: "UW",
+  UW: "UH",
+  UX: "UW",
+
+  // Consonants
+  P: "B",
+  B: "P",
+  T: "D",
+  D: "T",
+  K: "G",
+  G: "K",
+  CH: "SH",
+  JH: "CH",
+  F: "V",
+  V: "F",
+  TH: "T",
+  DH: "D",
+  S: "SH",
+  Z: "S",
+  SH: "S",
+  M: "N",
+  N: "NG",
+  NG: "N",
+  L: "R",
+  R: "L",
+  W: "Y",
+  Y: "W",
+};
+
+function getConfusablePartner(code) {
+  const c = String(code || "").trim().toUpperCase();
+  return CONFUSABLE_PARTNER[c] || null;
+}
+
+
+function generateDeepDiveFallback(code) {
+  const c = String(code || "").trim().toUpperCase();
+  const partner = getConfusablePartner(c);
+
+  return {
+    // gør UI stabilt for ALLE phonemer
+    contrastLabel: partner ? `${c} vs ${partner}` : `${c} (Deep Dive)`,
+    minimalPairs: [],
+    positions: { start: [], mid: [], end: [] },
+    drills: [],
+  };
+}
+
+
+function getDeepDiveForPhoneme(code) {
+  const c = String(code || "").trim().toUpperCase();
+  const base = PHONEME_DEEP_DIVE[c] || generateDeepDiveFallback(c);
+
+  const partner = getConfusablePartner(c);
+
+  // If we have a confusable partner, always show "X vs Y" unless the entry already has its own label.
+  if (partner && !base?.contrastLabel) {
+    return { ...base, contrastLabel: `${c} vs ${partner}` };
+  }
+
+  // If the existing label doesn't include "vs" but we do have a partner, prefer "X vs Y"
+  // (but keep special labels like "HH vs (no H)" as-is since HH has no partner anyway).
+  if (partner && typeof base?.contrastLabel === "string" && !base.contrastLabel.includes(" vs ")) {
+    return { ...base, contrastLabel: `${c} vs ${partner}` };
+  }
+
+  return base;
+}
+
+
+
 
 export default function PracticeMyText() {
   const nav = useNavigate();
@@ -662,6 +1511,35 @@ const ttsPlayIdRef = useRef(0);
 const ttsCacheRef = useRef(new Map());
 
 const [isCorrectPlaying, setIsCorrectPlaying] = useState(false);
+// Deep Dive TTS (same /api/tts, but for words/sentences)
+const [deepDivePlayingKey, setDeepDivePlayingKey] = useState(null); // string|null
+
+async function playDeepDiveTts(text, key) {
+  const t = String(text || "").trim();
+  if (!t) return;
+
+  // toggle off if same item is playing
+  if (deepDivePlayingKey === key && isCorrectPlaying) {
+    stopTtsNow();
+    setDeepDivePlayingKey(null);
+    return;
+  }
+
+  stopAllAudio();
+
+  const accent = accentUi === "en_br" ? "en_br" : "en_us";
+  const rate = Number(playbackRate ?? 1.0) || 1.0;
+
+  try {
+    setDeepDivePlayingKey(key);
+    const url = await ensureTtsUrl({ text: t, accent, rate });
+    await playTtsUrl(url, { rate, loop: false });
+  } catch (e) {
+    setDeepDivePlayingKey(null);
+    if (!IS_PROD) setErr(e?.message || String(e));
+    else setErr("TTS failed. Try again.");
+  }
+}
 
 const phonemeVideoRef = useRef(null);
 const [phonemeVideoPlaying, setPhonemeVideoPlaying] = useState(false);
@@ -880,21 +1758,24 @@ async function playTtsUrl(url, { rate, loop }) {
 
   setIsCorrectPlaying(true);
 
-  a.onended = () => {
-    if (ttsPlayIdRef.current !== myPlayId) return;
-    setIsCorrectPlaying(false);
-    if (loop) {
-      loopTimerRef.current = setTimeout(async () => {
-        if (ttsPlayIdRef.current !== myPlayId) return;
-        try {
-          a.currentTime = 0;
-          a.playbackRate = Number(rate ?? 1.0) || 1.0;
-          await a.play();
-          setIsCorrectPlaying(true);
-        } catch {}
-      }, 220);
-    }
-  };
+a.onended = () => {
+  if (ttsPlayIdRef.current !== myPlayId) return;
+  setIsCorrectPlaying(false);
+  setDeepDivePlayingKey(null);
+
+  if (loop) {
+    loopTimerRef.current = setTimeout(async () => {
+      if (ttsPlayIdRef.current !== myPlayId) return;
+      try {
+        a.currentTime = 0;
+        a.playbackRate = Number(rate ?? 1.0) || 1.0;
+        await a.play();
+        setIsCorrectPlaying(true);
+      } catch {}
+    }, 220);
+  }
+};
+
 
   try {
     await a.play();
@@ -986,7 +1867,7 @@ async function playCorrectTts() {
         score: s,
         rawScore: raw,
       media,
-hasVideo: media?.kind === "video" && !!media?.src,
+hasMedia: !!media?.src,
         isWeak: s == null || !isGreen(s),
       });
     }
@@ -994,10 +1875,12 @@ hasVideo: media?.kind === "video" && !!media?.src,
     return out;
   }, [currentWordObj]);
 
-  const weakItems = useMemo(
-    () => phonemeLineItems.filter((x) => x.hasVideo && x.isWeak),
-    [phonemeLineItems]
-  );
+const weakItems = useMemo(
+  () => phonemeLineItems.filter((x) => x.hasMedia && x.isWeak),
+  [phonemeLineItems]
+);
+
+
 const activeWeakItem = useMemo(() => {
   if (!activePhonemeKey) return null;
   return weakItems.find((x) => x.key === activePhonemeKey) || null;
@@ -1236,7 +2119,7 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [accentUi]);
 
-const CloseSlidesX = ({ top = "12px", right = "12px" }) => (
+const CloseSlidesX = ({ top = `calc(${SAFE_TOP} + 24px)`, right = "12px" }) => (
   <button
     type="button"
    onClick={() => {
@@ -1265,7 +2148,7 @@ const CloseSlidesX = ({ top = "12px", right = "12px" }) => (
 
     aria-label="Close"
     style={{
-      position: "absolute",
+      position: "fixed",
       top,
       right,
       width: 40,
@@ -1493,7 +2376,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   {slideIdx === 0 ? (
     // ----- Intro (CENTERED vertically) -----
     <>
-    <CloseSlidesX top={`calc(${SAFE_TOP} + 12px)`} right="12px" />
+    <CloseSlidesX top={`calc(${SAFE_TOP} + 24px)`} right="12px" />
 
      <div
  style={{
@@ -1508,7 +2391,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  gap: 14,
+  gap: 10,
 }}
 >
   {/* HERO TEXT (max 2 lines, never overlaps) */}
@@ -1569,7 +2452,7 @@ paddingTop: slideIdx === 0 ? `calc(${SAFE_TOP} + 14px)` : 0, // mere space over 
 
      <div
   style={{
-    marginTop: 15,
+    marginTop: 8,
     textAlign: "center",
     fontWeight: 950,
     fontSize: 24,
@@ -1593,16 +2476,16 @@ const LEVELS = ["Native", "Proficient", "Advanced", "Intermediate", "Beginner", 
 const n = LEVELS.length;
 
 // Baren: lidt højere/opad + ekstra plads for 🏆 + 3 ticks over første dot
-const LADDER_H = 600;
+const LADDER_H = 520;
 
 // hvor højt 🏆 sidder inde i baren (lavere tal = mindre luft over 🏆)
-const TROPHY_TOP = 18;
+const TROPHY_TOP = 14;
 
 // før var trophy top = 52, så vi “trimmer” 34px af top-luften
 const TOP_TRIM = 52 - TROPHY_TOP;
 
 // flyt hele baren NED med samme trim, så 🏆 ender samme sted på skærmen
-const STACK_TOP = `calc(${SAFE_TOP} + 64px + ${TOP_TRIM}px)`;
+const STACK_TOP = `calc(${SAFE_TOP} + 44px + ${TOP_TRIM}px)`;
 
 // flyt skalaen (ticks/dots) OP tilsvarende, så den også ender samme sted på skærmen
 const SCALE_TOP_PAD = 64 - TOP_TRIM; // = 30
@@ -1624,6 +2507,9 @@ function yForPct(pct) {
 // 100 = Native (top), 0 = Novice (bund)
 const idx = clamp(Math.round(((100 - tracked) / 100) * (n - 1)), 0, n - 1);
 const dotTopPx = yForPct(levelPctAnim);
+const BUBBLE_H = 58; // ca. højde på boblen
+const BUBBLE_NUDGE_UP = 5; // 👈 tiny tweak (mere op)
+const bubbleTop = clamp(dotTopPx - BUBBLE_H / 2 - BUBBLE_NUDGE_UP, -6, LADDER_H - BUBBLE_H + 8);
 
 
 
@@ -1639,20 +2525,20 @@ const dotTopPx = yForPct(levelPctAnim);
       paddingRight: 24,
     }}
   >
-    <CloseSlidesX top={`calc(${SAFE_TOP} + 12px)`} right="12px" />
+    <CloseSlidesX top={`calc(${SAFE_TOP} + 24px)`} right="12px" />
 
     {/* LEFT TITLE (top-left) */}
 
         <div
           style={{
             position: "absolute",
-            left: 70,
+            left: 22,
             top: `calc(${SAFE_TOP} + 40px)`,
-            fontSize: 52,
+            fontSize: 36,
             fontWeight: 950,
             lineHeight: 1.02,
             letterSpacing: -0.6,
-            maxWidth: 280,
+            maxWidth: 240,
           }}
         >
           Your
@@ -1663,23 +2549,25 @@ const dotTopPx = yForPct(levelPctAnim);
         </div>
 
         {/* RIGHT STACK (ladder + labels) */}
-        <div
-          style={{
-            position: "absolute",
-            right: 74,
-        top: STACK_TOP,
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 18,
-          }}
-        >
+  <div
+  style={{
+    position: "absolute",
+    right: -8, // 👈 mere til højre (tættere på kanten)
+    top: `calc(${SAFE_TOP} + 140px)`, // 👈 markant længere ned
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 14,
+  }}
+>
+
+
           {/* LADDER */}
           <div
             style={{
               position: "relative",
-              height: LADDER_H,
-              width: 64,
-              borderRadius: 36,
+      height: LADDER_H,
+width: 54,
+borderRadius: 30,
               background: "rgba(11,18,32,0.22)", // dark translucent like image 2
               border: "1px solid rgba(255,255,255,0.14)",
               boxShadow: "0 18px 46px rgba(0,0,0,0.22)",
@@ -1696,7 +2584,7 @@ const dotTopPx = yForPct(levelPctAnim);
     transform: "translateX(-50%)",
     background: "transparent",
     border: "none",
-    fontSize: 18,
+    fontSize: 16,
     lineHeight: 1,
     opacity: 0.98,
     pointerEvents: "none",
@@ -1724,8 +2612,8 @@ const dotTopPx = yForPct(levelPctAnim);
           left: "50%",
           transform: "translateX(-50%)",
           top: `${y - 1}px`,
-          width: 12,
-          height: 3,
+        width: 10,
+height: 2,
           borderRadius: 999,
           background: "rgba(255,255,255,0.22)",
         }}
@@ -1744,7 +2632,7 @@ const dotTopPx = yForPct(levelPctAnim);
   const y = yForLevel(i);
   const active = i === idx;
 
-  const size = active ? 14 : 10;
+  const size = active ? 12 : 8;
   const r = size / 2;
 
   return (
@@ -1768,32 +2656,34 @@ const dotTopPx = yForPct(levelPctAnim);
 
 
             {/* speech bubble (left of ladder) */}
-            <div
-              style={{
-                position: "absolute",
-                left: -140,
-                top: `${dotTopPx - 36}px`,
+        <div
+  style={{
+    position: "absolute",
+    left: -104,            // 👈 lidt mere mod højre
+top: `${bubbleTop}px`,
                 background: "rgba(255,255,255,0.96)",
                 color: "#0B1220",
-                borderRadius: 18,
-                padding: "12px 16px",
+               borderRadius: 16,
+padding: "10px 12px",
                 fontWeight: 950,
                 boxShadow: "0 18px 46px rgba(0,0,0,0.22)",
-                minWidth: 140,
+minWidth: 118,
               }}
             >
-              <div style={{ color: "#fb923c", fontSize: 26, lineHeight: 1.0 }}>You</div>
-              <div style={{ fontSize: 26, lineHeight: 1.0 }}>{levelPctAnim}%</div>
+             <div style={{ color: "#fb923c", fontSize: 22, lineHeight: 1.0 }}>You</div>
+<div style={{ fontSize: 22, lineHeight: 1.0 }}>{levelPctAnim}%</div>
+
 
               {/* bubble pointer */}
               <div
                 style={{
                   position: "absolute",
-                  right: -8,
+                  right: -7,
                   top: "50%",
                   transform: "translateY(-50%) rotate(45deg)",
-                  width: 14,
-                  height: 14,
+                width: 12,
+height: 12,
+
                   background: "rgba(255,255,255,0.96)",
                 }}
               />
@@ -1805,9 +2695,9 @@ const dotTopPx = yForPct(levelPctAnim);
   style={{
     position: "relative",
     height: LADDER_H,
-    minWidth: 120,
+    minWidth: 106,
     fontWeight: 850,
-    fontSize: 16,
+fontSize: 14,
     letterSpacing: -0.2,
     opacity: 0.78,
     color: "rgba(255,255,255,0.92)",
@@ -1857,6 +2747,10 @@ const dotTopPx = yForPct(levelPctAnim);
     paddingBottom: 18,
     boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
     marginBottom: 22,
+
+    marginLeft: -16,
+marginRight: -16,
+
   }}
 >
  <CloseSlidesX />
@@ -2039,6 +2933,10 @@ color: "#0B1220",
     paddingBottom: 18,
     boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
     marginBottom: 22,
+
+    marginLeft: -16,
+marginRight: -16,
+
   }}
 >
   <CloseSlidesX />
@@ -2180,6 +3078,10 @@ color: "#0B1220",
     paddingBottom: 18,
     boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
     marginBottom: 22,
+
+    marginLeft: -16,
+marginRight: -16,
+
   }}
 >
   <CloseSlidesX />
@@ -2403,7 +3305,7 @@ borderRadius: 20,
       aria-label="Close deep dive"
       style={{
         position: "absolute",
-        top: 14,
+      top: `calc(${SAFE_TOP} + 24px)`,
         right: 14,
         width: 44,
         height: 44,
@@ -2425,29 +3327,209 @@ borderRadius: 20,
   <div style={{ marginTop: 6, color: "rgba(255,255,255,0.72)", fontWeight: 650 }}>
     {deepDivePhoneme?.code || "—"} • Score{" "}
 {deepDivePhoneme?.score == null ? "—" : Math.round(deepDivePhoneme.score)}%  </div>
-
-  <div style={{ marginTop: 10, color: "rgba(255,255,255,0.78)", fontSize: 16, lineHeight: 1.35 }}>
-    {getShortTipForPhoneme(deepDivePhoneme?.code)}
-  </div>
 </div>
 
 
-    <div
-      style={{
-        marginTop: 10,
-        borderRadius: 22,
-        background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.10)",
-        padding: 14,
-        color: "rgba(255,255,255,0.78)",
-        lineHeight: 1.35,
-        flex: "1 1 auto",
-        minHeight: 0,
-        overflowY: "auto",
-      }}
-    >
-      Deep dive content coming soon.
+   {(() => {
+  const code = String(deepDivePhoneme?.code || "").toUpperCase();
+  const dd = getDeepDiveForPhoneme(code);
+
+  const Section = ({ title, children }) => (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ fontWeight: 950, color: "rgba(255,255,255,0.92)", fontSize: 14, letterSpacing: -0.2 }}>
+        {title}
+      </div>
+      <div style={{ marginTop: 10 }}>{children}</div>
     </div>
+  );
+
+  const PlayBtn = ({ onClick, active }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 16,
+        border: "1px solid rgba(255,255,255,0.12)",
+        background: active ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.10)",
+        color: "white",
+        display: "grid",
+        placeItems: "center",
+        cursor: "pointer",
+      }}
+      aria-label={active ? "Pause" : "Play"}
+    >
+      {active ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+    </button>
+  );
+
+  const Chip = ({ text, playKeyPrefix }) => {
+    const k = `${playKeyPrefix}:${text}`;
+    const active = deepDivePlayingKey === k && isCorrectPlaying;
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          padding: "10px 12px",
+          borderRadius: 18,
+          border: "1px solid rgba(255,255,255,0.10)",
+          background: "rgba(255,255,255,0.06)",
+        }}
+      >
+        <div style={{ fontWeight: 950, color: "rgba(255,255,255,0.92)", letterSpacing: -0.2 }}>{text}</div>
+        <PlayBtn onClick={() => playDeepDiveTts(text, k)} active={active} />
+      </div>
+    );
+  };
+
+  const PairRow = ({ a, b, idx }) => {
+    const ka = `pair:${idx}:a:${a}`;
+    const kb = `pair:${idx}:b:${b}`;
+    const activeA = deepDivePlayingKey === ka && isCorrectPlaying;
+    const activeB = deepDivePlayingKey === kb && isCorrectPlaying;
+
+    return (
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 10,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            padding: "10px 12px",
+            borderRadius: 18,
+            border: "1px solid rgba(255,255,255,0.10)",
+            background: "rgba(255,255,255,0.06)",
+          }}
+        >
+          <div style={{ fontWeight: 950, color: "rgba(255,255,255,0.92)" }}>{a}</div>
+          <PlayBtn onClick={() => playDeepDiveTts(a, ka)} active={activeA} />
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            padding: "10px 12px",
+            borderRadius: 18,
+            border: "1px solid rgba(255,255,255,0.10)",
+            background: "rgba(255,255,255,0.06)",
+          }}
+        >
+          <div style={{ fontWeight: 950, color: "rgba(255,255,255,0.92)" }}>{b}</div>
+          <PlayBtn onClick={() => playDeepDiveTts(b, kb)} active={activeB} />
+        </div>
+      </div>
+    );
+  };
+
+  const emptyStyle = {
+    padding: "12px 12px",
+    borderRadius: 18,
+    border: "1px dashed rgba(255,255,255,0.14)",
+    background: "rgba(255,255,255,0.04)",
+    color: "rgba(255,255,255,0.72)",
+    fontWeight: 750,
+    lineHeight: 1.35,
+  };
+
+  return (
+    <div>
+{/* Minimal pairs / Contrast:
+    - Only show if this phoneme has a confusable partner.
+    - If no partner: start directly at Example words (no section at all).
+*/}
+{(() => {
+  const partner = getConfusablePartner(code);
+  if (!partner) return null;
+
+  const title = dd?.contrastLabel || `${code} vs ${partner}`;
+
+  return (
+    <Section title={title}>
+      {dd?.minimalPairs?.length ? (
+        <div style={{ display: "grid", gap: 10 }}>
+          {dd.minimalPairs.map(([a, b], i) => (
+            <PairRow key={`${a}_${b}_${i}`} a={a} b={b} idx={i} />
+          ))}
+        </div>
+      ) : (
+        <div style={emptyStyle}>
+          No minimal pairs added yet for {title}.
+        </div>
+      )}
+    </Section>
+  );
+})()}
+
+
+
+      {/* Example words by position */}
+      <Section title="Example words (start / middle / end)">
+        {(dd.positions?.start?.length || dd.positions?.mid?.length || dd.positions?.end?.length) ? (
+          <div style={{ display: "grid", gap: 12 }}>
+            <div>
+              <div style={{ fontWeight: 950, color: "rgba(255,255,255,0.86)", fontSize: 13 }}>Start</div>
+              <div style={{ marginTop: 8, display: "grid", gap: 10 }}>
+                {(dd.positions?.start || []).map((w) => (
+                  <Chip key={`start_${w}`} text={w} playKeyPrefix={`pos:start`} />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontWeight: 950, color: "rgba(255,255,255,0.86)", fontSize: 13 }}>Middle</div>
+              <div style={{ marginTop: 8, display: "grid", gap: 10 }}>
+                {(dd.positions?.mid || []).map((w) => (
+                  <Chip key={`mid_${w}`} text={w} playKeyPrefix={`pos:mid`} />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontWeight: 950, color: "rgba(255,255,255,0.86)", fontSize: 13 }}>End</div>
+              <div style={{ marginTop: 8, display: "grid", gap: 10 }}>
+                {(dd.positions?.end || []).map((w) => (
+                  <Chip key={`end_${w}`} text={w} playKeyPrefix={`pos:end`} />
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={emptyStyle}>No position-based word examples added for {code} yet.</div>
+        )}
+      </Section>
+
+      {/* Sentence drills */}
+      <Section title="Sentence drills">
+        {dd.drills?.length ? (
+          <div style={{ display: "grid", gap: 10 }}>
+            {dd.drills.map((s, i) => (
+              <Chip key={`drill_${i}`} text={s} playKeyPrefix="drill" />
+            ))}
+          </div>
+        ) : (
+          <div style={emptyStyle}>No sentence drills added for {code} yet.</div>
+        )}
+      </Section>
+
+      <div style={{ height: 10 }} />
+    </div>
+  );
+})()}
+
   </div>
 )}
 <audio ref={ttsAudioRef} playsInline preload="auto" />

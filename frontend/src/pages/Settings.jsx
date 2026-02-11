@@ -169,30 +169,20 @@ export default function Settings() {
   return (
    <div
   className="page"
-  style={{
+ style={{
   position: "relative",
   minHeight: "100vh",
-  background: "#2196F3",
-
-  // ✅ same fix as Practice: kill page bottom padding from shell
+  background: "#FFFFFF",
   paddingBottom: 0,
-
-  // ✅ allow sheet to stretch down
+  paddingTop: "var(--safe-top)",
   display: "flex",
   flexDirection: "column",
 }}
 
+
 >
 {/* Force blue backdrop even if parent/shell paints background */}
-<div
-  aria-hidden
-  style={{
-    position: "fixed",
-    inset: 0,
-    background: "#2196F3",
-    zIndex: 0,
-  }}
-/>
+
 
       <div
   style={{
@@ -209,12 +199,7 @@ export default function Settings() {
 
 
 
-  {/* Blue header (only title lives here) */}
-<div style={{ maxWidth: 720, margin: "0 auto", padding: "18px 16px 18px", color: "white" }}>
-  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>
-    Settings
-  </div>
-</div>
+
 
 
 {/* Spacer (match Practice header → cards gap) */}
@@ -223,14 +208,18 @@ export default function Settings() {
 {/* White sheet under blue header */}
 <div
   style={{
-    flex: 1, // ✅ fill down to tab bar
-    background: "#FFFFFF",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
-    padding: "36px 16px 16px",
-    paddingBottom: "calc(16px + var(--safe-bottom))",
-  }}
+  flex: 1,
+  width: "100%",
+  maxWidth: 720,
+  margin: "0 auto",
+  background: "transparent",
+  borderRadius: 0,
+  boxShadow: "none",
+  padding: "0 16px",
+  paddingTop: 12,
+  paddingBottom: "calc(16px + var(--safe-bottom))",
+}}
+
 >
 
 

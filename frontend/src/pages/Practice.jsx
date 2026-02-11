@@ -106,13 +106,29 @@ useEffect(() => {
   // Keep it aligned with Record (record input maxLength=220 in Record.jsx)
   const MAX_LEN = 120;
 
-  const [text, setText] = useState("");
-  const [expanded, setExpanded] = useState(false);
-  const [collapsedReady, setCollapsedReady] = useState(true);
+const [text, setText] = useState("");
+const [expanded, setExpanded] = useState(false);
+const [isOpening, setIsOpening] = useState(false);
+const openStartTimerRef = useRef(null);
+
+useEffect(() => {
+  return () => {
+    try {
+      if (openStartTimerRef.current) clearTimeout(openStartTimerRef.current);
+    } catch {}
+  };
+}, []);
+
+const [collapsedReady, setCollapsedReady] = useState(true);
+
 // Show collapsed icon/title slightly BEFORE the close animation fully finishes
-const CLOSE_DURATION_MS = 600; // matches your "expanded ? 1.15 : 0.80" close duration
-const COLLAPSED_REVEAL_EARLY_MS = 520; // how much earlier it should appear
+const CLOSE_DURATION_MS = 550;      // matcher close duration 0.45s
+const COLLAPSED_REVEAL_EARLY_MS = 120; // reveal ~120ms før close er færdig
 const closeRevealTimerRef = React.useRef(null);
+const OPEN_DURATION_MS = 850; // matcher din open duration
+const OPEN_FOCUS_DELAY_MS = 350; // øg hvis du vil have endnu langsommere
+const openFocusTimerRef = React.useRef(null);
+const textareaRef = useRef(null);
 
   const [kb, setKb] = useState(0);
 useEffect(() => {
@@ -134,6 +150,29 @@ useEffect(() => {
     setCollapsedReady(true);
     closeRevealTimerRef.current = null;
   }, ms);
+}, [expanded]);
+
+useEffect(() => {
+  if (openFocusTimerRef.current) {
+    clearTimeout(openFocusTimerRef.current);
+    openFocusTimerRef.current = null;
+  }
+
+  if (!expanded) return;
+
+  openFocusTimerRef.current = setTimeout(() => {
+    try {
+      textareaRef.current?.focus?.();
+    } catch {}
+    openFocusTimerRef.current = null;
+  }, Math.max(0, OPEN_DURATION_MS - OPEN_FOCUS_DELAY_MS));
+
+  return () => {
+    if (openFocusTimerRef.current) {
+      clearTimeout(openFocusTimerRef.current);
+      openFocusTimerRef.current = null;
+    }
+  };
 }, [expanded]);
 
 
@@ -217,7 +256,7 @@ const progressDeg = (clampedLen / MAX_LEN) * 360;
         title: "Practice My Text",
         subtitle: "Type or paste your own text",
         Icon: Mic,
-        onPress: () => setExpanded(true),
+        onPress: () => openExpandedSlow(),
       },
       {
         key: "weakness",
@@ -378,6 +417,18 @@ async function handleStop(rec) {
 }
 
 
+function openExpandedSlow() {
+  if (expanded || isOpening) return;
+
+  setIsOpening(true);
+
+  try { if (openStartTimerRef.current) clearTimeout(openStartTimerRef.current); } catch {}
+  openStartTimerRef.current = setTimeout(() => {
+    setExpanded(true);
+    setIsOpening(false);
+    openStartTimerRef.current = null;
+  }, 180); // 👈 øg til 240/300 hvis du vil endnu langsommere start
+}
 
 
 return (
@@ -385,30 +436,18 @@ return (
 <div
   className="page"
   style={{
-    minHeight: "100vh",
-    position: "relative",
-    background: "#2196F3",
-    color: "var(--text)",
+  minHeight: "100vh",
+  position: "relative",
+  background: "#FFFFFF",
+  color: "var(--text)",
+  paddingBottom: 0,
+  paddingTop: "var(--safe-top)",
+  display: "flex",
+  flexDirection: "column",
+}}
 
-    // ✅ override shell/page padding for tab bar
-    paddingBottom: 0,
-
-    // ✅ let sheet stretch
-    display: "flex",
-    flexDirection: "column",
-  }}
 >
 
-      {/* Force blue backdrop even if parent/shell paints background */}
-      <div
-        aria-hidden
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "#2196F3",
-          zIndex: 0,
-        }}
-      />
 
       <div
   style={{
@@ -421,47 +460,25 @@ flex: 1,
     flexDirection: "column",
   }}
 >
-        {/* Blue header (only title lives here) */}
-       {/* Blue header (only title lives here) */}
-<div
-  style={{
-    maxWidth: 720,
-    margin: "0 auto",
-    width: "100%",
-    padding: "18px 16px 18px",
-    color: "white",
-    display: "flex",
-    justifyContent: "flex-start",
-    textAlign: "left",
-  }}
->
-  <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -0.4 }}>
-    Practice
-  </div>
-</div>
+
 
 
         {/* White sheet under blue header */}
         <div
-        style={{
-          flex: 1,
-width: "100%",
-
+       style={{
+  flex: 1,
+  width: "100%",
   maxWidth: 720,
   margin: "0 auto",
-  background: "#FFFFFF",
-  borderTopLeftRadius: 32,
-  borderTopRightRadius: 32,
-  boxShadow: "0 -1px 0 rgba(255,255,255,0.10), 0 18px 40px rgba(0,0,0,0.10)",
-  padding: "36px 16px 16px",
+  background: "transparent",
+  borderRadius: 0,
+  boxShadow: "none",
+  padding: "0 16px",
+  paddingTop: 22,
   color: "var(--text)",
-
-  // ✅ make the sheet reach the bottom
-  minHeight: "calc(100vh - 74px)",
-
-  // (optional) if your iOS shell uses safe-area vars:
   paddingBottom: "calc(16px + var(--safe-bottom))",
 }}
+
 
         >
           {/* Cards */}
@@ -471,17 +488,19 @@ width: "100%",
               layoutId="practice-mytext-card"
               layout
               onClick={() => {
-                if (!expanded) setExpanded(true);
+                if (!expanded) openExpandedSlow();
               }}
               role="button"
               tabIndex={0}
               onLayoutAnimationComplete={() => {
                 if (!expanded && !collapsedReady) setCollapsedReady(true);
               }}
-              transition={{
-                layout: { type: "tween", duration: expanded ? 0.34 : 0.26, ease: [0.22, 1, 0.36, 1] },
-                default: { duration: expanded ? 0.34 : 0.26, ease: [0.22, 1, 0.36, 1] },
-              }}
+          transition={{
+  layout: { type: "tween", duration: expanded ? 0.85 : 0.55, ease: [0.22, 1, 0.36, 1] },
+  default: { duration: expanded ? 0.85 : 0.55, ease: [0.22, 1, 0.36, 1] },
+}}
+
+
               style={{
                 borderRadius: expanded ? 26 : 22,
                 background: "var(--panel-bg)",
@@ -534,7 +553,7 @@ width: "100%",
                       </div>
 
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.2 }}>Practice My Text</div>
+                        <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.2 }}>Practice Your Text</div>
                       </div>
                     </div>
                   </motion.div>
@@ -597,7 +616,7 @@ width: "100%",
                   {/* EXPANDED */}
                   <div
                     style={{
-                      paddingTop: `calc(${safeTop} + 10px)`,
+                  paddingTop: "10px",
                       minHeight: "100dvh",
                       display: "flex",
                       flexDirection: "column",
@@ -633,7 +652,7 @@ width: "100%",
                             color: "var(--text)",
                           }}
                         >
-                          Practice your words
+                          Practice Your Text
                         </div>
 
                       <div style={{ position: "relative" }}>
@@ -699,7 +718,7 @@ width: "100%",
                         }}
                       >
                         <textarea
-                          autoFocus
+  ref={textareaRef}
                           value={text}
                           onChange={(e) => setText(String(e.target.value || "").slice(0, MAX_LEN))}
                           maxLength={MAX_LEN}
