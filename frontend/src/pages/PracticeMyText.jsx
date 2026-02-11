@@ -313,11 +313,11 @@ function getPhonemeLetters(p) {
 function pickShortLineFromScore(score) {
   const s = Number(score);
   if (!Number.isFinite(s)) return "No score yet.";
-  if (s >= 95) return "Perfect.";
-  if (s >= 90) return "Excellent.";
-  if (s >= 75) return "Good job.";
-  if (s >= 60) return "Needs a bit more work.";
-  return "Needs work.";
+  if (s >= 95) return "Native-level clarity.";
+  if (s >= 90) return "Excellent pronunciation.";
+  if (s >= 75) return "Strong performance.";
+  if (s >= 60) return "Room for improvement.";
+  return "Needs focused practice.";
 }
 
 function fallbackLettersFromWord(wordText, phonemeIndex, phonemeCount) {
