@@ -6,11 +6,6 @@ import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
 import PhonemeFeedback, { pfColorForPct } from "../components/PhonemeFeedback.jsx";
 
-// App Store screenshot mode (set true while taking screenshots)
-const APP_STORE_SHOTS = true;
-
-// More premium hero % color for screenshots
-const heroPctColor = APP_STORE_SHOTS ? "rgba(255,255,255,0.98)" : pfColorForPct(overallScore);
 
 
 const IS_PROD = !!import.meta?.env?.PROD;
@@ -2427,6 +2422,8 @@ gap: 0,
       lineHeight: 1.05,
       letterSpacing: -0.4,
       textShadow: "none",
+      WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
+paintOrder: "stroke fill",
       // så det ikke “spilder” layout
       display: "inline-block",
       maxWidth: "100%",
@@ -2454,7 +2451,7 @@ marginBottom: 18,
       fontSize: computePctFontSize(heroText, 100, 66),
       lineHeight: 1,
       letterSpacing: -1.0,
-      color: heroPctColor,
+      color: pfColorForPct(overallScore),
       textShadow: "none",
     }}
   >
