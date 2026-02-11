@@ -7,6 +7,11 @@ import * as sfx from "../lib/sfx.js";
 import PhonemeFeedback, { pfColorForPct } from "../components/PhonemeFeedback.jsx";
 
 
+// App Store screenshot mode (set true while taking screenshots)
+const APP_STORE_SHOTS = true;
+
+// More premium hero % color for screenshots
+const heroPctColor = APP_STORE_SHOTS ? "rgba(255,255,255,0.98)" : pfColorForPct(overallScore);
 
 const IS_PROD = !!import.meta?.env?.PROD;
 const RETRY_INTENT_KEY = "ac_my_text_retry_intent_v1";
@@ -2448,7 +2453,7 @@ marginBottom: 18,
       fontSize: computePctFontSize(heroText, 100, 66),
       lineHeight: 1,
       letterSpacing: -0.8,
-      color: pfColorForPct(overallScore),
+      color: heroPctColor,
       textShadow: "none",
     }}
   >
