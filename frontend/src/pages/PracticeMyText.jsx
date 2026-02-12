@@ -1573,6 +1573,28 @@ const t2 = setTimeout(() => setIntroPhase(2), 2400);
   };
 }, [result]);
 
+// Reset/force introPct when leaving/returning to slide 1
+useEffect(() => {
+  if (!result) return;
+
+  if (slideIdx === 0) {
+    // when you come back to slide 1: restart its animation
+    setIntroPct(0);
+    setIntroPhase(0);
+
+    const t1 = setTimeout(() => setIntroPhase(1), 50);
+    const t2 = setTimeout(() => setIntroPhase(2), 2400);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  } else {
+    // when leaving slide 1: force it to final score so it never "sticks" mid-way
+    setIntroPct(deckScore);
+  }
+}, [slideIdx, deckScore, result]);
+
 // Count-up when introPhase hits 1
 useEffect(() => {
   if (slideIdx !== 0) return;
@@ -1598,13 +1620,13 @@ useEffect(() => {
 useEffect(() => {
   if (slideIdx !== 1) return;
 
-  const target = Math.max(0, Math.min(100, Number(introPct) || 0));
-  const from = Math.max(0, Math.min(100, Number(levelPctAnim) || 0));
+  const target = Math.max(0, Math.min(100, Number(deckScore) || 0));
+  const from = 0; // eller levelPctAnim hvis du vil “fortsætte” fra sidste
+  setLevelPctAnim(0); // vigtigt: reset så den ikke arver gammel værdi
 
   let raf = 0;
   const start = performance.now();
   const dur = 1400;
-
   const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
   const tick = (now) => {
@@ -1616,7 +1638,8 @@ useEffect(() => {
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [slideIdx, introPct]);
+}, [slideIdx, deckScore]);
+
 
 
 
