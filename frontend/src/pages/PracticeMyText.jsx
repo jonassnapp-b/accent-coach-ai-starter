@@ -1392,6 +1392,8 @@ const [canRetryAnalyze, setCanRetryAnalyze] = useState(false);
 
   const [result, setResult] = useState(null);
   const [overallPctLocked, setOverallPctLocked] = useState(0);
+  const deckPctRef = useRef(null);
+
 
   const [isClosingSlides, setIsClosingSlides] = useState(false);
 
@@ -1545,6 +1547,11 @@ const activePhonemeSlide = isPhonemeOverlay ? weakPhonemeSlides[slideIdx - 2] : 
 // Reset slide flow when new result comes in
 useEffect(() => {
   if (!result) return;
+  // ✅ lock “deck score” once per result
+  const v = result?.overall ?? result?.pronunciation ?? result?.overallAccuracy ?? 0;
+const n = Number(v);
+const pct = Number.isFinite(n) ? (n <= 1 ? Math.round(n * 100) : Math.round(n)) : 0;
+deckPctRef.current = Math.max(0, Math.min(100, pct));
   setSlideIdx(0);
 
   setIntroPhase(0);
@@ -1568,7 +1575,7 @@ useEffect(() => {
   if (slideIdx !== 0) return;
   if (introPhase !== 1) return;
 
-  const target = Math.max(0, Math.min(100, Number(overallPctLocked) || 0));
+const target = deckPctRef.current ?? Math.max(0, Math.min(100, Number(overallPctLocked) || 0));
   let raf = 0;
   const start = performance.now();
   const dur = 1600; // ms
@@ -1588,7 +1595,7 @@ useEffect(() => {
   if (!result) return;
   if (slideIdx !== 1) return;
 
-  const target = Math.max(0, Math.min(100, Number(overallPctLocked) || 0));
+const target = deckPctRef.current ?? Math.max(0, Math.min(100, Number(overallPctLocked) || 0));
 
   setLevelPctAnim(0);
 
