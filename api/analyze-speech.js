@@ -191,6 +191,8 @@ async function postSpeechSuperExact({
 
   const url = `${host.replace(/\/$/, "")}/${coreType}`;
   
+  console.log("[SLACK CHECK] typeof slack:", typeof slack, "value:", slack);
+
 const { connect, start } = makeConnectStart({
   appKey,
   secretKey,
