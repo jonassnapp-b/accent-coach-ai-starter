@@ -190,7 +190,7 @@ async function postSpeechSuperExact({
 }) {
 
   const url = `${host.replace(/\/$/, "")}/${coreType}`;
-  
+
   console.log("[SLACK CHECK] typeof slack:", typeof slack, "value:", slack);
 
 const { connect, start } = makeConnectStart({
@@ -460,13 +460,58 @@ if (!refText) {
     console.log("[analyze-speech] received audio mime:", mimeHint);
 
     const wavBytes = await toWavPcm16Mono16k(rawBuf, mimeHint);
+    const slackCompare =
+  String(body.slackCompare || req.headers["x-slack-compare"] || "").trim() === "1";
+
     const coreType = /\s/.test(refText) ? "sent.eval.promax" : "word.eval.promax";
     const userId =
   String(body.userId || "").trim() ||
   String(req.headers["x-user-id"] || "").trim() ||
   "local";
 
-const ss = await postSpeechSuperExact({
+let ss = null;
+
+if (slackCompare) {
+  const ssA = await postSpeechSuperExact({
+    host,
+    coreType,
+    appKey,
+    secretKey,
+    userId,
+    refText,
+    wavBytes,
+    dictDialect,
+    slack: -1,
+  });
+
+  const ssB = await postSpeechSuperExact({
+    host,
+    coreType,
+    appKey,
+    secretKey,
+    userId,
+    refText,
+    wavBytes,
+    dictDialect,
+    slack: 1,
+  });
+
+  const uiAccent = dictDialect === "en_br" ? "en-GB" : "en-US";
+  const uiA = mapSpeechsuperToUi(ssA, refText, uiAccent);
+  const uiB = mapSpeechsuperToUi(ssB, refText, uiAccent);
+
+  return res.status(200).json({
+    _slackCompare: {
+      a: { sent: -1, overallAccuracy: uiA.overallAccuracy },
+      b: { sent: 1, overallAccuracy: uiB.overallAccuracy },
+      deltaOverall: (uiB.overallAccuracy ?? 0) - (uiA.overallAccuracy ?? 0),
+    },
+    a: uiA,
+    b: uiB,
+  });
+}
+
+ss = await postSpeechSuperExact({
   host,
   coreType,
   appKey,
@@ -477,6 +522,7 @@ const ss = await postSpeechSuperExact({
   dictDialect,
   slack,
 });
+
 
 try {
   const root = ss?.result || ss?.text_score || ss || {};
