@@ -1598,8 +1598,9 @@ useEffect(() => {
 useEffect(() => {
   if (slideIdx !== 1) return;
 
-  const target = Math.max(0, Math.min(100, Number(introPct) || 0));
-  const from = Math.max(0, Math.min(100, Number(levelPctAnim) || 0));
+  const target = Math.max(0, Math.min(100, Number(deckScore) || 0));
+  const from = 0;
+  setLevelPctAnim(0);
 
   let raf = 0;
   const start = performance.now();
@@ -1616,7 +1617,8 @@ useEffect(() => {
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [slideIdx, introPct]);
+}, [slideIdx, deckScore]);
+
 
 
 
@@ -2452,7 +2454,7 @@ fontSize: 18,
 ) : slideIdx === 1 ? (
   // ----- Speech Level (SLIDE 2 – MATCH IMAGE 2) -----
   (() => {
-   const tracked = introPct;
+   const tracked = deckScore;
 
 const LEVELS = ["Native", "Proficient", "Advanced", "Intermediate", "Beginner", "Novice"];
 const n = LEVELS.length;
@@ -2653,7 +2655,7 @@ minWidth: 118,
               }}
             >
              <div style={{ color: "#fb923c", fontSize: 22, lineHeight: 1.0 }}>You</div>
-<div style={{ fontSize: 22, lineHeight: 1.0 }}>{introPct}%</div>
+<div style={{ fontSize: 22, lineHeight: 1.0 }}>{levelPctAnim}%</div>
 
 
               {/* bubble pointer */}
