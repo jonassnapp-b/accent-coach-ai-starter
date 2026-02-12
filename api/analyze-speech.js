@@ -127,7 +127,7 @@ async function toWavPcm16Mono16k(inputBuf, inputMimeHint = "") {
 
 // ---------- Slack default (single source of truth) ----------
 // -1..1 (SpeechSuper). Default = 0 (recommended).
-const DEFAULT_SLACK = 1;
+const DEFAULT_SLACK = 0;
 
 function parseSlack(raw) {
   const n = Number(raw);
