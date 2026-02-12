@@ -10,26 +10,12 @@ import PhonemeFeedback, { pfColorForPct } from "../components/PhonemeFeedback.js
 
 const IS_PROD = !!import.meta?.env?.PROD;
 const RETRY_INTENT_KEY = "ac_my_text_retry_intent_v1";
-const DEVICE_ID_KEY = "ac_device_id_v1";
-const LEVEL_EMA_KEY = "ac_speech_level_ema_v1";
-const TROPHY_REACHED_KEY = "ac_trophy_reached_v1";
 const TROPHY_REACHED_PCT = 95; // justér hvis du vil gøre den hårdere/lettere
 
 // smoothing: 0.10 = meget glidende, 0.20 = mere responsiv
 const EMA_ALPHA = 0.15;
 
-function getOrCreateDeviceId() {
-  try {
-    const existing = localStorage.getItem(DEVICE_ID_KEY);
-    if (existing) return existing;
-    const id = (crypto?.randomUUID?.() || `${Date.now()}_${Math.random().toString(16).slice(2)}`);
-    localStorage.setItem(DEVICE_ID_KEY, id);
-    return id;
-  } catch {
-    // fallback hvis storage er blokeret
-    return "anonymous";
-  }
-}
+
 
 function loadLevelEma() {
   try {
@@ -46,25 +32,6 @@ function saveLevelEma(obj) {
   } catch {}
 }
 
-function updateLevelEmaWithScore(score100) {
-  const s = Number(score100);
-  if (!Number.isFinite(s)) return null;
-
-  const prev = loadLevelEma();
-  const prevEma = Number(prev?.ema);
-  const nextEma = Number.isFinite(prevEma) ? (EMA_ALPHA * s + (1 - EMA_ALPHA) * prevEma) : s;
-
-  const next = {
-    deviceId: getOrCreateDeviceId(),
-    ema: Math.round(nextEma),
-    lastScore: Math.round(s),
-    n: (Number(prev?.n) || 0) + 1,
-    updatedAt: Date.now(),
-  };
-
-  saveLevelEma(next);
-  return next;
-}
 function hasTrophyCelebrated() {
   try {
     return localStorage.getItem(TROPHY_REACHED_KEY) === "1";
@@ -1551,12 +1518,6 @@ const overallScore = useMemo(() => {
   return n <= 1 ? Math.round(n * 100) : Math.round(n);
 }, [result]);
 
-const levelEma = useMemo(() => {
-  const v = loadLevelEma();
-  const n = Number(v?.ema);
-  return Number.isFinite(n) ? n : null;
-}, [result]); // opdater når du får nyt result
-
 const heroText = useMemo(() => String(result?.refText || "").trim(), [result]);
 
 const words = useMemo(() => normalizeWordsFromResult(result, result?.refText), [result]);
@@ -1653,7 +1614,7 @@ useEffect(() => {
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [result, slideIdx, levelEma, overallScore]);
+}, [result, slideIdx, overallScore]);
 
 function stopLoopTimer() {
   if (loopTimerRef.current) {
@@ -2070,16 +2031,12 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
 
       setResult(payload);
 
-// opdater EMA og brug EMA som “trophy gate” (så det matcher din level logic)
-const nextEmaObj = updateLevelEmaWithScore(payload.overall);
-const emaNow = Number(nextEmaObj?.ema);
-
-const trophyReached =
-  Number.isFinite(emaNow) ? emaNow >= TROPHY_REACHED_PCT : Number(payload.overall) >= TROPHY_REACHED_PCT;
+const trophyReached = Number(payload.overall) >= TROPHY_REACHED_PCT;
 
 if (trophyReached) {
   triggerTrophyCelebration();
 }
+
 
 try { sessionStorage.setItem(RESULT_KEY, JSON.stringify(payload)); } catch {}
 
