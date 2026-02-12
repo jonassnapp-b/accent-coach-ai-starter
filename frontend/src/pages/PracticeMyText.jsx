@@ -1594,29 +1594,30 @@ useEffect(() => {
   return () => cancelAnimationFrame(raf);
 }, [slideIdx, introPhase, deckScore]);
 
-// Slide 2: bubble + percent count up (0 -> tracked)
+// Slide 2: animate the DOT up to the (same) introPct value
 useEffect(() => {
   if (slideIdx !== 1) return;
 
-  const target = deckScore;
-
-  setLevelPctAnim(0);
+  const target = Math.max(0, Math.min(100, Number(introPct) || 0));
+  const from = Math.max(0, Math.min(100, Number(levelPctAnim) || 0));
 
   let raf = 0;
   const start = performance.now();
-  const dur = 1400;
+  const dur = 420;
 
   const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
   const tick = (now) => {
     const p = Math.min(1, (now - start) / dur);
-    setLevelPctAnim(Math.round(target * easeOutCubic(p)));
+    const v = from + (target - from) * easeOutCubic(p);
+    setLevelPctAnim(Math.round(v));
     if (p < 1) raf = requestAnimationFrame(tick);
   };
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [slideIdx, deckScore]);
+}, [slideIdx, introPct]);
+
 
 
 function stopLoopTimer() {
@@ -2487,7 +2488,7 @@ function yForPct(pct) {
 
 // 100 = Native (top), 0 = Novice (bund)
 const idx = clamp(Math.round(((100 - tracked) / 100) * (n - 1)), 0, n - 1);
-const dotTopPx = yForPct(introPct);
+const dotTopPx = yForPct(levelPctAnim);
 const BUBBLE_H = 58; // ca. højde på boblen
 const BUBBLE_NUDGE_UP = 5; // 👈 tiny tweak (mere op)
 const bubbleTop = clamp(dotTopPx - BUBBLE_H / 2 - BUBBLE_NUDGE_UP, -6, LADDER_H - BUBBLE_H + 8);
