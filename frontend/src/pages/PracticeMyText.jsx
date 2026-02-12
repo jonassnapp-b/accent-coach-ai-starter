@@ -1393,6 +1393,7 @@ const [canRetryAnalyze, setCanRetryAnalyze] = useState(false);
   const [result, setResult] = useState(null);
   const [overallPctLocked, setOverallPctLocked] = useState(0);
   const deckPctRef = useRef(null);
+const [deckPctLocked, setDeckPctLocked] = useState(0);
 
 
   const [isClosingSlides, setIsClosingSlides] = useState(false);
@@ -1551,7 +1552,9 @@ useEffect(() => {
   const v = result?.overall ?? result?.pronunciation ?? result?.overallAccuracy ?? 0;
 const n = Number(v);
 const pct = Number.isFinite(n) ? (n <= 1 ? Math.round(n * 100) : Math.round(n)) : 0;
-deckPctRef.current = Math.max(0, Math.min(100, pct));
+const locked = Math.max(0, Math.min(100, pct));
+deckPctRef.current = locked;
+setDeckPctLocked(locked);
   setSlideIdx(0);
 
   setIntroPhase(0);
@@ -1575,7 +1578,7 @@ useEffect(() => {
   if (slideIdx !== 0) return;
   if (introPhase !== 1) return;
 
-const target = deckPctRef.current ?? Math.max(0, Math.min(100, Number(overallPctLocked) || 0));
+const target = Math.max(0, Math.min(100, Number(deckPctLocked) || 0));
   let raf = 0;
   const start = performance.now();
   const dur = 1600; // ms
@@ -1595,7 +1598,7 @@ useEffect(() => {
   if (!result) return;
   if (slideIdx !== 1) return;
 
-const target = deckPctRef.current ?? Math.max(0, Math.min(100, Number(overallPctLocked) || 0));
+const target = Math.max(0, Math.min(100, Number(deckPctLocked) || 0));
 
   setLevelPctAnim(0);
 
@@ -2412,7 +2415,7 @@ paintOrder: "stroke fill",
     fontSize: computePctFontSize(heroText, 108, 66),
     lineHeight: 1,
     letterSpacing: -1.0,
-color: pfColorForPct(overallPctLocked),
+color: pfColorForPct(deckPctLocked),
     textShadow: "none",
     WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
     paintOrder: "stroke fill",
@@ -2438,7 +2441,7 @@ fontSize: 18,
       transition: "all 650ms ease",
     }}
   >
-    {pickShortLineFromScore(overallPctLocked)}
+    {pickShortLineFromScore(deckPctLocked)}
   </div>
 </div>
 
@@ -2447,7 +2450,7 @@ fontSize: 18,
 ) : slideIdx === 1 ? (
   // ----- Speech Level (SLIDE 2 – MATCH IMAGE 2) -----
   (() => {
-   const tracked = overallPctLocked;
+   const tracked = deckPctLocked;
 
 const LEVELS = ["Native", "Proficient", "Advanced", "Intermediate", "Beginner", "Novice"];
 const n = LEVELS.length;
