@@ -1575,7 +1575,7 @@ const t2 = setTimeout(() => setIntroPhase(2), 2400);
 
 // Count-up when introPhase hits 1
 useEffect(() => {
-  if (slideIdx !== 0) return;
+  if (slideIdx !== 0 && slideIdx !== 1) return;
   if (introPhase !== 1) return;
 
   const target = deckScore;
@@ -2451,7 +2451,7 @@ fontSize: 18,
 ) : slideIdx === 1 ? (
   // ----- Speech Level (SLIDE 2 – MATCH IMAGE 2) -----
   (() => {
-   const tracked = deckScore;
+   const tracked = introPct;
 
 const LEVELS = ["Native", "Proficient", "Advanced", "Intermediate", "Beginner", "Novice"];
 const n = LEVELS.length;
@@ -2487,7 +2487,7 @@ function yForPct(pct) {
 
 // 100 = Native (top), 0 = Novice (bund)
 const idx = clamp(Math.round(((100 - tracked) / 100) * (n - 1)), 0, n - 1);
-const dotTopPx = yForPct(levelPctAnim);
+const dotTopPx = yForPct(introPct);
 const BUBBLE_H = 58; // ca. højde på boblen
 const BUBBLE_NUDGE_UP = 5; // 👈 tiny tweak (mere op)
 const bubbleTop = clamp(dotTopPx - BUBBLE_H / 2 - BUBBLE_NUDGE_UP, -6, LADDER_H - BUBBLE_H + 8);
@@ -2652,7 +2652,7 @@ minWidth: 118,
               }}
             >
              <div style={{ color: "#fb923c", fontSize: 22, lineHeight: 1.0 }}>You</div>
-<div style={{ fontSize: 22, lineHeight: 1.0 }}>{levelPctAnim}%</div>
+<div style={{ fontSize: 22, lineHeight: 1.0 }}>{introPct}%</div>
 
 
               {/* bubble pointer */}
