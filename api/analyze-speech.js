@@ -198,11 +198,7 @@ async function postSpeechSuperExact({
     dictDialect,
   });
 
-  console.log("=== SLACK DEBUG ===");
-console.log("Slack value being sent:", start?.param?.request?.slack);
-console.log("Full request object:", JSON.stringify(start?.param?.request, null, 2));
-console.log("====================");
-
+  
   const fd = new FormData();
   fd.append("text", JSON.stringify({ connect, start }));
   fd.append("audio", new Blob([wavBytes], { type: "audio/wav" }), "clip.wav");
