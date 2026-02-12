@@ -169,7 +169,7 @@ function makeConnectStart({ appKey, secretKey, userId, coreType, refText, dictDi
         model: "non_native",
         scale: 100,
         precision: 0.6,
-        slack: 0,
+        slack: 1,
         tokenId,
       },
     },
