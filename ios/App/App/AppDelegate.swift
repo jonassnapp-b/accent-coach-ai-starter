@@ -1,8 +1,7 @@
 import UIKit
 import Capacitor
 import FirebaseCore
-
-
+ 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
