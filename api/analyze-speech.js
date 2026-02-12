@@ -128,7 +128,7 @@ async function toWavPcm16Mono16k(inputBuf, inputMimeHint = "") {
 // ---------- SpeechSuper helpers ----------
 const sha1 = (s) => createHash("sha1").update(s).digest("hex");
 
-function makeConnectStart({ appKey, secretKey, userId, coreType, refText, dictDialect }) {
+function makeConnectStart({ appKey, secretKey, userId, coreType, refText, dictDialect, slack }) {
   const ts = Date.now().toString();
   const tokenId = randomUUID().replace(/-/g, "").toUpperCase();
 
@@ -169,7 +169,7 @@ function makeConnectStart({ appKey, secretKey, userId, coreType, refText, dictDi
         model: "non_native",
         scale: 100,
         precision: 0.6,
-        slack: -1,
+        slack: Number.isFinite(slack) ? slack : -1,
         tokenId,
       },
     },
@@ -186,17 +186,21 @@ async function postSpeechSuperExact({
   refText,
   wavBytes,
   dictDialect,
+  slack,
 }) {
+
   const url = `${host.replace(/\/$/, "")}/${coreType}`;
   
-  const { connect, start } = makeConnectStart({
-    appKey,
-    secretKey,
-    userId,
-    coreType,
-    refText,
-    dictDialect,
-  });
+const { connect, start } = makeConnectStart({
+  appKey,
+  secretKey,
+  userId,
+  coreType,
+  refText,
+  dictDialect,
+  slack,
+});
+console.log("SLACK SENT:", start?.param?.request?.slack);
 
   
   const fd = new FormData();
@@ -399,6 +403,10 @@ router.post("/", upload.single("audio"), async (req, res) => {
 
     const body = req.body || {};
 
+    const slackRaw = Number(body.slack);
+const slack = Number.isFinite(slackRaw) ? Math.max(-1, Math.min(1, slackRaw)) : -1;
+
+
 let refText = String(
   body.refText ??
   body.text ??
@@ -454,16 +462,18 @@ if (!refText) {
   String(req.headers["x-user-id"] || "").trim() ||
   "local";
 
-    const ss = await postSpeechSuperExact({
-      host,
-      coreType,
-      appKey,
-      secretKey,
-      userId,
-      refText,
-      wavBytes,
-      dictDialect,
-    });
+const ss = await postSpeechSuperExact({
+  host,
+  coreType,
+  appKey,
+  secretKey,
+  userId,
+  refText,
+  wavBytes,
+  dictDialect,
+  slack,
+});
+
 try {
   const root = ss?.result || ss?.text_score || ss || {};
   const words0 = (root.words || root.word_score_list || root.wordList || root.word_scores || [])[0];
@@ -513,6 +523,7 @@ try {
   console.warn("[WeaknessLab] save failed:", e?.message || e);
 }
 
+ui._debugSlack = { received: slack, sentToSpeechSuper: slack };
 
     return res.status(200).json(ui);
 } catch (err) {
