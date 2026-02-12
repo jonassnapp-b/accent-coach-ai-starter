@@ -1575,7 +1575,7 @@ const t2 = setTimeout(() => setIntroPhase(2), 2400);
 
 // Count-up when introPhase hits 1
 useEffect(() => {
-  if (slideIdx !== 0 && slideIdx !== 1) return;
+  if (slideIdx !== 0) return;
   if (introPhase !== 1) return;
 
   const target = deckScore;
@@ -2036,6 +2036,18 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
       };
 
       setResult(payload);
+      if (!IS_PROD) {
+  console.log("PRACTICE_MY_TEXT payload.overall fields:", {
+    overall: payload?.overall,
+    pronunciation: payload?.pronunciation,
+    overallAccuracy: payload?.overallAccuracy,
+    apiOverallRaw: json?.overall,
+    apiPronRaw: json?.pronunciation,
+    apiAccRaw: json?.overallAccuracy,
+    psmOverall: psm?.overall,
+  });
+}
+
 setOverallPctLocked(Math.max(0, Math.min(100, Number(overall) || 0)));
 
 const trophyReached = Number(payload.overall) >= TROPHY_REACHED_PCT;
