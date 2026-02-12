@@ -1394,6 +1394,7 @@ const [canRetryAnalyze, setCanRetryAnalyze] = useState(false);
   const [overallPctLocked, setOverallPctLocked] = useState(0);
   const deckPctRef = useRef(null);
 const [deckPctLocked, setDeckPctLocked] = useState(0);
+const deckScore = Number.isFinite(deckPctLocked) ? deckPctLocked : 0;
 
 
   const [isClosingSlides, setIsClosingSlides] = useState(false);
@@ -1574,50 +1575,49 @@ const t2 = setTimeout(() => setIntroPhase(2), 2400);
 
 // Count-up when introPhase hits 1
 useEffect(() => {
-  if (!result) return;
   if (slideIdx !== 0) return;
   if (introPhase !== 1) return;
 
-const target = Math.max(0, Math.min(100, Number(deckPctLocked) || 0));
+  const target = deckScore;
+
   let raf = 0;
   const start = performance.now();
-  const dur = 1600; // ms
+  const dur = 1600;
 
   const tick = (now) => {
     const p = Math.min(1, (now - start) / dur);
-    const val = Math.round(target * p);
-    setIntroPct(val);
+    setIntroPct(Math.round(target * p));
     if (p < 1) raf = requestAnimationFrame(tick);
   };
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [result, introPhase, slideIdx, deckPctLocked]);
+}, [slideIdx, introPhase, deckScore]);
+
 // Slide 2: bubble + percent count up (0 -> tracked)
 useEffect(() => {
-  if (!result) return;
   if (slideIdx !== 1) return;
 
-const target = Math.max(0, Math.min(100, Number(deckPctLocked) || 0));
+  const target = deckScore;
 
   setLevelPctAnim(0);
 
   let raf = 0;
   const start = performance.now();
-  const dur = 1400; // ms (tweak if needed)
+  const dur = 1400;
 
   const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
   const tick = (now) => {
     const p = Math.min(1, (now - start) / dur);
-    const eased = easeOutCubic(p);
-    setLevelPctAnim(Math.round(target * eased));
+    setLevelPctAnim(Math.round(target * easeOutCubic(p)));
     if (p < 1) raf = requestAnimationFrame(tick);
   };
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [result, slideIdx, deckPctLocked]);
+}, [slideIdx, deckScore]);
+
 
 function stopLoopTimer() {
   if (loopTimerRef.current) {
@@ -2130,6 +2130,7 @@ const CloseSlidesX = ({ top = `calc(${SAFE_TOP} + 24px)`, right = "12px" }) => (
 );
 
 
+
  return (
   <div
     className="page"
@@ -2450,7 +2451,7 @@ fontSize: 18,
 ) : slideIdx === 1 ? (
   // ----- Speech Level (SLIDE 2 – MATCH IMAGE 2) -----
   (() => {
-   const tracked = deckPctLocked;
+   const tracked = deckScore;
 
 const LEVELS = ["Native", "Proficient", "Advanced", "Intermediate", "Beginner", "Novice"];
 const n = LEVELS.length;
