@@ -2460,21 +2460,7 @@ textShadow: "0 8px 22px rgba(0,0,0,0.16)",
     paintOrder: "stroke fill",
   }}
 >
-  <span style={{ display: "inline-flex", alignItems: "baseline" }}>
-  <span>{introPct}</span>
-  <span
-    style={{
-      fontSize: "0.62em",
-      letterSpacing: "-0.6px",
-      opacity: 0.98,
-      transform: "translateY(-0.12em)",
-      display: "inline-block",
-      marginLeft: 2,
-    }}
-  >
-    %
-  </span>
-</span>
+  {introPct}%
 </div>
 
 
