@@ -1603,7 +1603,7 @@ useEffect(() => {
 
   let raf = 0;
   const start = performance.now();
-  const dur = 420;
+  const dur = 1400;
 
   const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
