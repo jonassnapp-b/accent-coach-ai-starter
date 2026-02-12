@@ -2128,6 +2128,19 @@ const CloseSlidesX = ({ top = `calc(${SAFE_TOP} + 24px)`, right = "12px" }) => (
     <X className="h-5 w-5" />
   </button>
 );
+// ✅ DEBUG: lige her (stadig inde i PracticeMyText)
+useEffect(() => {
+  if (!result) return;
+  console.log("DEBUG VALUES", {
+    overallPctLocked,
+    deckPctLocked,
+    deckPctRef: deckPctRef.current,
+    introPct,
+    levelPctAnim,
+    slideIdx,
+    resultOverall: result?.overall,
+  });
+}, [result, overallPctLocked, deckPctLocked, introPct, levelPctAnim, slideIdx]);
 
 
  return (
