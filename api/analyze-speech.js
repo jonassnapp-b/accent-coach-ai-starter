@@ -125,6 +125,17 @@ async function toWavPcm16Mono16k(inputBuf, inputMimeHint = "") {
   });
 }
 
+// ---------- Slack default (single source of truth) ----------
+// -1..1 (SpeechSuper). Default = 0 (recommended).
+const DEFAULT_SLACK = 0;
+
+function parseSlack(raw) {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return DEFAULT_SLACK;
+  return Math.max(-1, Math.min(1, n));
+}
+
+
 // ---------- SpeechSuper helpers ----------
 const sha1 = (s) => createHash("sha1").update(s).digest("hex");
 
@@ -169,7 +180,7 @@ function makeConnectStart({ appKey, secretKey, userId, coreType, refText, dictDi
         model: "non_native",
         scale: 100,
         precision: 0.6,
-        slack: Number.isFinite(slack) ? slack : -1,
+        slack: parseSlack(slack),
         tokenId,
       },
     },
@@ -191,8 +202,7 @@ async function postSpeechSuperExact({
 
   const url = `${host.replace(/\/$/, "")}/${coreType}`;
 
-  console.log("[SLACK CHECK] typeof slack:", typeof slack, "value:", slack);
-
+  
 const { connect, start } = makeConnectStart({
   appKey,
   secretKey,
@@ -202,9 +212,7 @@ const { connect, start } = makeConnectStart({
   dictDialect,
   slack,
 });
-console.log("SLACK SENT:", start?.param?.request?.slack);
-console.log("[SLACK TEST] coreType:", coreType);
-console.log("[SLACK TEST] slack:", start?.param?.request?.slack);
+
 
   
   const fd = new FormData();
@@ -407,8 +415,7 @@ router.post("/", upload.single("audio"), async (req, res) => {
 
     const body = req.body || {};
 
-    const slackRaw = Number(body.slack);
-const slack = Number.isFinite(slackRaw) ? Math.max(-1, Math.min(1, slackRaw)) : -1;
+    const slack = parseSlack(body.slack);
 
 
 let refText = String(
@@ -460,56 +467,15 @@ if (!refText) {
     console.log("[analyze-speech] received audio mime:", mimeHint);
 
     const wavBytes = await toWavPcm16Mono16k(rawBuf, mimeHint);
-    const slackCompare =
-  String(body.slackCompare || req.headers["x-slack-compare"] || "").trim() === "1";
+const coreType = /\s/.test(refText) ? "sent.eval.promax" : "word.eval.promax";
 
-    const coreType = /\s/.test(refText) ? "sent.eval.promax" : "word.eval.promax";
-    const userId =
+const userId =
   String(body.userId || "").trim() ||
   String(req.headers["x-user-id"] || "").trim() ||
   "local";
 
 let ss = null;
 
-if (slackCompare) {
-  const ssA = await postSpeechSuperExact({
-    host,
-    coreType,
-    appKey,
-    secretKey,
-    userId,
-    refText,
-    wavBytes,
-    dictDialect,
-    slack: -1,
-  });
-
-  const ssB = await postSpeechSuperExact({
-    host,
-    coreType,
-    appKey,
-    secretKey,
-    userId,
-    refText,
-    wavBytes,
-    dictDialect,
-    slack: 1,
-  });
-
-  const uiAccent = dictDialect === "en_br" ? "en-GB" : "en-US";
-  const uiA = mapSpeechsuperToUi(ssA, refText, uiAccent);
-  const uiB = mapSpeechsuperToUi(ssB, refText, uiAccent);
-
-  return res.status(200).json({
-    _slackCompare: {
-      a: { sent: -1, overallAccuracy: uiA.overallAccuracy },
-      b: { sent: 1, overallAccuracy: uiB.overallAccuracy },
-      deltaOverall: (uiB.overallAccuracy ?? 0) - (uiA.overallAccuracy ?? 0),
-    },
-    a: uiA,
-    b: uiB,
-  });
-}
 
 ss = await postSpeechSuperExact({
   host,
