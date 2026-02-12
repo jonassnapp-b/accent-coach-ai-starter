@@ -2335,7 +2335,9 @@ boxShadow: PAGE_SHADOW,
       position: "fixed",
       inset: 0,
       height: "100dvh",
-      background: "#2092EC",
+background:
+  "radial-gradient(1200px 700px at 50% 15%, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.00) 52%), " +
+  "linear-gradient(180deg, #2F9AF2 0%, #2092EC 45%, #1B78D6 100%)",
       color: "white",
       zIndex: 9999,
   paddingTop: 0,
@@ -2450,15 +2452,29 @@ paintOrder: "stroke fill",
     transition: "all 800ms ease",
     fontWeight: 950,
     fontSize: computePctFontSize(heroText, 100, 66),
-    lineHeight: 1,
-    letterSpacing: -1.0,
-color: "#ffffff",
-    textShadow: "none",
+   lineHeight: 0.92,
+letterSpacing: -1.6,
+    color: pfColorForPct(overallScore),
+textShadow: "0 8px 22px rgba(0,0,0,0.16)",
     WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
     paintOrder: "stroke fill",
   }}
 >
-  {introPct}%
+  <span style={{ display: "inline-flex", alignItems: "baseline" }}>
+  <span>{introPct}</span>
+  <span
+    style={{
+      fontSize: "0.62em",
+      letterSpacing: "-0.6px",
+      opacity: 0.98,
+      transform: "translateY(-0.12em)",
+      display: "inline-block",
+      marginLeft: 2,
+    }}
+  >
+    %
+  </span>
+</span>
 </div>
 
 
