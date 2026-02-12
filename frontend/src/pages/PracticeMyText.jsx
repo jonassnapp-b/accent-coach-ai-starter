@@ -2336,8 +2336,10 @@ boxShadow: PAGE_SHADOW,
       inset: 0,
       height: "100dvh",
 background:
+  "radial-gradient(800px 420px at 50% 26%, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.00) 62%), " +
   "radial-gradient(1200px 700px at 50% 15%, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.00) 52%), " +
   "linear-gradient(180deg, #2F9AF2 0%, #2092EC 45%, #1B78D6 100%)",
+
       color: "white",
       zIndex: 9999,
   paddingTop: 0,
@@ -2469,9 +2471,10 @@ color: "#ffffff",
     style={{
       marginTop: 0,
       textAlign: "center",
- fontWeight: 700,
+       fontWeight: 650,
+
 fontSize: 18,
-color: "rgba(255,255,255,0.85)",
+      color: "rgba(255,255,255,0.80)",
 
       textShadow: "none",
       opacity: introPhase >= 2 ? 1 : 0,
