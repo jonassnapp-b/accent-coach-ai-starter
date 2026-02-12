@@ -201,6 +201,8 @@ const { connect, start } = makeConnectStart({
   slack,
 });
 console.log("SLACK SENT:", start?.param?.request?.slack);
+console.log("[SLACK TEST] coreType:", coreType);
+console.log("[SLACK TEST] slack:", start?.param?.request?.slack);
 
   
   const fd = new FormData();
