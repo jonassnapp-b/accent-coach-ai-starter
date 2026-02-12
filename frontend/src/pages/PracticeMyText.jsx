@@ -1391,6 +1391,8 @@ const [canRetryAnalyze, setCanRetryAnalyze] = useState(false);
 
 
   const [result, setResult] = useState(null);
+  const [overallPctLocked, setOverallPctLocked] = useState(0);
+
   const [isClosingSlides, setIsClosingSlides] = useState(false);
 
   // Load analysis result from Practice.jsx (via navigate state or sessionStorage)
@@ -1401,6 +1403,11 @@ useEffect(() => {
 
   if (fromState) {
     setResult(fromState);
+    const v = fromState?.overall ?? fromState?.pronunciation ?? fromState?.overallAccuracy ?? 0;
+const n = Number(v);
+const pct = Number.isFinite(n) ? (n <= 1 ? Math.round(n * 100) : Math.round(n)) : 0;
+setOverallPctLocked(Math.max(0, Math.min(100, pct)));
+
 
     // ✅ sync UI with the result we arrived with
     setAccentUi(fromState?.accent || settings?.accentDefault || "en_us");
@@ -1419,6 +1426,11 @@ useEffect(() => {
     if (raw) {
       const parsed = JSON.parse(raw);
       setResult(parsed);
+      const v = parsed?.overall ?? parsed?.pronunciation ?? parsed?.overallAccuracy ?? 0;
+const n = Number(v);
+const pct = Number.isFinite(n) ? (n <= 1 ? Math.round(n * 100) : Math.round(n)) : 0;
+setOverallPctLocked(Math.max(0, Math.min(100, pct)));
+
       setAccentUi(parsed?.accent || settings?.accentDefault || "en_us");
       setRefText(String(parsed?.refText || ""));
       // NOTE: blob is usually not in sessionStorage; url might be.
@@ -1556,7 +1568,7 @@ useEffect(() => {
   if (slideIdx !== 0) return;
   if (introPhase !== 1) return;
 
-  const target = Math.max(0, Math.min(100, Number(overallScore) || 0));
+  const target = Math.max(0, Math.min(100, Number(overallPctLocked) || 0));
   let raf = 0;
   const start = performance.now();
   const dur = 1600; // ms
@@ -1570,13 +1582,13 @@ useEffect(() => {
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [result, introPhase, slideIdx, overallScore]);
+}, [result, introPhase, slideIdx, overallPctLocked]);
 // Slide 2: bubble + percent count up (0 -> tracked)
 useEffect(() => {
   if (!result) return;
   if (slideIdx !== 1) return;
 
-  const target = Math.max(0, Math.min(100, Number(overallScore) || 0));
+  const target = Math.max(0, Math.min(100, Number(overallPctLocked) || 0));
 
   setLevelPctAnim(0);
 
@@ -1595,7 +1607,7 @@ useEffect(() => {
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [result, slideIdx, overallScore]);
+}, [result, slideIdx, overallPctLocked]);
 
 function stopLoopTimer() {
   if (loopTimerRef.current) {
@@ -2011,6 +2023,7 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
       };
 
       setResult(payload);
+setOverallPctLocked(Math.max(0, Math.min(100, Number(overall) || 0)));
 
 const trophyReached = Number(payload.overall) >= TROPHY_REACHED_PCT;
 
@@ -2392,7 +2405,7 @@ paintOrder: "stroke fill",
     fontSize: computePctFontSize(heroText, 108, 66),
     lineHeight: 1,
     letterSpacing: -1.0,
-color: pfColorForPct(overallScore),
+color: pfColorForPct(overallPctLocked),
     textShadow: "none",
     WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
     paintOrder: "stroke fill",
@@ -2418,7 +2431,7 @@ fontSize: 18,
       transition: "all 650ms ease",
     }}
   >
-    {pickShortLineFromScore(overallScore)}
+    {pickShortLineFromScore(overallPctLocked)}
   </div>
 </div>
 
@@ -2427,7 +2440,7 @@ fontSize: 18,
 ) : slideIdx === 1 ? (
   // ----- Speech Level (SLIDE 2 – MATCH IMAGE 2) -----
   (() => {
-   const tracked = overallScore;
+   const tracked = overallPctLocked;
 
 const LEVELS = ["Native", "Proficient", "Advanced", "Intermediate", "Beginner", "Novice"];
 const n = LEVELS.length;
