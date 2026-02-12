@@ -2653,7 +2653,7 @@ minWidth: 118,
               }}
             >
              <div style={{ color: "#fb923c", fontSize: 22, lineHeight: 1.0 }}>You</div>
-<div style={{ fontSize: 22, lineHeight: 1.0 }}>{introPct}%</div>
+<div style={{ fontSize: 22, lineHeight: 1.0 }}>{levelPctAnim}%</div>
 
 
               {/* bubble pointer */}
@@ -2811,24 +2811,14 @@ preload="auto"
       cursor: "pointer",
     }}
   >
- {trophyCelebration && (
+    {trophyCelebration && (
   <>
     <style>{`
-      @keyframes acTrophyIn {
-        0%   { transform: translateY(14px) scale(0.92); opacity: 0; }
-        18%  { transform: translateY(0px)  scale(1.02); opacity: 1; }
-        55%  { transform: translateY(0px)  scale(1.00); opacity: 1; }
-        100% { transform: translateY(-10px) scale(0.98); opacity: 0; }
-      }
-      @keyframes acSpark {
-        0%   { transform: translate(var(--sx, 0px), var(--sy, 0px)) scale(0.6) rotate(0deg); opacity: 0; }
-        15%  { opacity: 1; }
-        100% { transform: translate(var(--ex, 0px), var(--ey, 0px)) scale(1.15) rotate(35deg); opacity: 0; }
-      }
-      @keyframes acRing {
-        0%   { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
-        20%  { opacity: 0.9; }
-        100% { transform: translate(-50%, -50%) scale(1.35); opacity: 0; }
+      @keyframes trophyPop {
+        0%   { transform: translateY(10px) scale(0.98); opacity: 0; }
+        15%  { transform: translateY(0px)  scale(1.00); opacity: 1; }
+        75%  { transform: translateY(0px)  scale(1.00); opacity: 1; }
+        100% { transform: translateY(-6px) scale(0.99); opacity: 0; }
       }
     `}</style>
 
@@ -2837,91 +2827,31 @@ preload="auto"
         position: "absolute",
         left: 0,
         right: 0,
-        top: `calc(${SAFE_TOP} + 10px)`,
+        top: `calc(${SAFE_TOP} + 12px)`,
         display: "flex",
         justifyContent: "center",
         zIndex: 10001,
         pointerEvents: "none",
       }}
     >
-      <div style={{ position: "relative" }}>
-        {/* expanding ring behind */}
-        <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-            width: 140,
-            height: 58,
-            borderRadius: 999,
-            border: "1px solid rgba(255,255,255,0.32)",
-            background: "rgba(255,255,255,0.06)",
-            transform: "translate(-50%, -50%)",
-            animation: "acRing 900ms ease-out both",
-          }}
-        />
-
-        {/* sparkle particles */}
-        {[
-          { ex: -46, ey: -28, d: 0 },
-          { ex: -28, ey: -40, d: 40 },
-          { ex: -10, ey: -46, d: 80 },
-          { ex:  14, ey: -44, d: 60 },
-          { ex:  34, ey: -36, d: 20 },
-          { ex:  52, ey: -22, d: 90 },
-          { ex: -52, ey:  18, d: 70 },
-          { ex: -34, ey:  30, d: 110 },
-          { ex: -12, ey:  34, d: 30 },
-          { ex:  12, ey:  34, d: 100 },
-          { ex:  34, ey:  28, d: 50 },
-          { ex:  54, ey:  14, d: 120 },
-        ].map((p, i) => (
-          <div
-            key={`spark_${i}`}
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "50%",
-              width: 8,
-              height: 8,
-              borderRadius: 999,
-              background: "rgba(255,255,255,0.92)",
-              boxShadow: "0 0 0 3px rgba(255,255,255,0.12)",
-              transform: "translate(-50%, -50%)",
-              animation: "acSpark 760ms ease-out both",
-              animationDelay: `${p.d}ms`,
-              // start a tiny random-ish offset so it doesn't look perfectly radial
-              ["--sx"]: `${(i % 3) - 1}px`,
-              ["--sy"]: `${((i + 1) % 3) - 1}px`,
-              ["--ex"]: `${p.ex}px`,
-              ["--ey"]: `${p.ey}px`,
-            }}
-          />
-        ))}
-
-        {/* banner */}
-        <div
-          style={{
-            padding: "10px 14px",
-            borderRadius: 18,
-            background: "rgba(255,255,255,0.16)",
-            border: "1px solid rgba(255,255,255,0.22)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
-            fontWeight: 950,
-            letterSpacing: -0.2,
-            animation: "acTrophyIn 1200ms cubic-bezier(0.2, 0.9, 0.2, 1) both",
-          }}
-        >
-          <span style={{ marginRight: 8 }}>🏆</span>
-          Trophy reached!
-          <span style={{ marginLeft: 8 }}>✨</span>
-        </div>
+      <div
+        style={{
+          padding: "10px 14px",
+          borderRadius: 18,
+          background: "rgba(255,255,255,0.16)",
+          border: "1px solid rgba(255,255,255,0.22)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          fontWeight: 950,
+          letterSpacing: -0.2,
+          animation: "trophyPop 2400ms ease both",
+        }}
+      >
+        🏆 Trophy reached!
       </div>
     </div>
   </>
 )}
-
 
     <div
       style={{
