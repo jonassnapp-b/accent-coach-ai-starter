@@ -1592,7 +1592,7 @@ const target = Math.max(0, Math.min(100, Number(deckPctLocked) || 0));
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [result, introPhase, slideIdx, overallPctLocked]);
+}, [result, introPhase, slideIdx, deckPctLocked]);
 // Slide 2: bubble + percent count up (0 -> tracked)
 useEffect(() => {
   if (!result) return;
@@ -1617,7 +1617,7 @@ const target = Math.max(0, Math.min(100, Number(deckPctLocked) || 0));
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [result, slideIdx, overallPctLocked]);
+}, [result, slideIdx, deckPctLocked]);
 
 function stopLoopTimer() {
   if (loopTimerRef.current) {
@@ -2128,19 +2128,6 @@ const CloseSlidesX = ({ top = `calc(${SAFE_TOP} + 24px)`, right = "12px" }) => (
     <X className="h-5 w-5" />
   </button>
 );
-// ✅ DEBUG: lige her (stadig inde i PracticeMyText)
-useEffect(() => {
-  if (!result) return;
-  console.log("DEBUG VALUES", {
-    overallPctLocked,
-    deckPctLocked,
-    deckPctRef: deckPctRef.current,
-    introPct,
-    levelPctAnim,
-    slideIdx,
-    resultOverall: result?.overall,
-  });
-}, [result, overallPctLocked, deckPctLocked, introPct, levelPctAnim, slideIdx]);
 
 
  return (
