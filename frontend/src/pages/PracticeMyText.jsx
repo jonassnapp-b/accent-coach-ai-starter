@@ -1455,6 +1455,42 @@ const [introPhase, setIntroPhase] = useState(0);
 const [introPct, setIntroPct] = useState(0);
 // Slide 2 (Speaking Level) animation
 const [levelPctAnim, setLevelPctAnim] = useState(0);
+const introTimersRef = useRef({ t1: null, t2: null });
+useEffect(() => {
+  if (!result) return;
+
+  // Clear any previous intro timers on slide changes
+  try {
+    if (introTimersRef.current.t1) clearTimeout(introTimersRef.current.t1);
+    if (introTimersRef.current.t2) clearTimeout(introTimersRef.current.t2);
+  } catch {}
+  introTimersRef.current.t1 = null;
+  introTimersRef.current.t2 = null;
+
+  // Entering Slide 1: always restart intro flow + count-up from 0 -> deckPctLocked
+  if (slideIdx === 0) {
+    setIntroPhase(0);
+    setIntroPct(0);
+
+    const t1 = setTimeout(() => setIntroPhase(1), 900);
+    const t2 = setTimeout(() => setIntroPhase(2), 2400);
+
+    introTimersRef.current.t1 = t1;
+    introTimersRef.current.t2 = t2;
+
+    return () => {
+      try {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      } catch {}
+    };
+  }
+
+  // Entering Slide 2: always restart the dot/bubble animation baseline
+  if (slideIdx === 1) {
+    setLevelPctAnim(0);
+  }
+}, [slideIdx, result]);
 
 
 const [loopOn, setLoopOn] = useState(false);
@@ -1556,14 +1592,21 @@ const pct = Number.isFinite(n) ? (n <= 1 ? Math.round(n * 100) : Math.round(n)) 
 const locked = Math.max(0, Math.min(100, pct));
 deckPctRef.current = locked;
 setDeckPctLocked(locked);
-  setSlideIdx(0);
+   setSlideIdx(0);
 
+  // reset animations (slide-change effect will start timers for slide 1)
   setIntroPhase(0);
   setIntroPct(0);
+  setLevelPctAnim(0);
 
-  // phase timings (feel free to tweak)
-const t1 = setTimeout(() => setIntroPhase(1), 900);
-const t2 = setTimeout(() => setIntroPhase(2), 2400);
+  // also clear any pending intro timers for safety
+  try {
+    if (introTimersRef.current.t1) clearTimeout(introTimersRef.current.t1);
+    if (introTimersRef.current.t2) clearTimeout(introTimersRef.current.t2);
+  } catch {}
+  introTimersRef.current.t1 = null;
+  introTimersRef.current.t2 = null;
+
 
 
   // count-up starts when phase becomes 1
@@ -1594,15 +1637,12 @@ useEffect(() => {
   return () => cancelAnimationFrame(raf);
 }, [slideIdx, introPhase, deckScore]);
 
-// Slide 2: animate DOT up to the locked deck score (NOT introPct)
+// Slide 2: animate dot + bubble to the SAME locked deck score (always)
 useEffect(() => {
   if (slideIdx !== 1) return;
 
-  const target = Math.max(0, Math.min(100, Number(deckScore) || 0));
-  const from = 0;
-
-  // reset on entry
-  setLevelPctAnim(from);
+  const target = Math.max(0, Math.min(100, Number(deckPctLocked) || 0));
+  const from = 0; // we reset levelPctAnim to 0 when entering slide 2
 
   let raf = 0;
   const start = performance.now();
@@ -1619,8 +1659,7 @@ useEffect(() => {
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [slideIdx, deckScore]);
-
+}, [slideIdx, deckPctLocked]);
 
 
 
