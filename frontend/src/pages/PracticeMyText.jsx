@@ -2010,8 +2010,7 @@ sendToServer(blob, localUrl);
       fd.append("refText", text);
       fd.append("accent", accentUi === "en_br" ? "en_br" : "en_us");
 
-      fd.append("slack", "1");
-
+      
       // hard timeout
       const controller = new AbortController();
     const timeoutMs = 12000; // keep your value
