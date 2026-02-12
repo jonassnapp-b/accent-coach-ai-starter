@@ -1575,7 +1575,7 @@ const t2 = setTimeout(() => setIntroPhase(2), 2400);
 
 // Count-up when introPhase hits 1
 useEffect(() => {
-  if (slideIdx !== 0 && slideIdx !== 1) return;
+  if (slideIdx !== 0) return;
   if (introPhase !== 1) return;
 
   const target = deckScore;
@@ -1598,8 +1598,9 @@ useEffect(() => {
 useEffect(() => {
   if (slideIdx !== 1) return;
 
-  const target = Math.max(0, Math.min(100, Number(introPct) || 0));
-  const from = Math.max(0, Math.min(100, Number(levelPctAnim) || 0));
+  const target = Math.max(0, Math.min(100, Number(deckScore) || 0));
+  const from = 0;
+
 
   let raf = 0;
   const start = performance.now();
@@ -1616,7 +1617,7 @@ useEffect(() => {
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [slideIdx, introPct]);
+}, [slideIdx, deckScore]);
 
 
 
@@ -2452,7 +2453,7 @@ fontSize: 18,
 ) : slideIdx === 1 ? (
   // ----- Speech Level (SLIDE 2 – MATCH IMAGE 2) -----
   (() => {
-   const tracked = introPct;
+   const tracked = deckScore;
 
 const LEVELS = ["Native", "Proficient", "Advanced", "Intermediate", "Beginner", "Novice"];
 const n = LEVELS.length;
