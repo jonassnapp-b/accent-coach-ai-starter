@@ -1455,7 +1455,6 @@ const [introPhase, setIntroPhase] = useState(0);
 const [introPct, setIntroPct] = useState(0);
 // Slide 2 (Speaking Level) animation
 const [levelPctAnim, setLevelPctAnim] = useState(0);
-const introTimersRef = useRef({ t1: null, t2: null });
 
 
 const [loopOn, setLoopOn] = useState(false);
