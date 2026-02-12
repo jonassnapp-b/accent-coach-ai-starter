@@ -11,26 +11,7 @@ import PhonemeFeedback, { pfColorForPct } from "../components/PhonemeFeedback.js
 const IS_PROD = !!import.meta?.env?.PROD;
 const RETRY_INTENT_KEY = "ac_my_text_retry_intent_v1";
 const TROPHY_REACHED_PCT = 95; // justér hvis du vil gøre den hårdere/lettere
-
-// smoothing: 0.10 = meget glidende, 0.20 = mere responsiv
-const EMA_ALPHA = 0.15;
-
-
-
-function loadLevelEma() {
-  try {
-    const raw = localStorage.getItem(LEVEL_EMA_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveLevelEma(obj) {
-  try {
-    localStorage.setItem(LEVEL_EMA_KEY, JSON.stringify(obj));
-  } catch {}
-}
+const TROPHY_REACHED_KEY = "ac_my_text_trophy_reached_v1";
 
 function hasTrophyCelebrated() {
   try {
@@ -2351,8 +2332,6 @@ paddingTop: slideIdx === 0 ? 0 : 0, // mere space over overskriften på Playback
   paddingRight: 16,
 
   // ✅ equal spacing between hero, % and line
-display: "flex",
-flexDirection: "column",
 display: "flex",
 flexDirection: "column",
 justifyContent: "center",
