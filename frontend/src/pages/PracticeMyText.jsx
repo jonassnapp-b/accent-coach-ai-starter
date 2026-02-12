@@ -1598,9 +1598,8 @@ useEffect(() => {
 useEffect(() => {
   if (slideIdx !== 1) return;
 
-  const target = Math.max(0, Math.min(100, Number(deckScore) || 0));
-  const from = 0;
-
+  const target = Math.max(0, Math.min(100, Number(introPct) || 0));
+  const from = Math.max(0, Math.min(100, Number(levelPctAnim) || 0));
 
   let raf = 0;
   const start = performance.now();
@@ -1617,7 +1616,7 @@ useEffect(() => {
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [slideIdx, deckScore]);
+}, [slideIdx, introPct]);
 
 
 
