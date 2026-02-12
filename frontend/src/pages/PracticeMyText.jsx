@@ -1594,12 +1594,15 @@ useEffect(() => {
   return () => cancelAnimationFrame(raf);
 }, [slideIdx, introPhase, deckScore]);
 
-// Slide 2: animate the DOT up to the (same) introPct value
+// Slide 2: animate DOT up to the locked deck score (NOT introPct)
 useEffect(() => {
   if (slideIdx !== 1) return;
 
-  const target = Math.max(0, Math.min(100, Number(introPct) || 0));
-  const from = Math.max(0, Math.min(100, Number(levelPctAnim) || 0));
+  const target = Math.max(0, Math.min(100, Number(deckScore) || 0));
+  const from = 0;
+
+  // reset on entry
+  setLevelPctAnim(from);
 
   let raf = 0;
   const start = performance.now();
@@ -1616,7 +1619,8 @@ useEffect(() => {
 
   raf = requestAnimationFrame(tick);
   return () => cancelAnimationFrame(raf);
-}, [slideIdx, introPct]);
+}, [slideIdx, deckScore]);
+
 
 
 
