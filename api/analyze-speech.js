@@ -188,11 +188,7 @@ async function postSpeechSuperExact({
   dictDialect,
 }) {
   const url = `${host.replace(/\/$/, "")}/${coreType}`;
-  console.log("=== SLACK DEBUG ===");
-console.log("Slack value being sent:", start?.request?.slack);
-console.log("Full request object:", JSON.stringify(start?.request, null, 2));
-console.log("====================");
-
+  
   const { connect, start } = makeConnectStart({
     appKey,
     secretKey,
@@ -201,6 +197,11 @@ console.log("====================");
     refText,
     dictDialect,
   });
+
+  console.log("=== SLACK DEBUG ===");
+console.log("Slack value being sent:", start?.param?.request?.slack);
+console.log("Full request object:", JSON.stringify(start?.param?.request, null, 2));
+console.log("====================");
 
   const fd = new FormData();
   fd.append("text", JSON.stringify({ connect, start }));
