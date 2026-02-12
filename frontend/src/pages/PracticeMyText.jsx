@@ -2442,22 +2442,25 @@ paintOrder: "stroke fill",
 
   {/* PERCENT (below text, adaptive size) */}
     <div
-    style={{
-      marginTop: 2,
-marginBottom: 18,
-      opacity: introPhase >= 1 ? 1 : 0,
-      transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-      transition: "all 800ms ease",
-      fontWeight: 950,
-      fontSize: computePctFontSize(heroText, 100, 66),
-      lineHeight: 1,
-      letterSpacing: -1.0,
-      color: pfColorForPct(overallScore),
-      textShadow: "none",
-    }}
-  >
-    {introPct}%
-  </div>
+  style={{
+    marginTop: 2,
+    marginBottom: 18,
+    opacity: introPhase >= 1 ? 1 : 0,
+    transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
+    transition: "all 800ms ease",
+    fontWeight: 950,
+    fontSize: computePctFontSize(heroText, 100, 66),
+    lineHeight: 1,
+    letterSpacing: -1.0,
+    color: pfColorForPct(overallScore),
+    textShadow: "none",
+    WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
+    paintOrder: "stroke fill",
+  }}
+>
+  {introPct}%
+</div>
+
 
   {/* ✅ MOVE THIS INSIDE THE WRAPPER (so space-between works) */}
   <div
