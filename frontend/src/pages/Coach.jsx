@@ -383,30 +383,32 @@ export default function Coach() {
     WebkitBackdropFilter: "blur(10px)",
   };
 
-  const pickerCenter = {
-    textAlign: "center",
-    fontWeight: 950,
-    fontSize: 26,
-    color: LIGHT_TEXT,
-    lineHeight: 1.05,
-    letterSpacing: -0.2,
-  };
+const pickerCenter = {
+  textAlign: "center",
+  fontWeight: 950,
+  fontSize: 26,
+  color: LIGHT_TEXT,
+  lineHeight: 1.02,
+  letterSpacing: -0.35,
+};
 
   const setupCard = {
-    background: "rgba(255,255,255,0.92)",
-    border: `1px solid rgba(0,0,0,0.08)`,
+   background: "rgba(255,255,255,0.96)",
+border: "1px solid rgba(17,24,39,0.08)",
     borderRadius: 28,
     padding: 18,
-    boxShadow: "0 18px 40px rgba(0,0,0,0.08)",
+boxShadow: "0 22px 60px rgba(17,24,39,0.10), 0 1px 0 rgba(255,255,255,0.8) inset",
     backdropFilter: "blur(12px)",
     WebkitBackdropFilter: "blur(12px)",
   };
 
-  const hairlineDivider = {
-    height: 1,
-    background: "rgba(17,24,39,0.10)",
-    margin: "14px 6px",
-  };
+const hairlineDivider = {
+  height: 1,
+  margin: "12px 10px",
+  background:
+    "linear-gradient(90deg, rgba(17,24,39,0.00), rgba(17,24,39,0.10), rgba(17,24,39,0.00))",
+};
+
 
   // Real iOS primary button: taller, full-ish width, depth
   const primaryBtn = {
@@ -414,13 +416,14 @@ export default function Coach() {
     width: "min(520px, 100%)",
     borderRadius: 999,
     border: "none",
-    background: BTN_BLUE,
+background: "linear-gradient(180deg, #2FA8FF 0%, #1E88E5 100%)",
     color: "white",
     fontWeight: 850,
     fontSize: 18,
     letterSpacing: -0.2,
     cursor: "pointer",
-    boxShadow: "0 14px 30px rgba(33,150,243,0.28), 0 2px 0 rgba(255,255,255,0.35) inset",
+boxShadow:
+  "0 22px 60px rgba(33,150,243,0.28), 0 1px 0 rgba(255,255,255,0.42) inset, 0 -1px 0 rgba(0,0,0,0.10) inset",
   };
 
 
@@ -456,7 +459,8 @@ export default function Coach() {
   style={{
     position: "relative",
     minHeight: "100vh",
-    background: "#FFFFFF",
+background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
+
     paddingBottom: 0,
     paddingTop: "var(--safe-top)",
     display: "flex",
@@ -499,12 +503,13 @@ export default function Coach() {
                     transition={{ duration: 0.18 }}
                    style={{
   display: "grid",
-  gap: 14,
+  gap: 16,
 
   // center the cluster, but keep it visually "middle 40–55%"
   minHeight: `calc(100vh - var(--safe-top) - ${TABBAR_OFFSET}px - ${SAFE_BOTTOM} - 24px)`,
   alignContent: "center",
 paddingTop: 10,
+transform: "translateY(-14px)",
 }}
 >
 <div style={{ ...setupCard }}>
@@ -518,7 +523,18 @@ paddingTop: 10,
     >
       <ChevronLeft className="h-7 w-7" />
     </button>
-    <div style={pickerCenter}>{MODE_LABEL[mode]}</div>
+    <AnimatePresence mode="wait" initial={false}>
+  <motion.div
+    key={mode}
+    style={pickerCenter}
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -8 }}
+    transition={{ type: "spring", stiffness: 700, damping: 45 }}
+  >
+    {MODE_LABEL[mode]}
+  </motion.div>
+</AnimatePresence>
     <button
       type="button"
       onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, 1))}
@@ -540,7 +556,18 @@ paddingTop: 10,
     >
       <ChevronLeft className="h-7 w-7" />
     </button>
-    <div style={pickerCenter}>{DIFF_LABEL[difficulty]}</div>
+    <AnimatePresence mode="wait" initial={false}>
+  <motion.div
+    key={difficulty}
+    style={pickerCenter}
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -8 }}
+    transition={{ type: "spring", stiffness: 700, damping: 45 }}
+  >
+    {DIFF_LABEL[difficulty]}
+  </motion.div>
+</AnimatePresence>
     <button
       type="button"
       onClick={() => setDifficulty((v) => cycleValue(DIFF_OPTIONS, v, 1))}
@@ -562,7 +589,18 @@ paddingTop: 10,
     >
       <ChevronLeft className="h-7 w-7" />
     </button>
-    <div style={{ ...pickerCenter, transform: "translateX(6px)" }}>{ACCENT_LABEL[accentUi]}</div>
+    <AnimatePresence mode="wait" initial={false}>
+  <motion.div
+    key={accentUi}
+    style={{ ...pickerCenter, transform: "translateX(6px)" }}
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -8 }}
+    transition={{ type: "spring", stiffness: 700, damping: 45 }}
+  >
+    {ACCENT_LABEL[accentUi]}
+  </motion.div>
+</AnimatePresence>
     <button
       type="button"
       onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, 1))}
@@ -575,20 +613,18 @@ paddingTop: 10,
 </div>
 
 <div style={{ display: "grid", placeItems: "center", marginTop: 8 }}>
-  <button type="button" onClick={onStartDrill} style={primaryBtn}>
-    Start
-  </button>
+<motion.button
+  type="button"
+  onClick={onStartDrill}
+  style={primaryBtn}
+  whileTap={{ scale: 0.98 }}
+  transition={{ type: "spring", stiffness: 700, damping: 40 }}
+>
+  Start
+</motion.button>
 
-  <div
-    style={{
-      marginTop: 10,
-      fontSize: 13,
-      fontWeight: 800,
-      color: LIGHT_MUTED,
-    }}
-  >
-    Takes 2–3 minutes
-  </div>
+
+
 </div>
 </motion.div>
 
