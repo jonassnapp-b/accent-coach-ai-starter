@@ -127,6 +127,16 @@ export default function Coach() {
   const [difficulty, setDifficulty] = useState("easy");
   const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
 
+  const summary = useMemo(() => {
+    if (!attempts.length) return { avg: 0, great: 0, ok: 0, needs: 0 };
+    const sum = attempts.reduce((a, x) => a + (Number.isFinite(x.overall) ? x.overall : 0), 0);
+    const avg = Math.round(sum / attempts.length);
+    const great = attempts.filter((x) => x.label === "Great").length;
+    const ok = attempts.filter((x) => x.label === "OK").length;
+    const needs = attempts.filter((x) => x.label === "Needs work").length;
+    return { avg, great, ok, needs };
+  }, [attempts]);
+
   useEffect(() => {
     setAccentUi(settings?.accentDefault || "en_us");
   }, [settings?.accentDefault]);
@@ -138,6 +148,7 @@ export default function Coach() {
   const [targets, setTargets] = useState([]); // 10 items
   const [idx, setIdx] = useState(0);
   const [attempts, setAttempts] = useState([]); // { i, text, overall, label, createdAt }
+const [summaryCount, setSummaryCount] = useState(0);
 
   const currentText = targets[idx] || "";
 
@@ -321,6 +332,27 @@ export default function Coach() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
+// Count-up when summary shows
+useEffect(() => {
+  if (phase !== "summary") return;
+
+  const target = Math.max(0, Math.min(100, summary.avg || 0));
+  setSummaryCount(0);
+
+  const start = performance.now();
+  const dur = 650;
+
+  let raf = 0;
+  const tick = (t) => {
+    const p = Math.min(1, (t - start) / dur);
+    const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+    setSummaryCount(Math.round(target * eased));
+    if (p < 1) raf = requestAnimationFrame(tick);
+  };
+
+  raf = requestAnimationFrame(tick);
+  return () => cancelAnimationFrame(raf);
+}, [phase, summary.avg]);
 
   function onStartDrill() {
     const acc = accentUi === "en_br" ? "en_br" : "en_us";
@@ -350,15 +382,7 @@ export default function Coach() {
     setPhase("prompt");
   }
 
-  const summary = useMemo(() => {
-    if (!attempts.length) return { avg: 0, great: 0, ok: 0, needs: 0 };
-    const sum = attempts.reduce((a, x) => a + (Number.isFinite(x.overall) ? x.overall : 0), 0);
-    const avg = Math.round(sum / attempts.length);
-    const great = attempts.filter((x) => x.label === "Great").length;
-    const ok = attempts.filter((x) => x.label === "OK").length;
-    const needs = attempts.filter((x) => x.label === "Needs work").length;
-    return { avg, great, ok, needs };
-  }, [attempts]);
+
 
   /* ---------------- UI helpers ---------------- */
   const pickerRow = {
@@ -563,6 +587,72 @@ boxShadow:
     background: "radial-gradient(circle, rgba(33,150,243,0.22) 0%, rgba(33,150,243,0.00) 70%)",
     pointerEvents: "none",
   };
+const summaryCard = {
+  background: "rgba(255,255,255,0.96)",
+  border: "1px solid rgba(17,24,39,0.08)",
+  borderRadius: 24,
+  padding: 22,
+  boxShadow: "0 22px 60px rgba(17,24,39,0.10), 0 1px 0 rgba(255,255,255,0.8) inset",
+  display: "grid",
+  gap: 16,
+};
+
+const summaryTitle = {
+  fontSize: 18,
+  fontWeight: 1000,
+  letterSpacing: -0.45,
+  color: LIGHT_TEXT,
+};
+
+const summaryHeroWrap = {
+  display: "grid",
+  placeItems: "center",
+  paddingTop: 6,
+  paddingBottom: 2,
+};
+
+const ringWrap = { position: "relative", width: 120, height: 120, display: "grid", placeItems: "center" };
+
+const ringInner = {
+  position: "absolute",
+  inset: 8,
+  borderRadius: 999,
+  background: "rgba(255,255,255,0.92)",
+  border: "1px solid rgba(17,24,39,0.08)",
+};
+
+const ringLabel = {
+  marginTop: 10,
+  fontSize: 12,
+  fontWeight: 850,
+  letterSpacing: -0.1,
+  color: LIGHT_MUTED,
+};
+
+const badgesRow = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, 1fr)",
+  gap: 10,
+  marginTop: 6,
+};
+
+const statBadge = (tintBg) => ({
+  borderRadius: 18,
+  border: "1px solid rgba(17,24,39,0.08)",
+  background: tintBg,
+  padding: "10px 12px",
+  display: "grid",
+  gap: 2,
+});
+
+const badgeLabel = { fontSize: 12, fontWeight: 900, color: LIGHT_MUTED, letterSpacing: -0.1 };
+const badgeValue = { fontSize: 18, fontWeight: 1100, color: LIGHT_TEXT, letterSpacing: -0.4 };
+
+const summaryCtas = {
+  display: "grid",
+  gap: 10,
+  marginTop: 8,
+};
 
   return (
     <div
@@ -917,48 +1007,87 @@ transform: "translateY(-14px)",
 ) : null}
 
 
-                    {phase === "summary" ? (
-                      <div
-                        style={{
-                          background: "#fff",
-                          border: `1px solid ${LIGHT_BORDER}`,
-                          borderRadius: 22,
-                          padding: 18,
-                          display: "grid",
-                          gap: 14,
-                        }}
-                      >
-                        <div style={{ fontSize: 20, fontWeight: 1000, color: LIGHT_TEXT }}>Session summary</div>
+                  {phase === "summary" ? (
+  <motion.div
+    key="summary"
+    initial={{ opacity: 0, y: 10, scale: 0.985 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    exit={{ opacity: 0, y: -8, scale: 0.985 }}
+    transition={{ type: "spring", stiffness: 700, damping: 45 }}
+    style={summaryCard}
+  >
+    <div style={summaryTitle}>Session summary</div>
 
-                        <div style={{ display: "grid", gap: 8 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 900, color: LIGHT_TEXT }}>
-                            <span>Average</span>
-                            <span>{summary.avg}%</span>
-                          </div>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 850, color: LIGHT_TEXT }}>
-                            <span>Great</span>
-                            <span>{summary.great}</span>
-                          </div>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 850, color: LIGHT_TEXT }}>
-                            <span>OK</span>
-                            <span>{summary.ok}</span>
-                          </div>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 850, color: LIGHT_TEXT }}>
-                            <span>Needs work</span>
-                            <span>{summary.needs}</span>
-                          </div>
-                        </div>
+    {/* HERO average */}
+    <div style={summaryHeroWrap}>
+      <div style={ringWrap}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: 999,
+            background:
+              "conic-gradient(from 270deg, rgba(33,150,243,0.90) 0%, rgba(33,150,243,0.90) " +
+              `${Math.max(0, Math.min(100, summaryCount))}%` +
+              ", rgba(17,24,39,0.08) 0%)",
+          }}
+        />
+        <div style={ringInner} />
+        <div style={{ position: "relative", fontSize: 46, fontWeight: 1150, letterSpacing: -1.0, color: LIGHT_TEXT }}>
+          {summaryCount}%
+        </div>
+      </div>
 
-                        <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 6 }}>
-                          <button type="button" onClick={onRepeatSameDrill} style={primaryBtn}>
-                            Repeat
-                          </button>
-                          <button type="button" onClick={onExit} style={ghostBtn}>
-                            New drill
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
+      <div style={ringLabel}>Session average</div>
+    </div>
+
+    {/* BADGES */}
+    <div style={badgesRow}>
+      <motion.div
+        initial={{ opacity: 0, y: 6, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.05, type: "spring", stiffness: 700, damping: 45 }}
+        style={statBadge("rgba(34,197,94,0.06)")}
+      >
+        <div style={badgeLabel}>Great</div>
+        <div style={badgeValue}>{summary.great}</div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 6, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.10, type: "spring", stiffness: 700, damping: 45 }}
+        style={statBadge("rgba(17,24,39,0.04)")}
+      >
+        <div style={badgeLabel}>OK</div>
+        <div style={badgeValue}>{summary.ok}</div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 6, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.15, type: "spring", stiffness: 700, damping: 45 }}
+        style={statBadge("rgba(239,68,68,0.06)")}
+      >
+        <div style={badgeLabel}>Needs work</div>
+        <div style={badgeValue}>{summary.needs}</div>
+      </motion.div>
+    </div>
+
+    {/* CTA spacing + hierarchy */}
+    <div style={summaryCtas}>
+      <button type="button" onClick={onRepeatSameDrill} style={primaryBtn}>
+        Repeat
+      </button>
+      <div style={{ display: "grid", placeItems: "center" }}>
+        <button type="button" onClick={onExit} style={{ ...ghostBtn, height: 44, width: "min(240px, 100%)" }}>
+          New drill
+        </button>
+      </div>
+    </div>
+  </motion.div>
+) : null}
+
                   </motion.div>
                 ) : null}
               </AnimatePresence>
