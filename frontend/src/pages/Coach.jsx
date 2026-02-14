@@ -504,63 +504,94 @@ export default function Coach() {
   // center the cluster, but keep it visually "middle 40–55%"
   minHeight: `calc(100vh - var(--safe-top) - ${TABBAR_OFFSET}px - ${SAFE_BOTTOM} - 24px)`,
   alignContent: "center",
-  paddingTop: 10,
+paddingTop: 10,
 }}
+>
+<div style={{ ...setupCard }}>
 
-                  >
-                    <div style={pickerRow}>
-                      <button type="button" onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, -1))} style={pickerBtn}>
-                        <ChevronLeft className="h-7 w-7" />
-                      </button>
-                      <div style={pickerCenter}>{MODE_LABEL[mode]}</div>
-                      <button type="button" onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, 1))} style={pickerBtn}>
-                        <ChevronRight className="h-7 w-7" />
-                      </button>
-                    </div>
+  <div style={pickerRow}>
+    <button
+      type="button"
+      onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, -1))}
+      style={pickerBtn}
+      aria-label="Previous mode"
+    >
+      <ChevronLeft className="h-7 w-7" />
+    </button>
+    <div style={pickerCenter}>{MODE_LABEL[mode]}</div>
+    <button
+      type="button"
+      onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, 1))}
+      style={pickerBtn}
+      aria-label="Next mode"
+    >
+      <ChevronRight className="h-7 w-7" />
+    </button>
+  </div>
 
-                    <div style={pickerRow}>
-                      <button
-                        type="button"
-                        onClick={() => setDifficulty((v) => cycleValue(DIFF_OPTIONS, v, -1))}
-                        style={pickerBtn}
-                      >
-                        <ChevronLeft className="h-7 w-7" />
-                      </button>
-                      <div style={pickerCenter}>{DIFF_LABEL[difficulty]}</div>
-                      <button
-                        type="button"
-                        onClick={() => setDifficulty((v) => cycleValue(DIFF_OPTIONS, v, 1))}
-                        style={pickerBtn}
-                      >
-                        <ChevronRight className="h-7 w-7" />
-                      </button>
-                    </div>
+  <div style={hairlineDivider} />
 
-                    <div style={pickerRow}>
-                      <button
-                        type="button"
-                        onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, -1))}
-                        style={pickerBtn}
-                      >
-                        <ChevronLeft className="h-7 w-7" />
-                      </button>
-                      <div style={{ ...pickerCenter, transform: "translateX(6px)" }}>{ACCENT_LABEL[accentUi]}</div>
-                      <button
-                        type="button"
-                        onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, 1))}
-                        style={pickerBtn}
-                      >
-                        <ChevronRight className="h-7 w-7" />
-                      </button>
-                    </div>
+  <div style={pickerRow}>
+    <button
+      type="button"
+      onClick={() => setDifficulty((v) => cycleValue(DIFF_OPTIONS, v, -1))}
+      style={pickerBtn}
+      aria-label="Previous difficulty"
+    >
+      <ChevronLeft className="h-7 w-7" />
+    </button>
+    <div style={pickerCenter}>{DIFF_LABEL[difficulty]}</div>
+    <button
+      type="button"
+      onClick={() => setDifficulty((v) => cycleValue(DIFF_OPTIONS, v, 1))}
+      style={pickerBtn}
+      aria-label="Next difficulty"
+    >
+      <ChevronRight className="h-7 w-7" />
+    </button>
+  </div>
 
-                    <div style={{ display: "grid", placeItems: "center", marginTop: 6 }}>
-                      <button type="button" onClick={onStartDrill} style={primaryBtn}>
-                        Start
-                      </button>
-                    
-                    </div>
-                  </motion.div>
+  <div style={hairlineDivider} />
+
+  <div style={pickerRow}>
+    <button
+      type="button"
+      onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, -1))}
+      style={pickerBtn}
+      aria-label="Previous accent"
+    >
+      <ChevronLeft className="h-7 w-7" />
+    </button>
+    <div style={{ ...pickerCenter, transform: "translateX(6px)" }}>{ACCENT_LABEL[accentUi]}</div>
+    <button
+      type="button"
+      onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, 1))}
+      style={pickerBtn}
+      aria-label="Next accent"
+    >
+      <ChevronRight className="h-7 w-7" />
+    </button>
+  </div>
+</div>
+
+<div style={{ display: "grid", placeItems: "center", marginTop: 8 }}>
+  <button type="button" onClick={onStartDrill} style={primaryBtn}>
+    Start
+  </button>
+
+  <div
+    style={{
+      marginTop: 10,
+      fontSize: 13,
+      fontWeight: 800,
+      color: LIGHT_MUTED,
+    }}
+  >
+    Takes 2–3 minutes
+  </div>
+</div>
+</motion.div>
+
                 ) : null}
 
                 {phase !== "setup" ? (
