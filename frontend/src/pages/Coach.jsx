@@ -128,6 +128,7 @@ export default function Coach() {
   const [mode, setMode] = useState("words");
   const [difficulty, setDifficulty] = useState("easy");
   const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
+const [setupStep, setSetupStep] = useState(0); // 0=mode, 1=difficulty, 2=accent
 
 
 
@@ -381,6 +382,8 @@ useEffect(() => {
     setTargets([]);
     setIdx(0);
     setAttempts([]);
+    setSetupStep(0);
+
     setPhase("setup");
   }
 
@@ -722,155 +725,231 @@ paddingTop: 10,
 transform: "translateY(-14px)",
 }}
 >
-  <div
-  style={{
-    textAlign: "center",
-    marginBottom: 22,
-  }}
->
+  {/* ---- Setup flow (3 steps) ---- */}
   <div
     style={{
-      fontSize: 34,
-      fontWeight: 1000,
-      letterSpacing: -0.8,
-      color: LIGHT_TEXT,
+      display: "grid",
+      gap: 14,
+      minHeight: `calc(100vh - var(--safe-top) - ${TABBAR_OFFSET}px - ${SAFE_BOTTOM} - 24px)`,
+      alignContent: "center",
+      paddingTop: 10,
+      transform: "translateY(-14px)",
     }}
   >
-    Daily Drill
+  {/* Title */}
+  <div style={{ textAlign: "center", marginBottom: 10 }}>
+    <div style={{ fontSize: 34, fontWeight: 1000, letterSpacing: -0.8, color: LIGHT_TEXT }}>
+      Daily Drill
+    </div>
+    <div style={{ marginTop: 6, fontSize: 15, fontWeight: 700, color: LIGHT_MUTED, letterSpacing: -0.2 }}>
+      Improve your pronunciation in minutes
+    </div>
   </div>
 
-  <div
-    style={{
-      marginTop: 6,
-      fontSize: 15,
-      fontWeight: 700,
-      color: LIGHT_MUTED,
-      letterSpacing: -0.2,
-    }}
-  >
-    Improve your pronunciation in minutes
+  <div style={{ ...setupCard, padding: 18 }}>
+    {/* Progress bars */}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 10,
+        marginBottom: 14,
+        padding: "2px 2px 0",
+      }}
+    >
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          style={{
+            height: 6,
+            borderRadius: 999,
+            background: i === setupStep ? "rgba(33,150,243,0.95)" : "rgba(33,150,243,0.22)",
+          }}
+        />
+      ))}
+    </div>
+
+    {/* Illustration placeholder */}
+    <div
+      style={{
+        height: 150,
+        borderRadius: 22,
+        background: "rgba(33,150,243,0.06)",
+        border: "1px solid rgba(17,24,39,0.06)",
+        marginBottom: 14,
+        display: "grid",
+        placeItems: "center",
+        color: "rgba(17,24,39,0.35)",
+        fontWeight: 900,
+        letterSpacing: -0.2,
+        userSelect: "none",
+      }}
+    >
+      Illustration
+    </div>
+
+    {/* Question */}
+    <div
+      style={{
+        textAlign: "center",
+        fontWeight: 1000,
+        fontSize: 22,
+        letterSpacing: -0.55,
+        color: LIGHT_TEXT,
+        marginBottom: 12,
+      }}
+    >
+      {setupStep === 0
+        ? "What do you want to practice?"
+        : setupStep === 1
+        ? "Choose a difficulty level"
+        : "Which accent do you want?"}
+    </div>
+
+    {/* Options */}
+    <div
+      style={{
+        borderRadius: 22,
+        overflow: "hidden",
+        border: "1px solid rgba(17,24,39,0.08)",
+        background: "rgba(255,255,255,0.98)",
+      }}
+    >
+      {setupStep === 0 ? (
+        <>
+          {[
+            { key: "words", label: "Words" },
+            { key: "sentences", label: "Sentences" },
+          ].map((opt) => {
+            const active = mode === opt.key;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setMode(opt.key)}
+                style={{
+                  width: "100%",
+                  textAlign: "center",
+                  padding: "18px 14px",
+                  fontWeight: 1000,
+                  fontSize: 18,
+                  letterSpacing: -0.25,
+                  color: active ? "rgba(17,24,39,0.92)" : "rgba(17,24,39,0.50)",
+                  background: active ? "rgba(33,150,243,0.08)" : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </>
+      ) : null}
+
+      {setupStep === 1 ? (
+        <>
+          {[
+            { key: "easy", label: "Easy" },
+            { key: "medium", label: "Medium" },
+            { key: "hard", label: "Hard" },
+          ].map((opt) => {
+            const active = difficulty === opt.key;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setDifficulty(opt.key)}
+                style={{
+                  width: "100%",
+                  textAlign: "center",
+                  padding: "18px 14px",
+                  fontWeight: 1000,
+                  fontSize: 18,
+                  letterSpacing: -0.25,
+                  color: active ? "rgba(17,24,39,0.92)" : "rgba(17,24,39,0.50)",
+                  background: active ? "rgba(33,150,243,0.08)" : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </>
+      ) : null}
+
+      {setupStep === 2 ? (
+        <>
+          {[
+            { key: "en_us", label: "American 🇺🇸" },
+            { key: "en_br", label: "British 🇬🇧" },
+          ].map((opt) => {
+            const active = accentUi === opt.key;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setAccentUi(opt.key)}
+                style={{
+                  width: "100%",
+                  textAlign: "center",
+                  padding: "18px 14px",
+                  fontWeight: 1000,
+                  fontSize: 18,
+                  letterSpacing: -0.25,
+                  color: active ? "rgba(17,24,39,0.92)" : "rgba(17,24,39,0.50)",
+                  background: active ? "rgba(33,150,243,0.08)" : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </>
+      ) : null}
+    </div>
+
+    {/* Buttons */}
+    <div style={{ display: "flex", gap: 12, marginTop: 16, justifyContent: "center", alignItems: "center" }}>
+      <button
+        type="button"
+        onClick={() => setSetupStep((s) => Math.max(0, s - 1))}
+        disabled={setupStep === 0}
+        style={{
+          ...ghostBtn,
+          height: 52,
+          width: 120,
+          opacity: setupStep === 0 ? 0.45 : 1,
+          cursor: setupStep === 0 ? "not-allowed" : "pointer",
+        }}
+      >
+        Back
+      </button>
+
+      <motion.button
+        type="button"
+        onClick={() => {
+          if (setupStep < 2) setSetupStep((s) => s + 1);
+          else onStartDrill();
+        }}
+        style={{ ...primaryBtn, height: 52, width: 220 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ type: "spring", stiffness: 700, damping: 40 }}
+      >
+        {setupStep < 2 ? "Next" : "Start"}
+      </motion.button>
+    </div>
   </div>
-</div>
-
-<div style={{ ...setupCard }}>
-
-  <div style={pickerRow}>
-    <button
-      type="button"
-      onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, -1))}
-      style={pickerBtn}
-      aria-label="Previous mode"
-    >
-      <ChevronLeft className="h-7 w-7" />
-    </button>
-    <AnimatePresence mode="wait" initial={false}>
-  <motion.div
-    key={mode}
-    style={pickerCenter}
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -8 }}
-    transition={{ type: "spring", stiffness: 700, damping: 45 }}
-  >
-    {MODE_LABEL[mode]}
-  </motion.div>
-</AnimatePresence>
-    <button
-      type="button"
-      onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, 1))}
-      style={pickerBtn}
-      aria-label="Next mode"
-    >
-      <ChevronRight className="h-7 w-7" />
-    </button>
-  </div>
-
-  <div style={hairlineDivider} />
-
-  <div style={pickerRow}>
-    <button
-      type="button"
-      onClick={() => setDifficulty((v) => cycleValue(DIFF_OPTIONS, v, -1))}
-      style={pickerBtn}
-      aria-label="Previous difficulty"
-    >
-      <ChevronLeft className="h-7 w-7" />
-    </button>
-    <AnimatePresence mode="wait" initial={false}>
-  <motion.div
-    key={difficulty}
-    style={pickerCenter}
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -8 }}
-    transition={{ type: "spring", stiffness: 700, damping: 45 }}
-  >
-    {DIFF_LABEL[difficulty]}
-  </motion.div>
-</AnimatePresence>
-    <button
-      type="button"
-      onClick={() => setDifficulty((v) => cycleValue(DIFF_OPTIONS, v, 1))}
-      style={pickerBtn}
-      aria-label="Next difficulty"
-    >
-      <ChevronRight className="h-7 w-7" />
-    </button>
-  </div>
-
-  <div style={hairlineDivider} />
-
-  <div style={pickerRow}>
-    <button
-      type="button"
-      onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, -1))}
-      style={pickerBtn}
-      aria-label="Previous accent"
-    >
-      <ChevronLeft className="h-7 w-7" />
-    </button>
-    <AnimatePresence mode="wait" initial={false}>
-  <motion.div
-    key={accentUi}
-    style={{ ...pickerCenter, transform: "translateX(6px)" }}
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -8 }}
-    transition={{ type: "spring", stiffness: 700, damping: 45 }}
-  >
-    {ACCENT_LABEL[accentUi]}
-  </motion.div>
-</AnimatePresence>
-    <button
-      type="button"
-      onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, 1))}
-      style={pickerBtn}
-      aria-label="Next accent"
-    >
-      <ChevronRight className="h-7 w-7" />
-    </button>
-  </div>
-</div>
-
-<div style={{ display: "grid", placeItems: "center", marginTop: 8 }}>
-<motion.button
-  type="button"
-  onClick={onStartDrill}
-  style={primaryBtn}
-  whileTap={{ scale: 0.98 }}
-  transition={{ type: "spring", stiffness: 700, damping: 40 }}
->
-  Start
-</motion.button>
-
-
-
 </div>
 </motion.div>
+) : null}
 
-                ) : null}
+{phase !== "setup" ? (
 
-                {phase !== "setup" ? (
                   <motion.div
                     key="flow"
                     initial={{ opacity: 0, y: 10, scale: 0.98 }}
