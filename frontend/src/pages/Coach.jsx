@@ -365,37 +365,64 @@ export default function Coach() {
     display: "grid",
     gridTemplateColumns: "56px 1fr 56px",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
   };
+
+  // iOS-ish controls: subtle border + tiny shadow + slight surface fill
   const pickerBtn = {
     width: 56,
     height: 56,
     borderRadius: 18,
-    border: `1px solid ${LIGHT_BORDER}`,
-    background: "transparent",
+    border: `1px solid rgba(0,0,0,0.08)`,
+    background: "rgba(255,255,255,0.72)",
+    boxShadow: "0 1px 0 rgba(255,255,255,0.9) inset, 0 8px 18px rgba(0,0,0,0.06)",
     display: "grid",
     placeItems: "center",
     cursor: "pointer",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
   };
+
   const pickerCenter = {
     textAlign: "center",
     fontWeight: 950,
-    fontSize: 28,
+    fontSize: 26,
     color: LIGHT_TEXT,
     lineHeight: 1.05,
+    letterSpacing: -0.2,
   };
 
+  const setupCard = {
+    background: "rgba(255,255,255,0.92)",
+    border: `1px solid rgba(0,0,0,0.08)`,
+    borderRadius: 28,
+    padding: 18,
+    boxShadow: "0 18px 40px rgba(0,0,0,0.08)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+  };
+
+  const hairlineDivider = {
+    height: 1,
+    background: "rgba(17,24,39,0.10)",
+    margin: "14px 6px",
+  };
+
+  // Real iOS primary button: taller, full-ish width, depth
   const primaryBtn = {
-    height: 46,
-    padding: "0 18px",
-    borderRadius: 16,
+    height: 58,
+    width: "min(520px, 100%)",
+    borderRadius: 999,
     border: "none",
     background: BTN_BLUE,
     color: "white",
-    fontWeight: 900,
+    fontWeight: 850,
+    fontSize: 18,
+    letterSpacing: -0.2,
     cursor: "pointer",
-    width: 160,
+    boxShadow: "0 14px 30px rgba(33,150,243,0.28), 0 2px 0 rgba(255,255,255,0.35) inset",
   };
+
 
   const ghostBtn = {
     height: 40,
@@ -470,24 +497,100 @@ export default function Coach() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.98 }}
                     transition={{ duration: 0.18 }}
-                    style={{
+                   style={{
   display: "grid",
-  gap: 22,
+  gap: 14,
 
-  // 👇 gør at indholdet kan centreres i den tilgængelige højde
+  // center the cluster, but keep it visually "middle 40–55%"
   minHeight: `calc(100vh - var(--safe-top) - ${TABBAR_OFFSET}px - ${SAFE_BOTTOM} - 24px)`,
   alignContent: "center",
+  paddingTop: 10,
 }}
+
                   >
-                    <div style={pickerRow}>
-                      <button type="button" onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, -1))} style={pickerBtn}>
-                        <ChevronLeft className="h-7 w-7" />
-                      </button>
-                      <div style={pickerCenter}>{MODE_LABEL[mode]}</div>
-                      <button type="button" onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, 1))} style={pickerBtn}>
-                        <ChevronRight className="h-7 w-7" />
-                      </button>
+                                      <div style={{ ...setupCard }}>
+                      <div style={pickerRow}>
+                        <button
+                          type="button"
+                          onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, -1))}
+                          style={pickerBtn}
+                          aria-label="Previous mode"
+                        >
+                          <ChevronLeft className="h-7 w-7" />
+                        </button>
+                        <div style={pickerCenter}>{MODE_LABEL[mode]}</div>
+                        <button
+                          type="button"
+                          onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, 1))}
+                          style={pickerBtn}
+                          aria-label="Next mode"
+                        >
+                          <ChevronRight className="h-7 w-7" />
+                        </button>
+                      </div>
+
+                      <div style={hairlineDivider} />
+
+                      <div style={pickerRow}>
+                        <button
+                          type="button"
+                          onClick={() => setDifficulty((v) => cycleValue(DIFF_OPTIONS, v, -1))}
+                          style={pickerBtn}
+                          aria-label="Previous difficulty"
+                        >
+                          <ChevronLeft className="h-7 w-7" />
+                        </button>
+                        <div style={pickerCenter}>{DIFF_LABEL[difficulty]}</div>
+                        <button
+                          type="button"
+                          onClick={() => setDifficulty((v) => cycleValue(DIFF_OPTIONS, v, 1))}
+                          style={pickerBtn}
+                          aria-label="Next difficulty"
+                        >
+                          <ChevronRight className="h-7 w-7" />
+                        </button>
+                      </div>
+
+                      <div style={hairlineDivider} />
+
+                      <div style={pickerRow}>
+                        <button
+                          type="button"
+                          onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, -1))}
+                          style={pickerBtn}
+                          aria-label="Previous accent"
+                        >
+                          <ChevronLeft className="h-7 w-7" />
+                        </button>
+                        <div style={{ ...pickerCenter, transform: "translateX(6px)" }}>{ACCENT_LABEL[accentUi]}</div>
+                        <button
+                          type="button"
+                          onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, 1))}
+                          style={pickerBtn}
+                          aria-label="Next accent"
+                        >
+                          <ChevronRight className="h-7 w-7" />
+                        </button>
+                      </div>
                     </div>
+
+                    <div style={{ display: "grid", placeItems: "center", marginTop: 8 }}>
+                      <button type="button" onClick={onStartDrill} style={primaryBtn}>
+                        Start
+                      </button>
+
+                      <div
+                        style={{
+                          marginTop: 10,
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: LIGHT_MUTED,
+                        }}
+                      >
+                        Takes 2–3 minutes
+                      </div>
+                    </div>
+
 
                     <div style={pickerRow}>
                       <button
