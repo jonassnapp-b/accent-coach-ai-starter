@@ -4,6 +4,10 @@ import { ChevronLeft, ChevronRight, Mic, StopCircle, X } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import { ingestLocalPhonemeScores } from "../lib/localPhonemeStats.js";
+import wordsImg from "../assets/words.png";
+import difficultyImg from "../assets/difficulty.png";
+import accentImg from "../assets/accent.png";
+
 
 /* ------------ API base (web + native) ------------ */
 function isNative() {
@@ -707,7 +711,7 @@ const summaryCtas = {
           position: "relative",
           borderTop: "1px solid rgba(17,24,39,0.14)",
           borderBottom: "1px solid rgba(17,24,39,0.14)",
-          background: "rgba(255,255,255,1)",
+          background: "transparent",
           height: WHEEL_ITEM_H * 3, // 3 visible rows like iOS
           overflow: "hidden",
         }}
@@ -901,24 +905,34 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
             </div>
           </div>
 
-          {/* Illustration (placeholder) */}
-          <div
-            style={{
-              height: 150,
-              borderRadius: 18,
-              background: "rgba(33,150,243,0.06)",
-              border: "1px solid rgba(17,24,39,0.06)",
-              display: "grid",
-              placeItems: "center",
-              color: "rgba(17,24,39,0.35)",
-              fontWeight: 700,
-              letterSpacing: -0.2,
-              margin: "0 22px",
-              userSelect: "none",
-            }}
-          >
-            Illustration
-          </div>
+         <div
+  style={{
+    display: "grid",
+    placeItems: "center",
+    margin: "0 22px",
+    paddingTop: 8,
+    paddingBottom: 8,
+  }}
+>
+  <img
+    src={
+      setupStep === 0
+        ? wordsImg
+        : setupStep === 1
+        ? difficultyImg
+        : accentImg
+    }
+    alt=""
+    style={{
+      width: 140,
+      height: 140,
+      objectFit: "contain",
+      pointerEvents: "none",
+      userSelect: "none",
+    }}
+  />
+</div>
+
 
           {/* Question (NOT bold) */}
           <div
@@ -940,7 +954,16 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
           </div>
 
           {/* Bottom buttons */}
-          <div style={{ display: "grid", gap: 10, padding: "0 22px", marginTop: 6 }}>
+          <div
+  style={{
+    display: "flex",
+    justifyContent: setupStep > 0 ? "space-between" : "flex-end",
+    alignItems: "center",
+    gap: 14,
+    padding: "0 22px",
+    marginTop: 10,
+  }}
+>
             {setupStep > 0 ? (
               <button
                 type="button"
@@ -965,13 +988,13 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
                 if (setupStep < 2) setSetupStep((s) => s + 1);
                 else onStartDrill();
               }}
-              style={{
-                ...primaryBtn,
-                height: 52,
-                width: "100%",
-                borderRadius: 14,
-                justifySelf: "stretch",
-              }}
+         style={{
+  ...primaryBtn,
+  height: 52,
+  width: setupStep > 0 ? "58%" : "100%",
+  borderRadius: 14,
+}}
+
               whileTap={{ scale: 0.98 }}
               transition={{ type: "spring", stiffness: 700, damping: 40 }}
             >
