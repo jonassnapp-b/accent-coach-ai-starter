@@ -920,13 +920,14 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
         : accentImg
     }
     alt=""
-  style={{
-  width: setupStep === 2 ? 170 : 140,
-  height: setupStep === 2 ? 170 : 140,
+style={{
+  width: 140,
+  height: 140,
   objectFit: "contain",
   pointerEvents: "none",
   userSelect: "none",
 }}
+
   />
 </div>
 
