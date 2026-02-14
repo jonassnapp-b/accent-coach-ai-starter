@@ -192,6 +192,62 @@ export default function Settings() {
 
 
 >
+  <style>{`
+  /* Blue filled + visible unfilled track */
+  input[type="range"].range-blue-white{
+    -webkit-appearance: none;
+    appearance: none;
+    height: 24px;              /* gives room for thumb */
+    background: transparent;   /* track is drawn in pseudo elements */
+  }
+
+  /* WebKit track */
+  input[type="range"].range-blue-white::-webkit-slider-runnable-track{
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(
+      to right,
+      #2196F3 0%,
+      #2196F3 var(--pct),
+      rgba(17,24,39,0.18) var(--pct),
+      rgba(17,24,39,0.18) 100%
+    );
+  }
+
+  /* WebKit thumb */
+  input[type="range"].range-blue-white::-webkit-slider-thumb{
+    -webkit-appearance: none;
+    appearance: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: #2196F3;
+    border: 4px solid #ffffff;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.18);
+    margin-top: -9px; /* centers thumb on 10px track */
+  }
+
+  /* Firefox track + progress */
+  input[type="range"].range-blue-white::-moz-range-track{
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(17,24,39,0.18);
+  }
+  input[type="range"].range-blue-white::-moz-range-progress{
+    height: 10px;
+    border-radius: 999px;
+    background: #2196F3;
+  }
+  input[type="range"].range-blue-white::-moz-range-thumb{
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: #2196F3;
+    border: 4px solid #ffffff;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.18);
+  }
+`}</style>
+
 {/* Force blue backdrop even if parent/shell paints background */}
 
 
