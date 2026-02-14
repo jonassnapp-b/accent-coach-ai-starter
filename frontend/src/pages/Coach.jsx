@@ -665,6 +665,115 @@ const summaryCtas = {
   gap: 10,
   marginTop: 8,
 };
+  const WHEEL_ITEM_H = 44;
+
+  function WheelPicker({ options, value, onChange }) {
+    const ref = useRef(null);
+    const snapT = useRef(0);
+
+    const idx = Math.max(
+      0,
+      options.findIndex((o) => o.key === value)
+    );
+
+    // Scroll to selected on mount / value change
+    useEffect(() => {
+      const el = ref.current;
+      if (!el) return;
+      el.scrollTop = idx * WHEEL_ITEM_H;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [value]);
+
+    function commitNearest() {
+      const el = ref.current;
+      if (!el) return;
+      const i = Math.round(el.scrollTop / WHEEL_ITEM_H);
+      const clamped = Math.max(0, Math.min(options.length - 1, i));
+      const next = options[clamped]?.key;
+      if (next && next !== value) onChange(next);
+      el.scrollTo({ top: clamped * WHEEL_ITEM_H, behavior: "smooth" });
+    }
+
+    function onScroll() {
+      clearTimeout(snapT.current);
+      snapT.current = window.setTimeout(() => {
+        commitNearest();
+      }, 90);
+    }
+
+    return (
+      <div
+        style={{
+          position: "relative",
+          borderTop: "1px solid rgba(17,24,39,0.14)",
+          borderBottom: "1px solid rgba(17,24,39,0.14)",
+          background: "rgba(255,255,255,1)",
+          height: WHEEL_ITEM_H * 3, // 3 visible rows like iOS
+          overflow: "hidden",
+        }}
+      >
+        {/* center highlight */}
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: WHEEL_ITEM_H,
+            height: WHEEL_ITEM_H,
+            borderTop: "1px solid rgba(17,24,39,0.12)",
+            borderBottom: "1px solid rgba(17,24,39,0.12)",
+            background: "rgba(33,150,243,0.06)",
+            pointerEvents: "none",
+          }}
+        />
+
+        <div
+          ref={ref}
+          onScroll={onScroll}
+          style={{
+            height: "100%",
+            overflowY: "auto",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            scrollSnapType: "y mandatory",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {/* padding so first/last can align in center */}
+          <div style={{ height: WHEEL_ITEM_H }} />
+          {options.map((o) => {
+            const active = o.key === value;
+            return (
+              <div
+                key={o.key}
+                onClick={() => onChange(o.key)}
+                style={{
+                  height: WHEEL_ITEM_H,
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 20,
+                  fontWeight: 600, // NOT bold question; picker can be semi-bold like iOS
+                  letterSpacing: -0.2,
+                  color: active ? "rgba(17,24,39,0.92)" : "rgba(17,24,39,0.55)",
+                  scrollSnapAlign: "center",
+                  userSelect: "none",
+                  cursor: "pointer",
+                }}
+              >
+                {o.label}
+              </div>
+            );
+          })}
+          <div style={{ height: WHEEL_ITEM_H }} />
+        </div>
+
+        {/* hide scrollbar in webkit */}
+        <style>{`
+          [data-wheel]::-webkit-scrollbar { display: none; }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -708,244 +817,171 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
             <LayoutGroup>
               <AnimatePresence mode="wait">
                 {phase === "setup" ? (
-                  <motion.div
-                    key="setup"
-                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                    transition={{ duration: 0.18 }}
-                   style={{
-  display: "grid",
-  gap: 16,
-
-  // center the cluster, but keep it visually "middle 40–55%"
-  minHeight: `calc(100vh - var(--safe-top) - ${TABBAR_OFFSET}px - ${SAFE_BOTTOM} - 24px)`,
-  alignContent: "center",
-paddingTop: 10,
-transform: "translateY(-14px)",
-}}
->
-  {/* ---- Setup flow (3 steps) ---- */}
-  <div
+  <motion.div
+    key="setup"
+    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+    transition={{ duration: 0.18 }}
     style={{
       display: "grid",
-      gap: 14,
+      gap: 16,
       minHeight: `calc(100vh - var(--safe-top) - ${TABBAR_OFFSET}px - ${SAFE_BOTTOM} - 24px)`,
       alignContent: "center",
       paddingTop: 10,
       transform: "translateY(-14px)",
     }}
   >
-  {/* Title */}
-  <div style={{ textAlign: "center", marginBottom: 10 }}>
-    <div style={{ fontSize: 34, fontWeight: 1000, letterSpacing: -0.8, color: LIGHT_TEXT }}>
-      Daily Drill
-    </div>
-    <div style={{ marginTop: 6, fontSize: 15, fontWeight: 700, color: LIGHT_MUTED, letterSpacing: -0.2 }}>
-      Improve your pronunciation in minutes
-    </div>
-  </div>
+    {(() => {
+      const question =
+        setupStep === 0
+          ? "What do you want to practice?"
+          : setupStep === 1
+          ? "Choose a difficulty level"
+          : "Which accent do you want?";
 
-  <div style={{ ...setupCard, padding: 18 }}>
-    {/* Progress bars */}
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
-        gap: 10,
-        marginBottom: 14,
-        padding: "2px 2px 0",
-      }}
-    >
-      {[0, 1, 2].map((i) => (
+      const options =
+        setupStep === 0
+          ? [
+              { key: "words", label: "Words" },
+              { key: "sentences", label: "Sentences" },
+            ]
+          : setupStep === 1
+          ? [
+              { key: "easy", label: "Easy" },
+              { key: "medium", label: "Medium" },
+              { key: "hard", label: "Hard" },
+            ]
+          : [
+              { key: "en_us", label: "American 🇺🇸" },
+              { key: "en_br", label: "British 🇬🇧" },
+            ];
+
+      const value = setupStep === 0 ? mode : setupStep === 1 ? difficulty : accentUi;
+      const setValue = (k) => {
+        if (setupStep === 0) setMode(k);
+        else if (setupStep === 1) setDifficulty(k);
+        else setAccentUi(k);
+      };
+
+      return (
         <div
-          key={i}
           style={{
-            height: 6,
-            borderRadius: 999,
-            background: i === setupStep ? "rgba(33,150,243,0.95)" : "rgba(33,150,243,0.22)",
+            display: "grid",
+            gridTemplateRows: "auto auto auto auto auto",
+            gap: 14,
+            minHeight: `calc(100vh - var(--safe-top) - ${TABBAR_OFFSET}px - ${SAFE_BOTTOM} - 24px)`,
+            alignContent: "start",
+            paddingTop: 10,
           }}
-        />
-      ))}
-    </div>
+        >
+          {/* Title */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 34, fontWeight: 1000, letterSpacing: -0.8, color: LIGHT_TEXT }}>
+              Daily Drill
+            </div>
+            <div style={{ marginTop: 6, fontSize: 15, fontWeight: 600, color: LIGHT_MUTED, letterSpacing: -0.2 }}>
+              Improve your pronunciation in minutes
+            </div>
+          </div>
 
-    {/* Illustration placeholder */}
-    <div
-      style={{
-        height: 150,
-        borderRadius: 22,
-        background: "rgba(33,150,243,0.06)",
-        border: "1px solid rgba(17,24,39,0.06)",
-        marginBottom: 14,
-        display: "grid",
-        placeItems: "center",
-        color: "rgba(17,24,39,0.35)",
-        fontWeight: 900,
-        letterSpacing: -0.2,
-        userSelect: "none",
-      }}
-    >
-      Illustration
-    </div>
+          {/* Progress bars */}
+          <div style={{ padding: "0 22px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    height: 6,
+                    borderRadius: 999,
+                    background: i === setupStep ? "rgba(33,150,243,0.95)" : "rgba(33,150,243,0.22)",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
 
-    {/* Question */}
-    <div
-      style={{
-        textAlign: "center",
-        fontWeight: 1000,
-        fontSize: 22,
-        letterSpacing: -0.55,
-        color: LIGHT_TEXT,
-        marginBottom: 12,
-      }}
-    >
-      {setupStep === 0
-        ? "What do you want to practice?"
-        : setupStep === 1
-        ? "Choose a difficulty level"
-        : "Which accent do you want?"}
-    </div>
+          {/* Illustration (placeholder) */}
+          <div
+            style={{
+              height: 150,
+              borderRadius: 18,
+              background: "rgba(33,150,243,0.06)",
+              border: "1px solid rgba(17,24,39,0.06)",
+              display: "grid",
+              placeItems: "center",
+              color: "rgba(17,24,39,0.35)",
+              fontWeight: 700,
+              letterSpacing: -0.2,
+              margin: "0 22px",
+              userSelect: "none",
+            }}
+          >
+            Illustration
+          </div>
 
-    {/* Options */}
-    <div
-      style={{
-        borderRadius: 22,
-        overflow: "hidden",
-        border: "1px solid rgba(17,24,39,0.08)",
-        background: "rgba(255,255,255,0.98)",
-      }}
-    >
-      {setupStep === 0 ? (
-        <>
-          {[
-            { key: "words", label: "Words" },
-            { key: "sentences", label: "Sentences" },
-          ].map((opt) => {
-            const active = mode === opt.key;
-            return (
+          {/* Question (NOT bold) */}
+          <div
+            style={{
+              textAlign: "center",
+              fontWeight: 500,
+              fontSize: 22,
+              letterSpacing: -0.45,
+              color: LIGHT_TEXT,
+              padding: "0 22px",
+            }}
+          >
+            {question}
+          </div>
+
+          {/* Wheel picker */}
+          <div style={{ marginTop: 2, padding: "0 22px" }}>
+            <WheelPicker options={options} value={value} onChange={setValue} />
+          </div>
+
+          {/* Bottom buttons */}
+          <div style={{ display: "grid", gap: 10, padding: "0 22px", marginTop: 6 }}>
+            {setupStep > 0 ? (
               <button
-                key={opt.key}
                 type="button"
-                onClick={() => setMode(opt.key)}
+                onClick={() => setSetupStep((s) => Math.max(0, s - 1))}
                 style={{
-                  width: "100%",
-                  textAlign: "center",
-                  padding: "18px 14px",
-                  fontWeight: 1000,
-                  fontSize: 18,
-                  letterSpacing: -0.25,
-                  color: active ? "rgba(17,24,39,0.92)" : "rgba(17,24,39,0.50)",
-                  background: active ? "rgba(33,150,243,0.08)" : "transparent",
+                  height: 46,
+                  borderRadius: 12,
                   border: "none",
+                  background: "transparent",
+                  color: "rgba(17,24,39,0.55)",
+                  fontWeight: 700,
                   cursor: "pointer",
                 }}
               >
-                {opt.label}
+                Back
               </button>
-            );
-          })}
-        </>
-      ) : null}
+            ) : null}
 
-      {setupStep === 1 ? (
-        <>
-          {[
-            { key: "easy", label: "Easy" },
-            { key: "medium", label: "Medium" },
-            { key: "hard", label: "Hard" },
-          ].map((opt) => {
-            const active = difficulty === opt.key;
-            return (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => setDifficulty(opt.key)}
-                style={{
-                  width: "100%",
-                  textAlign: "center",
-                  padding: "18px 14px",
-                  fontWeight: 1000,
-                  fontSize: 18,
-                  letterSpacing: -0.25,
-                  color: active ? "rgba(17,24,39,0.92)" : "rgba(17,24,39,0.50)",
-                  background: active ? "rgba(33,150,243,0.08)" : "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </>
-      ) : null}
-
-      {setupStep === 2 ? (
-        <>
-          {[
-            { key: "en_us", label: "American 🇺🇸" },
-            { key: "en_br", label: "British 🇬🇧" },
-          ].map((opt) => {
-            const active = accentUi === opt.key;
-            return (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => setAccentUi(opt.key)}
-                style={{
-                  width: "100%",
-                  textAlign: "center",
-                  padding: "18px 14px",
-                  fontWeight: 1000,
-                  fontSize: 18,
-                  letterSpacing: -0.25,
-                  color: active ? "rgba(17,24,39,0.92)" : "rgba(17,24,39,0.50)",
-                  background: active ? "rgba(33,150,243,0.08)" : "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </>
-      ) : null}
-    </div>
-
-    {/* Buttons */}
-    <div style={{ display: "flex", gap: 12, marginTop: 16, justifyContent: "center", alignItems: "center" }}>
-      <button
-        type="button"
-        onClick={() => setSetupStep((s) => Math.max(0, s - 1))}
-        disabled={setupStep === 0}
-        style={{
-          ...ghostBtn,
-          height: 52,
-          width: 120,
-          opacity: setupStep === 0 ? 0.45 : 1,
-          cursor: setupStep === 0 ? "not-allowed" : "pointer",
-        }}
-      >
-        Back
-      </button>
-
-      <motion.button
-        type="button"
-        onClick={() => {
-          if (setupStep < 2) setSetupStep((s) => s + 1);
-          else onStartDrill();
-        }}
-        style={{ ...primaryBtn, height: 52, width: 220 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ type: "spring", stiffness: 700, damping: 40 }}
-      >
-        {setupStep < 2 ? "Next" : "Start"}
-      </motion.button>
-    </div>
-  </div>
-</div>
-</motion.div>
+            <motion.button
+              type="button"
+              onClick={() => {
+                if (setupStep < 2) setSetupStep((s) => s + 1);
+                else onStartDrill();
+              }}
+              style={{
+                ...primaryBtn,
+                height: 52,
+                width: "100%",
+                borderRadius: 14,
+                justifySelf: "stretch",
+              }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 700, damping: 40 }}
+            >
+              {setupStep < 2 ? "Next" : "Start"}
+            </motion.button>
+          </div>
+        </div>
+      );
+    })()}
+  </motion.div>
 ) : null}
 
 {phase !== "setup" ? (
