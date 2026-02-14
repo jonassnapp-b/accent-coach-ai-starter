@@ -848,28 +848,74 @@ transform: "translateY(-14px)",
 ) : null}
 
 
-                    {phase === "result" && lastAttempt ? (
-                      <div
-                        style={{
-                          background: "#fff",
-                          border: `1px solid ${LIGHT_BORDER}`,
-                          borderRadius: 22,
-                          padding: 18,
-                          display: "grid",
-                          gap: 10,
-                          placeItems: "center",
-                          textAlign: "center",
-                        }}
-                      >
-                        <div style={{ fontSize: 44, fontWeight: 1000, letterSpacing: -0.6, color: LIGHT_TEXT }}>
-                          {lastAttempt.overall}%
-                        </div>
-                        <div style={{ fontSize: 16, fontWeight: 950, color: LIGHT_TEXT }}>
-                          {lastAttempt.label}
-                        </div>
-                       
-                      </div>
-                    ) : null}
+                   {phase === "result" && lastAttempt ? (
+  <motion.div
+    key={`result-${lastAttempt.createdAt}`}
+    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+    transition={{ type: "spring", stiffness: 700, damping: 45 }}
+    style={{
+      background: "rgba(255,255,255,0.96)",
+      border: "1px solid rgba(17,24,39,0.08)",
+      borderRadius: 24,
+      padding: 22,
+      display: "grid",
+      gap: 12,
+      placeItems: "center",
+      textAlign: "center",
+      boxShadow: "0 22px 60px rgba(17,24,39,0.10), 0 1px 0 rgba(255,255,255,0.8) inset",
+    }}
+  >
+    {/* subtle ring */}
+    <div style={{ position: "relative", width: 92, height: 92, display: "grid", placeItems: "center" }}>
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: 999,
+          background: "conic-gradient(from 270deg, rgba(33,150,243,0.90) 0%, rgba(33,150,243,0.90) "
+            + `${Math.max(0, Math.min(100, lastAttempt.overall))}%`
+            + ", rgba(17,24,39,0.08) 0%)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 6,
+          borderRadius: 999,
+          background: "rgba(255,255,255,0.92)",
+          border: "1px solid rgba(17,24,39,0.08)",
+        }}
+      />
+      <div style={{ position: "relative", fontSize: 30, fontWeight: 1100, letterSpacing: -0.7, color: LIGHT_TEXT }}>
+        {lastAttempt.overall}%
+      </div>
+    </div>
+
+    {/* label badge */}
+    <div
+      style={{
+        padding: "7px 12px",
+        borderRadius: 999,
+        border: "1px solid rgba(17,24,39,0.10)",
+        background: "rgba(33,150,243,0.08)",
+        fontSize: 13,
+        fontWeight: 950,
+        letterSpacing: -0.15,
+        color: LIGHT_TEXT,
+      }}
+    >
+      {lastAttempt.label}
+    </div>
+
+    {/* micro line */}
+    <div style={{ fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, letterSpacing: -0.1 }}>
+      Auto-next…
+    </div>
+  </motion.div>
+) : null}
+
 
                     {phase === "summary" ? (
                       <div
