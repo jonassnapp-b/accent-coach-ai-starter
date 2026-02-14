@@ -49,21 +49,23 @@ function pickRandom(arr) {
 
 function buildTargets({ mode, difficulty, total = 10 }) {
   const pool = mode === "sentences" ? (SENTENCES[difficulty] || []) : (WORDS[difficulty] || []);
-  const out = [];
-  let guard = 0;
 
-  while (out.length < total && guard < 500) {
-    guard++;
-    const t = pickRandom(pool);
-    if (!t) break;
-    if (out[out.length - 1] === t) continue; // avoid immediate repeat
-    out.push(t);
+  // Unique only (no duplicates within a session)
+  const uniq = Array.from(new Set(pool)).filter(Boolean);
+
+  // If pool is smaller than requested total, session becomes shorter (still no duplicates)
+  const n = Math.min(total, uniq.length);
+
+  // Fisher–Yates shuffle, then take first n
+  const a = uniq.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
   }
 
-  // fallback if pool too small
-  while (out.length < total) out.push(pool[0] || "");
-  return out;
+  return a.slice(0, n);
 }
+
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -314,26 +316,31 @@ const [summaryCount, setSummaryCount] = useState(0);
     }
   }
 
-  // Auto-next after result
-  useEffect(() => {
-    if (phase !== "result") return;
-    const t = setTimeout(() => {
-      setIdx((i) => {
-        const next = i + 1;
-        if (next >= 10) {
-          setPhase("summary");
-          return i;
-        }
-        setPhase("prompt");
-        cleanupUserUrl();
-        return next;
-      });
-    }, 1200);
+// Auto-next after result
+useEffect(() => {
+  if (phase !== "result") return;
 
+  const total = targets.length || 0;
 
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  const t = setTimeout(() => {
+    setIdx((i) => {
+      const next = i + 1;
+
+      if (total > 0 && next >= total) {
+        setPhase("summary");
+        return i;
+      }
+
+      setPhase("prompt");
+      cleanupUserUrl();
+      return next;
+    });
+  }, 1200);
+
+  return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [phase, targets.length]);
+
 // Count-up when summary shows
 useEffect(() => {
   if (phase !== "summary") return;
@@ -1077,16 +1084,17 @@ transform: "translateY(-14px)",
     </div>
 
     {/* CTA spacing + hierarchy */}
-    <div style={summaryCtas}>
-      <button type="button" onClick={onRepeatSameDrill} style={primaryBtn}>
-        Repeat
-      </button>
-      <div style={{ display: "grid", placeItems: "center" }}>
-        <button type="button" onClick={onExit} style={{ ...ghostBtn, height: 44, width: "min(240px, 100%)" }}>
-          New drill
-        </button>
-      </div>
-    </div>
+   <div style={summaryCtas}>
+  <button type="button" onClick={onRepeatSameDrill} style={{ ...primaryBtn, justifySelf: "center" }}>
+    Repeat
+  </button>
+  <div style={{ display: "grid", placeItems: "center" }}>
+    <button type="button" onClick={onExit} style={{ ...ghostBtn, height: 44, width: "min(240px, 100%)" }}>
+      New drill
+    </button>
+  </div>
+</div>
+
   </motion.div>
 ) : null}
 
