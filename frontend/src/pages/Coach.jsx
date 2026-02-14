@@ -1,6 +1,6 @@
 // src/pages/Coach.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Mic, StopCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Mic, StopCircle, X } from "lucide-react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import { ingestLocalPhonemeScores } from "../lib/localPhonemeStats.js";
@@ -452,6 +452,117 @@ boxShadow:
   });
 
   const lastAttempt = attempts[attempts.length - 1] || null;
+  const totalCount = targets?.length || 10;
+  const stepNow = Math.min(idx + 1, totalCount);
+  const progressPct = totalCount ? Math.round((stepNow / totalCount) * 100) : 0;
+
+  const flowHeaderWrap = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 10,
+  };
+
+  const flowTitle = {
+    fontSize: 22,
+    fontWeight: 1000,
+    letterSpacing: -0.6,
+    color: LIGHT_TEXT,
+    lineHeight: 1.05,
+  };
+
+  const flowMeta = {
+    marginTop: 6,
+    fontSize: 13,
+    fontWeight: 800,
+    letterSpacing: -0.15,
+    color: LIGHT_MUTED,
+    display: "flex",
+    gap: 10,
+    alignItems: "center",
+    flexWrap: "wrap",
+  };
+
+  const progressTrack = {
+    height: 3,
+    borderRadius: 999,
+    background: "rgba(17,24,39,0.10)",
+    overflow: "hidden",
+  };
+
+  const progressFill = {
+    height: "100%",
+    width: `${progressPct}%`,
+    borderRadius: 999,
+    background: "rgba(33,150,243,0.80)",
+  };
+
+  const closeBtn = {
+    width: 38,
+    height: 38,
+    borderRadius: 999,
+    border: "1px solid rgba(17,24,39,0.10)",
+    background: "rgba(255,255,255,0.70)",
+    boxShadow: "0 10px 22px rgba(17,24,39,0.10), 0 1px 0 rgba(255,255,255,0.9) inset",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
+    display: "grid",
+    placeItems: "center",
+    cursor: "pointer",
+  };
+
+  const flowCard = {
+    background: "rgba(255,255,255,0.96)",
+    border: "1px solid rgba(17,24,39,0.08)",
+    borderRadius: 24,
+    padding: 22,
+    boxShadow: "0 22px 60px rgba(17,24,39,0.10), 0 1px 0 rgba(255,255,255,0.8) inset",
+  };
+
+  const heroWord = {
+    fontSize: 32,
+    fontWeight: 1000,
+    letterSpacing: -0.8,
+    color: LIGHT_TEXT,
+    textAlign: "center",
+    lineHeight: 1.05,
+  };
+
+  const hintText = {
+    marginTop: 10,
+    fontSize: 13,
+    fontWeight: 850,
+    letterSpacing: -0.15,
+    color: LIGHT_MUTED,
+    textAlign: "center",
+  };
+
+  const micBtn = (isRecording, isDisabled) => ({
+    width: 80,
+    height: 80,
+    borderRadius: 26,
+    border: "1px solid rgba(17,24,39,0.08)",
+    background: isRecording
+      ? "linear-gradient(180deg, rgba(17,24,39,0.92) 0%, rgba(17,24,39,0.82) 100%)"
+      : "linear-gradient(180deg, #2FA8FF 0%, #1E88E5 100%)",
+    boxShadow: isRecording
+      ? "0 18px 50px rgba(17,24,39,0.18), 0 1px 0 rgba(255,255,255,0.20) inset"
+      : "0 22px 60px rgba(33,150,243,0.28), 0 1px 0 rgba(255,255,255,0.42) inset, 0 -1px 0 rgba(0,0,0,0.10) inset",
+    display: "grid",
+    placeItems: "center",
+    cursor: isDisabled ? "not-allowed" : "pointer",
+    opacity: isDisabled ? 0.6 : 1,
+    position: "relative",
+  });
+
+  const micGlow = {
+    position: "absolute",
+    inset: -18,
+    borderRadius: 34,
+    background: "radial-gradient(circle, rgba(33,150,243,0.22) 0%, rgba(33,150,243,0.00) 70%)",
+    pointerEvents: "none",
+  };
 
   return (
     <div
@@ -669,67 +780,73 @@ transform: "translateY(-14px)",
                     transition={{ duration: 0.18 }}
                     style={{ display: "grid", gap: 16 }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                     <div />
+                   <div style={flowHeaderWrap}>
+  <div style={{ flex: 1, minWidth: 0 }}>
+    <div style={flowTitle}>Daily Drill</div>
+    <div style={flowMeta}>
+      <span>{`Word ${stepNow} of ${totalCount}`}</span>
+      <span>•</span>
+      <span>{MODE_LABEL[mode]}</span>
+      <span>•</span>
+      <span>{DIFF_LABEL[difficulty]}</span>
+      <span>•</span>
+      <span>{ACCENT_LABEL[lockedAccent]}</span>
+    </div>
+
+    <div style={{ marginTop: 10 }}>
+      <div style={progressTrack}>
+        <div style={progressFill} />
+      </div>
+    </div>
+  </div>
+
+  <motion.button
+    type="button"
+    onClick={onExit}
+    style={closeBtn}
+    whileTap={{ scale: 0.96 }}
+    transition={{ type: "spring", stiffness: 700, damping: 40 }}
+    disabled={phase === "analyzing"}
+    aria-label="Close"
+    title="Close"
+  >
+    <X className="h-5 w-5" />
+  </motion.button>
+</div>
 
 
-                      <button type="button" onClick={onExit} style={{
-  ...ghostBtn,
-  background: "#2196F3",
-  border: "none",
-  color: "white",
-}}
- disabled={phase === "analyzing"}>
-                        Exit
-                      </button>
-                    </div>
+                 {phase === "prompt" || phase === "recording" || phase === "analyzing" ? (
+  <div style={{ ...flowCard, display: "grid", gap: 16, placeItems: "center" }}>
+    <div style={heroWord}>{currentText || "—"}</div>
 
-                    {phase === "prompt" || phase === "recording" || phase === "analyzing" ? (
-                      <div
-                        style={{
-                          background: "#fff",
-                          border: `1px solid ${LIGHT_BORDER}`,
-                          borderRadius: 22,
-                          padding: 18,
-                          display: "grid",
-                          gap: 14,
-                        }}
-                      >
-                        <div style={{ fontSize: 22, fontWeight: 950, color: LIGHT_TEXT, textAlign: "center" }}>
-                          {currentText || "—"}
-                        </div>
+    <motion.button
+      type="button"
+      onClick={toggleRecord}
+      disabled={phase === "analyzing" || !currentText}
+      title={phase === "recording" ? "Stop" : "Record"}
+      style={micBtn(phase === "recording", phase === "analyzing" || !currentText)}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: "spring", stiffness: 700, damping: 40 }}
+    >
+      {phase !== "recording" ? <div style={micGlow} /> : null}
 
-                        <div style={{ display: "grid", placeItems: "center", marginTop: 6 }}>
-                          <button
-                            type="button"
-                            onClick={toggleRecord}
-                            disabled={phase === "analyzing" || !currentText}
-                            title={phase === "recording" ? "Stop" : "Record"}
-                            style={{
-                              width: 56,
-                              height: 56,
-                              borderRadius: 18,
-                              border: "none",
-                              background: phase === "recording" ? "#111827" : BTN_BLUE,
-                              display: "grid",
-                              placeItems: "center",
-                              cursor: phase === "analyzing" ? "not-allowed" : "pointer",
-                              opacity: phase === "analyzing" ? 0.6 : 1,
-                            }}
-                          >
-                            {phase === "recording" ? (
-                              <StopCircle className="h-6 w-6" style={{ color: "white" }} />
-                            ) : (
-                              <Mic className="h-6 w-6" style={{ color: "white" }} />
-                            )}
-                          </button>
+      {phase === "recording" ? (
+        <StopCircle className="h-7 w-7" style={{ color: "white" }} />
+      ) : (
+        <Mic className="h-7 w-7" style={{ color: "white" }} />
+      )}
+    </motion.button>
 
-                          <div style={{ marginTop: 10, minHeight: 18, color: LIGHT_MUTED, fontWeight: 850, fontSize: 12 }}>
-                            {phase === "recording" ? "Recording…" : phase === "analyzing" ? "Analyzing…" : " "}
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
+    <div style={hintText}>
+      {phase === "recording"
+        ? "Recording…"
+        : phase === "analyzing"
+        ? "Analyzing…"
+        : "Tap to record"}
+    </div>
+  </div>
+) : null}
+
 
                     {phase === "result" && lastAttempt ? (
                       <div
