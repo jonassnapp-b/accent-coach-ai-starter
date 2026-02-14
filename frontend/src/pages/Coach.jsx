@@ -127,15 +127,7 @@ export default function Coach() {
   const [difficulty, setDifficulty] = useState("easy");
   const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
 
-  const summary = useMemo(() => {
-    if (!attempts.length) return { avg: 0, great: 0, ok: 0, needs: 0 };
-    const sum = attempts.reduce((a, x) => a + (Number.isFinite(x.overall) ? x.overall : 0), 0);
-    const avg = Math.round(sum / attempts.length);
-    const great = attempts.filter((x) => x.label === "Great").length;
-    const ok = attempts.filter((x) => x.label === "OK").length;
-    const needs = attempts.filter((x) => x.label === "Needs work").length;
-    return { avg, great, ok, needs };
-  }, [attempts]);
+
 
   useEffect(() => {
     setAccentUi(settings?.accentDefault || "en_us");
@@ -148,6 +140,16 @@ export default function Coach() {
   const [targets, setTargets] = useState([]); // 10 items
   const [idx, setIdx] = useState(0);
   const [attempts, setAttempts] = useState([]); // { i, text, overall, label, createdAt }
+  const summary = useMemo(() => {
+  if (!attempts.length) return { avg: 0, great: 0, ok: 0, needs: 0 };
+  const sum = attempts.reduce((a, x) => a + (Number.isFinite(x.overall) ? x.overall : 0), 0);
+  const avg = Math.round(sum / attempts.length);
+  const great = attempts.filter((x) => x.label === "Great").length;
+  const ok = attempts.filter((x) => x.label === "OK").length;
+  const needs = attempts.filter((x) => x.label === "Needs work").length;
+  return { avg, great, ok, needs };
+}, [attempts]);
+
 const [summaryCount, setSummaryCount] = useState(0);
 
   const currentText = targets[idx] || "";
