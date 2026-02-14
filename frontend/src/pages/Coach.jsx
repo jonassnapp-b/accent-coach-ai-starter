@@ -512,6 +512,36 @@ paddingTop: 10,
 transform: "translateY(-14px)",
 }}
 >
+  <div
+  style={{
+    textAlign: "center",
+    marginBottom: 22,
+  }}
+>
+  <div
+    style={{
+      fontSize: 34,
+      fontWeight: 1000,
+      letterSpacing: -0.8,
+      color: LIGHT_TEXT,
+    }}
+  >
+    Daily Drill
+  </div>
+
+  <div
+    style={{
+      marginTop: 6,
+      fontSize: 15,
+      fontWeight: 700,
+      color: LIGHT_MUTED,
+      letterSpacing: -0.2,
+    }}
+  >
+    Improve your pronunciation in minutes
+  </div>
+</div>
+
 <div style={{ ...setupCard }}>
 
   <div style={pickerRow}>
