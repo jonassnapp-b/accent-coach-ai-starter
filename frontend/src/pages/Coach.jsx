@@ -705,17 +705,16 @@ const summaryCtas = {
       }, 90);
     }
 
-    return (
-      <div
-        style={{
-          position: "relative",
-          borderTop: "1px solid rgba(17,24,39,0.14)",
-          borderBottom: "1px solid rgba(17,24,39,0.14)",
-          background: "transparent",
-          height: WHEEL_ITEM_H * 3, // 3 visible rows like iOS
-          overflow: "hidden",
-        }}
-      >
+   return (
+  <div
+    style={{
+      position: "relative",
+      background: "transparent",
+      height: WHEEL_ITEM_H * 3,
+      overflow: "hidden",
+    }}
+  >
+
         {/* center highlight */}
         <div
           style={{
@@ -724,8 +723,6 @@ const summaryCtas = {
             right: 0,
             top: WHEEL_ITEM_H,
             height: WHEEL_ITEM_H,
-            borderTop: "1px solid rgba(17,24,39,0.12)",
-            borderBottom: "1px solid rgba(17,24,39,0.12)",
             background: "rgba(33,150,243,0.06)",
             pointerEvents: "none",
           }}
@@ -923,13 +920,13 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
         : accentImg
     }
     alt=""
-    style={{
-      width: 140,
-      height: 140,
-      objectFit: "contain",
-      pointerEvents: "none",
-      userSelect: "none",
-    }}
+  style={{
+  width: setupStep === 2 ? 170 : 140,
+  height: setupStep === 2 ? 170 : 140,
+  objectFit: "contain",
+  pointerEvents: "none",
+  userSelect: "none",
+}}
   />
 </div>
 
@@ -957,26 +954,33 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
           <div
   style={{
     display: "flex",
-    justifyContent: setupStep > 0 ? "space-between" : "flex-end",
+    justifyContent: "center",
     alignItems: "center",
-    gap: 14,
+    gap: 12,
     padding: "0 22px",
     marginTop: 10,
   }}
 >
+
+
             {setupStep > 0 ? (
               <button
                 type="button"
                 onClick={() => setSetupStep((s) => Math.max(0, s - 1))}
-                style={{
-                  height: 46,
-                  borderRadius: 12,
-                  border: "none",
-                  background: "transparent",
-                  color: "rgba(17,24,39,0.55)",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
+               style={{
+  height: 52,
+  padding: "0 18px",
+  borderRadius: 14,
+  border: "1px solid rgba(17,24,39,0.14)",
+  background: "rgba(255,255,255,0.45)",
+  color: "rgba(17,24,39,0.72)",
+  fontWeight: 850,
+  cursor: "pointer",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+  minWidth: 120,
+}}
+
               >
                 Back
               </button>
@@ -991,9 +995,11 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
          style={{
   ...primaryBtn,
   height: 52,
-  width: setupStep > 0 ? "58%" : "100%",
+  flex: 1,
   borderRadius: 14,
+  maxWidth: 420,
 }}
+
 
               whileTap={{ scale: 0.98 }}
               transition={{ type: "spring", stiffness: 700, damping: 40 }}
