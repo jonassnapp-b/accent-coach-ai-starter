@@ -224,6 +224,7 @@ export default function Feedback() {
       // keep same accent as current result if possible, else settings default
       const accent = (result?.accent || settings.accentDefault || "en_us") === "en_br" ? "en_br" : "en_us";
       fd.append("accent", accent);
+      fd.append("slack", String(settings?.slack ?? 0));
 
       const r = await fetch(`${base}/api/analyze-speech`, { method: "POST", body: fd });
       const json = await r.json().catch(() => ({}));

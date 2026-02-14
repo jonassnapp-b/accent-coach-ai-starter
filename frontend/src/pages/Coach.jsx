@@ -234,6 +234,7 @@ export default function Coach() {
       fd.append("audio", audioBlob, "clip.webm");
       fd.append("refText", currentText);
       fd.append("accent", lockedAccent === "en_br" ? "en_br" : "en_us");
+      fd.append("slack", String(settings?.slack ?? 0));
 
       const timeoutMs = 15000;
       const controller = new AbortController();

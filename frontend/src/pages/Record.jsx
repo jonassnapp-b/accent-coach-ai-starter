@@ -347,6 +347,7 @@ else setErr("Microphone access is blocked. Please allow it and try again.");
       fd.append("audio", audioBlob, "clip.webm");
       fd.append("refText", text);
       fd.append("accent", accentUi === "en_br" ? "en_br" : "en_us");
+      fd.append("slack", String(settings?.slack ?? 0));
 
       // ✅ HARD TIMEOUT so App Review never sees “infinite loading”
 const controller = new AbortController();

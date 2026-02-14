@@ -1461,6 +1461,57 @@ const [loopOn, setLoopOn] = useState(false);
 const [playbackRate, setPlaybackRate] = useState(1.0);
 const [deepDiveOpen, setDeepDiveOpen] = useState(false);
 const [deepDivePhoneme, setDeepDivePhoneme] = useState(null); // { code, letters }
+useEffect(() => {
+  if (!deepDiveOpen) return;
+
+  let cancelled = false;
+
+  (async () => {
+    const code = String(deepDivePhoneme?.code || "").toUpperCase();
+    if (!code) return;
+
+    const dd = getDeepDiveForPhoneme(code);
+    const accent = accentUi === "en_br" ? "en_br" : "en_us";
+
+    // Prefetch only the most likely rate (current), so it matches clicks
+    const rate = Number(playbackRate ?? 1.0) || 1.0;
+
+    // Collect texts shown in Deep Dive
+    const texts = [];
+
+    if (Array.isArray(dd?.minimalPairs)) {
+      for (const pair of dd.minimalPairs) {
+        if (Array.isArray(pair) && pair.length >= 2) {
+          texts.push(pair[0], pair[1]);
+        }
+      }
+    }
+
+    const pos = dd?.positions || {};
+    for (const w of (pos.start || [])) texts.push(w);
+    for (const w of (pos.mid || [])) texts.push(w);
+    for (const w of (pos.end || [])) texts.push(w);
+
+    if (Array.isArray(dd?.drills)) {
+      for (const s of dd.drills) texts.push(s);
+    }
+
+    // Dedup + cap so we don’t spam the server
+    const unique = Array.from(new Set(texts.map((x) => String(x || "").trim()).filter(Boolean))).slice(0, 40);
+
+    // Prefetch sequentially (stable + gentle)
+    for (const t of unique) {
+      if (cancelled) return;
+      try {
+        await prefetchTtsUrl({ text: t, accent, rate });
+      } catch {}
+    }
+  })();
+
+  return () => {
+    cancelled = true;
+  };
+}, [deepDiveOpen, deepDivePhoneme?.code, accentUi, playbackRate]);
 
 
 const userAudioRef = useRef(null);
@@ -1718,6 +1769,32 @@ async function ensureTtsUrl({ text, accent, rate }) {
     const msg = await r.text().catch(() => "");
     throw new Error(`TTS failed (${r.status}): ${msg || r.statusText}`);
   }
+
+  const buf = await r.arrayBuffer();
+  const blob = new Blob([buf], { type: "audio/wav" });
+  const url = URL.createObjectURL(blob);
+
+  ttsCacheRef.current.set(key, url);
+  return url;
+}
+async function prefetchTtsUrl({ text, accent, rate }) {
+  const t = String(text || "").trim();
+  if (!t) return null;
+
+  const key = `${accent}|${rate}|${t}`;
+  const cached = ttsCacheRef.current.get(key);
+  if (cached) return cached;
+
+  const base = getApiBase();
+
+  // IMPORTANT: no ttsAbortRef here (so we don't cancel real plays)
+  const r = await fetch(`${base}/api/tts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: t, accent, rate }),
+  });
+
+  if (!r.ok) return null;
 
   const buf = await r.arrayBuffer();
   const blob = new Blob([buf], { type: "audio/wav" });
@@ -1997,6 +2074,7 @@ sendToServer(blob, localUrl);
       fd.append("audio", audioBlob, "clip.webm");
       fd.append("refText", text);
       fd.append("accent", accentUi === "en_br" ? "en_br" : "en_us");
+fd.append("slack", String(settings?.slack ?? 0));
 
       
       // hard timeout
@@ -2742,7 +2820,7 @@ fontSize: 14,
          <div
   style={{
     position: "relative",
-background: "#E8F2FF",
+background: "#FFFFFF",
     color: "#0B1220",
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
@@ -2753,8 +2831,8 @@ background: "#E8F2FF",
     boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
     marginBottom: 22,
 
-    marginLeft: -16,
-marginRight: -16,
+    marginLeft: -24,
+marginRight: -24,
 
   }}
 >
@@ -2787,42 +2865,54 @@ marginRight: -16,
             {s.mediaKind === "image" ? (
               <img src={s.mediaSrc} alt={`${s.code} visual`} style={{ width: "100%", display: "block" }} />
             ) : (
-           <div style={{ position: "relative" }}>
+        <div style={{ position: "relative" }}>
   <video
-  key={s.mediaSrc}
-  ref={phonemeVideoRef}
-  src={s.mediaSrc}
-  poster={`/phonemes/Videos/${s.code}.jpg`}   // ✅ preview før play (hvis filen findes)
-  playsInline
-  muted={false}
-  controls={false}
-  loop={false}
-  autoPlay={false}
-preload="auto"
-  style={{ width: "100%", display: "block" }}
-  onEnded={() => setPhonemeVideoPlaying(false)}
-/>
+    key={s.mediaSrc}
+    ref={phonemeVideoRef}
+    src={s.mediaSrc}
+    poster={`/phonemes/Videos/${s.code}.jpg`}
+    playsInline
+    muted={false}
+    controls={false}
+    loop={false}
+    autoPlay={false}
+    preload="auto"
+    style={{ width: "100%", display: "block" }}
+    onEnded={() => setPhonemeVideoPlaying(false)}
+  />
 
+  {/* ✅ darker overlay (only when NOT playing) */}
+  <div
+    aria-hidden="true"
+    style={{
+      position: "absolute",
+      inset: 0,
+      background:
+        "linear-gradient(180deg, rgba(0,0,0,0.34) 0%, rgba(0,0,0,0.18) 55%, rgba(0,0,0,0.34) 100%)",
+      opacity: phonemeVideoPlaying ? 0 : 1,
+      transition: "opacity 220ms ease",
+      pointerEvents: "none",
+    }}
+  />
 
   <button
     type="button"
-   onClick={async () => {
-  const v = phonemeVideoRef.current;
-  if (!v) return;
+    onClick={async () => {
+      const v = phonemeVideoRef.current;
+      if (!v) return;
 
-  try {
-    if (v.paused) {
-      v.muted = false;     // ✅ unmute når user klikker play
-      v.currentTime = 0;
-      await v.play();
-      setPhonemeVideoPlaying(true);
-    } else {
-      v.pause();
-      setPhonemeVideoPlaying(false);
-    }
-  } catch {}
-}}
-
+      try {
+        if (v.paused) {
+          v.muted = false;
+          v.currentTime = 0;
+          await v.play();
+          setPhonemeVideoPlaying(true);
+        } else {
+          v.pause();
+          setPhonemeVideoPlaying(false);
+        }
+      } catch {}
+    }}
     aria-label={phonemeVideoPlaying ? "Pause video" : "Play video"}
     style={{
       position: "absolute",
@@ -2834,64 +2924,28 @@ preload="auto"
       cursor: "pointer",
     }}
   >
-    {trophyCelebration && (
-  <>
-    <style>{`
-      @keyframes trophyPop {
-        0%   { transform: translateY(10px) scale(0.98); opacity: 0; }
-        15%  { transform: translateY(0px)  scale(1.00); opacity: 1; }
-        75%  { transform: translateY(0px)  scale(1.00); opacity: 1; }
-        100% { transform: translateY(-6px) scale(0.99); opacity: 0; }
-      }
-    `}</style>
-
     <div
       style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        top: `calc(${SAFE_TOP} + 12px)`,
-        display: "flex",
-        justifyContent: "center",
-        zIndex: 10001,
-        pointerEvents: "none",
-      }}
-    >
-      <div
-        style={{
-          padding: "10px 14px",
-          borderRadius: 18,
-          background: "rgba(255,255,255,0.16)",
-          border: "1px solid rgba(255,255,255,0.22)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          fontWeight: 950,
-          letterSpacing: -0.2,
-          animation: "trophyPop 2400ms ease both",
-        }}
-      >
-        🏆 Trophy reached!
-      </div>
-    </div>
-  </>
-)}
-
-    <div
-      style={{
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        background: "rgba(0,0,0,0.30)",
-        border: "1px solid rgba(255,255,255,0.22)",
+        width: 76,
+        height: 76,
+        borderRadius: 38,
+        background: "rgba(0,0,0,0.46)", // ✅ darker
+        border: "1px solid rgba(255,255,255,0.28)",
         display: "grid",
         placeItems: "center",
-        backdropFilter: "blur(6px)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        boxShadow:
+          "0 22px 60px rgba(0,0,0,0.45), 0 0 0 6px rgba(255,255,255,0.06)", // ✅ subtle glow ring
+        transform: phonemeVideoPlaying ? "scale(0.96)" : "scale(1)",
+        transition: "transform 180ms ease",
       }}
     >
-      {phonemeVideoPlaying ? <Pause className="h-7 w-7" /> : <Play className="h-7 w-7" />}
+      {phonemeVideoPlaying ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8" />}
     </div>
   </button>
 </div>
+
 
             )}
           </div>
@@ -2917,9 +2971,10 @@ color: "#0B1220",
       justifyContent: "center",
       gap: 10,
     }}
-  >
-    Watch Deep Dive <span style={{ fontSize: 20, lineHeight: 0 }}>→</span>
+   >
+    Watch Detailed Guide <span style={{ fontSize: 20, lineHeight: 0 }}>→</span>
   </button>
+
 </div>
 
         </>
@@ -3303,7 +3358,8 @@ borderRadius: 20,
       paddingLeft: 18,
       paddingRight: 18,
       paddingBottom: `calc(14px + ${SAFE_BOTTOM})`,
-      overflow: "hidden",
+overflow: "auto",
+WebkitOverflowScrolling: "touch",
       display: "flex",
       flexDirection: "column",
     }}

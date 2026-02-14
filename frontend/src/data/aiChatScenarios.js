@@ -116,7 +116,7 @@ export const AI_CHAT_LEVELS = [
         partnerName: "Noah",
         partnerTitle: "a Local",
         opening: "Hi! You look a bit lost, can I help?",
-        firstUserLine: "Yes, pleasem how do I get to the train station from here?",
+        firstUserLine: "Yes please, how do I get to the train station from here?",
         turns: [
           {
             assistantText: "Sure. Walk straight for two blocks, then turn left at the traffic light.",

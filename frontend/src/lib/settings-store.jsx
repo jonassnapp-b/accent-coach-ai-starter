@@ -18,6 +18,8 @@ export const defaultSettings = {
   showStressTips: true,
   autoPlayNative: false, // Imitate tab only
   ttsRate: 1.0,
+  // Difficulty (SpeechSuper slack)
+  slack: 0, // -1..1 (0 = recommended)
 
   // Audio
   volume: 0.6, // 0–1 (GLOBAL volume used across the app)
@@ -60,6 +62,8 @@ function coerceSettings(maybe) {
   s.showPhonemeTable = !!s.showPhonemeTable;
   s.showStressTips = !!s.showStressTips;
   s.autoPlayNative = !!s.autoPlayNative;
+  const slack = Number(s.slack);
+  s.slack = Number.isFinite(slack) ? Math.max(-1, Math.min(1, slack)) : defaultSettings.slack;
 
   const rate = Number(s.ttsRate);
   s.ttsRate = Number.isFinite(rate) ? Math.max(0.5, Math.min(1.5, rate)) : defaultSettings.ttsRate;

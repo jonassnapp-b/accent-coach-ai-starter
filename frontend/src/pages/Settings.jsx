@@ -106,6 +106,17 @@ function ControlInput(props) {
     />
   );
 }
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n));
+}
+
+function slackLabel(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "Recommended";
+  if (n <= -0.35) return "Easier";
+  if (n >= 0.35) return "Stricter";
+  return "Recommended";
+}
 
 /* ---------- Main ---------- */
 export default function Settings() {
@@ -240,6 +251,43 @@ export default function Settings() {
       </ControlSelect>
     </div>
   </Row>
+   {(() => {
+  const slackVal = clamp(Number(s.slack ?? 0), -1, 1);
+
+  return (
+    <div className="flex flex-col gap-2 py-3">
+      <div>
+        <div className="font-medium" style={{ color: "var(--text)" }}>
+          Difficulty (Slack)
+        </div>
+        <div className="text-sm" style={{ color: "var(--muted)" }}>
+          Controls scoring strictness. Easier = more forgiving. Stricter = harder.
+        </div>
+      </div>
+
+      <div className="grid gap-2">
+        <div style={{ color: "var(--muted)", fontWeight: 800 }}>
+          {slackLabel(slackVal)} ({slackVal.toFixed(2)})
+        </div>
+
+        <input
+          type="range"
+          min="-1"
+          max="1"
+          step="0.05"
+          value={slackVal}
+          onChange={(e) => setS({ ...s, slack: Number(e.target.value) })}
+          className="w-56 range-blue-white"
+          style={{
+            "--pct": `${Math.round(((slackVal + 1) / 2) * 100)}%`,
+          }}
+        />
+      </div>
+    </div>
+  );
+})()}
+
+
 </Section>
 
 

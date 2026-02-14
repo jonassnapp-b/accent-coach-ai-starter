@@ -366,6 +366,7 @@ async function handleStop(rec) {
     fd.append("refText", refText);
     // Brug din default accent hvis du vil – ellers bare en fast fallback:
     fd.append("accent", (accentUi === "en_br" ? "en_br" : "en_us"));
+    fd.append("slack", String(settings?.slack ?? 0));
 
     const controller = new AbortController();
     const timeoutMs = 12000;

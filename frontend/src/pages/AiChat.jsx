@@ -568,13 +568,15 @@ setTargetLine("");
 try {
   const base = getApiBase();
 
-  const { json, psmOverall, psmWordScoresInOrder } = await analyzeSpeechPSM({
-    base,
-    audioBlob: blob,
-    refText: spokenText,
-    accent: accentUi === "en_br" ? "en_br" : "en_us",
-    timeoutMs: 12000,
-  });
+const { json, psmOverall, psmWordScoresInOrder } = await analyzeSpeechPSM({
+  base,
+  audioBlob: blob,
+  refText: spokenText,
+  accent: accentUi === "en_br" ? "en_br" : "en_us",
+  timeoutMs: 12000,
+  slack: 1,
+});
+
 
   const overall = Number(psmOverall ?? 0);
   const orderedWordScores = Array.isArray(psmWordScoresInOrder) ? psmWordScoresInOrder : [];

@@ -6,6 +6,8 @@ import { Play, Mic, StopCircle, RefreshCw, ChevronRight, RotateCcw, ArrowRight }
 import PhonemeFeedback from "../components/PhonemeFeedback.jsx";
 import { burstConfetti } from "../lib/celebrations.js";
 import { updateStreak, readStreak } from "../lib/streak.js";
+import { useSettings } from "../lib/settings-store.jsx";
+
 
 /* ---------------- Platform + API base ---------------- */
 function isNative() { return !!(window?.Capacitor && window.Capacitor.isNativePlatform); }
@@ -45,6 +47,8 @@ const ACCENTS = [
 ];
 
 export default function Imitate() {
+    const { settings } = useSettings();
+
   const [level, setLevel]   = useState("easy");
   const [accent, setAccent] = useState("en_us");
   const [sample, setSample] = useState({ text: "", voice: "en-US" });
@@ -243,6 +247,7 @@ async function sendToServer(audioBlob, localUrl) {
     fd.append("audio", audioBlob, `clip.${ext}`);
     fd.append("refText", text);
     fd.append("accent", accent === "en_br" ? "en_br" : "en_us");
+    fd.append("slack", String(settings?.slack ?? 0));
 
     const r = await fetch(`${base}/api/analyze-speech`, { method: "POST", body: fd });
     const json = await r.json().catch(() => ({}));

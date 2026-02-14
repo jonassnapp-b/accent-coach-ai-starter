@@ -69,7 +69,9 @@ export async function analyzeSpeechPSM({
   accent, // "en_us" | "en_br"
   timeoutMs = 12000,
   filename = "clip.webm",
+  slack, // optional number (e.g. 1)
 }) {
+
   if (!base) throw new Error("API base is missing.");
   if (!audioBlob) throw new Error("audioBlob is missing.");
 
@@ -77,6 +79,9 @@ export async function analyzeSpeechPSM({
   fd.append("audio", audioBlob, filename);
   fd.append("refText", String(refText || ""));
   fd.append("accent", accent === "en_br" ? "en_br" : "en_us");
+if (slack != null && slack !== "") {
+  fd.append("slack", String(slack));
+}
 
   const controller = new AbortController();
   const t = setTimeout(() => {

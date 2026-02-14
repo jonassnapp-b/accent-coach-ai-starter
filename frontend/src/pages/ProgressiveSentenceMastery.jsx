@@ -1029,6 +1029,7 @@ useEffect(() => {
       fd.append("refText", normalizeRefText(sentence));
       fd.append("accent", accent);
       fd.append("audio", audioBlob, "clip.webm");
+      fd.append("slack", String(settings?.slack ?? 0));
 
       const res = await fetch(`${base}/api/analyze-speech`, { method: "POST", body: fd });
       const json = await res.json().catch(() => ({}));
