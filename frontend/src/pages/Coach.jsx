@@ -508,7 +508,58 @@ export default function Coach() {
 }}
 
                   >
-                   
+                    <div style={pickerRow}>
+                      <button type="button" onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, -1))} style={pickerBtn}>
+                        <ChevronLeft className="h-7 w-7" />
+                      </button>
+                      <div style={pickerCenter}>{MODE_LABEL[mode]}</div>
+                      <button type="button" onClick={() => setMode((v) => cycleValue(MODE_OPTIONS, v, 1))} style={pickerBtn}>
+                        <ChevronRight className="h-7 w-7" />
+                      </button>
+                    </div>
+
+                    <div style={pickerRow}>
+                      <button
+                        type="button"
+                        onClick={() => setDifficulty((v) => cycleValue(DIFF_OPTIONS, v, -1))}
+                        style={pickerBtn}
+                      >
+                        <ChevronLeft className="h-7 w-7" />
+                      </button>
+                      <div style={pickerCenter}>{DIFF_LABEL[difficulty]}</div>
+                      <button
+                        type="button"
+                        onClick={() => setDifficulty((v) => cycleValue(DIFF_OPTIONS, v, 1))}
+                        style={pickerBtn}
+                      >
+                        <ChevronRight className="h-7 w-7" />
+                      </button>
+                    </div>
+
+                    <div style={pickerRow}>
+                      <button
+                        type="button"
+                        onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, -1))}
+                        style={pickerBtn}
+                      >
+                        <ChevronLeft className="h-7 w-7" />
+                      </button>
+                      <div style={{ ...pickerCenter, transform: "translateX(6px)" }}>{ACCENT_LABEL[accentUi]}</div>
+                      <button
+                        type="button"
+                        onClick={() => setAccentUi((v) => cycleValue(ACCENT_OPTIONS, v, 1))}
+                        style={pickerBtn}
+                      >
+                        <ChevronRight className="h-7 w-7" />
+                      </button>
+                    </div>
+
+                    <div style={{ display: "grid", placeItems: "center", marginTop: 6 }}>
+                      <button type="button" onClick={onStartDrill} style={primaryBtn}>
+                        Start
+                      </button>
+                    
+                    </div>
                   </motion.div>
                 ) : null}
 
