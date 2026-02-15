@@ -142,10 +142,16 @@ const CHALLENGE_GREEN = 85;
 
 // Time limit per difficulty (tuned to be “TikTok-challenge-hard” but still winnable)
 const CHALLENGE_SECONDS = {
-  easy: 12,
+  easy: 10,
   medium: 10,
   hard: 8,
 };
+
+function challengeSecondsFor(difficulty) {
+  return CHALLENGE_SECONDS[difficulty] ?? 10;
+}
+
+
 
 const [wordDeadlineMs, setWordDeadlineMs] = useState(null); // absolute timestamp
 const [timeLeftMs, setTimeLeftMs] = useState(0);
@@ -156,6 +162,24 @@ const [timeLeftMs, setTimeLeftMs] = useState(0);
   useEffect(() => {
     setAccentUi(settings?.accentDefault || "en_us");
   }, [settings?.accentDefault]);
+useEffect(() => {
+  if (!challengeOn) return;
+  if (!wordDeadlineMs) return;
+  if (phase === "setup" || phase === "summary") return;
+
+  const id = setInterval(() => {
+    const left = Math.max(0, wordDeadlineMs - Date.now());
+    setTimeLeftMs(left);
+
+    if (left <= 0) {
+      clearInterval(id);
+      resetRunToStart();
+    }
+  }, 100);
+
+  return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [challengeOn, wordDeadlineMs, phase]);
 
   /* ---------------- Daily Drill state machine ---------------- */
   const [phase, setPhase] = useState("setup"); // setup | prompt | recording | analyzing | result | summary
@@ -464,6 +488,12 @@ useEffect(() => {
     resetChallengeWordTimer();
 
     setPhase("prompt");
+    if (challengeOn) {
+  const ms = challengeSecondsFor(difficulty) * 1000;
+  setWordDeadlineMs(Date.now() + ms);
+  setTimeLeftMs(ms);
+}
+
   }
 
   function onExit() {
@@ -798,6 +828,7 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [challengeOn, wordDeadlineMs, phase]);
 
+
     function commitNearest() {
       const el = ref.current;
       if (!el) return;
@@ -1047,7 +1078,7 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
 
   {challengeOn ? (
     <div style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, letterSpacing: -0.1 }}>
-      Beat each word in {CHALLENGE_SECONDS[difficulty] ?? 10}s • Miss one → restart from word 1
+      Beat each word in {challengeSecondsFor(difficulty)}s • Miss one → restart from word 1
     </div>
   ) : null}
 </div>
@@ -1216,6 +1247,44 @@ style={{
         >
           Daily Drill
         </div>
+<div style={{ textAlign: "center" }}>
+  <div
+    style={{
+      fontSize: 34,
+      fontWeight: 1100,
+      letterSpacing: -0.8,
+      color: "rgba(255,255,255,0.98)",
+      lineHeight: 1.05,
+    }}
+  >
+    Daily Drill
+  </div>
+
+  {challengeOn && (phase === "prompt" || phase === "recording" || phase === "analyzing") ? (
+    <div style={{ marginTop: 8, display: "grid", placeItems: "center" }}>
+      <div
+        style={{
+          fontSize: 56,
+          fontWeight: 1100,
+          letterSpacing: -1.2,
+          color: "rgba(255,255,255,0.98)",
+          lineHeight: 1,
+          fontVariantNumeric: "tabular-nums",
+          textShadow: "0 18px 40px rgba(0,0,0,0.18)",
+        }}
+      >
+        {(Math.max(0, timeLeftMs || 0) / 1000).toFixed(1)}
+      </div>
+      <div style={{ marginTop: 2, fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.78)" }}>
+        seconds left
+      </div>
+    </div>
+  ) : null}
+
+  <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
+    ...
+  </div>
+</div>
 
         <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
     <div
