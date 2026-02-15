@@ -142,10 +142,11 @@ const CHALLENGE_GREEN = 85;
 
 // Time limit per difficulty (tuned to be “TikTok-challenge-hard” but still winnable)
 const CHALLENGE_SECONDS = {
-  easy: 10,
-  medium: 10,
-  hard: 8,
+  easy: 20,
+  medium: 20,
+  hard: 20,
 };
+
 
 function challengeSecondsFor(difficulty) {
   return CHALLENGE_SECONDS[difficulty] ?? 10;
@@ -177,10 +178,11 @@ useEffect(() => {
     const left = Math.max(0, wordDeadlineMs - Date.now());
     setTimeLeftMs(left);
 
-    if (left <= 0) {
-      clearInterval(id);
-      resetRunToStart();
-    }
+   if (left <= 0) {
+  clearInterval(id);
+  goBackToSetup();
+}
+
   }, 100);
 
   return () => clearInterval(id);
@@ -229,6 +231,20 @@ const [summaryCount, setSummaryCount] = useState(0);
   function resetChallengeWordTimer() {
   setWordDeadlineMs(null);
   setTimeLeftMs(0);
+}
+function goBackToSetup() {
+  // stop recording if running
+  try {
+    if (mediaRecRef.current && mediaRecRef.current.state !== "inactive") mediaRecRef.current.stop();
+  } catch {}
+
+  cleanupUserUrl();
+  resetChallengeWordTimer();
+  setTargets([]);
+  setIdx(0);
+  setAttempts([]);
+  setSetupStep(0);
+  setPhase("setup");
 }
 
 function resetRunToStart() {
@@ -424,9 +440,10 @@ useEffect(() => {
     const timedOut = wordDeadlineMs ? Date.now() > wordDeadlineMs : false;
 
     if (timedOut) {
-      resetRunToStart();
-      return;
-    }
+  goBackToSetup();
+  return;
+}
+
 
     if (!passed) {
       // retry same word (timer keeps running)
@@ -1057,7 +1074,7 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
         color: challengeOn ? "white" : "rgba(17,24,39,0.72)",
       }}
     >
-      Challenge ⏱
+      Challenge
     </button>
   </div>
 
@@ -1283,15 +1300,17 @@ style={{
 
     {wordDeadlineMs ? (
       <div
-        style={{
-          padding: "6px 10px",
-          borderRadius: 999,
-          border: "1px solid rgba(255,255,255,0.22)",
-          background: "rgba(0,0,0,0.14)",
-          fontSize: 12,
-          fontWeight: 1000,
-          letterSpacing: -0.1,
-        }}
+       style={{
+  padding: "6px 10px",
+  borderRadius: 999,
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "rgba(0,0,0,0.14)",
+  fontSize: 14,
+  fontWeight: 1000,
+  letterSpacing: -0.1,
+  fontVariantNumeric: "tabular-nums",
+}}
+
       >
         ⏱ {Math.ceil((timeLeftMs || 0) / 1000)}s
       </div>
