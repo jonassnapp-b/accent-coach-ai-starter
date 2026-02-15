@@ -129,10 +129,27 @@ export default function Coach() {
   const ACCENT_OPTIONS = ["en_us", "en_br"];
   const ACCENT_LABEL = { en_us: "American 🇺🇸", en_br: "British 🇬🇧" };
 
-  const [mode, setMode] = useState("words");
-  const [difficulty, setDifficulty] = useState("easy");
-  const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
+const [mode, setMode] = useState("words");
+const [difficulty, setDifficulty] = useState("easy");
+const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
 const [setupStep, setSetupStep] = useState(0); // 0=mode, 1=difficulty, 2=accent
+
+// ---------- Challenge mode (optional) ----------
+const [challengeOn, setChallengeOn] = useState(false);
+
+// “Green” definition + feel-good fairness: must hit green once within the timer.
+const CHALLENGE_GREEN = 85;
+
+// Time limit per difficulty (tuned to be “TikTok-challenge-hard” but still winnable)
+const CHALLENGE_SECONDS = {
+  easy: 12,
+  medium: 10,
+  hard: 8,
+};
+
+const [wordDeadlineMs, setWordDeadlineMs] = useState(null); // absolute timestamp
+const [timeLeftMs, setTimeLeftMs] = useState(0);
+
 
 
 
@@ -182,6 +199,24 @@ const [summaryCount, setSummaryCount] = useState(0);
     mediaRecRef.current = null;
   }
 
+  function resetChallengeWordTimer() {
+  setWordDeadlineMs(null);
+  setTimeLeftMs(0);
+}
+
+function resetRunToStart() {
+  // stop any active recording cleanly
+  try {
+    if (mediaRecRef.current && mediaRecRef.current.state !== "inactive") mediaRecRef.current.stop();
+  } catch {}
+
+  cleanupUserUrl();
+  resetChallengeWordTimer();
+  setIdx(0);
+  setAttempts([]);
+  setPhase("prompt");
+}
+
   async function ensureMic() {
     if (!navigator?.mediaDevices?.getUserMedia) throw new Error("Microphone not supported on this device.");
     const stream = micStreamRef.current || (await navigator.mediaDevices.getUserMedia({ audio: true }));
@@ -209,13 +244,23 @@ const [summaryCount, setSummaryCount] = useState(0);
     mediaRecRef.current = rec;
   }
 
-  function startRecording() {
-    if (!currentText.trim()) return;
-    if (!mediaRecRef.current) return;
-    chunksRef.current = [];
-    mediaRecRef.current.start();
-    setPhase("recording");
+function startRecording() {
+  if (!currentText.trim()) return;
+  if (!mediaRecRef.current) return;
+
+  // Start challenge timer when the user first records for this word
+  if (challengeOn && !wordDeadlineMs) {
+    const secs = CHALLENGE_SECONDS[difficulty] ?? 10;
+    const deadline = Date.now() + secs * 1000;
+    setWordDeadlineMs(deadline);
+    setTimeLeftMs(secs * 1000);
   }
+
+  chunksRef.current = [];
+  mediaRecRef.current.start();
+  setPhase("recording");
+}
+
 
   function stopRecording() {
     try {
@@ -326,8 +371,46 @@ useEffect(() => {
   if (phase !== "result") return;
 
   const total = targets.length || 0;
+  const last = attempts[attempts.length - 1] || null;
 
   const t = setTimeout(() => {
+    // NORMAL MODE: keep your current behavior
+    if (!challengeOn) {
+      setIdx((i) => {
+        const next = i + 1;
+
+        if (total > 0 && next >= total) {
+          setPhase("summary");
+          return i;
+        }
+
+        setPhase("prompt");
+        cleanupUserUrl();
+        return next;
+      });
+      return;
+    }
+
+    // CHALLENGE MODE:
+    // - must get green (>=85) before timer ends
+    const passed = !!last && last.i === idx && Number(last.overall) >= CHALLENGE_GREEN;
+    const timedOut = wordDeadlineMs ? Date.now() > wordDeadlineMs : false;
+
+    if (timedOut) {
+      resetRunToStart();
+      return;
+    }
+
+    if (!passed) {
+      // retry same word (timer keeps running)
+      cleanupUserUrl();
+      setPhase("prompt");
+      return;
+    }
+
+    // passed => advance and reset timer for the next word
+    resetChallengeWordTimer();
+
     setIdx((i) => {
       const next = i + 1;
 
@@ -340,11 +423,12 @@ useEffect(() => {
       cleanupUserUrl();
       return next;
     });
-  }, 1200);
+  }, 900); // slightly snappier for “challenge feel”
 
   return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [phase, targets.length]);
+}, [phase, targets.length, attempts, challengeOn, idx, wordDeadlineMs]);
+
 
 // Count-up when summary shows
 useEffect(() => {
@@ -377,6 +461,8 @@ useEffect(() => {
     setIdx(0);
     setAttempts([]);
     cleanupUserUrl();
+    resetChallengeWordTimer();
+
     setPhase("prompt");
   }
 
@@ -387,6 +473,8 @@ useEffect(() => {
     setIdx(0);
     setAttempts([]);
     setSetupStep(0);
+resetChallengeWordTimer();
+setChallengeOn(false);
 
     setPhase("setup");
   }
@@ -395,6 +483,8 @@ useEffect(() => {
     cleanupUserUrl();
     setIdx(0);
     setAttempts([]);
+    resetChallengeWordTimer();
+
     setPhase("prompt");
   }
 
@@ -688,6 +778,25 @@ const summaryCtas = {
       el.scrollTop = idx * WHEEL_ITEM_H;
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value]);
+useEffect(() => {
+  if (!challengeOn) return;
+  if (!wordDeadlineMs) return;
+  if (phase === "setup" || phase === "summary") return;
+
+  const id = setInterval(() => {
+    const left = Math.max(0, wordDeadlineMs - Date.now());
+    setTimeLeftMs(left);
+
+    if (left <= 0) {
+      // Time’s up: restart run
+      clearInterval(id);
+      resetRunToStart();
+    }
+  }, 100);
+
+  return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [challengeOn, wordDeadlineMs, phase]);
 
     function commitNearest() {
       const el = ref.current;
@@ -885,6 +994,64 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
             <div style={{ marginTop: 6, fontSize: 15, fontWeight: 600, color: LIGHT_MUTED, letterSpacing: -0.2 }}>
               Improve your pronunciation in minutes
             </div>
+            <div style={{ marginTop: 14, display: "grid", placeItems: "center" }}>
+  <div
+    style={{
+      display: "inline-flex",
+      gap: 6,
+      padding: 6,
+      borderRadius: 999,
+      border: "1px solid rgba(17,24,39,0.10)",
+      background: "rgba(255,255,255,0.70)",
+      boxShadow: "0 10px 22px rgba(17,24,39,0.08)",
+      backdropFilter: "blur(10px)",
+      WebkitBackdropFilter: "blur(10px)",
+    }}
+  >
+    <button
+      type="button"
+      onClick={() => setChallengeOn(false)}
+      style={{
+        height: 36,
+        padding: "0 14px",
+        borderRadius: 999,
+        border: "none",
+        cursor: "pointer",
+        fontWeight: 950,
+        letterSpacing: -0.15,
+        background: !challengeOn ? "rgba(33,150,243,0.95)" : "transparent",
+        color: !challengeOn ? "white" : "rgba(17,24,39,0.72)",
+      }}
+    >
+      Normal
+    </button>
+
+    <button
+      type="button"
+      onClick={() => setChallengeOn(true)}
+      style={{
+        height: 36,
+        padding: "0 14px",
+        borderRadius: 999,
+        border: "none",
+        cursor: "pointer",
+        fontWeight: 950,
+        letterSpacing: -0.15,
+        background: challengeOn ? "rgba(33,150,243,0.95)" : "transparent",
+        color: challengeOn ? "white" : "rgba(17,24,39,0.72)",
+      }}
+    >
+      Challenge ⏱
+    </button>
+  </div>
+
+  {challengeOn ? (
+    <div style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, letterSpacing: -0.1 }}>
+      Beat each word in {CHALLENGE_SECONDS[difficulty] ?? 10}s • Miss one → restart from word 1
+    </div>
+  ) : null}
+</div>
+
           </div>
 
           {/* Progress bars */}
@@ -1062,6 +1229,53 @@ style={{
   }}
 >
   {metaText}
+{challengeOn ? (
+  <div style={{ marginTop: 8, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+    <div
+      style={{
+        padding: "6px 10px",
+        borderRadius: 999,
+        border: "1px solid rgba(255,255,255,0.22)",
+        background: "rgba(255,255,255,0.14)",
+        fontSize: 12,
+        fontWeight: 950,
+        letterSpacing: -0.1,
+      }}
+    >
+      Challenge
+    </div>
+
+    {wordDeadlineMs ? (
+      <div
+        style={{
+          padding: "6px 10px",
+          borderRadius: 999,
+          border: "1px solid rgba(255,255,255,0.22)",
+          background: "rgba(0,0,0,0.14)",
+          fontSize: 12,
+          fontWeight: 1000,
+          letterSpacing: -0.1,
+        }}
+      >
+        ⏱ {Math.ceil((timeLeftMs || 0) / 1000)}s
+      </div>
+    ) : (
+      <div
+        style={{
+          padding: "6px 10px",
+          borderRadius: 999,
+          border: "1px solid rgba(255,255,255,0.22)",
+          background: "rgba(0,0,0,0.10)",
+          fontSize: 12,
+          fontWeight: 900,
+          letterSpacing: -0.1,
+        }}
+      >
+        Start recording to begin timer
+      </div>
+    )}
+  </div>
+) : null}
 </div>
 
         </div>
