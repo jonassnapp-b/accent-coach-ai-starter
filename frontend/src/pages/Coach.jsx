@@ -1051,26 +1051,19 @@ style={{
         </div>
 
         <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "10px 14px",
-              borderRadius: 999,
-              background: "rgba(255,255,255,0.16)",
-              border: "1px solid rgba(255,255,255,0.22)",
-              color: "rgba(255,255,255,0.92)",
-              fontSize: 13,
-              fontWeight: 850,
-              letterSpacing: -0.15,
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-            }}
-          >
-            <span style={{ opacity: 0.95 }}>🗓️</span>
-            <span>{metaText}</span>
-          </div>
+    <div
+  style={{
+    marginTop: 10,
+    textAlign: "center",
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 14,
+    fontWeight: 850,
+    letterSpacing: -0.15,
+  }}
+>
+  {metaText}
+</div>
+
         </div>
       </div>
 
