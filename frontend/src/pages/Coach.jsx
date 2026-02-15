@@ -681,7 +681,7 @@ boxShadow:
     const totalCount = targets?.length || 10;
   const stepNow = Math.min(idx + 1, totalCount);
   const progressPct = totalCount ? Math.round((stepNow / totalCount) * 100) : 0;
-  const metaText = `Word ${stepNow} of ${totalCount} • ${MODE_LABEL[mode]} • ${DIFF_LABEL[difficulty]} • ${ACCENT_LABEL[lockedAccent]}`;
+  const metaText = `Word ${stepNow} of ${totalCount}`;
 
   const flowHeaderWrap = {
     display: "flex",
@@ -1128,17 +1128,7 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
     </button>
   </div>
 
-  {challengeOn ? (
-  <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
-    <div style={ruleBadge}>
-      <span style={greenDot} />
-     <span>
-  <span style={{ color: "rgba(17,24,39,0.92)" }}>{CHALLENGE_GREEN}%+</span> to advance
-</span>
 
-    </div>
-  </div>
-) : null}
 
 </div>
 
@@ -1339,55 +1329,7 @@ style={{
   }}
 >
   {metaText}
-{challengeOn ? (
-  <div style={{ marginTop: 8, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-    <div
-      style={{
-        padding: "6px 10px",
-        borderRadius: 999,
-        border: "1px solid rgba(255,255,255,0.22)",
-        background: "rgba(255,255,255,0.14)",
-        fontSize: 12,
-        fontWeight: 950,
-        letterSpacing: -0.1,
-      }}
-    >
-      Challenge
-    </div>
 
-    {wordDeadlineMs ? (
-      <div
-       style={{
-  padding: "6px 10px",
-  borderRadius: 999,
-  border: "1px solid rgba(255,255,255,0.22)",
-  background: "rgba(0,0,0,0.14)",
-  fontSize: 14,
-  fontWeight: 1000,
-  letterSpacing: -0.1,
-  fontVariantNumeric: "tabular-nums",
-}}
-
-      >
-        ⏱ {Math.ceil((timeLeftMs || 0) / 1000)}s
-      </div>
-    ) : (
-      <div
-        style={{
-          padding: "6px 10px",
-          borderRadius: 999,
-          border: "1px solid rgba(255,255,255,0.22)",
-          background: "rgba(0,0,0,0.10)",
-          fontSize: 12,
-          fontWeight: 900,
-          letterSpacing: -0.1,
-        }}
-      >
-        Start recording to begin timer
-      </div>
-    )}
-  </div>
-) : null}
 {challengeOn ? (
   <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
    <div style={ruleBadge}>
