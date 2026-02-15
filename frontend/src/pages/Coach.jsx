@@ -1128,6 +1128,16 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
     </button>
   </div>
 
+  {challengeOn ? (
+    <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
+      <div style={ruleBadge}>
+        <span style={greenDot} />
+        <span>
+          <span style={{ color: "rgba(17,24,39,0.92)" }}>{CHALLENGE_GREEN}%+</span> to advance
+        </span>
+      </div>
+    </div>
+  ) : null}
 
 
 </div>
