@@ -495,6 +495,7 @@ boxShadow:
   const totalCount = targets?.length || 10;
   const stepNow = Math.min(idx + 1, totalCount);
   const progressPct = totalCount ? Math.round((stepNow / totalCount) * 100) : 0;
+  const metaText = `Word ${stepNow} of ${totalCount} • ${MODE_LABEL[mode]} • ${DIFF_LABEL[difficulty]} • ${ACCENT_LABEL[lockedAccent]}`;
 
   const flowHeaderWrap = {
     display: "flex",
@@ -1015,236 +1016,326 @@ style={{
 ) : null}
 
 {phase !== "setup" ? (
-
-                  <motion.div
-                    key="flow"
-                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                    transition={{ duration: 0.18 }}
-                    style={{ display: "grid", gap: 16 }}
-                  >
-                   <div style={flowHeaderWrap}>
-  <div style={{ flex: 1, minWidth: 0 }}>
-    <div style={flowTitle}>Daily Drill</div>
-    <div style={flowMeta}>
-      <span>{`Word ${stepNow} of ${totalCount}`}</span>
-      <span>•</span>
-      <span>{MODE_LABEL[mode]}</span>
-      <span>•</span>
-      <span>{DIFF_LABEL[difficulty]}</span>
-      <span>•</span>
-      <span>{ACCENT_LABEL[lockedAccent]}</span>
-    </div>
-
-    <div style={{ marginTop: 10 }}>
-      <div style={progressTrack}>
-        <div style={progressFill} />
-      </div>
-    </div>
-  </div>
-
-  <motion.button
-    type="button"
-    onClick={onExit}
-    style={closeBtn}
-    whileTap={{ scale: 0.96 }}
-    transition={{ type: "spring", stiffness: 700, damping: 40 }}
-    disabled={phase === "analyzing"}
-    aria-label="Close"
-    title="Close"
-  >
-    <X className="h-5 w-5" />
-  </motion.button>
-</div>
-
-
-                 {phase === "prompt" || phase === "recording" || phase === "analyzing" ? (
-  <div style={{ ...flowCard, display: "grid", gap: 16, placeItems: "center" }}>
-    <div style={heroWord}>{currentText || "—"}</div>
-
-    <motion.button
-      type="button"
-      onClick={toggleRecord}
-      disabled={phase === "analyzing" || !currentText}
-      title={phase === "recording" ? "Stop" : "Record"}
-      style={micBtn(phase === "recording", phase === "analyzing" || !currentText)}
-      whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 700, damping: 40 }}
-    >
-      {phase !== "recording" ? <div style={micGlow} /> : null}
-
-      {phase === "recording" ? (
-        <StopCircle className="h-7 w-7" style={{ color: "white" }} />
-      ) : (
-        <Mic className="h-7 w-7" style={{ color: "white" }} />
-      )}
-    </motion.button>
-
-    <div style={hintText}>
-      {phase === "recording"
-        ? "Recording…"
-        : phase === "analyzing"
-        ? "Analyzing…"
-        : "Tap to record"}
-    </div>
-  </div>
-) : null}
-
-
-                   {phase === "result" && lastAttempt ? (
   <motion.div
-    key={`result-${lastAttempt.createdAt}`}
+    key="flow"
     initial={{ opacity: 0, y: 10, scale: 0.98 }}
     animate={{ opacity: 1, y: 0, scale: 1 }}
     exit={{ opacity: 0, y: -8, scale: 0.98 }}
-    transition={{ type: "spring", stiffness: 700, damping: 45 }}
+    transition={{ duration: 0.18 }}
     style={{
-      background: "rgba(255,255,255,0.96)",
-      border: "1px solid rgba(17,24,39,0.08)",
-      borderRadius: 24,
-      padding: 22,
+      minHeight: `calc(100vh - var(--safe-top) - ${TABBAR_OFFSET}px - ${SAFE_BOTTOM})`,
+      borderRadius: 28,
+      padding: 18,
+      background:
+        "linear-gradient(180deg, rgba(33,150,243,0.98) 0%, rgba(33,150,243,0.92) 60%, rgba(33,150,243,0.86) 100%)",
+      position: "relative",
       display: "grid",
-      gap: 12,
-      placeItems: "center",
-      textAlign: "center",
-      boxShadow: "0 22px 60px rgba(17,24,39,0.10), 0 1px 0 rgba(255,255,255,0.8) inset",
+      gridTemplateRows: "auto 1fr",
+      gap: 14,
+      boxShadow: "0 22px 60px rgba(17,24,39,0.18)",
     }}
   >
-    {/* subtle ring */}
-    <div style={{ position: "relative", width: 92, height: 92, display: "grid", placeItems: "center" }}>
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          borderRadius: 999,
-          background: "conic-gradient(from 270deg, rgba(33,150,243,0.90) 0%, rgba(33,150,243,0.90) "
-            + `${Math.max(0, Math.min(100, lastAttempt.overall))}%`
-            + ", rgba(17,24,39,0.08) 0%)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          inset: 6,
-          borderRadius: 999,
-          background: "rgba(255,255,255,0.92)",
-          border: "1px solid rgba(17,24,39,0.08)",
-        }}
-      />
-      <div style={{ position: "relative", fontSize: 30, fontWeight: 1100, letterSpacing: -0.7, color: LIGHT_TEXT }}>
-        {lastAttempt.overall}%
-      </div>
-    </div>
-
-    {/* label badge */}
-    <div
-      style={{
-        padding: "7px 12px",
-        borderRadius: 999,
-        border: "1px solid rgba(17,24,39,0.10)",
-        background: "rgba(33,150,243,0.08)",
-        fontSize: 13,
-        fontWeight: 950,
-        letterSpacing: -0.15,
-        color: LIGHT_TEXT,
-      }}
-    >
-      {lastAttempt.label}
-    </div>
-
-    {/* micro line */}
-    <div style={{ fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, letterSpacing: -0.1 }}>
-      Auto-next…
-    </div>
-  </motion.div>
-) : null}
-
-
-                  {phase === "summary" ? (
-  <motion.div
-    key="summary"
-    initial={{ opacity: 0, y: 10, scale: 0.985 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    exit={{ opacity: 0, y: -8, scale: 0.985 }}
-    transition={{ type: "spring", stiffness: 700, damping: 45 }}
-    style={summaryCard}
-  >
-    <div style={summaryTitle}>Session summary</div>
-
-    {/* HERO average */}
-    <div style={summaryHeroWrap}>
-      <div style={ringWrap}>
+    {/* Header */}
+    <div style={{ position: "relative", paddingTop: 6, paddingBottom: 6 }}>
+      <div style={{ textAlign: "center" }}>
         <div
           style={{
-            position: "absolute",
-            inset: 0,
-            borderRadius: 999,
-            background:
-              "conic-gradient(from 270deg, rgba(33,150,243,0.90) 0%, rgba(33,150,243,0.90) " +
-              `${Math.max(0, Math.min(100, summaryCount))}%` +
-              ", rgba(17,24,39,0.08) 0%)",
+            fontSize: 34,
+            fontWeight: 1100,
+            letterSpacing: -0.8,
+            color: "rgba(255,255,255,0.98)",
+            lineHeight: 1.05,
           }}
-        />
-        <div style={ringInner} />
-        <div style={{ position: "relative", fontSize: 46, fontWeight: 1150, letterSpacing: -1.0, color: LIGHT_TEXT }}>
-          {summaryCount}%
+        >
+          Daily Drill
+        </div>
+
+        <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 14px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.16)",
+              border: "1px solid rgba(255,255,255,0.22)",
+              color: "rgba(255,255,255,0.92)",
+              fontSize: 13,
+              fontWeight: 850,
+              letterSpacing: -0.15,
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+            }}
+          >
+            <span style={{ opacity: 0.95 }}>🗓️</span>
+            <span>{metaText}</span>
+          </div>
         </div>
       </div>
 
-      <div style={ringLabel}>Session average</div>
+      <motion.button
+        type="button"
+        onClick={onExit}
+        whileTap={{ scale: 0.96 }}
+        transition={{ type: "spring", stiffness: 700, damping: 40 }}
+        disabled={phase === "analyzing"}
+        aria-label="Close"
+        title="Close"
+        style={{
+          position: "absolute",
+          right: 8,
+          top: 8,
+          width: 38,
+          height: 38,
+          borderRadius: 999,
+          border: "1px solid rgba(255,255,255,0.28)",
+          background: "rgba(255,255,255,0.18)",
+          color: "white",
+          display: "grid",
+          placeItems: "center",
+          cursor: "pointer",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          boxShadow: "0 10px 22px rgba(17,24,39,0.16)",
+        }}
+      >
+        <X className="h-5 w-5" />
+      </motion.button>
+
+      <div
+        style={{
+          marginTop: 14,
+          height: 2,
+          borderRadius: 999,
+          background: "rgba(255,255,255,0.24)",
+        }}
+      />
     </div>
 
-    {/* BADGES */}
-    <div style={badgesRow}>
-      <motion.div
-        initial={{ opacity: 0, y: 6, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ delay: 0.05, type: "spring", stiffness: 700, damping: 45 }}
-        style={statBadge("rgba(34,197,94,0.06)")}
-      >
-        <div style={badgeLabel}>Great</div>
-        <div style={badgeValue}>{summary.great}</div>
-      </motion.div>
+    {/* Content */}
+    <div
+      style={{
+        display: "grid",
+        alignContent: "start",
+        justifyItems: "center",
+        gap: 18,
+        paddingTop: 10,
+        paddingBottom: `calc(${TABBAR_OFFSET}px + 22px + ${SAFE_BOTTOM})`,
+      }}
+    >
+      {(phase === "prompt" || phase === "recording" || phase === "analyzing") ? (
+        <>
+          {/* Card: ONLY text */}
+          <div
+            style={{
+              width: "min(640px, 100%)",
+              background: "rgba(255,255,255,0.98)",
+              borderRadius: 28,
+              padding: "28px 26px",
+              border: "1px solid rgba(17,24,39,0.08)",
+              boxShadow: "0 26px 70px rgba(17,24,39,0.18)",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontSize: mode === "sentences" ? 30 : 34,
+                fontWeight: 1100,
+                letterSpacing: -0.9,
+                color: "rgba(17,24,39,0.92)",
+                lineHeight: 1.08,
+                wordBreak: "break-word",
+              }}
+            >
+              {currentText || "—"}
+            </div>
+          </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 6, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ delay: 0.10, type: "spring", stiffness: 700, damping: 45 }}
-        style={statBadge("rgba(17,24,39,0.04)")}
-      >
-        <div style={badgeLabel}>OK</div>
-        <div style={badgeValue}>{summary.ok}</div>
-      </motion.div>
+          {/* Record button UNDER card */}
+          <div style={{ width: "min(640px, 100%)", display: "grid", placeItems: "center", marginTop: 6 }}>
+            <motion.button
+              type="button"
+              onClick={toggleRecord}
+              disabled={phase === "analyzing" || !currentText}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 700, damping: 40 }}
+              title={phase === "recording" ? "Stop" : "Record"}
+              style={{
+                width: 92,
+                height: 92,
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.28)",
+                background: phase === "recording" ? "rgba(17,24,39,0.92)" : "rgba(255,255,255,0.92)",
+                display: "grid",
+                placeItems: "center",
+                cursor: phase === "analyzing" || !currentText ? "not-allowed" : "pointer",
+                opacity: phase === "analyzing" || !currentText ? 0.7 : 1,
+                boxShadow:
+                  phase === "recording"
+                    ? "0 24px 70px rgba(17,24,39,0.26)"
+                    : "0 24px 70px rgba(17,24,39,0.18), 0 0 0 14px rgba(255,255,255,0.10)",
+                backdropFilter: "blur(10px)",
+                WebkitBackdropFilter: "blur(10px)",
+              }}
+            >
+              {phase === "recording" ? (
+                <StopCircle className="h-8 w-8" style={{ color: "white" }} />
+              ) : (
+                <Mic className="h-8 w-8" style={{ color: BTN_BLUE }} />
+              )}
+            </motion.button>
+          </div>
+        </>
+      ) : null}
 
-      <motion.div
-        initial={{ opacity: 0, y: 6, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ delay: 0.15, type: "spring", stiffness: 700, damping: 45 }}
-        style={statBadge("rgba(239,68,68,0.06)")}
-      >
-        <div style={badgeLabel}>Needs work</div>
-        <div style={badgeValue}>{summary.needs}</div>
-      </motion.div>
+      {/* RESULT (keep your existing one if you want; this is identical to what you had) */}
+      {phase === "result" && lastAttempt ? (
+        <motion.div
+          key={`result-${lastAttempt.createdAt}`}
+          initial={{ opacity: 0, y: 10, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -8, scale: 0.98 }}
+          transition={{ type: "spring", stiffness: 700, damping: 45 }}
+          style={{
+            width: "min(640px, 100%)",
+            background: "rgba(255,255,255,0.96)",
+            border: "1px solid rgba(17,24,39,0.08)",
+            borderRadius: 24,
+            padding: 22,
+            display: "grid",
+            gap: 12,
+            placeItems: "center",
+            textAlign: "center",
+            boxShadow: "0 22px 60px rgba(17,24,39,0.18), 0 1px 0 rgba(255,255,255,0.8) inset",
+          }}
+        >
+          <div style={{ position: "relative", width: 92, height: 92, display: "grid", placeItems: "center" }}>
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: 999,
+                background:
+                  "conic-gradient(from 270deg, rgba(33,150,243,0.90) 0%, rgba(33,150,243,0.90) " +
+                  `${Math.max(0, Math.min(100, lastAttempt.overall))}%` +
+                  ", rgba(17,24,39,0.08) 0%)",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                inset: 6,
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.92)",
+                border: "1px solid rgba(17,24,39,0.08)",
+              }}
+            />
+            <div style={{ position: "relative", fontSize: 30, fontWeight: 1100, letterSpacing: -0.7, color: LIGHT_TEXT }}>
+              {lastAttempt.overall}%
+            </div>
+          </div>
+
+          <div
+            style={{
+              padding: "7px 12px",
+              borderRadius: 999,
+              border: "1px solid rgba(17,24,39,0.10)",
+              background: "rgba(33,150,243,0.08)",
+              fontSize: 13,
+              fontWeight: 950,
+              letterSpacing: -0.15,
+              color: LIGHT_TEXT,
+            }}
+          >
+            {lastAttempt.label}
+          </div>
+
+          <div style={{ fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, letterSpacing: -0.1 }}>Auto-next…</div>
+        </motion.div>
+      ) : null}
+
+      {/* SUMMARY (you already have summaryCard etc.) */}
+      {phase === "summary" ? (
+        <motion.div
+          key="summary"
+          initial={{ opacity: 0, y: 10, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -8, scale: 0.985 }}
+          transition={{ type: "spring", stiffness: 700, damping: 45 }}
+          style={{ ...summaryCard, width: "min(640px, 100%)" }}
+        >
+          <div style={summaryTitle}>Session summary</div>
+
+          <div style={summaryHeroWrap}>
+            <div style={ringWrap}>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: 999,
+                  background:
+                    "conic-gradient(from 270deg, rgba(33,150,243,0.90) 0%, rgba(33,150,243,0.90) " +
+                    `${Math.max(0, Math.min(100, summaryCount))}%` +
+                    ", rgba(17,24,39,0.08) 0%)",
+                }}
+              />
+              <div style={ringInner} />
+              <div style={{ position: "relative", fontSize: 46, fontWeight: 1150, letterSpacing: -1.0, color: LIGHT_TEXT }}>
+                {summaryCount}%
+              </div>
+            </div>
+            <div style={ringLabel}>Session average</div>
+          </div>
+
+          <div style={badgesRow}>
+            <motion.div
+              initial={{ opacity: 0, y: 6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.05, type: "spring", stiffness: 700, damping: 45 }}
+              style={statBadge("rgba(34,197,94,0.06)")}
+            >
+              <div style={badgeLabel}>Great</div>
+              <div style={badgeValue}>{summary.great}</div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.10, type: "spring", stiffness: 700, damping: 45 }}
+              style={statBadge("rgba(17,24,39,0.04)")}
+            >
+              <div style={badgeLabel}>OK</div>
+              <div style={badgeValue}>{summary.ok}</div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.15, type: "spring", stiffness: 700, damping: 45 }}
+              style={statBadge("rgba(239,68,68,0.06)")}
+            >
+              <div style={badgeLabel}>Needs work</div>
+              <div style={badgeValue}>{summary.needs}</div>
+            </motion.div>
+          </div>
+
+          <div style={summaryCtas}>
+            <button type="button" onClick={onRepeatSameDrill} style={{ ...primaryBtn, justifySelf: "center" }}>
+              Repeat
+            </button>
+            <div style={{ display: "grid", placeItems: "center" }}>
+              <button type="button" onClick={onExit} style={{ ...ghostBtn, height: 44, width: "min(240px, 100%)" }}>
+                New drill
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      ) : null}
     </div>
-
-    {/* CTA spacing + hierarchy */}
-   <div style={summaryCtas}>
-  <button type="button" onClick={onRepeatSameDrill} style={{ ...primaryBtn, justifySelf: "center" }}>
-    Repeat
-  </button>
-  <div style={{ display: "grid", placeItems: "center" }}>
-    <button type="button" onClick={onExit} style={{ ...ghostBtn, height: 44, width: "min(240px, 100%)" }}>
-      New drill
-    </button>
-  </div>
-</div>
-
   </motion.div>
 ) : null}
 
-                  </motion.div>
-                ) : null}
               </AnimatePresence>
             </LayoutGroup>
           </div>
