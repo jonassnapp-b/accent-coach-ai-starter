@@ -1127,11 +1127,6 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
   </div>
 
   {challengeOn ? (
-    <div style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, letterSpacing: -0.1 }}>
-      Beat each word in {challengeSecondsFor(difficulty)}s • Miss one → restart from word 1
-    </div>
-  ) : null}
-  {challengeOn ? (
   <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
     <div style={ruleBadge}>
       <span style={greenDot} />
