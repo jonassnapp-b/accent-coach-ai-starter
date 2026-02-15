@@ -8,20 +8,30 @@ const FEEDBACK_EMAIL = "admin@fluentup.app";
 const APP_URL = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
 
 /* ---------- UI helpers ---------- */
+/* ---------- UI helpers ---------- */
+function Group({ children }) {
+  const items = React.Children.toArray(children).filter(Boolean);
+  return (
+    <div className="ios-group">
+      {items.map((child, i) => (
+        <React.Fragment key={i}>
+          {child}
+          {i !== items.length - 1 ? <div className="ios-divider" /> : null}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
 function Row({ label, children, hint }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 py-3">
-      <div className="sm:min-w-[220px]">
-        <div className="font-medium" style={{ color: "var(--text)" }}>
-          {label}
-        </div>
-        {hint ? (
-          <div className="text-sm" style={{ color: "var(--muted)" }}>
-            {hint}
-          </div>
-        ) : null}
+    <div className="ios-row">
+      <div className="ios-row-left">
+        <div className="ios-row-label">{label}</div>
+        {hint ? <div className="ios-row-hint">{hint}</div> : null}
       </div>
-      <div className="flex-1">{children}</div>
+
+      <div className="ios-row-right">{children}</div>
     </div>
   );
 }
@@ -32,11 +42,10 @@ function Section({ title, children, noPanel = false, first = false }) {
       className="grid"
       style={{
         marginTop: first ? 7 : 18,
- // ✅ første får 0, resten 18
         rowGap: 10,
       }}
     >
-      {/* heading OUTSIDE the card */}
+      {/* heading OUTSIDE the group */}
       <div
         style={{
           letterSpacing: "0.14em",
@@ -51,10 +60,11 @@ function Section({ title, children, noPanel = false, first = false }) {
         {title}
       </div>
 
-      {noPanel ? children : <div className="rounded-2xl panel">{children}</div>}
+      {noPanel ? children : <Group>{children}</Group>}
     </div>
   );
 }
+
 
 
 
@@ -311,7 +321,7 @@ export default function Settings() {
   const slackVal = clamp(Number(s.slack ?? 0), -1, 1);
 
   return (
-    <div className="flex flex-col gap-2 py-3">
+    <div className="ios-row" style={{ alignItems: "flex-start" }}>
       <div>
         <div className="font-medium" style={{ color: "var(--text)" }}>
           Difficulty (Slack)

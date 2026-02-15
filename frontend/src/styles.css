@@ -969,3 +969,58 @@ input[type="range"].range-blue-white::-moz-range-thumb{
 .tabbtn:first-child .tabicon{
   transform: translateX(1px);
 }
+
+  /* iOS-like grouped rows (without changing your page background) */
+  .ios-group{
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.10);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+  }
+
+  .ios-row{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 16px;
+    min-height: 56px;
+  }
+
+  .ios-row-left{
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+  }
+
+  .ios-row-label{
+    font-weight: 650;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .ios-row-hint{
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.25;
+  }
+
+  .ios-row-right{
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex: 0 0 auto;
+  }
+
+  .ios-divider{
+    height: 1px;
+    background: rgba(0,0,0,0.08);
+    margin-left: 16px; /* iOS-style inset divider */
+  }
+
+  /* Make native checkboxes feel more like a switch row (visual only) */
+  .ios-row-right input[type="checkbox"]{
+    transform: scale(1.15);
+  }
