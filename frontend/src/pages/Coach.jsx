@@ -147,16 +147,20 @@ const ruleBadge = {
   gap: 10,
   padding: "10px 14px",
   borderRadius: 16,
-  border: "1px solid rgba(255,255,255,0.10)",
-  background: "rgba(0,0,0,0.55)",
-  color: "rgba(255,255,255,0.92)",
+
+  // subtle green tint (premium + integrated)
+  border: "1px solid rgba(34,197,94,0.22)",
+  background: "rgba(34,197,94,0.10)",
+  color: "rgba(17,24,39,0.88)",
+
   fontFamily:
     'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
   fontSize: 14,
   fontWeight: 800,
   letterSpacing: -0.1,
-  boxShadow: "0 18px 50px rgba(0,0,0,0.22)",
+  boxShadow: "0 18px 50px rgba(17,24,39,0.10)",
 };
+
 
 const greenDot = {
   width: 14,
@@ -1130,9 +1134,10 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
   <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
     <div style={ruleBadge}>
       <span style={greenDot} />
-      <span>
-        <span style={{ color: "rgba(244,114,182,0.95)" }}>{CHALLENGE_GREEN}%+</span> required
-      </span>
+     <span>
+  <span style={{ color: "rgba(17,24,39,0.92)" }}>{CHALLENGE_GREEN}%+</span> to advance
+</span>
+
     </div>
   </div>
 ) : null}
@@ -1387,12 +1392,13 @@ style={{
 ) : null}
 {challengeOn ? (
   <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
-    <div style={{ ...ruleBadge, background: "rgba(0,0,0,0.35)" }}>
-      <span style={greenDot} />
-      <span>
-        <span style={{ color: "rgba(244,114,182,0.95)" }}>{CHALLENGE_GREEN}%+</span> required
-      </span>
-    </div>
+   <div style={ruleBadge}>
+  <span style={greenDot} />
+  <span>
+    <span style={{ color: "rgba(17,24,39,0.92)" }}>{CHALLENGE_GREEN}%+</span> to advance
+  </span>
+</div>
+
   </div>
 ) : null}
 
