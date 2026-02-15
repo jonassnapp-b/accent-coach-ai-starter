@@ -418,21 +418,30 @@ export default function Settings() {
               </div>
             </Row>
 
-            <div className="mt-3">
-           <button
-  onClick={clearLocalData}
-  className="btn btn-ghost"
-  style={{
-    background: "#2196F3",
-    borderColor: "transparent",
-    color: "white",
-  }}
->
-  <Trash2 className="h-4 w-4" /> Clear cached data
-</button>
+         <ActionRow>
+  <button
+    onClick={clearLocalData}
+    type="button"
+    style={{
+      width: "100%",
+      height: 48,
+      borderRadius: 14,
+      border: "none",
+      background: "#2196F3",
+      color: "white",
+      fontWeight: 900,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      cursor: "pointer",
+    }}
+  >
+    <Trash2 className="h-4 w-4" />
+    Clear cached data
+  </button>
+</ActionRow>
 
-
-            </div>
           </Section>
 {/* Feedback & Support */}
 <Section title="FEEDBACK AND SUPPORT" noPanel>
