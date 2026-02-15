@@ -139,6 +139,32 @@ const [challengeOn, setChallengeOn] = useState(false);
 
 // “Green” definition + feel-good fairness: must hit green once within the timer.
 const CHALLENGE_GREEN = 85;
+const isGreen = (overall) => Number(overall) >= CHALLENGE_GREEN;
+
+const ruleBadge = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "10px 14px",
+  borderRadius: 16,
+  border: "1px solid rgba(255,255,255,0.10)",
+  background: "rgba(0,0,0,0.55)",
+  color: "rgba(255,255,255,0.92)",
+  fontFamily:
+    'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+  fontSize: 14,
+  fontWeight: 800,
+  letterSpacing: -0.1,
+  boxShadow: "0 18px 50px rgba(0,0,0,0.22)",
+};
+
+const greenDot = {
+  width: 14,
+  height: 14,
+  borderRadius: 999,
+  background: "rgba(34,197,94,0.95)",
+  boxShadow: "0 0 0 4px rgba(34,197,94,0.18)",
+};
 
 // Time limit per difficulty (tuned to be “TikTok-challenge-hard” but still winnable)
 const CHALLENGE_SECONDS = {
@@ -156,6 +182,20 @@ function challengeSecondsFor(difficulty) {
 
 const [wordDeadlineMs, setWordDeadlineMs] = useState(null); // absolute timestamp
 const [timeLeftMs, setTimeLeftMs] = useState(0);
+const [greenFlash, setGreenFlash] = useState(false);
+
+useEffect(() => {
+  if (!challengeOn) return;
+  if (phase !== "result") return;
+  if (!lastAttempt) return;
+  if (lastAttempt.i !== idx) return;
+  if (!isGreen(lastAttempt.overall)) return;
+
+  setGreenFlash(true);
+  const t = window.setTimeout(() => setGreenFlash(false), 220);
+  return () => window.clearTimeout(t);
+}, [challengeOn, phase, lastAttempt, idx]);
+
 
 
 
@@ -193,6 +233,8 @@ useEffect(() => {
   const [targets, setTargets] = useState([]); // 10 items
   const [idx, setIdx] = useState(0);
   const [attempts, setAttempts] = useState([]); // { i, text, overall, label, createdAt }
+  const lastAttempt = attempts[attempts.length - 1] || null;
+
   const summary = useMemo(() => {
   if (!attempts.length) return { avg: 0, great: 0, ok: 0, needs: 0 };
   const sum = attempts.reduce((a, x) => a + (Number.isFinite(x.overall) ? x.overall : 0), 0);
@@ -631,8 +673,7 @@ boxShadow:
     color: LIGHT_TEXT,
   });
 
-  const lastAttempt = attempts[attempts.length - 1] || null;
-  const totalCount = targets?.length || 10;
+    const totalCount = targets?.length || 10;
   const stepNow = Math.min(idx + 1, totalCount);
   const progressPct = totalCount ? Math.round((stepNow / totalCount) * 100) : 0;
   const metaText = `Word ${stepNow} of ${totalCount} • ${MODE_LABEL[mode]} • ${DIFF_LABEL[difficulty]} • ${ACCENT_LABEL[lockedAccent]}`;
@@ -1089,6 +1130,17 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
       Beat each word in {challengeSecondsFor(difficulty)}s • Miss one → restart from word 1
     </div>
   ) : null}
+  {challengeOn ? (
+  <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
+    <div style={ruleBadge}>
+      <span style={greenDot} />
+      <span>
+        <span style={{ color: "rgba(244,114,182,0.95)" }}>{CHALLENGE_GREEN}%+</span> required
+      </span>
+    </div>
+  </div>
+) : null}
+
 </div>
 
           </div>
@@ -1337,6 +1389,17 @@ style={{
     )}
   </div>
 ) : null}
+{challengeOn ? (
+  <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
+    <div style={{ ...ruleBadge, background: "rgba(0,0,0,0.35)" }}>
+      <span style={greenDot} />
+      <span>
+        <span style={{ color: "rgba(244,114,182,0.95)" }}>{CHALLENGE_GREEN}%+</span> required
+      </span>
+    </div>
+  </div>
+) : null}
+
 </div>
 
         </div>
@@ -1478,16 +1541,57 @@ style={{
             boxShadow: "0 22px 60px rgba(17,24,39,0.18), 0 1px 0 rgba(255,255,255,0.8) inset",
           }}
         >
+          <AnimatePresence>
+  {challengeOn && greenFlash ? (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.12 }}
+      style={{
+        position: "absolute",
+        inset: 0,
+        borderRadius: 24,
+        background: "rgba(34,197,94,0.18)",
+        display: "grid",
+        placeItems: "center",
+        pointerEvents: "none",
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.96, y: 4, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.98, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 700, damping: 40 }}
+        style={{
+          fontSize: 28,
+          fontWeight: 1100,
+          letterSpacing: -0.6,
+          color: "rgba(34,197,94,0.98)",
+          textShadow: "0 18px 40px rgba(0,0,0,0.18)",
+        }}
+      >
+        GREEN!
+      </motion.div>
+    </motion.div>
+  ) : null}
+</AnimatePresence>
+
           <div style={{ position: "relative", width: 92, height: 92, display: "grid", placeItems: "center" }}>
             <div
               style={{
                 position: "absolute",
                 inset: 0,
                 borderRadius: 999,
-                background:
-                  "conic-gradient(from 270deg, rgba(33,150,243,0.90) 0%, rgba(33,150,243,0.90) " +
-                  `${Math.max(0, Math.min(100, lastAttempt.overall))}%` +
-                  ", rgba(17,24,39,0.08) 0%)",
+              background:
+  "conic-gradient(from 270deg, " +
+  (challengeOn && isGreen(lastAttempt.overall) ? "rgba(34,197,94,0.95)" : "rgba(33,150,243,0.90)") +
+  " 0%, " +
+  (challengeOn && isGreen(lastAttempt.overall) ? "rgba(34,197,94,0.95)" : "rgba(33,150,243,0.90)") +
+  " " +
+  `${Math.max(0, Math.min(100, lastAttempt.overall))}%` +
+  ", rgba(17,24,39,0.08) 0%)",
+
               }}
             />
             <div
@@ -1502,6 +1606,33 @@ style={{
             <div style={{ position: "relative", fontSize: 30, fontWeight: 1100, letterSpacing: -0.7, color: LIGHT_TEXT }}>
               {lastAttempt.overall}%
             </div>
+            {/* threshold marker (85%) */}
+{challengeOn ? (
+  <div
+    style={{
+      position: "absolute",
+      inset: -2,
+      borderRadius: 999,
+      pointerEvents: "none",
+      transform: `rotate(${270 + (360 * CHALLENGE_GREEN) / 100}deg)`,
+    }}
+  >
+    <div
+      style={{
+        position: "absolute",
+        top: -1,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: 10,
+        height: 10,
+        borderRadius: 999,
+        background: "rgba(34,197,94,0.95)",
+        boxShadow: "0 0 0 4px rgba(34,197,94,0.18)",
+      }}
+    />
+  </div>
+) : null}
+
           </div>
 
           <div
