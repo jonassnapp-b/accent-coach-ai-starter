@@ -35,6 +35,14 @@ function Row({ label, children, hint }) {
     </div>
   );
 }
+function ActionRow({ children }) {
+  return (
+    <div className="ios-row" style={{ justifyContent: "center" }}>
+      <div style={{ width: "100%" }}>{children}</div>
+    </div>
+  );
+}
+
 
 function Section({ title, children, noPanel = false, first = false }) {
   return (
