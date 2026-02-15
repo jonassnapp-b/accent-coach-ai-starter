@@ -182,19 +182,7 @@ function challengeSecondsFor(difficulty) {
 
 const [wordDeadlineMs, setWordDeadlineMs] = useState(null); // absolute timestamp
 const [timeLeftMs, setTimeLeftMs] = useState(0);
-const [greenFlash, setGreenFlash] = useState(false);
 
-useEffect(() => {
-  if (!challengeOn) return;
-  if (phase !== "result") return;
-  if (!lastAttempt) return;
-  if (lastAttempt.i !== idx) return;
-  if (!isGreen(lastAttempt.overall)) return;
-
-  setGreenFlash(true);
-  const t = window.setTimeout(() => setGreenFlash(false), 220);
-  return () => window.clearTimeout(t);
-}, [challengeOn, phase, lastAttempt, idx]);
 
 
 
@@ -234,6 +222,19 @@ useEffect(() => {
   const [idx, setIdx] = useState(0);
   const [attempts, setAttempts] = useState([]); // { i, text, overall, label, createdAt }
   const lastAttempt = attempts[attempts.length - 1] || null;
+  const [greenFlash, setGreenFlash] = useState(false);
+
+useEffect(() => {
+  if (!challengeOn) return;
+  if (phase !== "result") return;
+  if (!lastAttempt) return;
+  if (lastAttempt.i !== idx) return;
+  if (!isGreen(lastAttempt.overall)) return;
+
+  setGreenFlash(true);
+  const t = window.setTimeout(() => setGreenFlash(false), 220);
+  return () => window.clearTimeout(t);
+}, [challengeOn, phase, lastAttempt, idx]);
 
   const summary = useMemo(() => {
   if (!attempts.length) return { avg: 0, great: 0, ok: 0, needs: 0 };
