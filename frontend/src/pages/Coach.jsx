@@ -1070,9 +1070,7 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
             <div style={{ fontSize: 34, fontWeight: 1000, letterSpacing: -0.8, color: LIGHT_TEXT }}>
               Daily Drill
             </div>
-            <div style={{ marginTop: 6, fontSize: 15, fontWeight: 600, color: LIGHT_MUTED, letterSpacing: -0.2 }}>
-              Improve your pronunciation in minutes
-            </div>
+      
             <div style={{ marginTop: 14, display: "grid", placeItems: "center" }}>
   <div
     style={{
