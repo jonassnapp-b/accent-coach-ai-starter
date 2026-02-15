@@ -1043,7 +1043,10 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
   >
     <button
       type="button"
-      onClick={() => setChallengeOn(false)}
+      onClick={() => {
+  setChallengeOn(false);
+  setSetupStep(0);
+}}
       style={{
         height: 36,
         padding: "0 14px",
@@ -1061,7 +1064,10 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
 
     <button
       type="button"
-      onClick={() => setChallengeOn(true)}
+      onClick={() => {
+  setChallengeOn(true);
+  setSetupStep(0);
+}}
       style={{
         height: 36,
         padding: "0 14px",
