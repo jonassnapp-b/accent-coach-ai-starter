@@ -210,10 +210,12 @@ useEffect(() => {
     const left = Math.max(0, wordDeadlineMs - Date.now());
     setTimeLeftMs(left);
 
-   if (left <= 0) {
+if (left <= 0) {
   clearInterval(id);
+  abortRunRef.current = true;
   goBackToSetup();
 }
+
 
   }, 100);
 
@@ -259,6 +261,7 @@ const [summaryCount, setSummaryCount] = useState(0);
   const mediaRecRef = useRef(null);
   const chunksRef = useRef([]);
   const userUrlRef = useRef(null);
+const abortRunRef = useRef(false);
 
   function cleanupUserUrl() {
     try {
@@ -367,6 +370,18 @@ function startRecording() {
   }
 
   function handleStop(rec) {
+    if (abortRunRef.current) {
+  chunksRef.current = [];
+  cleanupUserUrl();
+  resetChallengeWordTimer();
+  setTargets([]);
+  setIdx(0);
+  setAttempts([]);
+  setSetupStep(0);
+  setPhase("setup");
+  return;
+}
+
     const chunks = chunksRef.current.slice();
     chunksRef.current = [];
 
@@ -553,13 +568,11 @@ useEffect(() => {
     setAttempts([]);
     cleanupUserUrl();
     resetChallengeWordTimer();
+abortRunRef.current = false;
 
-    setPhase("prompt");
-    if (challengeOn) {
-  const ms = challengeSecondsFor(difficulty) * 1000;
-  setWordDeadlineMs(Date.now() + ms);
-  setTimeLeftMs(ms);
-}
+ setPhase("prompt");
+// timer starts on first recording (startRecording), not here
+
 
   }
 
@@ -1306,7 +1319,7 @@ style={{
         >
           Daily Drill
         </div>
-{challengeOn && (phase === "prompt" || phase === "recording" || phase === "analyzing") ? (
+{challengeOn && wordDeadlineMs && (phase === "prompt" || phase === "recording" || phase === "analyzing") ? (
   <div style={{ marginTop: 8, display: "grid", placeItems: "center" }}>
     <div
       style={{
