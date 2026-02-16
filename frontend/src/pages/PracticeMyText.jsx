@@ -2667,7 +2667,7 @@ style={{
     position: "absolute",
     left: "50%",
     top: "50%",
-transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 94 : 90}px)`,
+transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 124 : 118}px)`,
     fontWeight: 850,
     fontSize: 32, // ✅ bigger
     color: "rgba(255,255,255,0.88)",
@@ -2809,7 +2809,7 @@ color: "#0B1220",
 
       // ✅ kortere “pills”
      width: "100%",
-maxWidth: 420,   // 👈 smallere (prøv 380 hvis du vil endnu smallere)
+maxWidth: 490,   // 👈 smallere (prøv 380 hvis du vil endnu smallere)
 margin: "0 auto",
 
 
