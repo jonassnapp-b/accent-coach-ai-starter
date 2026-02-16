@@ -2691,7 +2691,7 @@ transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 110 : 100}px)`
     position: "absolute",
     left: "50%",
     top: "50%",
-transform: "translate(-50%, -50%) translateY(-32px)",
+transform: "translate(-50%, -50%) translateY(-42px)",
     opacity: introPhase >= 1 ? 1 : 0,
     transition: "opacity 900ms ease",
     transitionDelay: introPhase >= 1 ? "220ms" : "0ms",
