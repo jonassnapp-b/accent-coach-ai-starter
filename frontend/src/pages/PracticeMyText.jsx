@@ -2449,34 +2449,35 @@ paddingTop: slideIdx === 0 ? 0 : 0, // mere space over overskriften på Playback
     <CloseSlidesX top={`calc(${SAFE_TOP} + 24px)`} right="12px" />
 
      <div
- style={{
-  width: "100%",
-  maxWidth: 720,
-  margin: "0 auto",
-  textAlign: "center",
-  paddingLeft: 16,
-  paddingRight: 16,
 
-  // ✅ equal spacing between hero, % and line
-display: "flex",
-flexDirection: "column",
-justifyContent: "center",
-paddingTop: 28,
-paddingBottom: 28,
-gap: 0,
+  style={{
+    width: "100%",
+    maxWidth: 720,
+    margin: "0 auto",
+    textAlign: "center",
+    paddingLeft: 16,
+    paddingRight: 16,
 
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "flex-start",
+    position: "relative",
 
-}}
+    paddingTop: 28,
+    paddingBottom: 28,
+    gap: 0,
+  }}
 >
+<div style={{ height: 96 }} />
+
   {/* HERO TEXT (max 2 lines, never overlaps) */}
 <div
   style={{
     marginTop: 0,
     opacity: 1,
-transform: `translateY(${introPhase >= 1 ? -46 : 14}px)`,
-transition: "transform 1100ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+    transform: `translateY(${introPhase >= 1 ? -96 : 0}px)`,
+transition: "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
 willChange: "transform",
-
     textAlign: "center",
     maxWidth: 720,
     marginLeft: "auto",
@@ -2513,11 +2514,9 @@ paintOrder: "stroke fill",
   style={{
     marginTop: 2,
     marginBottom: 18,
-  opacity: introPhase >= 1 ? 1 : 0,
-transform: `translateY(${introPhase >= 1 ? 0 : 22}px)`,
-transition: "opacity 350ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
-willChange: "transform, opacity",
-
+    opacity: introPhase >= 1 ? 1 : 0,
+    transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
+    transition: "all 800ms ease",
     fontWeight: 950,
     fontSize: computePctFontSize(heroText, 108, 66),
     lineHeight: 1,
