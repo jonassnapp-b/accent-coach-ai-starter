@@ -2668,8 +2668,7 @@ style={{
     left: "50%",
     top: "50%",
     transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 78 : 70}px)`,
-  fontWeight: 1000,
-    fontSize: 44,
+
     color: "rgba(255,255,255,0.88)",
     opacity: introPhase === 2 ? 1 : 0,
     transition: "opacity 520ms ease, transform 520ms ease",
@@ -2677,9 +2676,11 @@ style={{
     pointerEvents: "none",
     textAlign: "center",
     whiteSpace: "nowrap",
-    letterSpacing: -0.6,
-   WebkitTextStroke: "1.2px rgba(0,0,0,0.22)",
-     paintOrder: "stroke fill",
+    fontWeight: 1000,
+    fontSize: 48,
+    letterSpacing: -0.4,
+    WebkitTextStroke: "1.2px rgba(0,0,0,0.22)",
+    paintOrder: "stroke fill",
   }}
 >
   {pickShortLineFromScore(deckPctLocked)}
