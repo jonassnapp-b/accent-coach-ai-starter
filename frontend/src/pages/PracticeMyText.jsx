@@ -2640,7 +2640,8 @@ style={{
   <div
     style={{
       fontWeight: 1000,
-      fontSize: computeHeroFontSize(heroText, 112, 52),
+      fontSize: computeHeroFontSize(heroText, 170, 90),
+
       lineHeight: 1.05,
       letterSpacing: -0.4,
       WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
@@ -2655,7 +2656,7 @@ style={{
   style={{
     marginTop: 10,
     fontWeight: 750,
-    fontSize: 22,
+    fontSize: 32,
     color: "rgba(255,255,255,0.84)",
     opacity: introPhase === 2 ? 1 : 0,
     transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
