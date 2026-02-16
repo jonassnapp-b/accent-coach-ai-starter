@@ -2499,151 +2499,155 @@ justifyContent: "flex-start",
   <>
     <CloseSlidesX top={`calc(${SAFE_TOP} + 24px)`} right="12px" />
 
-    {/* ABSOLUTE CENTER LAYER */}
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        display: "grid",
-        placeItems: "center",
-        paddingLeft: 24,
-        paddingRight: 24,
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 720,
-          margin: "0 auto",
-          textAlign: "center",
-          paddingLeft: 16,
-          paddingRight: 16,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          paddingTop: 28,
-          paddingBottom: 28,
-          gap: 0,
-        }}
-      >
-{/* SHARED SLOT: word starts centered -> moves up, percent appears where word was */}
-{/* CENTER STACK (matches screenshot) */}
+{/* ABSOLUTE CENTER LAYER (ONLY HERO) */}
 <div
   style={{
-    position: "relative",
-    width: "100%",
-    maxWidth: 720,
-    margin: "0 auto",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    textAlign: "center",
-    gap: 10,
+    position: "absolute",
+    inset: 0,
+    display: "grid",
+    placeItems: "center",
+    paddingLeft: 24,
+    paddingRight: 24,
+    pointerEvents: "none", // ✅ hero må ikke “tage plads” i layout eller fange klik
   }}
 >
-  {/* subtle radial light BEHIND the percent */}
-  <div
-    aria-hidden="true"
-    style={{
-      position: "absolute",
-      left: "50%",
-      top: "52%",
-      transform: "translate(-50%, -50%)",
-      width: 320,
-      height: 190,
-      borderRadius: 999,
-      background:
-        "radial-gradient(closest-side at 50% 55%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 32%, rgba(255,255,255,0.00) 70%)",
-      opacity: introPhase >= 1 ? 1 : 0,
-      transition: "opacity 1500ms ease",
-      transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
-      pointerEvents: "none",
-      zIndex: 0,
-    }}
-  />
-
-  {/* WORD */}
   <div
     style={{
-      opacity: introPhase >= 0 ? 1 : 0,
-      transform: `translateY(${introPhase >= 4 ? -36 : introPhase >= 1 ? -22 : 0}px) scale(${introPhase >= 4 ? 0.72 : 1})`,
-      transition:
-        "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
-      zIndex: 1,
       width: "100%",
+      maxWidth: 720,
+      margin: "0 auto",
+      textAlign: "center",
       paddingLeft: 16,
       paddingRight: 16,
+      paddingTop: 28,
+      paddingBottom: 28,
     }}
   >
+    {/* CENTER STACK (matches screenshot) */}
     <div
       style={{
-        fontWeight: 1000,
-        fontSize: introPhase >= 4
-          ? computeHeroFontSize(heroText, 46, 22)
-          : computeHeroFontSize(heroText, 72, 32),
-        lineHeight: 1.05,
-        letterSpacing: -0.4,
-        WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
-        paintOrder: "stroke fill",
-        display: "inline-block",
-        maxWidth: "100%",
+        position: "relative",
+        width: "100%",
+        maxWidth: 720,
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        textAlign: "center",
+        gap: 10,
       }}
     >
-      <PhonemeFeedback result={result} mode="textOnly" />
+      {/* subtle radial light BEHIND the percent */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "52%",
+          transform: "translate(-50%, -50%)",
+          width: 320,
+          height: 190,
+          borderRadius: 999,
+          background:
+            "radial-gradient(closest-side at 50% 55%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 32%, rgba(255,255,255,0.00) 70%)",
+          opacity: introPhase >= 1 ? 1 : 0,
+          transition: "opacity 1500ms ease",
+          transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
+          zIndex: 0,
+        }}
+      />
+
+      {/* WORD */}
+      <div
+        style={{
+          opacity: introPhase >= 0 ? 1 : 0,
+          transform: `translateY(${introPhase >= 4 ? -36 : introPhase >= 1 ? -22 : 0}px) scale(${introPhase >= 4 ? 0.72 : 1})`,
+          transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+          zIndex: 1,
+          width: "100%",
+          paddingLeft: 16,
+          paddingRight: 16,
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 1000,
+            fontSize:
+              introPhase >= 4
+                ? computeHeroFontSize(heroText, 46, 22)
+                : computeHeroFontSize(heroText, 72, 32),
+            lineHeight: 1.05,
+            letterSpacing: -0.4,
+            WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
+            paintOrder: "stroke fill",
+            display: "inline-block",
+            maxWidth: "100%",
+          }}
+        >
+          <PhonemeFeedback result={result} mode="textOnly" />
+        </div>
+      </div>
+
+      {/* PERCENT */}
+      <div
+        style={{
+          opacity: introPhase >= 1 ? 1 : 0,
+          transform: `translateY(${introPhase >= 1 ? 0 : 8}px)`,
+          transition: "opacity 1500ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+          transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
+          fontWeight: 1000,
+          fontSize:
+            introPhase >= 4
+              ? computePctFontSize(heroText, 64, 44)
+              : computePctFontSize(heroText, 112, 68),
+          lineHeight: 1,
+          letterSpacing: -1.1,
+          color: pfColorForPct(deckPctLocked),
+          WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
+          paintOrder: "stroke fill",
+          zIndex: 1,
+        }}
+      >
+        {introPct}%
+      </div>
+
+      {/* LINE UNDER PERCENT */}
+      <div
+        style={{
+          marginTop: 4,
+          fontWeight: 650,
+          fontSize: 18,
+          color: "rgba(255,255,255,0.84)",
+          opacity: introPhase === 2 ? 1 : 0,
+          transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
+          transition: "opacity 520ms ease, transform 520ms ease",
+          zIndex: 1,
+        }}
+      >
+        {pickShortLineFromScore(deckPctLocked)}
+      </div>
     </div>
-  </div>
-
-  {/* PERCENT */}
-  <div
-    style={{
-      opacity: introPhase >= 1 ? 1 : 0,
-      transform: `translateY(${introPhase >= 1 ? 0 : 8}px)`,
-      transition: "opacity 1500ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
-      transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
-      fontWeight: 1000,
-      fontSize: introPhase >= 4
-        ? computePctFontSize(heroText, 64, 44)
-        : computePctFontSize(heroText, 112, 68),
-      lineHeight: 1,
-      letterSpacing: -1.1,
-      color: pfColorForPct(deckPctLocked),
-      WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
-      paintOrder: "stroke fill",
-      pointerEvents: "none",
-      zIndex: 1,
-    }}
-  >
-    {introPct}%
-  </div>
-
-  {/* LINE UNDER PERCENT */}
-  <div
-    style={{
-      marginTop: 4,
-      fontWeight: 650,
-      fontSize: 18,
-      color: "rgba(255,255,255,0.84)",
-      opacity: introPhase === 2 ? 1 : 0,
-      transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
-      transition: "opacity 520ms ease, transform 520ms ease",
-      zIndex: 1,
-    }}
-  >
-    {pickShortLineFromScore(deckPctLocked)}
   </div>
 </div>
 
-
-
-  {/* DETAILS (appears after the line fades out) */}
+{/* DETAILS LAYER (does NOT affect hero centering) */}
 <div
   style={{
-    marginTop: 18,
+    position: "absolute",
+    left: 0,
+    right: 0,
+
+    // ✅ sits below the center, without shifting it
+    top: "calc(50% + 120px)",
+    transform: "translateY(-20px)",
+
     opacity: introPhase >= 4 ? 1 : 0,
-    transform: `translateY(${introPhase >= 4 ? 0 : 10}px)`,
     transition: "opacity 700ms ease, transform 700ms ease",
     pointerEvents: introPhase >= 4 ? "auto" : "none",
+
+    paddingLeft: 16,
+    paddingRight: 16,
   }}
 >
   {/* Coach / You */}
@@ -2770,9 +2774,6 @@ justifyContent: "flex-start",
   </div>
 </div>
 
-</div>
-
-    </div>
 
     </>
 ) : slideIdx === 1 ? (
