@@ -2738,7 +2738,7 @@ WebkitOverflowScrolling: introPhase >= 4 ? "touch" : "auto",
 
 
     opacity: introPhase >= 4 ? 1 : 0,
-    transition: "opacity 700ms ease, transform 700ms ease",
+    transition: "none",
     pointerEvents: introPhase >= 4 ? "auto" : "none",
 
     paddingLeft: 16,
