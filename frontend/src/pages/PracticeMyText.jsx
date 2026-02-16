@@ -2449,35 +2449,32 @@ paddingTop: slideIdx === 0 ? 0 : 0, // mere space over overskriften på Playback
     <CloseSlidesX top={`calc(${SAFE_TOP} + 24px)`} right="12px" />
 
      <div
+ style={{
+  width: "100%",
+  maxWidth: 720,
+  margin: "0 auto",
+  textAlign: "center",
+  paddingLeft: 16,
+  paddingRight: 16,
 
-  style={{
-    width: "100%",
-    maxWidth: 720,
-    margin: "0 auto",
-    textAlign: "center",
-    paddingLeft: 16,
-    paddingRight: 16,
+  // ✅ equal spacing between hero, % and line
+display: "flex",
+flexDirection: "column",
+justifyContent: "center",
+paddingTop: 28,
+paddingBottom: 28,
+gap: 0,
 
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "flex-start",
-    position: "relative",
 
-    paddingTop: 28,
-    paddingBottom: 28,
-    gap: 0,
-  }}
+}}
 >
-<div style={{ height: 96 }} />
-
   {/* HERO TEXT (max 2 lines, never overlaps) */}
 <div
   style={{
     marginTop: 0,
     opacity: 1,
-    transform: `translateY(${introPhase >= 1 ? -96 : 0}px)`,
-transition: "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
-willChange: "transform",
+    transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
+    transition: "all 900ms ease",
     textAlign: "center",
     maxWidth: 720,
     marginLeft: "auto",
