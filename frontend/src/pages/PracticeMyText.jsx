@@ -2528,7 +2528,7 @@ justifyContent: "flex-start",
     <CloseSlidesX top={`calc(${SAFE_TOP} + 24px)`} right="12px" />
 
 {/* ABSOLUTE CENTER LAYER (ONLY HERO) */}
-const HERO_DOWN_PX = 40;
+const HERO_DOWN_PX = 65;
 
 <div
 style={{
