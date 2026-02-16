@@ -2481,7 +2481,7 @@ gap: 0,
 <div
   style={{
     position: "relative",
-    height: 168,               // juster hvis du vil have mere/ mindre luft
+height: 152,               // juster hvis du vil have mere/ mindre luft
     width: "100%",
     maxWidth: 720,
     margin: "0 auto",
@@ -2506,7 +2506,7 @@ transition: "opacity 1300ms ease, transform 1550ms cubic-bezier(0.2, 0.9, 0.2, 1
   >
     <div
       style={{
-        fontWeight: 950,
+        fontWeight: 1000,
         fontSize: computeHeroFontSize(heroText, 72, 32),
         lineHeight: 1.05,
         letterSpacing: -0.4,
@@ -2519,38 +2519,60 @@ transition: "opacity 1300ms ease, transform 1550ms cubic-bezier(0.2, 0.9, 0.2, 1
       <PhonemeFeedback result={result} mode="textOnly" />
     </div>
   </div>
+{/* PERCENT (appears in the ORIGINAL center slot) */}
+<>
+  {/* subtle radial light BEHIND the percent (not on the text) */}
+  <div
+    aria-hidden="true"
+    style={{
+      position: "absolute",
+      left: "50%",
+      top: "50%",
+      transform: "translate(-50%, -50%)",
+      width: 320,
+      height: 190,
+      borderRadius: 999,
+      background:
+        "radial-gradient(closest-side at 50% 55%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 32%, rgba(255,255,255,0.00) 70%)",
+      opacity: introPhase >= 1 ? 1 : 0,
+      transition: "opacity 1500ms ease",
+      transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
+      pointerEvents: "none",
+      zIndex: 0,
+    }}
+  />
 
-  {/* PERCENT (appears in the ORIGINAL center slot) */}
   <div
     style={{
       position: "absolute",
       left: "50%",
       top: "50%",
       transform: "translate(-50%, -50%)",
-opacity: introPhase >= 1 ? 1 : 0,
-transition: "opacity 1500ms ease",
-transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
+      opacity: introPhase >= 1 ? 1 : 0,
+      transition: "opacity 1500ms ease",
+      transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
 
-
-
-      fontWeight: 950,
-      fontSize: computePctFontSize(heroText, 108, 66),
+      fontWeight: 1000,
+      fontSize: computePctFontSize(heroText, 112, 68),
       lineHeight: 1,
-      letterSpacing: -1.0,
+      letterSpacing: -1.1,
       color: pfColorForPct(deckPctLocked),
-      WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
+      WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
       paintOrder: "stroke fill",
       pointerEvents: "none",
+      zIndex: 1,
     }}
   >
     {introPct}%
   </div>
+</>
+
 </div>
 
   {/* ✅ MOVE THIS INSIDE THE WRAPPER (so space-between works) */}
   <div
     style={{
-      marginTop: 0,
+      marginTop: -4,
       textAlign: "center",
        fontWeight: 650,
 
