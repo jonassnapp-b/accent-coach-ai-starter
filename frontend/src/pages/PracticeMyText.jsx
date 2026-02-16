@@ -2527,61 +2527,28 @@ justifyContent: "flex-start",
         }}
       >
 {/* SHARED SLOT: word starts centered -> moves up, percent appears where word was */}
+{/* CENTER STACK (matches screenshot) */}
 <div
   style={{
     position: "relative",
-height: 152,               // juster hvis du vil have mere/ mindre luft
     width: "100%",
     maxWidth: 720,
     margin: "0 auto",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+    gap: 10,
   }}
 >
-  {/* WORD (starts centered, then glides UP) */}
-  <div
-    style={{
-      position: "absolute",
-      left: "50%",
-    top: introPhase >= 4 ? 34 : "50%",
-opacity: introPhase >= 0 ? 1 : 0,
-transform: `translate(-50%, -50%) translateY(${
-  introPhase >= 4 ? -112 : introPhase >= 1 ? -86 : 0
-}px) scale(${introPhase >= 4 ? 0.72 : 1})`,
-transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1), top 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
-
-
-
-      textAlign: "center",
-      width: "100%",
-      paddingLeft: 16,
-      paddingRight: 16,
-    }}
-  >
-    <div
-      style={{
-        fontWeight: 1000,
-        fontSize: introPhase >= 4
-  ? computeHeroFontSize(heroText, 46, 22)
-  : computeHeroFontSize(heroText, 72, 32),
-        lineHeight: 1.05,
-        letterSpacing: -0.4,
-        WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
-        paintOrder: "stroke fill",
-        display: "inline-block",
-        maxWidth: "100%",
-      }}
-    >
-      <PhonemeFeedback result={result} mode="textOnly" />
-    </div>
-  </div>
-{/* PERCENT (appears in the ORIGINAL center slot) */}
-<>
-  {/* subtle radial light BEHIND the percent (not on the text) */}
+  {/* subtle radial light BEHIND the percent */}
   <div
     aria-hidden="true"
     style={{
       position: "absolute",
       left: "50%",
-      top: "50%",
+      top: "52%",
       transform: "translate(-50%, -50%)",
       width: 320,
       height: 190,
@@ -2596,21 +2563,48 @@ transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)
     }}
   />
 
+  {/* WORD */}
   <div
     style={{
-      position: "absolute",
-      left: "50%",
-top: introPhase >= 4 ? 90 : "50%",
-transform: "translate(-50%, -50%)",
+      opacity: introPhase >= 0 ? 1 : 0,
+      transform: `translateY(${introPhase >= 4 ? -36 : introPhase >= 1 ? -22 : 0}px) scale(${introPhase >= 4 ? 0.72 : 1})`,
+      transition:
+        "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+      zIndex: 1,
+      width: "100%",
+      paddingLeft: 16,
+      paddingRight: 16,
+    }}
+  >
+    <div
+      style={{
+        fontWeight: 1000,
+        fontSize: introPhase >= 4
+          ? computeHeroFontSize(heroText, 46, 22)
+          : computeHeroFontSize(heroText, 72, 32),
+        lineHeight: 1.05,
+        letterSpacing: -0.4,
+        WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
+        paintOrder: "stroke fill",
+        display: "inline-block",
+        maxWidth: "100%",
+      }}
+    >
+      <PhonemeFeedback result={result} mode="textOnly" />
+    </div>
+  </div>
 
+  {/* PERCENT */}
+  <div
+    style={{
       opacity: introPhase >= 1 ? 1 : 0,
-transition: "opacity 1500ms ease, top 900ms cubic-bezier(0.2, 0.9, 0.2, 1), font-size 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+      transform: `translateY(${introPhase >= 1 ? 0 : 8}px)`,
+      transition: "opacity 1500ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
       transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
-
       fontWeight: 1000,
       fontSize: introPhase >= 4
-  ? computePctFontSize(heroText, 64, 44)
-  : computePctFontSize(heroText, 112, 68),
+        ? computePctFontSize(heroText, 64, 44)
+        : computePctFontSize(heroText, 112, 68),
       lineHeight: 1,
       letterSpacing: -1.1,
       color: pfColorForPct(deckPctLocked),
@@ -2622,9 +2616,24 @@ transition: "opacity 1500ms ease, top 900ms cubic-bezier(0.2, 0.9, 0.2, 1), font
   >
     {introPct}%
   </div>
-</>
 
+  {/* LINE UNDER PERCENT */}
+  <div
+    style={{
+      marginTop: 4,
+      fontWeight: 650,
+      fontSize: 18,
+      color: "rgba(255,255,255,0.84)",
+      opacity: introPhase === 2 ? 1 : 0,
+      transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
+      transition: "opacity 520ms ease, transform 520ms ease",
+      zIndex: 1,
+    }}
+  >
+    {pickShortLineFromScore(deckPctLocked)}
+  </div>
 </div>
+
 
   {/* ✅ MOVE THIS INSIDE THE WRAPPER (so space-between works) */}
   <div
