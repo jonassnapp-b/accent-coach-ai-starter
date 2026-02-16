@@ -2594,66 +2594,63 @@ justifyContent: "flex-start",
     </div>
   </div>
 
-  {/* PERCENT */}
+  {/* PCT + LINE (absolute so it doesn't reserve space while hidden) */}
   <div
     style={{
-      opacity: introPhase >= 1 ? 1 : 0,
-      transform: `translateY(${introPhase >= 1 ? 0 : 8}px)`,
-      transition: "opacity 1500ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
-      transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
-      fontWeight: 1000,
-      fontSize: introPhase >= 4
-        ? computePctFontSize(heroText, 64, 44)
-        : computePctFontSize(heroText, 112, 68),
-      lineHeight: 1,
-      letterSpacing: -1.1,
-      color: pfColorForPct(deckPctLocked),
-      WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
-      paintOrder: "stroke fill",
+      position: "absolute",
+      left: "50%",
+      top: "50%",
+      transform: "translate(-50%, -50%)",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: 6,
       pointerEvents: "none",
       zIndex: 1,
     }}
   >
-    {introPct}%
+    {/* PERCENT */}
+    <div
+      style={{
+        opacity: introPhase >= 1 ? 1 : 0,
+        transform: `translateY(${introPhase >= 1 ? 0 : 8}px)`,
+        transition:
+          "opacity 1500ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+        transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
+        fontWeight: 1000,
+        fontSize:
+          introPhase >= 4
+            ? computePctFontSize(heroText, 64, 44)
+            : computePctFontSize(heroText, 112, 68),
+        lineHeight: 1,
+        letterSpacing: -1.1,
+        color: pfColorForPct(deckPctLocked),
+        WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
+        paintOrder: "stroke fill",
+      }}
+    >
+      {introPct}%
+    </div>
+
+    {/* LINE UNDER PERCENT */}
+    <div
+      style={{
+        fontWeight: 650,
+        fontSize: 18,
+        color: "rgba(255,255,255,0.84)",
+        opacity: introPhase === 2 ? 1 : 0,
+        transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
+        transition: "opacity 520ms ease, transform 520ms ease",
+      }}
+    >
+      {pickShortLineFromScore(deckPctLocked)}
+    </div>
   </div>
 
-  {/* LINE UNDER PERCENT */}
-  <div
-    style={{
-      marginTop: 4,
-      fontWeight: 650,
-      fontSize: 18,
-      color: "rgba(255,255,255,0.84)",
-      opacity: introPhase === 2 ? 1 : 0,
-      transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
-      transition: "opacity 520ms ease, transform 520ms ease",
-      zIndex: 1,
-    }}
-  >
-    {pickShortLineFromScore(deckPctLocked)}
-  </div>
 </div>
 
 
-  {/* ✅ MOVE THIS INSIDE THE WRAPPER (so space-between works) */}
-  <div
-    style={{
-      marginTop: -4,
-      textAlign: "center",
-       fontWeight: 650,
 
-fontSize: 18,
-      color: "rgba(255,255,255,0.84)",
-
-      textShadow: "none",
-    opacity: introPhase === 2 ? 1 : 0,
-transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
-transition: "opacity 520ms ease, transform 520ms ease",
-
-    }}
-  >
-    {pickShortLineFromScore(deckPctLocked)}
-  </div>
   {/* DETAILS (appears after the line fades out) */}
 <div
   style={{
