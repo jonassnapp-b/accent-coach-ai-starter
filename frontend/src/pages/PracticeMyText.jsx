@@ -2485,7 +2485,8 @@ paddingRight: 24,
         minHeight: 0,
         display: "flex",
         flexDirection: "column",
-        justifyContent: slideIdx === 0 ? "center" : "flex-start",
+position: "relative",
+justifyContent: "flex-start",
         paddingTop: 0,
 
         // ✅ ingen bund-reserve før chevrons vises (så slide 1 faktisk er centreret)
@@ -2494,31 +2495,37 @@ paddingRight: 24,
     >
 
 
-  {slideIdx === 0 ? (
-    // ----- Intro (CENTERED vertically) -----
-    <>
+{slideIdx === 0 ? (
+  <>
     <CloseSlidesX top={`calc(${SAFE_TOP} + 24px)`} right="12px" />
 
-     <div
- style={{
-  width: "100%",
-  maxWidth: 720,
-  margin: "0 auto",
-  textAlign: "center",
-  paddingLeft: 16,
-  paddingRight: 16,
-
-  // ✅ equal spacing between hero, % and line
-display: "flex",
-flexDirection: "column",
-justifyContent: "center",
-paddingTop: 28,
-paddingBottom: 28,
-gap: 0,
-
-
-}}
->
+    {/* ABSOLUTE CENTER LAYER */}
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "grid",
+        placeItems: "center",
+        paddingLeft: 24,
+        paddingRight: 24,
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 720,
+          margin: "0 auto",
+          textAlign: "center",
+          paddingLeft: 16,
+          paddingRight: 16,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          paddingTop: 28,
+          paddingBottom: 28,
+          gap: 0,
+        }}
+      >
 {/* SHARED SLOT: word starts centered -> moves up, percent appears where word was */}
 <div
   style={{
@@ -2774,6 +2781,7 @@ transition: "opacity 520ms ease, transform 520ms ease",
 
 </div>
 
+    </div>
 
     </>
 ) : slideIdx === 1 ? (
