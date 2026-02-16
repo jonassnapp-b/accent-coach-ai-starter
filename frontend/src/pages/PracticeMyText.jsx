@@ -1,5 +1,5 @@
 // src/pages/PracticeMyText.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, ChevronDown, Volume2, Play, Pause, X, RotateCcw } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
@@ -1457,6 +1457,14 @@ const [introPhase, setIntroPhase] = useState(-1);
 const [introPct, setIntroPct] = useState(0);
 // Slide 2 (Speaking Level) animation
 const [levelPctAnim, setLevelPctAnim] = useState(0);
+const [overlayReady, setOverlayReady] = useState(false);
+
+// keep intro timers in one place so we never “double-run”
+const introTimersRef = useRef([]);
+function clearIntroTimers() {
+  for (const id of introTimersRef.current) clearTimeout(id);
+  introTimersRef.current = [];
+}
 
 
 const [loopOn, setLoopOn] = useState(false);
@@ -1598,57 +1606,64 @@ function goNext() {
 const isPhonemeOverlay =
   slideIdx >= 2 && slideIdx <= 1 + weakPhonemeSlides.length;
 const activePhonemeSlide = isPhonemeOverlay ? weakPhonemeSlides[slideIdx - 2] : null;
+useLayoutEffect(() => {
+  if (!result) {
+    setOverlayReady(false);
+    return;
+  }
+
+  // Hide overlay, reset state BEFORE first paint of the overlay
+  setOverlayReady(false);
+  clearIntroTimers();
+
+  setSlideIdx(0);
+  setIntroPct(0);
+  setLevelPctAnim(0);
+  setIntroPhase(-1);
+
+  // show overlay next frame (after reset is committed)
+  requestAnimationFrame(() => setOverlayReady(true));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [result]);
 
 // Reset slide flow when new result comes in
 useEffect(() => {
   if (!result) return;
+  if (!overlayReady) return;
+
   // ✅ lock “deck score” once per result
   const v = result?.overall ?? result?.pronunciation ?? result?.overallAccuracy ?? 0;
-const n = Number(v);
-const pct = Number.isFinite(n) ? (n <= 1 ? Math.round(n * 100) : Math.round(n)) : 0;
-const locked = Math.max(0, Math.min(100, pct));
-deckPctRef.current = locked;
-setDeckPctLocked(locked);
-   setSlideIdx(0);
+  const n = Number(v);
+  const pct = Number.isFinite(n) ? (n <= 1 ? Math.round(n * 100) : Math.round(n)) : 0;
+  const locked = Math.max(0, Math.min(100, pct));
+  deckPctRef.current = locked;
+  setDeckPctLocked(locked);
 
+  setSlideIdx(0);
   setIntroPhase(-1);
   setIntroPct(0);
 
-  // -1: hidden (to trigger fade)
-  //  0: word fades in (center)
-  //  1: word moves up + percent fades in + count up starts
-  //  2: show message
-const t0 = setTimeout(() => setIntroPhase(0), 50);
-const t1 = setTimeout(() => setIntroPhase(1), 650);
-const t2 = setTimeout(() => setIntroPhase(2), 2100);
+  clearIntroTimers();
 
-// hold teksten ~3s
-const t3 = setTimeout(() => setIntroPhase(3), 2100 + 1500);
+  introTimersRef.current.push(setTimeout(() => setIntroPhase(0), 50));
+  introTimersRef.current.push(setTimeout(() => setIntroPhase(1), 650));
+  introTimersRef.current.push(setTimeout(() => setIntroPhase(2), 2100));
+  introTimersRef.current.push(setTimeout(() => setIntroPhase(3), 2100 + 1500));
+  introTimersRef.current.push(setTimeout(() => setIntroPhase(4), 2100 + 1500 + 520));
 
-// vent på fade (du bruger 520ms i CSS)
-const t4 = setTimeout(() => setIntroPhase(4), 2100 + 1500 + 520);
+  return () => clearIntroTimers();
+}, [result, overlayReady]);
 
-
-
-
-
-  // count-up starts when phase becomes 1
-  return () => {
-    clearTimeout(t0);
-    clearTimeout(t1);
-    clearTimeout(t2);
-      clearTimeout(t3);
-  clearTimeout(t4);
-
-  };
-
-}, [result]);
 
 // Reset/force introPct when leaving/returning to slide 1
 useEffect(() => {
   if (!result) return;
+  if (!overlayReady) return;
+
 
   if (slideIdx === 0) {
+    clearIntroTimers();
+
     // when you come back to slide 1: restart its animation
         setIntroPct(0);
     setIntroPhase(-1);
@@ -1664,14 +1679,8 @@ const t3 = setTimeout(() => setIntroPhase(3), 2100 + 1500);
 const t4 = setTimeout(() => setIntroPhase(4), 2100 + 1500 + 520);
 
 
-return () => {
-  clearTimeout(t0);
-  clearTimeout(t1);
-  clearTimeout(t2);
-  clearTimeout(t3);
-    clearTimeout(t4);
+return () => clearIntroTimers();
 
-};
 
   } else {
     // when leaving slide 1: force it to final score so it never "sticks" mid-way
@@ -2426,7 +2435,7 @@ boxShadow: PAGE_SHADOW,
   </button>
 )}
 
-{!!result && !isClosingSlides && (
+{!!result && overlayReady && !isClosingSlides && (
   <div
     style={{
       position: "fixed",
