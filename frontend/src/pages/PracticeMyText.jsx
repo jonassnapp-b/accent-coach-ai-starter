@@ -2749,9 +2749,10 @@ WebkitOverflowScrolling: introPhase >= 4 ? "touch" : "auto",
         minWidth: 150,
         height: 48,
         borderRadius: 16,
-        border: "1px solid rgba(255,255,255,0.16)",
-        background: "rgba(255,255,255,0.10)",
-        color: "rgba(255,255,255,0.92)",
+        border: "1px solid rgba(11,18,32,0.10)",
+background: "rgba(255,255,255,0.96)",
+color: "#0B1220",
+
         fontWeight: 950,
         cursor: "pointer",
         display: "inline-flex",
@@ -2774,9 +2775,10 @@ WebkitOverflowScrolling: introPhase >= 4 ? "touch" : "auto",
         minWidth: 150,
         height: 48,
         borderRadius: 16,
-        border: "1px solid rgba(255,255,255,0.16)",
-        background: "rgba(255,255,255,0.10)",
-        color: "rgba(255,255,255,0.92)",
+   border: "1px solid rgba(11,18,32,0.10)",
+background: "rgba(255,255,255,0.96)",
+color: "#0B1220",
+
         fontWeight: 950,
         cursor: "pointer",
         display: "inline-flex",
@@ -2796,69 +2798,96 @@ WebkitOverflowScrolling: introPhase >= 4 ? "touch" : "auto",
   <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
     {(weakPhonemeSlides || []).map((p) => {
       const pct = p?.score == null ? null : Math.round(Number(p.score));
-      return (
-        <div
-          key={`intro_row_${p.code}`}
+     return (
+  <div
+    key={`intro_row_${p.code}`}
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+
+      // ✅ kortere “pills”
+      width: "100%",
+      maxWidth: 520,
+      margin: "0 auto",
+
+      padding: "10px 12px",
+      borderRadius: 18,
+      border: "1px solid rgba(255,255,255,0.14)",
+      background: "rgba(255,255,255,0.08)",
+      backdropFilter: "blur(10px)",
+      WebkitBackdropFilter: "blur(10px)",
+    }}
+  >
+    {/* LEFT: speaker + phoneme i samme pill */}
+    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+      <button
+        type="button"
+        onClick={() => playDeepDiveTts(p.code, `intro_ph:${p.code}`)}
+        aria-label={`Play ${p.code}`}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 10,
+
+          height: 42,
+          padding: "0 12px",
+          borderRadius: 16,
+
+          border: "1px solid rgba(255,255,255,0.16)",
+          background: "rgba(0,0,0,0.18)",
+          color: "rgba(255,255,255,0.92)",
+
+          cursor: "pointer",
+          flex: "0 0 auto",
+        }}
+      >
+        <Volume2 className="h-5 w-5" />
+
+        {/* ✅ phoneme tekst farves efter score */}
+        <span
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "12px 14px",
-            borderRadius: 18,
-            border: "1px solid rgba(255,255,255,0.14)",
-            background: "rgba(255,255,255,0.08)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
+            fontWeight: 1000,
+            letterSpacing: -0.4,
+            fontSize: 18,
+            lineHeight: 1,
+            color: pct == null ? "rgba(255,255,255,0.65)" : pfColorForPct(pct),
+            WebkitTextStroke: pct == null ? "0px" : "1px rgba(0,0,0,0.18)",
+            paintOrder: "stroke fill",
           }}
         >
-          <button
-            type="button"
-            onClick={() => playDeepDiveTts(p.code, `intro_ph:${p.code}`)}
-            aria-label={`Play ${p.code}`}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 14,
-              border: "1px solid rgba(255,255,255,0.16)",
-              background: "rgba(0,0,0,0.18)",
-              color: "rgba(255,255,255,0.92)",
-              display: "grid",
-              placeItems: "center",
-              cursor: "pointer",
-              flex: "0 0 auto",
-            }}
-          >
-            <Volume2 className="h-5 w-5" />
-          </button>
+          {p.code}
+        </span>
+      </button>
+    </div>
 
-          <div
-            style={{
-              fontWeight: 1000,
-              letterSpacing: -0.4,
-              fontSize: 18,
-              color: "rgba(255,255,255,0.92)",
-              flex: "1 1 auto",
-              textAlign: "left",
-            }}
-          >
-            {p.code}
-          </div>
+    {/* RIGHT: større procent i badge (som billede 2) */}
+    <div
+      style={{
+        flex: "0 0 auto",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
 
-          <div
-            style={{
-              fontWeight: 1000,
-              letterSpacing: -0.4,
-              fontSize: 16,
-              color: pct == null ? "rgba(255,255,255,0.55)" : pfColorForPct(pct),
-              WebkitTextStroke: pct == null ? "0px" : "1px rgba(0,0,0,0.18)",
-              paintOrder: "stroke fill",
-              flex: "0 0 auto",
-            }}
-          >
-            {pct == null ? "—" : `${pct}%`}
-          </div>
-        </div>
-      );
+        height: 36,
+        padding: "0 12px",
+        borderRadius: 14,
+
+        background: "rgba(255,255,255,0.96)",
+        border: "1px solid rgba(11,18,32,0.10)",
+
+        fontWeight: 1000,
+        fontSize: 18,
+        letterSpacing: -0.4,
+        color: pct == null ? "rgba(11,18,32,0.45)" : pfColorForPct(pct),
+      }}
+    >
+      {pct == null ? "—" : `${pct}%`}
+    </div>
+  </div>
+);
+
     })}
   </div>
 </div>
