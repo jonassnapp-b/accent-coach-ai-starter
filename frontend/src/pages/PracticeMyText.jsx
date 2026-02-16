@@ -1656,35 +1656,37 @@ useEffect(() => {
 
 
 // Reset/force introPct when leaving/returning to slide 1
-// Reset/force introPct when leaving/returning to slide 1
 useEffect(() => {
   if (!result) return;
   if (!overlayReady) return;
 
-  clearIntroTimers();
 
   if (slideIdx === 0) {
+    clearIntroTimers();
+
     // when you come back to slide 1: restart its animation
-    setIntroPct(0);
+        setIntroPct(0);
     setIntroPhase(-1);
 
-    introTimersRef.current.push(setTimeout(() => setIntroPhase(0), 50));
-    introTimersRef.current.push(setTimeout(() => setIntroPhase(1), 650));
-    introTimersRef.current.push(setTimeout(() => setIntroPhase(2), 2100));
+const t0 = setTimeout(() => setIntroPhase(0), 50);
+const t1 = setTimeout(() => setIntroPhase(1), 650);
+const t2 = setTimeout(() => setIntroPhase(2), 2100);
 
-    // hold teksten ~3s
-    introTimersRef.current.push(setTimeout(() => setIntroPhase(3), 2100 + 1500));
+// hold teksten ~3s
+const t3 = setTimeout(() => setIntroPhase(3), 2100 + 1500);
 
-    // vent på fade (du bruger 520ms i CSS)
-    introTimersRef.current.push(setTimeout(() => setIntroPhase(4), 2100 + 1500 + 520));
+// vent på fade (du bruger 520ms i CSS)
+const t4 = setTimeout(() => setIntroPhase(4), 2100 + 1500 + 520);
+
+
+return () => clearIntroTimers();
+
+
   } else {
     // when leaving slide 1: force it to final score so it never "sticks" mid-way
     setIntroPct(deckScore);
   }
-
-  return () => clearIntroTimers();
-}, [slideIdx, deckScore, result, overlayReady]);
-
+}, [slideIdx, deckScore, result]);
 
 // Count-up when introPhase hits 1
 useEffect(() => {
@@ -3480,18 +3482,19 @@ marginRight: -16,
 
 
 
-      {/* Chevrons (bottom) — IMPORTANT: allow going to Playback + Next */}
-      <div
-       style={{
-  marginTop: 12,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  paddingLeft: 12,
-  paddingRight: 12,
-}}
+    {/* Chevrons (bottom) — show only after intro is in final phase on slide 1 */}
+{(slideIdx !== 0 || introPhase >= 4) && (
+  <div
+    style={{
+      marginTop: 12,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingLeft: 12,
+      paddingRight: 12,
+    }}
+  >
 
-      >
         <button
           type="button"
           onClick={() => {
@@ -3550,7 +3553,9 @@ borderRadius: 20,
         >
 <ChevronRight className="h-6 w-6" />
         </button>
-      </div>
+        </div>
+)}
+
     </div>
   </div>
 )}
