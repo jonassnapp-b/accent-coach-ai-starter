@@ -2501,15 +2501,22 @@ justifyContent: "flex-start",
 
 {/* ABSOLUTE CENTER LAYER (ONLY HERO) */}
 <div
-  style={{
-    position: "absolute",
-    inset: 0,
-    display: "grid",
-    placeItems: "center",
-    paddingLeft: 24,
-    paddingRight: 24,
-    pointerEvents: "none", // ✅ hero må ikke “tage plads” i layout eller fange klik
-  }}
+style={{
+  position: "absolute",
+  inset: 0,
+  display: "grid",
+
+  // ✅ før phase 4: center
+  // ✅ fra phase 4: flyt hele hero-blokken op under safe-top
+  placeItems: introPhase >= 4 ? "start center" : "center",
+
+  paddingLeft: 24,
+  paddingRight: 24,
+  paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 78px)` : 0,
+
+  pointerEvents: "none",
+}}
+
 >
   <div
     style={{
@@ -2540,7 +2547,7 @@ justifyContent: "flex-start",
     gap: introPhase >= 1 ? 4 : 10,
 
     // ✅ lift up slightly BEFORE final phase (phase 3), then a bit more in phase 4
-    transform: `translateY(${introPhase >= 4 ? -18 : introPhase >= 3 ? -12 : 0}px)`,
+    transform: `translateY(${introPhase >= 4 ? 0 : introPhase >= 3 ? -12 : 0}px)`,
     transition: "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
   }}
 >
@@ -2646,8 +2653,14 @@ justifyContent: "flex-start",
     right: 0,
 
     // ✅ sits below the center, without shifting it
-    top: "calc(50% + 120px)",
-    transform: "translateY(-20px)",
+ top: introPhase >= 4 ? `calc(${SAFE_TOP} + 240px)` : "calc(50% + 120px)",
+transform: introPhase >= 4 ? "translateY(0px)" : "translateY(-20px)",
+
+// ✅ vigtig: hold details væk fra chevrons-området
+bottom: introPhase >= 4 ? `${CHEVRON_RESERVE_PX}px` : "auto",
+overflow: introPhase >= 4 ? "auto" : "visible",
+WebkitOverflowScrolling: introPhase >= 4 ? "touch" : "auto",
+
 
     opacity: introPhase >= 4 ? 1 : 0,
     transition: "opacity 700ms ease, transform 700ms ease",
