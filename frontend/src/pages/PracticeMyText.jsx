@@ -2528,6 +2528,8 @@ justifyContent: "flex-start",
     <CloseSlidesX top={`calc(${SAFE_TOP} + 24px)`} right="12px" />
 
 {/* ABSOLUTE CENTER LAYER (ONLY HERO) */}
+const HERO_DOWN_PX = 40;
+
 <div
 style={{
   position: "absolute",
@@ -2540,7 +2542,7 @@ style={{
 
   paddingLeft: 24,
   paddingRight: 24,
-  paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 90px)` : 0,
+paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 90px + ${HERO_DOWN_PX}px)` : 0,
 
   pointerEvents: "none",
 }}
