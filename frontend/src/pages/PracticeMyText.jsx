@@ -1274,6 +1274,8 @@ const SEND_PURPLE = "#8B5CF6";
   const TABBAR_OFFSET = 64;
   const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
   const SAFE_TOP = "env(safe-area-inset-top, 0px)";
+  const HERO_DOWN_PX = 65;
+
 useEffect(() => {
   const prevBody = document.body.style.background;
   const prevHtml = document.documentElement.style.background;
@@ -2528,7 +2530,6 @@ justifyContent: "flex-start",
     <CloseSlidesX top={`calc(${SAFE_TOP} + 24px)`} right="12px" />
 
 {/* ABSOLUTE CENTER LAYER (ONLY HERO) */}
-const HERO_DOWN_PX = 65;
 
 <div
 style={{
