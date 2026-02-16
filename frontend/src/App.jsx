@@ -36,6 +36,36 @@ import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 
 import "./styles.css";
+/* ---------------- Backend warm-up (Render cold start) ---------------- */
+function isNative() {
+  return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
+}
+
+function getApiBase() {
+  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
+  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
+  if (isNative()) {
+    const base = (ls || env).replace(/\/+$/, "");
+    return base; // may be ""
+  }
+  return (ls || env || window.location.origin).replace(/\/+$/, "");
+}
+
+const BACKEND_WARM_KEY = "ac_backend_warm_v1";
+
+function warmBackendOnce() {
+  try {
+    if (sessionStorage.getItem(BACKEND_WARM_KEY) === "1") return;
+    sessionStorage.setItem(BACKEND_WARM_KEY, "1");
+  } catch {}
+
+  const base = getApiBase();
+  if (!base) return;
+
+  // Fire-and-forget. No UI. No timeout. No await.
+  try { fetch(`${base}/api/health`, { cache: "no-store" }).catch(() => {}); } catch {}
+  try { fetch(`${base}/api/ping`,   { cache: "no-store" }).catch(() => {}); } catch {}
+}
 
 /* ---------------- Prefetch helpers (route-level) ---------------- */
 const routePrefetch = {
@@ -114,6 +144,15 @@ function AppInner() {
   try { return sessionStorage.getItem("ac_splash_done_v1") !== "1"; }
   catch { return true; }
 });
+useEffect(() => {
+  if (showSplash) return;
+
+  const idle = (cb) =>
+    (window.requestIdleCallback ? window.requestIdleCallback(cb) : setTimeout(cb, 350));
+
+  idle(() => warmBackendOnce());
+}, [showSplash]);
+
   const location = useLocation();
   const [scenarioOverlayOpen, setScenarioOverlayOpen] = useState(false);
 const showTabs = !scenarioOverlayOpen;
