@@ -2512,7 +2512,7 @@ style={{
 
   paddingLeft: 24,
   paddingRight: 24,
-  paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 78px)` : 0,
+  paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 56px)` : 0,
 
   pointerEvents: "none",
 }}
@@ -2544,7 +2544,7 @@ style={{
     textAlign: "center",
 
     // ✅ less space between word and percent once percent is visible
-    gap: introPhase >= 1 ? 4 : 10,
+    gap: introPhase >= 1 ? 2 : 10,
 
     // ✅ lift up slightly BEFORE final phase (phase 3), then a bit more in phase 4
     transform: `translateY(${introPhase >= 4 ? 0 : introPhase >= 3 ? -12 : 0}px)`,
@@ -2576,7 +2576,7 @@ style={{
 <div
   style={{
     opacity: introPhase >= 0 && introPhase < 4 ? 1 : 0,
-    transform: `translateY(${introPhase >= 1 ? -22 : 0}px) scale(1)`,
+    transform: `translateY(${introPhase >= 1 ? 18 : 0}px) scale(1)`,
     transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
     zIndex: 1,
     width: "100%",
@@ -2604,7 +2604,7 @@ style={{
 <div
   style={{
     opacity: introPhase >= 4 ? 1 : 0,
-    transform: `translateY(-36px) scale(0.72)`,
+    transform: `translateY(-50px) scale(0.72)`,
     transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
     zIndex: 1,
     width: "100%",
@@ -2632,7 +2632,7 @@ style={{
 <div
   style={{
     opacity: introPhase >= 1 && introPhase < 4 ? 1 : 0,
-    transform: `translateY(${introPhase >= 1 ? 0 : 8}px)`,
+    transform: `translateY(${introPhase >= 1 ? -10 : 8}px)`,
     transition: "opacity 1500ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
     transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
     fontWeight: 1000,
@@ -2652,7 +2652,7 @@ style={{
 <div
   style={{
     opacity: introPhase >= 4 ? 1 : 0,
-    transform: `translateY(0px)`,
+    transform: `translateY(-28px)`,
     transition: "opacity 1500ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
     transitionDelay: "260ms",
     fontWeight: 1000,
