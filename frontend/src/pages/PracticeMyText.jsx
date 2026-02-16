@@ -2621,57 +2621,11 @@ style={{
   }}
 />
 
-{/* ONE WORD (same DOM node): starts centered, then glides up */}
-<div
-  style={{
-    position: "absolute",
-    left: "50%",
-    top: "50%",
-    transform: `translate(-50%, -50%) translateY(${introPhase >= 1 ? heroDeltaY : 0}px) scale(${introPhase >= 1 ? 0.85 : 1})`,
-    transition: "transform 1200ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 900ms ease",
-    opacity: introPhase >= 0 ? 1 : 0,
-    zIndex: 1,
-    width: "100%",
-    paddingLeft: 16,
-    paddingRight: 16,
-    pointerEvents: "none",
-  }}
->
-  <div
-    style={{
-      fontWeight: 1000,
-      fontSize: computeHeroFontSize(heroText, 140, 100),
-
-      lineHeight: 1.05,
-      letterSpacing: -0.4,
-      WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
-      paintOrder: "stroke fill",
-      display: "inline-block",
-      maxWidth: "100%",
-    }}
-  >
-    <PhonemeFeedback result={result} mode="textOnly" />
-
-<div
-  style={{
-    marginTop: 10,
-    fontWeight: 750,
-    fontSize: 28,
-    color: "rgba(255,255,255,0.84)",
-    opacity: introPhase === 2 ? 1 : 0,
-    transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
-    transition: "opacity 520ms ease, transform 520ms ease",
-  }}
->
-  {pickShortLineFromScore(deckPctLocked)}
-</div>
-  </div>
-</div>
-
 {/* ONE PERCENT + WORD (word nearly as big as percent) */}
 {(() => {
   const pctFont = computePctFontSize(heroText, 112, 68);
-  const wordFont = Math.round(pctFont * 0.82); // 👈 key: make “ok” almost as big as %
+  const wordFont = pctFont; // 100% same size
+ // 👈 key: make “ok” almost as big as %
   const statusWord =
     String(result?.inlineMsg || "").trim().split(/\s+/g)[0] || "ok"; // uses your existing msg if present
 
@@ -2680,8 +2634,8 @@ style={{
       style={{
         position: "absolute",
         left: "50%",
-        top: "50%",
-        transform: "translate(-50%, -50%)",
+  top: "54%",   // 👈 flytter hele hero lidt ned
+transform: "translate(-50%, -50%)",
         opacity: introPhase >= 1 ? 1 : 0,
         transition: "opacity 900ms ease",
         transitionDelay: introPhase >= 1 ? "220ms" : "0ms",
