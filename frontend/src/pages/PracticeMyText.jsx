@@ -2572,7 +2572,7 @@ style={{
     textAlign: "center",
 
     // ✅ less space between word and percent once percent is visible
-    gap: introPhase >= 1 ? 2 : 10,
+    gap: introPhase >= 1 ? 18 : 10,
 
     // ✅ lift up slightly BEFORE final phase (phase 3), then a bit more in phase 4
     transform: "translateY(0px)",
@@ -2667,7 +2667,7 @@ style={{
     position: "absolute",
     left: "50%",
     top: "50%",
-    transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 78 : 70}px)`,
+transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 110 : 100}px)`,
     fontWeight: 850,
     fontSize: 32, // ✅ bigger
     color: "rgba(255,255,255,0.88)",
