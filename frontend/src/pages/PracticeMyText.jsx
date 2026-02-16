@@ -2540,7 +2540,7 @@ style={{
 
   paddingLeft: 24,
   paddingRight: 24,
-  paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 56px)` : 0,
+  paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 76px)` : 0,
 
   pointerEvents: "none",
 }}
@@ -2721,7 +2721,8 @@ transform: "translate(-50%, -50%) translateY(-42px)",
     right: 0,
 
     // ✅ sits below the center, without shifting it
- top: introPhase >= 4 ? `calc(${SAFE_TOP} + 240px)` : "calc(50% + 120px)",
+ top: introPhase >= 4 ? `calc(${SAFE_TOP} + 280px)` : "calc(50% + 120px)",
+
 transform: introPhase >= 4 ? "translateY(0px)" : "translateY(-20px)",
 
 // ✅ vigtig: hold details væk fra chevrons-området
