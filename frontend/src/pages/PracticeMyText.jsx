@@ -2455,26 +2455,36 @@ boxShadow: PAGE_SHADOW,
 
 {!!result && overlayReady && !isClosingSlides && (
   <div
+    className="pmt-overlay"
     style={{
       position: "fixed",
       inset: 0,
       height: "100dvh",
-background:
-  "radial-gradient(800px 420px at 50% 26%, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.00) 62%), " +
-  "radial-gradient(1200px 700px at 50% 15%, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.00) 52%), " +
-  "linear-gradient(180deg, #2F9AF2 0%, #2092EC 45%, #1B78D6 100%)",
-
+      background:
+        "radial-gradient(800px 420px at 50% 26%, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.00) 62%), " +
+        "radial-gradient(1200px 700px at 50% 15%, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.00) 52%), " +
+        "linear-gradient(180deg, #2F9AF2 0%, #2092EC 45%, #1B78D6 100%)",
       color: "white",
       zIndex: 9999,
-  paddingTop: 0,
+      paddingTop: 0,
       paddingLeft: 24,
-paddingRight: 24,
+      paddingRight: 24,
       paddingBottom: `calc(14px + ${SAFE_BOTTOM})`,
       overflow: "hidden",
       display: "flex",
       flexDirection: "column",
     }}
   >
+    <style>{`
+      .pmt-overlay .pf-hero-word {
+        font-size: inherit !important;
+        line-height: inherit !important;
+        font-weight: inherit !important;
+      }
+    `}</style>
+
+ 
+
   
 
     {/* Centered width like other pages */}
