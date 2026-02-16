@@ -2495,7 +2495,7 @@ gap: 0,
       top: "50%",
 opacity: introPhase >= 0 ? 1 : 0,
 transform: `translate(-50%, -50%) translateY(${introPhase >= 1 ? -86 : 0}px)`,
-transition: "opacity 1150ms ease, transform 1500ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+transition: "opacity 1300ms ease, transform 1550ms cubic-bezier(0.2, 0.9, 0.2, 1)",
 
 
       textAlign: "center",
