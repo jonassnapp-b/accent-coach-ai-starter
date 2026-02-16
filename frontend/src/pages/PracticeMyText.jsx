@@ -1623,10 +1623,10 @@ const t1 = setTimeout(() => setIntroPhase(1), 650);
 const t2 = setTimeout(() => setIntroPhase(2), 2100);
 
 // hold teksten ~3s
-const t3 = setTimeout(() => setIntroPhase(3), 2100 + 3000);
+const t3 = setTimeout(() => setIntroPhase(3), 2100 + 1500);
 
 // vent på fade (du bruger 520ms i CSS)
-const t4 = setTimeout(() => setIntroPhase(4), 2100 + 3000 + 520);
+const t4 = setTimeout(() => setIntroPhase(4), 2100 + 1500 + 520);
 
 
 
@@ -1638,6 +1638,7 @@ const t4 = setTimeout(() => setIntroPhase(4), 2100 + 3000 + 520);
     clearTimeout(t1);
     clearTimeout(t2);
       clearTimeout(t3);
+  clearTimeout(t4);
 
   };
 
@@ -1657,10 +1658,10 @@ const t1 = setTimeout(() => setIntroPhase(1), 650);
 const t2 = setTimeout(() => setIntroPhase(2), 2100);
 
 // hold teksten ~3s
-const t3 = setTimeout(() => setIntroPhase(3), 2100 + 3000);
+const t3 = setTimeout(() => setIntroPhase(3), 2100 + 1500);
 
 // vent på fade (du bruger 520ms i CSS)
-const t4 = setTimeout(() => setIntroPhase(4), 2100 + 3000 + 520);
+const t4 = setTimeout(() => setIntroPhase(4), 2100 + 1500 + 520);
 
 
 return () => {
@@ -1668,6 +1669,8 @@ return () => {
   clearTimeout(t1);
   clearTimeout(t2);
   clearTimeout(t3);
+    clearTimeout(t4);
+
 };
 
   } else {
