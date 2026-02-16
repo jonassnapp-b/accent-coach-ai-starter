@@ -2525,19 +2525,26 @@ justifyContent: "flex-start",
   >
     {/* CENTER STACK (matches screenshot) */}
     <div
-      style={{
-        position: "relative",
-        width: "100%",
-        maxWidth: 720,
-        margin: "0 auto",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
-        gap: 10,
-      }}
-    >
+  style={{
+    position: "relative",
+    width: "100%",
+    maxWidth: 720,
+    margin: "0 auto",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+
+    // ✅ less space between word and percent once percent is visible
+    gap: introPhase >= 1 ? 4 : 10,
+
+    // ✅ lift up slightly BEFORE final phase (phase 3), then a bit more in phase 4
+    transform: `translateY(${introPhase >= 4 ? -18 : introPhase >= 3 ? -12 : 0}px)`,
+    transition: "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+  }}
+>
+
       {/* subtle radial light BEHIND the percent */}
       <div
         aria-hidden="true"
