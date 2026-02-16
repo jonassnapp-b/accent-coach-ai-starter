@@ -2667,7 +2667,7 @@ style={{
     position: "absolute",
     left: "50%",
     top: "50%",
-transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 124 : 118}px)`,
+transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 180 : 170}px)`,
     fontWeight: 850,
     fontSize: 32, // ✅ bigger
     color: "rgba(255,255,255,0.88)",
