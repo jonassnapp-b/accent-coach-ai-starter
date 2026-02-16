@@ -2482,7 +2482,7 @@ paddingRight: 24,
     flexDirection: "column",
     justifyContent: slideIdx === 0 ? "center" : "flex-start",
 paddingTop: slideIdx === 0 ? 0 : 0, // mere space over overskriften på Playback/andre slides
-    paddingBottom: 12,
+paddingBottom: 96, // space for bottom chevrons (now absolute)
   }}
 >
   {slideIdx === 0 ? (
@@ -3483,14 +3483,18 @@ marginRight: -16,
 
       {/* Chevrons (bottom) — IMPORTANT: allow going to Playback + Next */}
       <div
-       style={{
-  marginTop: 12,
+      style={{
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: `calc(14px + ${SAFE_BOTTOM})`,
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
   paddingLeft: 12,
   paddingRight: 12,
 }}
+
 
       >
         <button
