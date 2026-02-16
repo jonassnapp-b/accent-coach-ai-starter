@@ -1274,7 +1274,8 @@ const SEND_PURPLE = "#8B5CF6";
   const TABBAR_OFFSET = 64;
   const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
   const SAFE_TOP = "env(safe-area-inset-top, 0px)";
-  const HERO_DOWN_PX = 20;
+  const HERO_DOWN_PX = 18;
+const PHASE1_LIFT_PX = 22; // justér (18–32) hvis du vil mere/mindre op
 
 useEffect(() => {
   const prevBody = document.body.style.background;
@@ -2670,7 +2671,9 @@ paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 90px + ${HERO_DOWN_PX}px)` : 0
     position: "absolute",
     left: "50%",
     top: "50%",
-transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 94 : 90}px)`,
+transform: `translate(-50%, -50%) translateY(${
+  (introPhase === 2 ? 94 : 90) - (introPhase >= 1 && introPhase < 4 ? PHASE1_LIFT_PX : 0)
+}px)`,
     fontWeight: 850,
     fontSize: 32, // ✅ bigger
     color: "rgba(255,255,255,0.88)",
@@ -2694,7 +2697,10 @@ transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 94 : 90}px)`,
     position: "absolute",
     left: "50%",
     top: "50%",
-transform: "translate(-50%, -50%) translateY(-42px)",
+transform:
+  introPhase >= 1 && introPhase < 4
+    ? `translate(-50%, -50%) translateY(${-42 - PHASE1_LIFT_PX}px)`
+    : "translate(-50%, -50%) translateY(-42px)",
     opacity: introPhase >= 1 ? 1 : 0,
     transition: "opacity 900ms ease",
     transitionDelay: introPhase >= 1 ? "220ms" : "0ms",
