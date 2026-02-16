@@ -2656,7 +2656,7 @@ style={{
   style={{
     marginTop: 10,
     fontWeight: 750,
-    fontSize: 32,
+    fontSize: 28,
     color: "rgba(255,255,255,0.84)",
     opacity: introPhase === 2 ? 1 : 0,
     transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
@@ -2668,29 +2668,61 @@ style={{
   </div>
 </div>
 
-{/* ONE PERCENT: appears exactly where the word used to be (center slot) */}
-<div
-  style={{
-    position: "absolute",
-    left: "50%",
-    top: "50%",
-    transform: "translate(-50%, -50%)",
-    opacity: introPhase >= 1 ? 1 : 0,
-    transition: "opacity 900ms ease",
-    transitionDelay: introPhase >= 1 ? "220ms" : "0ms",
-    fontWeight: 1000,
-    fontSize: computePctFontSize(heroText, 112, 68),
-    lineHeight: 1,
-    letterSpacing: -1.1,
-    color: pfColorForPct(deckPctLocked),
-    WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
-    paintOrder: "stroke fill",
-    zIndex: 1,
-    pointerEvents: "none",
-  }}
->
-  {introPct}%
-</div>
+{/* ONE PERCENT + WORD (word nearly as big as percent) */}
+{(() => {
+  const pctFont = computePctFontSize(heroText, 112, 68);
+  const wordFont = Math.round(pctFont * 0.82); // 👈 key: make “ok” almost as big as %
+  const statusWord =
+    String(result?.inlineMsg || "").trim().split(/\s+/g)[0] || "ok"; // uses your existing msg if present
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: "50%",
+        top: "50%",
+        transform: "translate(-50%, -50%)",
+        opacity: introPhase >= 1 ? 1 : 0,
+        transition: "opacity 900ms ease",
+        transitionDelay: introPhase >= 1 ? "220ms" : "0ms",
+        zIndex: 1,
+        pointerEvents: "none",
+        textAlign: "center",
+      }}
+    >
+      <div
+        style={{
+          fontWeight: 1000,
+          fontSize: pctFont,
+          lineHeight: 0.92,
+          letterSpacing: -1.1,
+          color: pfColorForPct(deckPctLocked),
+          WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
+          paintOrder: "stroke fill",
+        }}
+      >
+        {introPct}%
+      </div>
+
+      <div
+        style={{
+          marginTop: -6, // 👈 pulls it closer like your screenshot
+          fontWeight: 1000,
+          fontSize: wordFont,
+          lineHeight: 0.92,
+          letterSpacing: -0.8,
+          color: pfColorForPct(deckPctLocked),
+          WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
+          paintOrder: "stroke fill",
+          textTransform: "lowercase",
+        }}
+      >
+        {statusWord}
+      </div>
+    </div>
+  );
+})()}
+
 
     </div>
   </div>
