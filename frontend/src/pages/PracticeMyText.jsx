@@ -1450,8 +1450,10 @@ setOverallPctLocked(Math.max(0, Math.min(100, pct)));
 const [slideIdx, setSlideIdx] = useState(0);
 
 // Slide 1 animation phases
-// 0 = show word fade in, 1 = word moved up + start counting, 2 = show message
+// -1 = hidden, 0 = word fades in (center), 1 = word moves up + percent appears + count up,
+// 2 = show message, 3 = message fades out + word/% collapse to top + details appear
 const [introPhase, setIntroPhase] = useState(-1);
+
 const [introPct, setIntroPct] = useState(0);
 // Slide 2 (Speaking Level) animation
 const [levelPctAnim, setLevelPctAnim] = useState(0);
@@ -1616,9 +1618,11 @@ setDeckPctLocked(locked);
   //  0: word fades in (center)
   //  1: word moves up + percent fades in + count up starts
   //  2: show message
-  const t0 = setTimeout(() => setIntroPhase(0), 50);
-  const t1 = setTimeout(() => setIntroPhase(1), 650);
-  const t2 = setTimeout(() => setIntroPhase(2), 2100);
+const t0 = setTimeout(() => setIntroPhase(0), 50);
+const t1 = setTimeout(() => setIntroPhase(1), 650);
+const t2 = setTimeout(() => setIntroPhase(2), 2100);
+const t3 = setTimeout(() => setIntroPhase(3), 3150);
+
 
 
 
@@ -1627,6 +1631,8 @@ setDeckPctLocked(locked);
     clearTimeout(t0);
     clearTimeout(t1);
     clearTimeout(t2);
+      clearTimeout(t3);
+
   };
 
 }, [result]);
@@ -1641,14 +1647,17 @@ useEffect(() => {
     setIntroPhase(-1);
 
     const t0 = setTimeout(() => setIntroPhase(0), 50);
-    const t1 = setTimeout(() => setIntroPhase(1), 650);
-    const t2 = setTimeout(() => setIntroPhase(2), 2100);
+const t1 = setTimeout(() => setIntroPhase(1), 650);
+const t2 = setTimeout(() => setIntroPhase(2), 2100);
+const t3 = setTimeout(() => setIntroPhase(3), 3150);
 
+return () => {
+  clearTimeout(t0);
+  clearTimeout(t1);
+  clearTimeout(t2);
+  clearTimeout(t3);
+};
 
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
   } else {
     // when leaving slide 1: force it to final score so it never "sticks" mid-way
     setIntroPct(deckScore);
@@ -2492,10 +2501,13 @@ height: 152,               // juster hvis du vil have mere/ mindre luft
     style={{
       position: "absolute",
       left: "50%",
-      top: "50%",
+    top: introPhase >= 3 ? 34 : "50%",
 opacity: introPhase >= 0 ? 1 : 0,
-transform: `translate(-50%, -50%) translateY(${introPhase >= 1 ? -86 : 0}px)`,
-transition: "opacity 1300ms ease, transform 1550ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+transform: `translate(-50%, -50%) translateY(${
+  introPhase >= 3 ? -112 : introPhase >= 1 ? -86 : 0
+}px) scale(${introPhase >= 3 ? 0.72 : 1})`,
+transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1), top 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+
 
 
       textAlign: "center",
@@ -2507,7 +2519,9 @@ transition: "opacity 1300ms ease, transform 1550ms cubic-bezier(0.2, 0.9, 0.2, 1
     <div
       style={{
         fontWeight: 1000,
-        fontSize: computeHeroFontSize(heroText, 72, 32),
+        fontSize: introPhase >= 3
+  ? computeHeroFontSize(heroText, 46, 22)
+  : computeHeroFontSize(heroText, 72, 32),
         lineHeight: 1.05,
         letterSpacing: -0.4,
         WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
@@ -2546,14 +2560,17 @@ transition: "opacity 1300ms ease, transform 1550ms cubic-bezier(0.2, 0.9, 0.2, 1
     style={{
       position: "absolute",
       left: "50%",
-      top: "50%",
-      transform: "translate(-50%, -50%)",
+top: introPhase >= 3 ? 90 : "50%",
+transform: "translate(-50%, -50%)",
+
       opacity: introPhase >= 1 ? 1 : 0,
-      transition: "opacity 1500ms ease",
+transition: "opacity 1500ms ease, top 900ms cubic-bezier(0.2, 0.9, 0.2, 1), font-size 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
       transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
 
       fontWeight: 1000,
-      fontSize: computePctFontSize(heroText, 112, 68),
+      fontSize: introPhase >= 3
+  ? computePctFontSize(heroText, 64, 44)
+  : computePctFontSize(heroText, 112, 68),
       lineHeight: 1,
       letterSpacing: -1.1,
       color: pfColorForPct(deckPctLocked),
@@ -2580,13 +2597,148 @@ fontSize: 18,
       color: "rgba(255,255,255,0.84)",
 
       textShadow: "none",
-      opacity: introPhase >= 2 ? 1 : 0,
-      transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
-      transition: "all 650ms ease",
+    opacity: introPhase === 2 ? 1 : 0,
+transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
+transition: "opacity 520ms ease, transform 520ms ease",
+
     }}
   >
     {pickShortLineFromScore(deckPctLocked)}
   </div>
+  {/* DETAILS (appears after the line fades out) */}
+<div
+  style={{
+    marginTop: 18,
+    opacity: introPhase >= 3 ? 1 : 0,
+    transform: `translateY(${introPhase >= 3 ? 0 : 10}px)`,
+    transition: "opacity 700ms ease, transform 700ms ease",
+    pointerEvents: introPhase >= 3 ? "auto" : "none",
+  }}
+>
+  {/* Coach / You */}
+  <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+    <button
+      type="button"
+      onClick={playCorrectTts}
+      style={{
+        flex: "0 0 auto",
+        minWidth: 150,
+        height: 48,
+        borderRadius: 16,
+        border: "1px solid rgba(255,255,255,0.16)",
+        background: "rgba(255,255,255,0.10)",
+        color: "rgba(255,255,255,0.92)",
+        fontWeight: 950,
+        cursor: "pointer",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+      }}
+    >
+      <Volume2 className="h-5 w-5" />
+      Coach
+    </button>
+
+    <button
+      type="button"
+      onClick={playYou}
+      style={{
+        flex: "0 0 auto",
+        minWidth: 150,
+        height: 48,
+        borderRadius: 16,
+        border: "1px solid rgba(255,255,255,0.16)",
+        background: "rgba(255,255,255,0.10)",
+        color: "rgba(255,255,255,0.92)",
+        fontWeight: 950,
+        cursor: "pointer",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+      }}
+    >
+      <Volume2 className="h-5 w-5" />
+      You
+    </button>
+  </div>
+
+  {/* Phoneme list */}
+  <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
+    {(weakPhonemeSlides || []).map((p) => {
+      const pct = p?.score == null ? null : Math.round(Number(p.score));
+      return (
+        <div
+          key={`intro_row_${p.code}`}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "12px 14px",
+            borderRadius: 18,
+            border: "1px solid rgba(255,255,255,0.14)",
+            background: "rgba(255,255,255,0.08)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => playDeepDiveTts(p.code, `intro_ph:${p.code}`)}
+            aria-label={`Play ${p.code}`}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 14,
+              border: "1px solid rgba(255,255,255,0.16)",
+              background: "rgba(0,0,0,0.18)",
+              color: "rgba(255,255,255,0.92)",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+              flex: "0 0 auto",
+            }}
+          >
+            <Volume2 className="h-5 w-5" />
+          </button>
+
+          <div
+            style={{
+              fontWeight: 1000,
+              letterSpacing: -0.4,
+              fontSize: 18,
+              color: "rgba(255,255,255,0.92)",
+              flex: "1 1 auto",
+              textAlign: "left",
+            }}
+          >
+            {p.code}
+          </div>
+
+          <div
+            style={{
+              fontWeight: 1000,
+              letterSpacing: -0.4,
+              fontSize: 16,
+              color: pct == null ? "rgba(255,255,255,0.55)" : pfColorForPct(pct),
+              WebkitTextStroke: pct == null ? "0px" : "1px rgba(0,0,0,0.18)",
+              paintOrder: "stroke fill",
+              flex: "0 0 auto",
+            }}
+          >
+            {pct == null ? "—" : `${pct}%`}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+</div>
+
 </div>
 
 
