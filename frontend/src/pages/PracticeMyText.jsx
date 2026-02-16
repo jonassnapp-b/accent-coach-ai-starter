@@ -2224,133 +2224,6 @@ useEffect(() => {
   sendToServer(blob, url);
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [accentUi]);
-  // --- Slide 1 hero: two stable layouts (center + top) we crossfade between ---
-  const HeroBlock = ({ variant }) => {
-    const isTop = variant === "top";
-
-    return (
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 720,
-          margin: "0 auto",
-          textAlign: "center",
-          paddingLeft: 16,
-          paddingRight: 16,
-          paddingTop: isTop ? 0 : 28,
-          paddingBottom: isTop ? 0 : 28,
-        }}
-      >
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            maxWidth: 720,
-            margin: "0 auto",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            textAlign: "center",
-            gap: introPhase >= 1 ? 4 : 10,
-
-            transform: `translateY(${introPhase >= 3 && !isTop ? -12 : 0}px)`,
-            transition: "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
-          }}
-        >
-          {/* subtle radial light BEHIND the percent */}
-          <div
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "52%",
-              transform: "translate(-50%, -50%)",
-              width: 320,
-              height: 190,
-              borderRadius: 999,
-              background:
-                "radial-gradient(closest-side at 50% 55%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 32%, rgba(255,255,255,0.00) 70%)",
-              opacity: introPhase >= 1 ? 1 : 0,
-              transition: "opacity 1500ms ease",
-              transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
-              zIndex: 0,
-            }}
-          />
-
-          {/* WORD */}
-          <div
-            style={{
-              opacity: introPhase >= 0 ? 1 : 0,
-              transform: `translateY(${introPhase >= 1 ? -22 : 0}px) scale(${isTop ? 0.72 : 1})`,
-              transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
-              zIndex: 1,
-              width: "100%",
-              paddingLeft: 16,
-              paddingRight: 16,
-            }}
-          >
-            <div
-              style={{
-                fontWeight: 1000,
-                fontSize: isTop
-                  ? computeHeroFontSize(heroText, 46, 22)
-                  : computeHeroFontSize(heroText, 72, 32),
-                lineHeight: 1.05,
-                letterSpacing: -0.4,
-                WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
-                paintOrder: "stroke fill",
-                display: "inline-block",
-                maxWidth: "100%",
-              }}
-            >
-              <PhonemeFeedback result={result} mode="textOnly" />
-            </div>
-          </div>
-
-          {/* PERCENT */}
-          <div
-            style={{
-              opacity: introPhase >= 1 ? 1 : 0,
-              transform: `translateY(${introPhase >= 1 ? 0 : 8}px)`,
-              transition: "opacity 1500ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
-              transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
-              fontWeight: 1000,
-              fontSize: isTop
-                ? computePctFontSize(heroText, 64, 44)
-                : computePctFontSize(heroText, 112, 68),
-              lineHeight: 1,
-              letterSpacing: -1.1,
-              color: pfColorForPct(deckPctLocked),
-              WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
-              paintOrder: "stroke fill",
-              zIndex: 1,
-            }}
-          >
-            {introPct}%
-          </div>
-
-          {/* LINE UNDER PERCENT (kun center-varianten) */}
-          {!isTop && (
-            <div
-              style={{
-                marginTop: 4,
-                fontWeight: 650,
-                fontSize: 18,
-                color: "rgba(255,255,255,0.84)",
-                opacity: introPhase === 2 ? 1 : 0,
-                transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
-                transition: "opacity 520ms ease, transform 520ms ease",
-                zIndex: 1,
-              }}
-            >
-              {pickShortLineFromScore(deckPctLocked)}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
 const CloseSlidesX = ({ top = `calc(${SAFE_TOP} + 24px)`, right = "12px" }) => (
   <button
@@ -2626,45 +2499,194 @@ justifyContent: "flex-start",
   <>
     <CloseSlidesX top={`calc(${SAFE_TOP} + 24px)`} right="12px" />
 
-{/* HERO (two-layer crossfade: center -> top) */}
-<>
-  {/* Center hero */}
+{/* ABSOLUTE CENTER LAYER (ONLY HERO) */}
+<div
+style={{
+  position: "absolute",
+  inset: 0,
+  display: "grid",
+
+  // ✅ før phase 4: center
+  // ✅ fra phase 4: flyt hele hero-blokken op under safe-top
+  placeItems: introPhase >= 4 ? "start center" : "center",
+
+  paddingLeft: 24,
+  paddingRight: 24,
+  paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 78px)` : 0,
+
+  pointerEvents: "none",
+}}
+
+>
   <div
     style={{
-      position: "absolute",
-      inset: 0,
-      display: "grid",
-      placeItems: "center",
-      paddingLeft: 24,
-      paddingRight: 24,
-      pointerEvents: "none",
-      opacity: introPhase >= 4 ? 0 : 1,
-      transform: `translateY(${introPhase >= 4 ? -10 : 0}px)`,
-      transition: "opacity 420ms ease, transform 420ms ease",
+      width: "100%",
+      maxWidth: 720,
+      margin: "0 auto",
+      textAlign: "center",
+      paddingLeft: 16,
+      paddingRight: 16,
+      paddingTop: 28,
+      paddingBottom: 28,
     }}
   >
-    <HeroBlock variant="center" />
-  </div>
+    {/* CENTER STACK (matches screenshot) */}
+    <div
+  style={{
+    position: "relative",
+    width: "100%",
+    maxWidth: 720,
+    margin: "0 auto",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
 
-  {/* Top hero */}
+    // ✅ less space between word and percent once percent is visible
+    gap: introPhase >= 1 ? 4 : 10,
+
+    // ✅ lift up slightly BEFORE final phase (phase 3), then a bit more in phase 4
+    transform: `translateY(${introPhase >= 4 ? 0 : introPhase >= 3 ? -12 : 0}px)`,
+    transition: "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+  }}
+>
+
+      {/* subtle radial light BEHIND the percent */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "52%",
+          transform: "translate(-50%, -50%)",
+          width: 320,
+          height: 190,
+          borderRadius: 999,
+          background:
+            "radial-gradient(closest-side at 50% 55%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 32%, rgba(255,255,255,0.00) 70%)",
+          opacity: introPhase >= 1 ? 1 : 0,
+          transition: "opacity 1500ms ease",
+          transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
+          zIndex: 0,
+        }}
+      />
+
+     {/* WORD (INTRO: phases 0-3) */}
+<div
+  style={{
+    opacity: introPhase >= 0 && introPhase < 4 ? 1 : 0,
+    transform: `translateY(${introPhase >= 1 ? -22 : 0}px) scale(1)`,
+    transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+    zIndex: 1,
+    width: "100%",
+    paddingLeft: 16,
+    paddingRight: 16,
+  }}
+>
   <div
     style={{
-      position: "absolute",
-      left: 0,
-      right: 0,
-      top: `calc(${SAFE_TOP} + 78px)`,
-      paddingLeft: 24,
-      paddingRight: 24,
-      pointerEvents: "none",
-      opacity: introPhase >= 4 ? 1 : 0,
-      transform: `translateY(${introPhase >= 4 ? 0 : 10}px)`,
-      transition: "opacity 420ms ease, transform 420ms ease",
+      fontWeight: 1000,
+      fontSize: computeHeroFontSize(heroText, 72, 32),
+      lineHeight: 1.05,
+      letterSpacing: -0.4,
+      WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
+      paintOrder: "stroke fill",
+      display: "inline-block",
+      maxWidth: "100%",
     }}
   >
-    <HeroBlock variant="top" />
+    <PhonemeFeedback result={result} mode="textOnly" />
   </div>
-</>
+</div>
 
+{/* WORD (FINAL: phase 4+) */}
+<div
+  style={{
+    opacity: introPhase >= 4 ? 1 : 0,
+    transform: `translateY(-36px) scale(0.72)`,
+    transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+    zIndex: 1,
+    width: "100%",
+    paddingLeft: 16,
+    paddingRight: 16,
+  }}
+>
+  <div
+    style={{
+      fontWeight: 1000,
+      fontSize: computeHeroFontSize(heroText, 46, 22),
+      lineHeight: 1.05,
+      letterSpacing: -0.4,
+      WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
+      paintOrder: "stroke fill",
+      display: "inline-block",
+      maxWidth: "100%",
+    }}
+  >
+    <PhonemeFeedback result={result} mode="textOnly" />
+  </div>
+</div>
+
+{/* PERCENT (INTRO: phases 1-3) */}
+<div
+  style={{
+    opacity: introPhase >= 1 && introPhase < 4 ? 1 : 0,
+    transform: `translateY(${introPhase >= 1 ? 0 : 8}px)`,
+    transition: "opacity 1500ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+    transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
+    fontWeight: 1000,
+    fontSize: computePctFontSize(heroText, 112, 68),
+    lineHeight: 1,
+    letterSpacing: -1.1,
+    color: pfColorForPct(deckPctLocked),
+    WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
+    paintOrder: "stroke fill",
+    zIndex: 1,
+  }}
+>
+  {introPct}%
+</div>
+
+{/* PERCENT (FINAL: phase 4+) */}
+<div
+  style={{
+    opacity: introPhase >= 4 ? 1 : 0,
+    transform: `translateY(0px)`,
+    transition: "opacity 1500ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+    transitionDelay: "260ms",
+    fontWeight: 1000,
+    fontSize: computePctFontSize(heroText, 64, 44),
+    lineHeight: 1,
+    letterSpacing: -1.1,
+    color: pfColorForPct(deckPctLocked),
+    WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
+    paintOrder: "stroke fill",
+    zIndex: 1,
+  }}
+>
+  {deckScore}%
+</div>
+
+
+      {/* LINE UNDER PERCENT */}
+      <div
+        style={{
+          marginTop: 4,
+          fontWeight: 650,
+          fontSize: 18,
+          color: "rgba(255,255,255,0.84)",
+          opacity: introPhase === 2 ? 1 : 0,
+          transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
+          transition: "opacity 520ms ease, transform 520ms ease",
+          zIndex: 1,
+        }}
+      >
+        {pickShortLineFromScore(deckPctLocked)}
+      </div>
+    </div>
+  </div>
+</div>
 
 {/* DETAILS LAYER (does NOT affect hero centering) */}
 <div
