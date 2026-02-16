@@ -2468,65 +2468,68 @@ gap: 0,
 
 }}
 >
-  {/* HERO TEXT (max 2 lines, never overlaps) */}
+{/* SHARED SLOT: word starts centered -> moves up, percent appears where word was */}
 <div
   style={{
-    marginTop: 0,
-    opacity: 1,
-    transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-    transition: "all 900ms ease",
-    textAlign: "center",
+    position: "relative",
+    height: 210,               // juster hvis du vil have mere/ mindre luft
+    width: "100%",
     maxWidth: 720,
-    marginLeft: "auto",
-    marginRight: "auto",
+    margin: "0 auto",
   }}
 >
+  {/* WORD (starts centered, then glides UP) */}
   <div
     style={{
-      // hold det stort som din hero
-      fontWeight: 950,
-      fontSize: computeHeroFontSize(heroText, 72, 32),
-      lineHeight: 1.05,
-      letterSpacing: -0.4,
-      textShadow: "none",
-      WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
-paintOrder: "stroke fill",
-      // så det ikke “spilder” layout
-      display: "inline-block",
-      maxWidth: "100%",
+      position: "absolute",
+      left: "50%",
+      top: "50%",
+      transform: `translate(-50%, -50%) translateY(${introPhase >= 1 ? -54 : 0}px)`,
+      transition: "transform 900ms ease",
+      textAlign: "center",
+      width: "100%",
+      paddingLeft: 16,
+      paddingRight: 16,
     }}
   >
-<PhonemeFeedback
-  result={result}
-  mode="textOnly"
-/>
+    <div
+      style={{
+        fontWeight: 950,
+        fontSize: computeHeroFontSize(heroText, 72, 32),
+        lineHeight: 1.05,
+        letterSpacing: -0.4,
+        WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
+        paintOrder: "stroke fill",
+        display: "inline-block",
+        maxWidth: "100%",
+      }}
+    >
+      <PhonemeFeedback result={result} mode="textOnly" />
+    </div>
+  </div>
 
-
+  {/* PERCENT (appears in the ORIGINAL center slot) */}
+  <div
+    style={{
+      position: "absolute",
+      left: "50%",
+      top: "50%",
+      transform: "translate(-50%, -50%)",
+      opacity: introPhase >= 1 ? 1 : 0,
+      transition: "opacity 800ms ease",
+      fontWeight: 950,
+      fontSize: computePctFontSize(heroText, 108, 66),
+      lineHeight: 1,
+      letterSpacing: -1.0,
+      color: pfColorForPct(deckPctLocked),
+      WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
+      paintOrder: "stroke fill",
+      pointerEvents: "none",
+    }}
+  >
+    {introPct}%
   </div>
 </div>
-
-
-  {/* PERCENT (below text, adaptive size) */}
-    <div
-  style={{
-    marginTop: 2,
-    marginBottom: 18,
-    opacity: introPhase >= 1 ? 1 : 0,
-    transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-    transition: "all 800ms ease",
-    fontWeight: 950,
-    fontSize: computePctFontSize(heroText, 108, 66),
-    lineHeight: 1,
-    letterSpacing: -1.0,
-color: pfColorForPct(deckPctLocked),
-    textShadow: "none",
-    WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
-    paintOrder: "stroke fill",
-  }}
->
-  {introPct}%
-</div>
-
 
   {/* ✅ MOVE THIS INSIDE THE WRAPPER (so space-between works) */}
   <div
