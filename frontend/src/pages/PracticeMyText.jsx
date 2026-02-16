@@ -2650,7 +2650,7 @@ style={{
   <div
     style={{
       fontWeight: 1000,
-  fontSize: Math.round(computePctFontSize(heroText, 112, 68) * 0.95),
+  fontSize: Math.round(computePctFontSize(heroText, 140, 80)),
 
       lineHeight: 1.05,
       letterSpacing: -0.4,
