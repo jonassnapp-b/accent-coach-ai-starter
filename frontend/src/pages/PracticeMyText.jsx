@@ -2474,17 +2474,25 @@ paddingRight: 24,
       }}
     >
 {/* CONTENT */}
-<div
-  style={{
-    flex: 1,
-    minHeight: "100%",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: slideIdx === 0 ? "center" : "flex-start",
-    paddingTop: 0,
-    paddingBottom: 12,
-  }}
->
+{(() => {
+  const showChevrons = slideIdx !== 0 || introPhase >= 4;
+  const CHEVRON_RESERVE_PX = 92; // nok til knapper + padding
+
+  return (
+    <div
+      style={{
+        flex: "1 1 auto",
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: slideIdx === 0 ? "center" : "flex-start",
+        paddingTop: 0,
+
+        // ✅ ingen bund-reserve før chevrons vises (så slide 1 faktisk er centreret)
+        paddingBottom: showChevrons ? CHEVRON_RESERVE_PX : 0,
+      }}
+    >
+
 
   {slideIdx === 0 ? (
     // ----- Intro (CENTERED vertically) -----
@@ -3479,82 +3487,90 @@ marginRight: -16,
     </>
   )}
 </div>
+  );
+})()}
+
 
 
 
     {/* Chevrons (bottom) — show only after intro is in final phase on slide 1 */}
+{/* Chevrons (bottom) */}
 {(slideIdx !== 0 || introPhase >= 4) && (
   <div
     style={{
-      marginTop: 12,
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 20,
+
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
       paddingLeft: 12,
       paddingRight: 12,
+      paddingBottom: `calc(10px + ${SAFE_BOTTOM})`,
     }}
   >
+    <button
+      type="button"
+      onClick={() => {
+        stopAllAudio();
+        goPrev();
+      }}
+      disabled={slideIdx <= 0}
+      aria-label="Previous"
+      style={{
+        width: 52,
+        height: 52,
+        borderRadius: 20,
+        border: "1px solid rgba(255,255,255,0.12)",
+        background: "rgba(255,255,255,0.08)",
+        display: "grid",
+        placeItems: "center",
+        cursor: slideIdx <= 0 ? "not-allowed" : "pointer",
+        opacity: slideIdx <= 0 ? 0.45 : 1,
+      }}
+    >
+      <ChevronLeft className="h-6 w-6" />
+    </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            stopAllAudio();
-            goPrev();
-          }}
-          disabled={slideIdx <= 0}
-          aria-label="Previous"
-          style={{
-         width: 52,
-height: 52,
-borderRadius: 20,
+    <div
+      style={{
+        fontWeight: 950,
+        fontSize: 16,
+        letterSpacing: -0.2,
+        color: "#ffffff",
+      }}
+    >
+      {slideIdx + 1} / {totalSlides}
+    </div>
 
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "rgba(255,255,255,0.08)",
-            display: "grid",
-            placeItems: "center",
-            cursor: slideIdx <= 0 ? "not-allowed" : "pointer",
-            opacity: slideIdx <= 0 ? 0.45 : 1,
-          }}
-        >
-<ChevronLeft className="h-6 w-6" />
-        </button>
-
-     <div
-  style={{
-    fontWeight: 950,
-    fontSize: 16,
-    letterSpacing: -0.2,
-    color: "#ffffff",
-  }}
->
-  {slideIdx + 1} / {totalSlides}
-</div>
-
-
-        <button
-          type="button"
-          onClick={() => {
-            stopAllAudio();
-            goNext();
-          }}
-          disabled={slideIdx >= totalSlides - 1}
-          aria-label="Next"
-          style={{
-           width: 64,
-  height: 64,
-  borderRadius: 24,
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "rgba(255,255,255,0.08)",
-            display: "grid",
-            placeItems: "center",
-            cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
-            opacity: slideIdx >= totalSlides - 1 ? 0.45 : 1,
-          }}
-        >
-<ChevronRight className="h-6 w-6" />
-        </button>
-        </div>
+    <button
+      type="button"
+      onClick={() => {
+        stopAllAudio();
+        goNext();
+      }}
+      disabled={slideIdx >= totalSlides - 1}
+      aria-label="Next"
+      style={{
+        width: 64,
+        height: 64,
+        borderRadius: 24,
+        border: "1px solid rgba(255,255,255,0.12)",
+        background: "rgba(255,255,255,0.08)",
+        display: "grid",
+        placeItems: "center",
+        cursor: slideIdx >= totalSlides - 1 ? "not-allowed" : "pointer",
+        opacity: slideIdx >= totalSlides - 1 ? 0.45 : 1,
+      }}
+    >
+      <ChevronRight className="h-6 w-6" />
+    </button>
+  </div>
 )}
+
 
     </div>
   </div>
