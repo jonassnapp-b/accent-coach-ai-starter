@@ -1613,10 +1613,8 @@ setDeckPctLocked(locked);
   setIntroPct(0);
 
   // phase timings (feel free to tweak)
-// phase timings (slightly slower)
-const t1 = setTimeout(() => setIntroPhase(1), 1200);
-const t2 = setTimeout(() => setIntroPhase(2), 3000);
-
+const t1 = setTimeout(() => setIntroPhase(1), 900);
+const t2 = setTimeout(() => setIntroPhase(2), 2400);
 
 
   // count-up starts when phase becomes 1
@@ -1635,9 +1633,8 @@ useEffect(() => {
     setIntroPct(0);
     setIntroPhase(0);
 
-   const t1 = setTimeout(() => setIntroPhase(1), 120);
-const t2 = setTimeout(() => setIntroPhase(2), 3000);
-
+    const t1 = setTimeout(() => setIntroPhase(1), 50);
+    const t2 = setTimeout(() => setIntroPhase(2), 2400);
 
     return () => {
       clearTimeout(t1);
@@ -1658,7 +1655,7 @@ useEffect(() => {
 
   let raf = 0;
   const start = performance.now();
-  const dur = 2000;
+  const dur = 1600;
 
   const tick = (now) => {
     const p = Math.min(1, (now - start) / dur);
@@ -2476,8 +2473,10 @@ gap: 0,
   style={{
     marginTop: 0,
     opacity: 1,
-    transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-    transition: "all 1200ms ease",
+transform: `translateY(${introPhase >= 1 ? -46 : 14}px)`,
+transition: "transform 1100ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+willChange: "transform",
+
     textAlign: "center",
     maxWidth: 720,
     marginLeft: "auto",
@@ -2514,9 +2513,11 @@ paintOrder: "stroke fill",
   style={{
     marginTop: 2,
     marginBottom: 18,
-    opacity: introPhase >= 1 ? 1 : 0,
-    transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-    transition: "all 1100ms ease",
+  opacity: introPhase >= 1 ? 1 : 0,
+transform: `translateY(${introPhase >= 1 ? 0 : 22}px)`,
+transition: "opacity 350ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+willChange: "transform, opacity",
+
     fontWeight: 950,
     fontSize: computePctFontSize(heroText, 108, 66),
     lineHeight: 1,
@@ -2544,7 +2545,7 @@ fontSize: 18,
       textShadow: "none",
       opacity: introPhase >= 2 ? 1 : 0,
       transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
-      transition: "all 850ms ease",
+      transition: "all 650ms ease",
     }}
   >
     {pickShortLineFromScore(deckPctLocked)}
