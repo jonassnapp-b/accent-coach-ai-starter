@@ -1275,7 +1275,6 @@ const SEND_PURPLE = "#8B5CF6";
   const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
   const SAFE_TOP = "env(safe-area-inset-top, 0px)";
   const HERO_DOWN_PX = 18;
-const PHASE1_LIFT_PX = 22; // justér (18–32) hvis du vil mere/mindre op
 
 useEffect(() => {
   const prevBody = document.body.style.background;
@@ -2579,8 +2578,9 @@ paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 90px + ${HERO_DOWN_PX}px)` : 0
     gap: introPhase >= 1 ? 18 : 10,
 
     // ✅ lift up slightly BEFORE final phase (phase 3), then a bit more in phase 4
-    transform: "translateY(0px)",
-    transition: "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+   transform: `translateY(${introPhase >= 4 ? 0 : -28}px)`,
+transition: "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+
   }}
 >
 
@@ -2671,9 +2671,7 @@ paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 90px + ${HERO_DOWN_PX}px)` : 0
     position: "absolute",
     left: "50%",
     top: "50%",
-transform: `translate(-50%, -50%) translateY(${
-  (introPhase === 2 ? 94 : 90) - (introPhase >= 1 && introPhase < 4 ? PHASE1_LIFT_PX : 0)
-}px)`,
+transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 94 : 90}px)`,
     fontWeight: 850,
     fontSize: 32, // ✅ bigger
     color: "rgba(255,255,255,0.88)",
@@ -2697,10 +2695,7 @@ transform: `translate(-50%, -50%) translateY(${
     position: "absolute",
     left: "50%",
     top: "50%",
-transform:
-  introPhase >= 1 && introPhase < 4
-    ? `translate(-50%, -50%) translateY(${-42 - PHASE1_LIFT_PX}px)`
-    : "translate(-50%, -50%) translateY(-42px)",
+transform: "translate(-50%, -50%) translateY(-42px)",
     opacity: introPhase >= 1 ? 1 : 0,
     transition: "opacity 900ms ease",
     transitionDelay: introPhase >= 1 ? "220ms" : "0ms",
