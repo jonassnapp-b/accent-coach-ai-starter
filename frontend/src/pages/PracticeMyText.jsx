@@ -2481,7 +2481,7 @@ gap: 0,
 <div
   style={{
     position: "relative",
-    height: 210,               // juster hvis du vil have mere/ mindre luft
+    height: 168,               // juster hvis du vil have mere/ mindre luft
     width: "100%",
     maxWidth: 720,
     margin: "0 auto",
@@ -2495,7 +2495,7 @@ gap: 0,
       top: "50%",
 opacity: introPhase >= 0 ? 1 : 0,
 transform: `translate(-50%, -50%) translateY(${introPhase >= 1 ? -86 : 0}px)`,
-transition: "opacity 650ms ease, transform 1300ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+transition: "opacity 1150ms ease, transform 1500ms cubic-bezier(0.2, 0.9, 0.2, 1)",
 
 
       textAlign: "center",
@@ -2528,8 +2528,9 @@ transition: "opacity 650ms ease, transform 1300ms cubic-bezier(0.2, 0.9, 0.2, 1)
       top: "50%",
       transform: "translate(-50%, -50%)",
 opacity: introPhase >= 1 ? 1 : 0,
-transition: "opacity 1050ms ease",
-transitionDelay: introPhase >= 1 ? "120ms" : "0ms",
+transition: "opacity 1500ms ease",
+transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
+
 
 
       fontWeight: 950,
