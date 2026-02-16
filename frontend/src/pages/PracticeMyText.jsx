@@ -2637,7 +2637,7 @@ style={{
     position: "absolute",
     left: "50%",
     top: "50%",
-    transform: `translate(-50%, -50%) translateY(${introPhase >= 1 ? heroDeltaY : 0}px) scale(${introPhase >= 1 ? 0.85 : 1})`,
+    transform: `translate(-50%, -50%) translateY(${introPhase >= 1 ? heroDeltaY : 0}px)`,
     transition: "transform 1200ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 900ms ease",
     opacity: introPhase >= 0 ? 1 : 0,
     zIndex: 1,
@@ -2668,7 +2668,8 @@ style={{
     left: "50%",
     top: "50%",
     transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 78 : 70}px)`,
-
+    fontWeight: 850,
+    fontSize: 32, // ✅ bigger
     color: "rgba(255,255,255,0.88)",
     opacity: introPhase === 2 ? 1 : 0,
     transition: "opacity 520ms ease, transform 520ms ease",
@@ -2676,11 +2677,6 @@ style={{
     pointerEvents: "none",
     textAlign: "center",
     whiteSpace: "nowrap",
-    fontWeight: 1000,
-    fontSize: 48,
-    letterSpacing: -0.4,
-    WebkitTextStroke: "1.2px rgba(0,0,0,0.22)",
-    paintOrder: "stroke fill",
   }}
 >
   {pickShortLineFromScore(deckPctLocked)}
