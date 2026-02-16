@@ -2655,18 +2655,9 @@ style={{
 <div
   style={{
     marginTop: 10,
-    fontWeight: 1000,
-
-    // ✅ 95% af procentens størrelse (samme sizing-logik som % bruger)
-    fontSize: Math.round(computePctFontSize(heroText, 112, 68) * 0.95),
-
-    lineHeight: 1,
-    letterSpacing: -0.8,
-
+    fontWeight: 750,
+    fontSize: 28,
     color: "rgba(255,255,255,0.84)",
-    WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
-    paintOrder: "stroke fill",
-
     opacity: introPhase === 2 ? 1 : 0,
     transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
     transition: "opacity 520ms ease, transform 520ms ease",
@@ -2674,7 +2665,6 @@ style={{
 >
   {pickShortLineFromScore(deckPctLocked)}
 </div>
-
   </div>
 </div>
 
