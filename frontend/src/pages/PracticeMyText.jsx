@@ -1451,7 +1451,7 @@ const [slideIdx, setSlideIdx] = useState(0);
 
 // Slide 1 animation phases
 // -1 = hidden, 0 = word fades in (center), 1 = word moves up + percent appears + count up,
-// 2 = show message, 3 = message fades out + word/% collapse to top + details appear
+// 2 = show message (hold), 3 = message fades out, 4 = word/% collapse to top + details appear
 const [introPhase, setIntroPhase] = useState(-1);
 
 const [introPct, setIntroPct] = useState(0);
@@ -1621,7 +1621,13 @@ setDeckPctLocked(locked);
 const t0 = setTimeout(() => setIntroPhase(0), 50);
 const t1 = setTimeout(() => setIntroPhase(1), 650);
 const t2 = setTimeout(() => setIntroPhase(2), 2100);
-const t3 = setTimeout(() => setIntroPhase(3), 3150);
+
+// hold teksten ~3s
+const t3 = setTimeout(() => setIntroPhase(3), 2100 + 3000);
+
+// vent på fade (du bruger 520ms i CSS)
+const t4 = setTimeout(() => setIntroPhase(4), 2100 + 3000 + 520);
+
 
 
 
@@ -1646,10 +1652,16 @@ useEffect(() => {
         setIntroPct(0);
     setIntroPhase(-1);
 
-    const t0 = setTimeout(() => setIntroPhase(0), 50);
+const t0 = setTimeout(() => setIntroPhase(0), 50);
 const t1 = setTimeout(() => setIntroPhase(1), 650);
 const t2 = setTimeout(() => setIntroPhase(2), 2100);
-const t3 = setTimeout(() => setIntroPhase(3), 3150);
+
+// hold teksten ~3s
+const t3 = setTimeout(() => setIntroPhase(3), 2100 + 3000);
+
+// vent på fade (du bruger 520ms i CSS)
+const t4 = setTimeout(() => setIntroPhase(4), 2100 + 3000 + 520);
+
 
 return () => {
   clearTimeout(t0);
@@ -2501,11 +2513,11 @@ height: 152,               // juster hvis du vil have mere/ mindre luft
     style={{
       position: "absolute",
       left: "50%",
-    top: introPhase >= 3 ? 34 : "50%",
+    top: introPhase >= 4 ? 34 : "50%",
 opacity: introPhase >= 0 ? 1 : 0,
 transform: `translate(-50%, -50%) translateY(${
-  introPhase >= 3 ? -112 : introPhase >= 1 ? -86 : 0
-}px) scale(${introPhase >= 3 ? 0.72 : 1})`,
+  introPhase >= 4 ? -112 : introPhase >= 1 ? -86 : 0
+}px) scale(${introPhase >= 4 ? 0.72 : 1})`,
 transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1), top 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
 
 
@@ -2519,7 +2531,7 @@ transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)
     <div
       style={{
         fontWeight: 1000,
-        fontSize: introPhase >= 3
+        fontSize: introPhase >= 4
   ? computeHeroFontSize(heroText, 46, 22)
   : computeHeroFontSize(heroText, 72, 32),
         lineHeight: 1.05,
@@ -2560,7 +2572,7 @@ transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)
     style={{
       position: "absolute",
       left: "50%",
-top: introPhase >= 3 ? 90 : "50%",
+top: introPhase >= 4 ? 90 : "50%",
 transform: "translate(-50%, -50%)",
 
       opacity: introPhase >= 1 ? 1 : 0,
@@ -2568,7 +2580,7 @@ transition: "opacity 1500ms ease, top 900ms cubic-bezier(0.2, 0.9, 0.2, 1), font
       transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
 
       fontWeight: 1000,
-      fontSize: introPhase >= 3
+      fontSize: introPhase >= 4
   ? computePctFontSize(heroText, 64, 44)
   : computePctFontSize(heroText, 112, 68),
       lineHeight: 1,
@@ -2609,10 +2621,10 @@ transition: "opacity 520ms ease, transform 520ms ease",
 <div
   style={{
     marginTop: 18,
-    opacity: introPhase >= 3 ? 1 : 0,
-    transform: `translateY(${introPhase >= 3 ? 0 : 10}px)`,
+    opacity: introPhase >= 4 ? 1 : 0,
+    transform: `translateY(${introPhase >= 4 ? 0 : 10}px)`,
     transition: "opacity 700ms ease, transform 700ms ease",
-    pointerEvents: introPhase >= 3 ? "auto" : "none",
+    pointerEvents: introPhase >= 4 ? "auto" : "none",
   }}
 >
   {/* Coach / You */}
