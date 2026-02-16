@@ -2667,7 +2667,7 @@ style={{
     position: "absolute",
     left: "50%",
     top: "50%",
-transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 180 : 170}px)`,
+transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 94 : 90}px)`,
     fontWeight: 850,
     fontSize: 32, // ✅ bigger
     color: "rgba(255,255,255,0.88)",
@@ -2740,7 +2740,7 @@ WebkitOverflowScrolling: introPhase >= 4 ? "touch" : "auto",
   }}
 >
   {/* Coach / You */}
-  <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+  <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 24 }}>
     <button
       type="button"
       onClick={playCorrectTts}
