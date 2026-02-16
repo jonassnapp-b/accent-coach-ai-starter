@@ -2808,9 +2808,10 @@ color: "#0B1220",
       gap: 12,
 
       // ✅ kortere “pills”
-      width: "100%",
-      maxWidth: 520,
-      margin: "0 auto",
+     width: "100%",
+maxWidth: 420,   // 👈 smallere (prøv 380 hvis du vil endnu smallere)
+margin: "0 auto",
+
 
       padding: "10px 12px",
       borderRadius: 18,
