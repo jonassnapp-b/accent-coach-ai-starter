@@ -1274,7 +1274,7 @@ const SEND_PURPLE = "#8B5CF6";
   const TABBAR_OFFSET = 64;
   const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
   const SAFE_TOP = "env(safe-area-inset-top, 0px)";
-  const HERO_DOWN_PX = 28;
+  const HERO_DOWN_PX = 20;
 
 useEffect(() => {
   const prevBody = document.body.style.background;
