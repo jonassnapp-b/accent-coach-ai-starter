@@ -1455,6 +1455,11 @@ const [slideIdx, setSlideIdx] = useState(0);
 const [introPhase, setIntroPhase] = useState(-1);
 
 const [introPct, setIntroPct] = useState(0);
+// --- slide 1 hero anchors (center -> top) ---
+const heroCenterRef = useRef(null);
+const heroTopRef = useRef(null);
+const [heroDeltaY, setHeroDeltaY] = useState(0);
+
 // Slide 2 (Speaking Level) animation
 const [levelPctAnim, setLevelPctAnim] = useState(0);
 const [overlayReady, setOverlayReady] = useState(false);
@@ -1625,6 +1630,19 @@ useLayoutEffect(() => {
   requestAnimationFrame(() => setOverlayReady(true));
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [result]);
+useLayoutEffect(() => {
+  if (!overlayReady) return;
+  if (!heroCenterRef.current || !heroTopRef.current) return;
+
+  const center = heroCenterRef.current.getBoundingClientRect();
+  const top = heroTopRef.current.getBoundingClientRect();
+
+  // flyt word fra center-slot midtpunkt til top-slot midtpunkt
+  const centerMidY = center.top + center.height / 2;
+  const topMidY = top.top + top.height / 2;
+
+  setHeroDeltaY(topMidY - centerMidY);
+}, [overlayReady, slideIdx]);
 
 // Reset slide flow when new result comes in
 useEffect(() => {
@@ -2547,7 +2565,7 @@ style={{
     gap: introPhase >= 1 ? 2 : 10,
 
     // ✅ lift up slightly BEFORE final phase (phase 3), then a bit more in phase 4
-    transform: `translateY(${introPhase >= 4 ? 0 : introPhase >= 3 ? -12 : 0}px)`,
+    transform: "translateY(0px)",
     transition: "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
   }}
 >
@@ -2572,16 +2590,51 @@ style={{
         }}
       />
 
-     {/* WORD (INTRO: phases 0-3) */}
+
+
+{/* Anchors: define the exact center slot + the exact top slot */}
+<div
+  ref={heroCenterRef}
+  aria-hidden="true"
+  style={{
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    width: 1,
+    height: 1,
+    transform: "translate(-50%, -50%)",
+    pointerEvents: "none",
+  }}
+/>
+
+<div
+  ref={heroTopRef}
+  aria-hidden="true"
+  style={{
+    position: "absolute",
+    left: "50%",
+    top: `calc(${SAFE_TOP} + 86px)`, // 👈 top destination for the WORD
+    width: 1,
+    height: 1,
+    transform: "translate(-50%, -50%)",
+    pointerEvents: "none",
+  }}
+/>
+
+{/* ONE WORD (same DOM node): starts centered, then glides up */}
 <div
   style={{
-    opacity: introPhase >= 0 && introPhase < 4 ? 1 : 0,
-    transform: `translateY(${introPhase >= 1 ? 18 : 0}px) scale(1)`,
-    transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    transform: `translate(-50%, -50%) translateY(${introPhase >= 1 ? heroDeltaY : 0}px) scale(${introPhase >= 1 ? 0.72 : 1})`,
+    transition: "transform 1200ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 900ms ease",
+    opacity: introPhase >= 0 ? 1 : 0,
     zIndex: 1,
     width: "100%",
     paddingLeft: 16,
     paddingRight: 16,
+    pointerEvents: "none",
   }}
 >
   <div
@@ -2600,41 +2653,16 @@ style={{
   </div>
 </div>
 
-{/* WORD (FINAL: phase 4+) */}
+{/* ONE PERCENT: appears exactly where the word used to be (center slot) */}
 <div
   style={{
-    opacity: introPhase >= 4 ? 1 : 0,
-    transform: `translateY(-50px) scale(0.72)`,
-    transition: "opacity 1300ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
-    zIndex: 1,
-    width: "100%",
-    paddingLeft: 16,
-    paddingRight: 16,
-  }}
->
-  <div
-    style={{
-      fontWeight: 1000,
-      fontSize: computeHeroFontSize(heroText, 46, 22),
-      lineHeight: 1.05,
-      letterSpacing: -0.4,
-      WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
-      paintOrder: "stroke fill",
-      display: "inline-block",
-      maxWidth: "100%",
-    }}
-  >
-    <PhonemeFeedback result={result} mode="textOnly" />
-  </div>
-</div>
-
-{/* PERCENT (INTRO: phases 1-3) */}
-<div
-  style={{
-    opacity: introPhase >= 1 && introPhase < 4 ? 1 : 0,
-    transform: `translateY(${introPhase >= 1 ? -10 : 8}px)`,
-    transition: "opacity 1500ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
-    transitionDelay: introPhase >= 1 ? "260ms" : "0ms",
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    transform: "translate(-50%, -50%)",
+    opacity: introPhase >= 1 ? 1 : 0,
+    transition: "opacity 900ms ease",
+    transitionDelay: introPhase >= 1 ? "220ms" : "0ms",
     fontWeight: 1000,
     fontSize: computePctFontSize(heroText, 112, 68),
     lineHeight: 1,
@@ -2643,30 +2671,12 @@ style={{
     WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
     paintOrder: "stroke fill",
     zIndex: 1,
+    pointerEvents: "none",
   }}
 >
   {introPct}%
 </div>
 
-{/* PERCENT (FINAL: phase 4+) */}
-<div
-  style={{
-    opacity: introPhase >= 4 ? 1 : 0,
-    transform: `translateY(-28px)`,
-    transition: "opacity 1500ms ease, transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
-    transitionDelay: "260ms",
-    fontWeight: 1000,
-    fontSize: computePctFontSize(heroText, 64, 44),
-    lineHeight: 1,
-    letterSpacing: -1.1,
-    color: pfColorForPct(deckPctLocked),
-    WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
-    paintOrder: "stroke fill",
-    zIndex: 1,
-  }}
->
-  {deckScore}%
-</div>
 
 
       {/* LINE UNDER PERCENT */}
