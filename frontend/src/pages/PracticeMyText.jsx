@@ -1451,7 +1451,7 @@ const [slideIdx, setSlideIdx] = useState(0);
 
 // Slide 1 animation phases
 // 0 = show word fade in, 1 = word moved up + start counting, 2 = show message
-const [introPhase, setIntroPhase] = useState(0);
+const [introPhase, setIntroPhase] = useState(-1);
 const [introPct, setIntroPct] = useState(0);
 // Slide 2 (Speaking Level) animation
 const [levelPctAnim, setLevelPctAnim] = useState(0);
@@ -1607,21 +1607,28 @@ const pct = Number.isFinite(n) ? (n <= 1 ? Math.round(n * 100) : Math.round(n)) 
 const locked = Math.max(0, Math.min(100, pct));
 deckPctRef.current = locked;
 setDeckPctLocked(locked);
-  setSlideIdx(0);
+   setSlideIdx(0);
 
-  setIntroPhase(0);
+  setIntroPhase(-1);
   setIntroPct(0);
 
-  // phase timings (feel free to tweak)
-const t1 = setTimeout(() => setIntroPhase(1), 900);
-const t2 = setTimeout(() => setIntroPhase(2), 2400);
+  // -1: hidden (to trigger fade)
+  //  0: word fades in (center)
+  //  1: word moves up + percent fades in + count up starts
+  //  2: show message
+  const t0 = setTimeout(() => setIntroPhase(0), 50);
+  const t1 = setTimeout(() => setIntroPhase(1), 650);
+  const t2 = setTimeout(() => setIntroPhase(2), 2100);
+
 
 
   // count-up starts when phase becomes 1
   return () => {
+    clearTimeout(t0);
     clearTimeout(t1);
     clearTimeout(t2);
   };
+
 }, [result]);
 
 // Reset/force introPct when leaving/returning to slide 1
@@ -1630,11 +1637,13 @@ useEffect(() => {
 
   if (slideIdx === 0) {
     // when you come back to slide 1: restart its animation
-    setIntroPct(0);
-    setIntroPhase(0);
+        setIntroPct(0);
+    setIntroPhase(-1);
 
-    const t1 = setTimeout(() => setIntroPhase(1), 50);
-    const t2 = setTimeout(() => setIntroPhase(2), 2400);
+    const t0 = setTimeout(() => setIntroPhase(0), 50);
+    const t1 = setTimeout(() => setIntroPhase(1), 650);
+    const t2 = setTimeout(() => setIntroPhase(2), 2100);
+
 
     return () => {
       clearTimeout(t1);
@@ -1655,7 +1664,7 @@ useEffect(() => {
 
   let raf = 0;
   const start = performance.now();
-  const dur = 1600;
+  const dur = 1100;
 
   const tick = (now) => {
     const p = Math.min(1, (now - start) / dur);
@@ -2485,8 +2494,9 @@ gap: 0,
       left: "50%",
       top: "50%",
 opacity: introPhase >= 0 ? 1 : 0,
-transform: `translate(-50%, -50%) translateY(${introPhase >= 1 ? -86 : 10}px)`,
-transition: "opacity 800ms ease, transform 1500ms ease",
+transform: `translate(-50%, -50%) translateY(${introPhase >= 1 ? -86 : 0}px)`,
+transition: "opacity 650ms ease, transform 800ms cubic-bezier(0.2, 0.9, 0.2, 1)",
+
 
       textAlign: "center",
       width: "100%",
@@ -2518,8 +2528,9 @@ transition: "opacity 800ms ease, transform 1500ms ease",
       top: "50%",
       transform: "translate(-50%, -50%)",
 opacity: introPhase >= 1 ? 1 : 0,
-transition: "opacity 1100ms ease",
-transitionDelay: introPhase >= 1 ? "1500ms" : "0ms",
+transition: "opacity 650ms ease",
+transitionDelay: introPhase >= 1 ? "120ms" : "0ms",
+
 
       fontWeight: 950,
       fontSize: computePctFontSize(heroText, 108, 66),
