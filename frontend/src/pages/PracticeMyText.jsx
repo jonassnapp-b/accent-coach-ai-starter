@@ -2627,7 +2627,7 @@ style={{
     position: "absolute",
     left: "50%",
     top: "50%",
-    transform: `translate(-50%, -50%) translateY(${introPhase >= 1 ? heroDeltaY : 0}px) scale(${introPhase >= 1 ? 0.72 : 1})`,
+    transform: `translate(-50%, -50%) translateY(${introPhase >= 1 ? heroDeltaY : 0}px) scale(${introPhase >= 1 ? 0.85 : 1})`,
     transition: "transform 1200ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 900ms ease",
     opacity: introPhase >= 0 ? 1 : 0,
     zIndex: 1,
@@ -2640,7 +2640,7 @@ style={{
   <div
     style={{
       fontWeight: 1000,
-      fontSize: computeHeroFontSize(heroText, 170, 90),
+      fontSize: computeHeroFontSize(heroText, 140, 100),
 
       lineHeight: 1.05,
       letterSpacing: -0.4,
