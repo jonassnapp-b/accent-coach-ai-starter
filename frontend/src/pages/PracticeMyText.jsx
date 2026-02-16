@@ -1613,8 +1613,10 @@ setDeckPctLocked(locked);
   setIntroPct(0);
 
   // phase timings (feel free to tweak)
-const t1 = setTimeout(() => setIntroPhase(1), 900);
-const t2 = setTimeout(() => setIntroPhase(2), 2400);
+// phase timings (slightly slower)
+const t1 = setTimeout(() => setIntroPhase(1), 1200);
+const t2 = setTimeout(() => setIntroPhase(2), 3000);
+
 
 
   // count-up starts when phase becomes 1
@@ -1633,8 +1635,9 @@ useEffect(() => {
     setIntroPct(0);
     setIntroPhase(0);
 
-    const t1 = setTimeout(() => setIntroPhase(1), 50);
-    const t2 = setTimeout(() => setIntroPhase(2), 2400);
+   const t1 = setTimeout(() => setIntroPhase(1), 120);
+const t2 = setTimeout(() => setIntroPhase(2), 3000);
+
 
     return () => {
       clearTimeout(t1);
@@ -1655,7 +1658,7 @@ useEffect(() => {
 
   let raf = 0;
   const start = performance.now();
-  const dur = 1600;
+  const dur = 2000;
 
   const tick = (now) => {
     const p = Math.min(1, (now - start) / dur);
@@ -2474,7 +2477,7 @@ gap: 0,
     marginTop: 0,
     opacity: 1,
     transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-    transition: "all 900ms ease",
+    transition: "all 1200ms ease",
     textAlign: "center",
     maxWidth: 720,
     marginLeft: "auto",
@@ -2513,7 +2516,7 @@ paintOrder: "stroke fill",
     marginBottom: 18,
     opacity: introPhase >= 1 ? 1 : 0,
     transform: `translateY(${introPhase >= 1 ? 0 : 10}px)`,
-    transition: "all 800ms ease",
+    transition: "all 1100ms ease",
     fontWeight: 950,
     fontSize: computePctFontSize(heroText, 108, 66),
     lineHeight: 1,
@@ -2541,7 +2544,7 @@ fontSize: 18,
       textShadow: "none",
       opacity: introPhase >= 2 ? 1 : 0,
       transform: `translateY(${introPhase >= 2 ? 0 : 8}px)`,
-      transition: "all 650ms ease",
+      transition: "all 850ms ease",
     }}
   >
     {pickShortLineFromScore(deckPctLocked)}
