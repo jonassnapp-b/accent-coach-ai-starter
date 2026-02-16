@@ -2664,17 +2664,24 @@ style={{
 
 <div
   style={{
-    marginTop: 10,
-    fontWeight: 750,
-    fontSize: 28,
-    color: "rgba(255,255,255,0.84)",
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 78 : 70}px)`,
+    fontWeight: 850,
+    fontSize: 32, // ✅ bigger
+    color: "rgba(255,255,255,0.88)",
     opacity: introPhase === 2 ? 1 : 0,
-    transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
     transition: "opacity 520ms ease, transform 520ms ease",
+    zIndex: 2, // ✅ above the % if they ever touch
+    pointerEvents: "none",
+    textAlign: "center",
+    whiteSpace: "nowrap",
   }}
 >
   {pickShortLineFromScore(deckPctLocked)}
 </div>
+
   </div>
 </div>
 
