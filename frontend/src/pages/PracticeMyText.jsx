@@ -2640,7 +2640,7 @@ style={{
   <div
     style={{
       fontWeight: 1000,
-      fontSize: computeHeroFontSize(heroText, 72, 32),
+      fontSize: computeHeroFontSize(heroText, 92, 40),
       lineHeight: 1.05,
       letterSpacing: -0.4,
       WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
@@ -2650,6 +2650,20 @@ style={{
     }}
   >
     <PhonemeFeedback result={result} mode="textOnly" />
+
+<div
+  style={{
+    marginTop: 10,
+    fontWeight: 750,
+    fontSize: 18,
+    color: "rgba(255,255,255,0.84)",
+    opacity: introPhase === 2 ? 1 : 0,
+    transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
+    transition: "opacity 520ms ease, transform 520ms ease",
+  }}
+>
+  {pickShortLineFromScore(deckPctLocked)}
+</div>
   </div>
 </div>
 
@@ -2677,23 +2691,6 @@ style={{
   {introPct}%
 </div>
 
-
-
-      {/* LINE UNDER PERCENT */}
-      <div
-        style={{
-          marginTop: 4,
-          fontWeight: 650,
-          fontSize: 18,
-          color: "rgba(255,255,255,0.84)",
-          opacity: introPhase === 2 ? 1 : 0,
-          transform: `translateY(${introPhase === 2 ? 0 : -6}px)`,
-          transition: "opacity 520ms ease, transform 520ms ease",
-          zIndex: 1,
-        }}
-      >
-        {pickShortLineFromScore(deckPctLocked)}
-      </div>
     </div>
   </div>
 </div>
