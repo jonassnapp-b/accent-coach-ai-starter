@@ -2631,19 +2631,22 @@ style={{
 
   return (
     <div
-      style={{
-        position: "absolute",
-        left: "50%",
-  top: "54%",   // 👈 flytter hele hero lidt ned
-transform: "translate(-50%, -50%)",
-        opacity: introPhase >= 1 ? 1 : 0,
-        transition: "opacity 900ms ease",
-        transitionDelay: introPhase >= 1 ? "220ms" : "0ms",
-        zIndex: 1,
-        pointerEvents: "none",
-        textAlign: "center",
-      }}
-    >
+  style={{
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    transform:
+      `translate(-50%, -50%) translateY(${introPhase >= 4 ? heroDeltaY : 0}px)`,
+    transition:
+      "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 900ms ease",
+    opacity: introPhase >= 0 ? 1 : 0,
+    transitionDelay: introPhase >= 0 ? "120ms" : "0ms",
+    zIndex: 1,
+    pointerEvents: "none",
+    textAlign: "center",
+  }}
+>
+
       <div
         style={{
           fontWeight: 1000,
@@ -2653,6 +2656,9 @@ transform: "translate(-50%, -50%)",
           color: pfColorForPct(deckPctLocked),
           WebkitTextStroke: "1.5px rgba(0,0,0,0.20)",
           paintOrder: "stroke fill",
+          opacity: introPhase >= 1 ? 1 : 0,
+transition: "opacity 600ms ease",
+
         }}
       >
         {introPct}%
