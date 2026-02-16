@@ -1275,6 +1275,8 @@ const SEND_PURPLE = "#8B5CF6";
   const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
   const SAFE_TOP = "env(safe-area-inset-top, 0px)";
   const HERO_DOWN_PX = 18;
+  const DETAILS_DOWN_PX = 26; // tweak: 18–40 feels reasonable
+
 
 useEffect(() => {
   const prevBody = document.body.style.background;
@@ -2727,7 +2729,7 @@ transform: "translate(-50%, -50%) translateY(-42px)",
     // ✅ sits below the center, without shifting it
  top: introPhase >= 4 ? `calc(${SAFE_TOP} + 280px)` : "calc(50% + 120px)",
 
-transform: introPhase >= 4 ? "translateY(0px)" : "translateY(-20px)",
+transform: introPhase >= 4 ? `translateY(${DETAILS_DOWN_PX}px)` : "translateY(-20px)",
 
 // ✅ vigtig: hold details væk fra chevrons-området
 bottom: introPhase >= 4 ? `${CHEVRON_RESERVE_PX}px` : "auto",
