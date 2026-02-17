@@ -144,6 +144,22 @@ function heroColorForPct(pct) {
   if (n >= 75) return "#eab308";  // yellow
   return "#ef4444";               // red
 }
+function hexToRgba(hex, a = 1) {
+  const h = String(hex || "").replace("#", "").trim();
+  if (h.length === 3) {
+    const r = parseInt(h[0] + h[0], 16);
+    const g = parseInt(h[1] + h[1], 16);
+    const b = parseInt(h[2] + h[2], 16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  if (h.length === 6) {
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  return `rgba(255,255,255,${a})`;
+}
 
 /* ---------------- Coach-like feedback helpers ---------------- */
 
@@ -2356,9 +2372,10 @@ boxShadow: PAGE_SHADOW,
 
     <div
       style={{
-        fontSize: 28,
-       fontWeight: 1000,
-letterSpacing: -0.5,
+       fontSize: 28,
+fontWeight: 900,      // ✅ mindre “banner-ish”
+letterSpacing: -0.25, // ✅ mindre aggressiv tracking
+
 
         lineHeight: 1.1,
         textAlign: "center",
@@ -2378,7 +2395,7 @@ letterSpacing: -0.5,
           height: 44,
           borderRadius: 16,
           padding: "0 12px",
-          fontWeight: 900,
+          fontWeight: 800,
        color: HEADER_TEXT,
 background: HEADER_SURFACE,
 border: `1px solid ${HEADER_BORDER}`,
@@ -2745,6 +2762,8 @@ WebkitOverflowScrolling: introPhase >= 4 ? "touch" : "auto",
     paddingRight: 16,
   }}
 >
+  <div style={{ width: "100%", maxWidth: 520, margin: "0 auto" }}>
+
   {/* Coach / You */}
   <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 24 }}>
     <button
@@ -2759,8 +2778,9 @@ WebkitOverflowScrolling: introPhase >= 4 ? "touch" : "auto",
 background: "rgba(255,255,255,0.96)",
 color: "#0B1220",
 
-        fontWeight: 950,
-        cursor: "pointer",
+fontWeight: 850,
+letterSpacing: -0.2,
+cursor: "pointer",
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
@@ -2785,7 +2805,8 @@ color: "#0B1220",
 background: "rgba(255,255,255,0.96)",
 color: "#0B1220",
 
-        fontWeight: 950,
+fontWeight: 850,
+ letterSpacing: -0.2,
         cursor: "pointer",
         display: "inline-flex",
         alignItems: "center",
@@ -2801,31 +2822,40 @@ color: "#0B1220",
   </div>
 
   {/* Phoneme list */}
-  <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
+  <div style={{ marginTop: 16, display: "grid", gap: 16 }}>
     {(weakPhonemeSlides || []).map((p) => {
       const pct = p?.score == null ? null : Math.round(Number(p.score));
      return (
   <div
     key={`intro_row_${p.code}`}
-    style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: 12,
+   style={{
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
 
-      // ✅ kortere “pills”
-     width: "100%",
-maxWidth: 490,   // 👈 smallere (prøv 380 hvis du vil endnu smallere)
-margin: "0 auto",
+  width: "100%",
+  maxWidth: 520,              // ✅ låst bredde (mere premium/stramt)
+  margin: "0 auto",
 
+  padding: "12px 14px",       // ✅ ens “grid” spacing
+  borderRadius: 18,
 
-      padding: "10px 12px",
-      borderRadius: 18,
-      border: "1px solid rgba(255,255,255,0.14)",
-      background: "rgba(255,255,255,0.08)",
-      backdropFilter: "blur(10px)",
-      WebkitBackdropFilter: "blur(10px)",
-    }}
+  // ✅ base glass
+  border: "1px solid rgba(255,255,255,0.14)",
+  background: "rgba(255,255,255,0.08)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+
+  // ✅ farvet “ring” efter score (subtil)
+  boxShadow:
+    pct == null
+      ? "inset 0 1px 0 rgba(255,255,255,0.12)"
+      : `inset 0 1px 0 rgba(255,255,255,0.14), 0 0 0 2px ${hexToRgba(pfColorForPct(pct), 0.55)}`,
+
+  transition: "box-shadow 180ms ease, transform 180ms ease",
+}}
+
   >
     {/* LEFT: speaker + phoneme i samme pill */}
     <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
@@ -2897,6 +2927,8 @@ margin: "0 auto",
 
     })}
   </div>
+  </div>
+
 </div>
 
 
