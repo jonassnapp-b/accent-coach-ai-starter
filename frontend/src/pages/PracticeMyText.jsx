@@ -2848,10 +2848,10 @@ fontWeight: 850,
   WebkitBackdropFilter: "blur(10px)",
 
   // ✅ farvet “ring” efter score (subtil)
-  boxShadow:
-    pct == null
-      ? "inset 0 1px 0 rgba(255,255,255,0.12)"
-      : `inset 0 1px 0 rgba(255,255,255,0.14), 0 0 0 2px ${hexToRgba(pfColorForPct(pct), 0.55)}`,
+ boxShadow:
+  pct == null
+    ? "inset 0 1px 0 rgba(255,255,255,0.12)"
+    : `inset 0 1px 0 rgba(255,255,255,0.14), 0 0 0 2px ${pfColorForPct(pct)}`,
 
   transition: "box-shadow 180ms ease, transform 180ms ease",
 }}
