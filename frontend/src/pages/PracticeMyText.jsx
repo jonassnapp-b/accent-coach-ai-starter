@@ -3035,7 +3035,9 @@ const bubbleTop = clamp(dotTopPx - BUBBLE_H / 2 - BUBBLE_NUDGE_UP, -6, LADDER_H 
 width: 54,
 borderRadius: 30,
               background: "rgba(11,18,32,0.22)", // dark translucent like image 2
-              border: "1px solid rgba(255,255,255,0.14)",
+          border: pct == null
+  ? "1px solid rgba(255,255,255,0.14)"
+  : `1px solid ${hexToRgba(pfColorForPct(pct), 0.65)}`,
               boxShadow: "0 18px 46px rgba(0,0,0,0.22)",
               backdropFilter: "blur(10px)",
               WebkitBackdropFilter: "blur(10px)",
