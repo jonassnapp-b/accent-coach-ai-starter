@@ -6,6 +6,7 @@ import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
 import PhonemeFeedback, { pfColorForPct } from "../components/PhonemeFeedback.jsx";
 import { bumpSessionsCount, shouldAskForRating, markAskedForRating, triggerNativeRatingPrompt } from "../lib/ratingGate.js";
+import { usePostHog } from "@posthog/react";
 
 
 
@@ -1259,6 +1260,7 @@ function getDeepDiveForPhoneme(code) {
 
 
 export default function PracticeMyText() {
+  const posthog = usePostHog();
   const nav = useNavigate();
   const location = useLocation();
   const { settings } = useSettings();
@@ -2143,6 +2145,11 @@ sendToServer(blob, localUrl);
     }
     try {
       setErr("");
+      posthog?.capture("practice_my_text_started", {
+  mode,
+  accent: accentUi,
+});
+
       await ensureMic();
       chunksRef.current = [];
       mediaRecRef.current.start();
@@ -2237,6 +2244,13 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
       };
 
       setResult(payload);
+      posthog?.capture("practice_my_text_completed", {
+  score: overall,
+  mode,
+  accent: accentUi,
+  text_length: text.length,
+});
+
 setOverallPctLocked(Math.max(0, Math.min(100, Number(overall) || 0)));
 // --- Rating gate (>=90%, >=5 sessions, max 1 gang) ---
 try {
@@ -3589,7 +3603,11 @@ marginRight: -16,
           type="button"
          onClick={() => {
   stopAllAudio();
-
+posthog?.capture("practice_my_text_retry", {
+    mode,
+    accent: accentUi,
+    score: deckPctLocked,
+  });
   const text = sanitizeTextForSubmit(result?.refText ?? refText).slice(0, MAX_LEN);
   const payload = {
     mode,                 // "coach" | "practice"

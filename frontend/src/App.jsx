@@ -15,6 +15,7 @@ import Feedback from "./pages/Feedback.jsx";
 
 import { Mic, AudioWaveform, Target, Settings as SettingsIcon, MessageCircle } from "lucide-react";
 import SplashSequence from "./components/SplashSequence";
+import { usePostHog } from "@posthog/react";
 
 
 
@@ -140,6 +141,12 @@ function isOnboardingDone() {
 
 
 function AppInner() {
+    const posthog = usePostHog();
+
+  useEffect(() => {
+    posthog?.capture("app_open");
+  }, [posthog]);
+
   const [showSplash, setShowSplash] = useState(() => {
   try { return sessionStorage.getItem("ac_splash_done_v1") !== "1"; }
   catch { return true; }
