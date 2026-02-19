@@ -19,6 +19,9 @@ function ErrorBoundary({ children }) {
     return <pre style={{ padding: 16 }}>{String(e)}</pre>;
   }
 }
+console.log("POSTHOG KEY:", import.meta.env.VITE_PUBLIC_POSTHOG_KEY);
+console.log("POSTHOG HOST:", import.meta.env.VITE_PUBLIC_POSTHOG_HOST);
+
 const posthogOptions = {
   api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
   capture_pageview: false,
