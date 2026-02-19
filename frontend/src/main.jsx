@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import "./styles.css";
+import { PostHogProvider } from "@posthog/react";
 
 if (!import.meta.env.DEV) {
   console.log = () => {};
@@ -18,11 +19,23 @@ function ErrorBoundary({ children }) {
     return <pre style={{ padding: 16 }}>{String(e)}</pre>;
   }
 }
+const posthogOptions = {
+  api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+  capture_pageview: false,
+  capture_pageleave: true,
+  session_recording: { enabled: false }, // vi holder replay fra for nu
+};
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
+    <PostHogProvider
+      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
+      options={posthogOptions}
+    >
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </PostHogProvider>
   </React.StrictMode>
 );
+

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, ChevronDown, Volume2, Play, Pause, X, Rotate
 import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
 import PhonemeFeedback, { pfColorForPct } from "../components/PhonemeFeedback.jsx";
+import { bumpSessionsCount, shouldAskForRating, markAskedForRating, triggerNativeRatingPrompt } from "../lib/ratingGate.js";
 
 
 
@@ -1396,6 +1397,27 @@ useEffect(() => {
 
   const [err, setErr] = useState("");
 
+const [showEnjoyingModal, setShowEnjoyingModal] = useState(false);
+
+function openEnjoyingModal() {
+  setShowEnjoyingModal(true);
+}
+
+function openFeedbackEmail() {
+  const subject = encodeURIComponent("FluentUp feedback");
+  const body = encodeURIComponent("What went wrong?\n\nDevice:\nApp version:\n");
+  window.location.href = `mailto:support@DITDOMAENE.com?subject=${subject}&body=${body}`;
+}
+
+async function handleEnjoyingYes() {
+  setShowEnjoyingModal(false);
+  await triggerNativeRatingPrompt();
+}
+
+function handleEnjoyingNotReally() {
+  setShowEnjoyingModal(false);
+  openFeedbackEmail();
+}
 
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -2216,6 +2238,19 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
 
       setResult(payload);
 setOverallPctLocked(Math.max(0, Math.min(100, Number(overall) || 0)));
+// --- Rating gate (>=90%, >=5 sessions, max 1 gang) ---
+try {
+  bumpSessionsCount();
+
+  if (shouldAskForRating(overall)) {
+    // markér først, så vi aldrig spørger igen selv hvis UI rerender
+    markAskedForRating();
+
+    // lille delay så det føles som en naturlig del af "win moment"
+    setTimeout(() => openEnjoyingModal(), 900);
+  }
+} catch {}
+
 
 const trophyReached = Number(payload.overall) >= TROPHY_REACHED_PCT;
 
@@ -3991,6 +4026,70 @@ WebkitOverflowScrolling: "touch",
   </div>
 )}
 <audio ref={ttsAudioRef} playsInline preload="auto" />
+{showEnjoyingModal && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 20000,
+      background: "rgba(0,0,0,0.45)",
+      display: "grid",
+      placeItems: "center",
+      padding: 18,
+    }}
+  >
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 420,
+        borderRadius: 22,
+        background: "rgba(255,255,255,0.98)",
+        border: "1px solid rgba(11,18,32,0.10)",
+        boxShadow: "0 22px 70px rgba(0,0,0,0.30)",
+        padding: 16,
+      }}
+    >
+      <div style={{ fontSize: 18, fontWeight: 950, letterSpacing: -0.2, color: "#0B1220" }}>
+        Enjoying the app?
+      </div>
+      <div style={{ marginTop: 8, color: "rgba(11,18,32,0.65)", fontWeight: 650, lineHeight: 1.35 }}>
+        If FluentUp is helping you, a quick rating really helps.
+      </div>
+
+      <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+        <button
+          type="button"
+          onClick={handleEnjoyingYes}
+          style={{
+            height: 50,
+            borderRadius: 16,
+            border: "none",
+            background: "rgba(33,150,243,0.14)",
+            fontWeight: 950,
+            cursor: "pointer",
+          }}
+        >
+          Yes 😊
+        </button>
+
+        <button
+          type="button"
+          onClick={handleEnjoyingNotReally}
+          style={{
+            height: 50,
+            borderRadius: 16,
+            border: "1px solid rgba(11,18,32,0.12)",
+            background: "#fff",
+            fontWeight: 900,
+            cursor: "pointer",
+          }}
+        >
+          Not really
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
     </div>
   );
