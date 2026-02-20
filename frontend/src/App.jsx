@@ -18,7 +18,7 @@ import Feedback from "./pages/Feedback.jsx";
 import { Mic, AudioWaveform, Target, Settings as SettingsIcon, MessageCircle } from "lucide-react";
 import SplashSequence from "./components/SplashSequence";
 import { usePostHog } from "@posthog/react";
-import Paywall from "./pages/Paywall";
+import Paywall from "./pages/Paywall.jsx";
 
 
 
@@ -144,6 +144,8 @@ function isOnboardingDone() {
 
 
 function AppInner() {
+  console.log("APPINNER LOADED", window.location.href);
+
     const posthog = usePostHog();
 
   useEffect(() => {
@@ -323,8 +325,8 @@ useEffect(() => {
                 <Route path="/coach-my-text" element={<PracticeMyTextPage />} />
                 <Route path="/weakness" element={<WeaknessLab />} />
                 <Route path="/bookmarks" element={<Bookmarks />} />
+               <Route path="/pro" element={<Paywall />} />
                 <Route path="*" element={<div />} />
-                <Route path="/pro" element={<Paywall />} />
               </Routes>
             </Suspense>
           </main>
