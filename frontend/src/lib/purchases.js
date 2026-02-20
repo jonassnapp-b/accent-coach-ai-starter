@@ -1,30 +1,66 @@
-import { NativePurchases } from '@capgo/native-purchases';
+// frontend/src/lib/purchases.js
 
-const PRODUCT_IDS = [
-  'fluentup.pro.monthly',
-  'fluentup.pro.yearly'
-];
-
-export async function initPurchases() {
-  await NativePurchases.initialize({
-    debug: true
-  });
+function isNative() {
+  return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
 }
 
-export async function loadProducts() {
-  const products = await NativePurchases.getProducts({
-    productIdentifiers: PRODUCT_IDS
-  });
-  return products;
+let _nativePurchasesPromise = null;
+
+async function getNativePurchases() {
+  if (!isNative()) return null;
+
+  // Lazy-import ONLY on native, so Vite/Rollup web build doesn't need the module
+  if (!_nativePurchasesPromise) {
+    _nativePurchasesPromise = import("@capgo/native-purchases").catch(() => null);
+  }
+
+  const mod = await _nativePurchasesPromise;
+  // Capgo exports can vary; try common shapes safely
+  return mod?.Purchases || mod?.default?.Purchases || mod?.default || mod || null;
 }
 
-export async function buyProduct(productId) {
-  const result = await NativePurchases.purchaseProduct({
-    productIdentifier: productId
-  });
-  return result;
+/**
+ * Optional: call this once on app start (native only)
+ */
+export async function purchasesConfigure({ apiKey } = {}) {
+  const Purchases = await getNativePurchases();
+  if (!Purchases) return { ok: false, reason: "not_native" };
+
+  // Adjust if your plugin uses different method names
+  if (apiKey && Purchases.configure) {
+    await Purchases.configure({ apiKey });
+  }
+  return { ok: true };
 }
 
-export async function restorePurchases() {
-  return await NativePurchases.restorePurchases();
+export async function purchasesGetOfferings() {
+  const Purchases = await getNativePurchases();
+  if (!Purchases) return null;
+  if (!Purchases.getOfferings) return null;
+  return Purchases.getOfferings();
+}
+
+export async function purchasesPurchaseProduct(productId) {
+  const Purchases = await getNativePurchases();
+  if (!Purchases) return { ok: false, reason: "not_native" };
+  if (!Purchases.purchaseProduct) return { ok: false, reason: "missing_method" };
+
+  const res = await Purchases.purchaseProduct({ productIdentifier: productId });
+  return { ok: true, res };
+}
+
+export async function purchasesRestore() {
+  const Purchases = await getNativePurchases();
+  if (!Purchases) return { ok: false, reason: "not_native" };
+  if (!Purchases.restorePurchases) return { ok: false, reason: "missing_method" };
+
+  const res = await Purchases.restorePurchases();
+  return { ok: true, res };
+}
+
+export async function purchasesGetCustomerInfo() {
+  const Purchases = await getNativePurchases();
+  if (!Purchases) return null;
+  if (!Purchases.getCustomerInfo) return null;
+  return Purchases.getCustomerInfo();
 }
