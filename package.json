@@ -3,16 +3,18 @@
   "private": true,
   "type": "module",
   "devDependencies": {
-    "@capacitor/cli": "^7.4.3",
+    "@capacitor/cli": "^8.1.0",
     "globby": "^15.0.0",
     "nodemon": "^3.1.11",
     "vercel": "^48.4.0"
   },
   "dependencies": {
     "@capacitor-community/in-app-review": "^7.1.0",
-    "@capacitor/core": "^7.4.3",
-    "@capacitor/ios": "^7.4.3",
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
+    "@capacitor/ios": "^8.1.0",
     "@capacitor/push-notifications": "^7.0.3",
+    "@capgo/native-purchases": "^8.0.24",
     "@posthog/react": "^1.8.0",
     "@upstash/redis": "^1.35.6",
     "capacitor-voice-recorder": "^7.0.6",

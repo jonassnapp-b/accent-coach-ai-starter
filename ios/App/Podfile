@@ -1,6 +1,6 @@
 source 'https://github.com/CocoaPods/Specs.git'   # <- Brug Git specs i stedet for CDN
 
-platform :ios, '14.0'                             # vælg din minimum iOS-version
+platform :ios, '15.0'                             # vælg din minimum iOS-version
 use_frameworks!
 
 require_relative '../../node_modules/@capacitor/ios/scripts/pods_helpers'
@@ -14,6 +14,7 @@ def capacitor_pods
   pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
   pod 'CapacitorCommunityInAppReview', :path => '../../node_modules/@capacitor-community/in-app-review'
   pod 'CapacitorPushNotifications', :path => '../../node_modules/@capacitor/push-notifications'
+  pod 'CapgoNativePurchases', :path => '../../node_modules/@capgo/native-purchases'
   pod 'CapacitorVoiceRecorder', :path => '../../node_modules/capacitor-voice-recorder'
 end
 
@@ -24,3 +25,10 @@ target 'App' do
   pod 'FirebaseAnalytics'
 end
 
+post_install do |installer|
+  installer.pods_project.targets.each do |t|
+    t.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+    end
+  end
+end
