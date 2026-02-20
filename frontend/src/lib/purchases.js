@@ -11,7 +11,8 @@ async function getNativePurchases() {
 
   // Lazy-import ONLY on native, so Vite/Rollup web build doesn't need the module
   if (!_nativePurchasesPromise) {
-    _nativePurchasesPromise = import("@capgo/native-purchases").catch(() => null);
+    const moduleName = "@capgo/native-purchases";
+_nativePurchasesPromise = import(/* @vite-ignore */ moduleName).catch(() => null);
   }
 
   const mod = await _nativePurchasesPromise;
