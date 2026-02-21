@@ -90,18 +90,35 @@ const selectedProduct = selected === "fluentup.pro.monthly" ? monthly : yearly;
 const selectedPeriodLabel = selected === "fluentup.pro.monthly" ? "per month" : "per year";
 return (
   <div
-    style={{
-      minHeight: "100vh",
-      background: "#fff",
-      padding: 18,
-      paddingTop: "calc(var(--safe-top) + 18px)",
-      display: "flex",
-      justifyContent: "center",
-    }}
-  >
-    <div style={{ width: "100%", maxWidth: 520 }}>
-      {/* top right close */}
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+  style={{
+    height: "100vh",
+    background: "#fff",
+    display: "flex",
+    flexDirection: "column",
+  }}
+>
+    <div
+  style={{
+    width: "100%",
+    maxWidth: 520,
+    margin: "0 auto",
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+  }}
+>
+    {/* TOP (sticky) */}
+<div
+  style={{
+    position: "sticky",
+    top: 0,
+    background: "#fff",
+    zIndex: 10,
+    padding: 18,
+    paddingTop: "calc(var(--safe-top) + 18px)",
+  }}
+>
+  <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button
           onClick={() => (ret ? nav(ret) : nav(-1))}
           aria-label="Close"
@@ -136,9 +153,18 @@ return (
         <br />
         7-day trial works
       </h1>
+      </div>
 
-      {/* timeline */}
-      <div style={{ display: "flex", gap: 16, alignItems: "flex-start", padding: "6px 2px" }}>
+      {/* MID (scroll) */}
+<div
+  style={{
+    flex: 1,
+    overflowY: "auto",
+    padding: "0 18px",
+  }}
+>
+  {/* timeline */}
+<div style={{ display: "flex", gap: 16, alignItems: "flex-start", padding: "6px 2px" }}>
         {/* left gradient bar */}
         <div style={{ width: 44, display: "flex", justifyContent: "center" }}>
           <div
@@ -260,9 +286,17 @@ background: "linear-gradient(180deg, #64B5F6 0%, #2196F3 40%, #1E88E5 70%, #1565
   {selectedProduct?.priceString ? `${selectedProduct.priceString} ${selectedPeriodLabel}` : "—"}
 </div>
       </div>
-
-      {/* remind toggle (UI only) */}
-      <RemindRow />
+</div>
+   {/* BOTTOM (sticky) */}
+<div
+  style={{
+    position: "sticky",
+    bottom: 0,
+    background: "#fff",
+    padding: 18,
+  }}
+>
+  <RemindRow />
 
       {/* CTA */}
       <button
@@ -370,7 +404,7 @@ background: "linear-gradient(180deg, #64B5F6 0%, #2196F3 40%, #1E88E5 70%, #1565
     Privacy
   </button>
 </div>
-
+</div>
       {/* debug (valgfrit) */}
    
     </div>
