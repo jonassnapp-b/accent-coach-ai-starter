@@ -1,9 +1,8 @@
-// This file is safe for Vercel. It selects the right implementation per platform.
+// frontend/src/lib/purchases.js
 import { Capacitor } from "@capacitor/core";
 
 const isNative = Capacitor?.isNativePlatform?.() ?? false;
 
-// top-level await is supported in Vite
 const mod = isNative
   ? await import("./purchases.native.js")
   : await import("./purchases.web.js");

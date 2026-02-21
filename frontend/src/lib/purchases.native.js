@@ -1,10 +1,24 @@
+// frontend/src/lib/purchases.native.js
 import { Capacitor } from "@capacitor/core";
-import { NativePurchases, PURCHASE_TYPE } from "@capgo/native-purchases";
 
 export const SUBS_IDS = ["fluentup.pro.monthly", "fluentup.pro.yearly"];
 
 function isNative() {
   return Capacitor?.isNativePlatform?.() ?? false;
+}
+
+let capgoPromise = null;
+async function getCapgo() {
+  if (!isNative()) return null;
+  if (!capgoPromise) {
+    capgoPromise = import(/* @vite-ignore */ "@capgo/native-purchases");
+  }
+  try {
+    return await capgoPromise;
+  } catch (e) {
+    console.log("[Purchases] Failed to load @capgo/native-purchases:", e);
+    return null;
+  }
 }
 
 function normalizeProduct(p) {
@@ -16,19 +30,32 @@ function normalizeProduct(p) {
 
 export async function initPurchases() {
   if (!isNative()) return { ok: false, reason: "not_native" };
-  const sup = await NativePurchases.isBillingSupported();
-  if (!sup?.isBillingSupported) return { ok: false, reason: "billing_not_supported" };
-  return { ok: true };
+  const capgo = await getCapgo();
+  if (!capgo) return { ok: false, reason: "capgo_missing" };
+
+  const { NativePurchases } = capgo;
+  try {
+    const sup = await NativePurchases.isBillingSupported();
+    if (!sup?.isBillingSupported) return { ok: false, reason: "billing_not_supported" };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: "init_failed", error: String(e?.message ?? e) };
+  }
 }
 
 export async function loadProducts() {
   if (!isNative()) return [];
+  const capgo = await getCapgo();
+  if (!capgo) return [];
+
+  const { NativePurchases, PURCHASE_TYPE } = capgo;
   try {
     const res = await NativePurchases.getProducts({
       productIdentifiers: SUBS_IDS,
       productType: PURCHASE_TYPE.SUBS,
     });
-    return (res?.products ?? []).map(normalizeProduct).filter((p) => !!p.id);
+    const raw = res?.products ?? [];
+    return raw.map(normalizeProduct).filter((p) => !!p.id);
   } catch (e) {
     console.log("[Purchases] loadProducts error:", e);
     return [];
@@ -37,6 +64,10 @@ export async function loadProducts() {
 
 export async function buyProduct(productId) {
   if (!isNative()) return { ok: false, reason: "not_native" };
+  const capgo = await getCapgo();
+  if (!capgo) return { ok: false, reason: "capgo_missing" };
+
+  const { NativePurchases, PURCHASE_TYPE } = capgo;
   try {
     const transaction = await NativePurchases.purchaseProduct({
       productIdentifier: productId,
@@ -53,6 +84,10 @@ export async function buyProduct(productId) {
 
 export async function restorePurchases() {
   if (!isNative()) return { ok: false, reason: "not_native" };
+  const capgo = await getCapgo();
+  if (!capgo) return { ok: false, reason: "capgo_missing" };
+
+  const { NativePurchases } = capgo;
   try {
     await NativePurchases.restorePurchases();
     return { ok: true };
@@ -63,6 +98,10 @@ export async function restorePurchases() {
 
 export async function getProStatus() {
   if (!isNative()) return { isPro: false, activeProductIds: [] };
+  const capgo = await getCapgo();
+  if (!capgo) return { isPro: false, activeProductIds: [], reason: "capgo_missing" };
+
+  const { NativePurchases, PURCHASE_TYPE } = capgo;
   try {
     const res = await NativePurchases.getPurchases({ productType: PURCHASE_TYPE.SUBS });
     const purchases = res?.purchases ?? [];
@@ -72,7 +111,6 @@ export async function getProStatus() {
     );
     return { isPro: activeProductIds.length > 0, activeProductIds, _raw: purchases };
   } catch (e) {
-    console.log("[Purchases] getProStatus error:", e);
     return { isPro: false, activeProductIds: [], error: String(e?.message ?? e) };
   }
 }
