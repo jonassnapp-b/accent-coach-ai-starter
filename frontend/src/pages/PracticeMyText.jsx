@@ -7,6 +7,7 @@ import * as sfx from "../lib/sfx.js";
 import PhonemeFeedback, { pfColorForPct } from "../components/PhonemeFeedback.jsx";
 import { bumpSessionsCount, shouldAskForRating, markAskedForRating, triggerNativeRatingPrompt } from "../lib/ratingGate.js";
 import { usePostHog } from "@posthog/react";
+import { useProStatus } from "../providers/PurchasesProvider.jsx";
 
 
 
@@ -14,6 +15,35 @@ const IS_PROD = !!import.meta?.env?.PROD;
 const RETRY_INTENT_KEY = "ac_my_text_retry_intent_v1";
 const TROPHY_REACHED_PCT = 95; // justér hvis du vil gøre den hårdere/lettere
 const TROPHY_REACHED_KEY = "ac_my_text_trophy_reached_v1";
+
+const MAX_FREE_PRACTICE_ATTEMPTS = 3;
+
+function attemptsKeyForToday() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `ac_practice_attempts_v1:${yyyy}-${mm}-${dd}`;
+}
+
+function readAttemptsToday() {
+  try {
+    const n = Number(localStorage.getItem(attemptsKeyForToday()) || "0");
+    return Number.isFinite(n) ? Math.max(0, n) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function incAttemptsToday() {
+  try {
+    const next = readAttemptsToday() + 1;
+    localStorage.setItem(attemptsKeyForToday(), String(next));
+    return next;
+  } catch {
+    return null;
+  }
+}
 
 function hasTrophyCelebrated() {
   try {
@@ -1269,6 +1299,21 @@ export default function PracticeMyText() {
   const backRoute = location?.state?.backRoute || (mode === "coach" ? "/coach" : "/practice");
   const title = mode === "coach" ? "Coach My Text" : "Practice My Text";
   const RESULT_KEY = mode === "coach" ? "ac_coach_my_text_result_v1" : "ac_practice_my_text_result_v1";
+  const { isPro } = useProStatus();
+const [usedAttempts, setUsedAttempts] = useState(() => {
+  return (!isPro && mode === "practice") ? readAttemptsToday() : 0;
+});
+
+useEffect(() => {
+  setUsedAttempts((!isPro && mode === "practice") ? readAttemptsToday() : 0);
+}, [isPro, mode]);
+
+
+  const leftAttempts = useMemo(() => {
+    return (!isPro && mode === "practice")
+      ? Math.max(0, MAX_FREE_PRACTICE_ATTEMPTS - usedAttempts)
+      : 0;
+  }, [isPro, mode, usedAttempts]);
 
 
   const MAX_LEN = 120;
@@ -2136,32 +2181,49 @@ sendToServer(blob, localUrl);
 
   }
 
-  async function startPronunciationRecord() {
-    if (!refText.trim()) {
-        setTrophyCelebration(false);
+async function startPronunciationRecord() {
+  // 1) Tom tekst => stop her
+  if (!refText.trim()) {
+    setTrophyCelebration(false);
+    setErr("Type something first.");
+    return;
+  }
 
-      setErr("Type something first.");
+  // 2) Gate: tjek limit (men INGEN increment endnu)
+  if (mode === "practice" && !isPro) {
+    const used = readAttemptsToday();
+    if (used >= MAX_FREE_PRACTICE_ATTEMPTS) {
+      nav(`/pro?src=practice_limit&return=${encodeURIComponent("/practice-my-text")}`);
       return;
     }
-    try {
-      setErr("");
-      posthog?.capture("practice_my_text_started", {
-  mode,
-  accent: accentUi,
-});
-
-      await ensureMic();
-      chunksRef.current = [];
-      mediaRecRef.current.start();
-      setIsRecording(true);
-      if (canPlaySfx) sfx.warm();
-    } catch (e) {
-      if (!IS_PROD) setErr("Microphone error: " + (e?.message || String(e)));
-      else setErr("Microphone access is blocked. Please allow it and try again.");
-      setIsRecording(false);
-      if (canPlaySfx) sfx.softFail();
-    }
   }
+
+  // 3) Start recording normalt
+  try {
+    setErr("");
+    posthog?.capture("practice_my_text_started", { mode, accent: accentUi });
+
+    await ensureMic();               // ✅ først mic permission + recorder klar
+    chunksRef.current = [];
+
+    // ✅ NU tæller vi et attempt (kun hvis mic faktisk blev klar)
+    if (mode === "practice" && !isPro) {
+      const next = incAttemptsToday();     // din funktion returnerer next eller null
+      if (typeof next === "number") setUsedAttempts(next); // ✅ live UI update
+    }
+
+    mediaRecRef.current.start();      // ✅ lige før vi starter optagelsen
+    setIsRecording(true);
+    if (canPlaySfx) sfx.warm();
+  } catch (e) {
+    if (!IS_PROD) setErr("Microphone error: " + (e?.message || String(e)));
+    else setErr("Microphone access is blocked. Please allow it and try again.");
+    setIsRecording(false);
+    if (canPlaySfx) sfx.softFail();
+  }
+}
+
+
 
   function stopPronunciationRecord() {
     try {
@@ -2420,19 +2482,40 @@ boxShadow: PAGE_SHADOW,
     </button>
 
     <div
+  style={{
+    fontSize: 28,
+    fontWeight: 900,
+    letterSpacing: -0.25,
+    lineHeight: 1.1,
+    textAlign: "center",
+    flex: "1 1 auto",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 6,
+  }}
+>
+  <div>{title}</div>
+
+  {/* ✅ “x/3 tilbag(e)” */}
+  {!isPro && mode === "practice" && (
+    <div
       style={{
-       fontSize: 28,
-fontWeight: 900,      // ✅ mindre “banner-ish”
-letterSpacing: -0.25, // ✅ mindre aggressiv tracking
-
-
-        lineHeight: 1.1,
-        textAlign: "center",
-        flex: "1 1 auto",
+        fontSize: 13,
+        fontWeight: 850,
+        color: HEADER_MUTED,
+        padding: "6px 10px",
+        borderRadius: 999,
+        border: `1px solid ${HEADER_BORDER}`,
+        background: HEADER_SURFACE,
       }}
     >
-      {title}
+      {usedAttempts}/{MAX_FREE_PRACTICE_ATTEMPTS} today
+      {/* eller: {leftAttempts} left today */}
     </div>
+  )}
+</div>
+
 
     <div style={{ position: "relative", flex: "0 0 auto" }}>
       <select

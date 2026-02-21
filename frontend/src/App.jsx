@@ -15,10 +15,11 @@ import { SettingsProvider } from "./lib/settings-store.jsx";
 import Record from "./pages/Record.jsx";
 import Feedback from "./pages/Feedback.jsx";
 
-import { Mic, AudioWaveform, Target, Settings as SettingsIcon, MessageCircle } from "lucide-react";
+import { Mic, AudioWaveform, Settings as SettingsIcon, MessageCircle } from "lucide-react";
 import SplashSequence from "./components/SplashSequence";
 import { usePostHog } from "@posthog/react";
 import Paywall from "./pages/Paywall.jsx";
+import { PurchasesProvider } from "./providers/PurchasesProvider.jsx";
 
 
 
@@ -165,10 +166,7 @@ useEffect(() => {
   idle(() => warmBackendOnce());
 }, [showSplash]);
 
-  const location = useLocation();
-  const navigate = useNavigate();
-const showProBtn = location.pathname !== "/pro";
-
+    
   const [scenarioOverlayOpen, setScenarioOverlayOpen] = useState(false);
 const showTabs = !scenarioOverlayOpen;
 
@@ -285,29 +283,7 @@ useEffect(() => {
 
       {!showSplash && (
         <div className="app-shell">
-          {showProBtn && (
-  <button
-    type="button"
-    onClick={() => navigate("/pro")}
-    style={{
-      position: "fixed",
-      top: 12,
-      right: 12,
-      zIndex: 9999,
-      padding: "8px 12px",
-      borderRadius: 999,
-      border: "1px solid rgba(0,0,0,0.12)",
-      background: "rgba(255,255,255,0.92)",
-      backdropFilter: "blur(10px)",
-      WebkitBackdropFilter: "blur(10px)",
-      fontWeight: 700,
-      fontSize: 13,
-      lineHeight: "16px",
-    }}
-  >
-    Pro
-  </button>
-)}
+          
 
           <main className="content with-bottom-tabs">
             <Suspense fallback={<div style={{padding:16, color:"var(--muted)"}}>Loading…</div>}>
@@ -364,9 +340,11 @@ useEffect(() => {
 export default function App() {
   return (
     <SettingsProvider>
-      <BrowserRouter>
-        <AppInner />
-      </BrowserRouter>
+      <PurchasesProvider>
+        <BrowserRouter>
+          <AppInner />
+        </BrowserRouter>
+      </PurchasesProvider>
     </SettingsProvider>
   );
 }

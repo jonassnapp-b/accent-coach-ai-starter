@@ -1,46 +1,50 @@
 // frontend/src/lib/purchases.js
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Capacitor } from "@capacitor/core";
+import { NativePurchases, PURCHASE_TYPE } from "@capgo/native-purchases";
+
+export const SUBS_IDS = ["fluentup.pro.monthly", "fluentup.pro.yearly"];
 
 function isNative() {
   return Capacitor?.isNativePlatform?.() ?? false;
 }
 
-// IMPORTANT: plugin name must match the native plugin registration name.
-// For CapgoNativePurchases, this is typically "CapgoNativePurchases".
-const NativePurchases = registerPlugin("CapgoNativePurchases");
+function normalizeProduct(p) {
+  // Capgo kan returnere lidt forskellige shapes på tværs af versioner/platforme
+  const id =
+    p?.identifier ??
+    p?.productIdentifier ??
+    p?.productId ??
+    p?.id;
 
-function isObj(x) {
-  return x && typeof x === "object";
+  const title =
+    p?.title ??
+    p?.localizedTitle ??
+    p?.displayName ??
+    "";
+
+  const priceString =
+    p?.priceString ??
+    p?.localizedPrice ??
+    p?.price ??
+    "";
+
+  return {
+    id,
+    title,
+    priceString,
+    _raw: p,
+  };
 }
 
-function pickFirst(obj, keys) {
-  for (const k of keys) {
-    if (obj && obj[k] != null) return obj[k];
-  }
-  return undefined;
-}
-
-// --- Public API matching what your Paywall.jsx expects ---
-
-export async function initPurchases({ apiKey } = {}) {
+export async function initPurchases() {
   if (!isNative()) return { ok: false, reason: "not_native" };
 
-  // try common configure shapes
   try {
-    if (apiKey) {
-      if (typeof NativePurchases.configure === "function") {
-        await NativePurchases.configure({ apiKey });
-      } else if (typeof NativePurchases.setApiKey === "function") {
-        await NativePurchases.setApiKey({ apiKey });
-      } else if (typeof NativePurchases.setup === "function") {
-        await NativePurchases.setup({ apiKey });
-      } else {
-        // no configure method found; still ok to continue for now
-      }
-    }
+    const sup = await NativePurchases.isBillingSupported();
+    if (!sup?.isBillingSupported) return { ok: false, reason: "billing_not_supported" };
     return { ok: true };
   } catch (e) {
-    return { ok: false, reason: "configure_failed", error: String(e?.message || e) };
+    return { ok: false, reason: "init_failed", error: String(e?.message ?? e) };
   }
 }
 
@@ -48,71 +52,44 @@ export async function loadProducts() {
   if (!isNative()) return [];
 
   try {
-    // try offerings methods
-    if (typeof NativePurchases.getOfferings === "function") {
-      const offerings = await NativePurchases.getOfferings();
-      // normalize common shapes
-      const current =
-        pickFirst(offerings, ["current", "currentOffering", "offering"]) || offerings;
+    const res = await NativePurchases.getProducts({
+      productIdentifiers: SUBS_IDS,
+      productType: PURCHASE_TYPE.SUBS,
+    });
 
-      const pkgs =
-        pickFirst(current, ["availablePackages", "packages", "available_packages"]) || [];
+    const rawProducts = res?.products ?? [];
+    const products = rawProducts
+      .map(normalizeProduct)
+      .filter((p) => !!p.id); // vigtigt: kun gyldige
 
-      // return a list your UI can render
-      if (Array.isArray(pkgs)) {
-        return pkgs.map((p) => {
-          const product =
-            pickFirst(p, ["product", "storeProduct", "store_product"]) || p;
-          return {
-            productIdentifier:
-              pickFirst(product, ["productIdentifier", "identifier", "id"]) ||
-              pickFirst(p, ["productIdentifier", "identifier", "id"]),
-            title: pickFirst(product, ["title", "name"]) || "Pro",
-            price:
-              pickFirst(product, ["priceString", "price", "price_string"]) || "",
-            _raw: p,
-          };
-        }).filter(x => !!x.productIdentifier);
-      }
-      return [];
-    }
+    console.log("[Purchases] loadProducts raw:", rawProducts);
+    console.log("[Purchases] loadProducts normalized:", products);
 
-    // fallback: direct products call (some plugins expose this)
-    if (typeof NativePurchases.getProducts === "function") {
-      const res = await NativePurchases.getProducts();
-      if (!Array.isArray(res)) return [];
-      return res.map((p) => ({
-        productIdentifier: pickFirst(p, ["productIdentifier", "identifier", "id"]),
-        title: pickFirst(p, ["title", "name"]) || "Pro",
-        price: pickFirst(p, ["priceString", "price"]) || "",
-        _raw: p,
-      })).filter(x => !!x.productIdentifier);
-    }
-
-    return [];
+    return products;
   } catch (e) {
-    console.warn("[Purchases] loadProducts failed:", e);
+    console.log("[Purchases] loadProducts error:", e);
     return [];
   }
 }
 
 export async function buyProduct(productId) {
   if (!isNative()) return { ok: false, reason: "not_native" };
-  if (!productId) return { ok: false, reason: "missing_product_id" };
 
   try {
-    // try common method names
-    if (typeof NativePurchases.purchaseProduct === "function") {
-      const res = await NativePurchases.purchaseProduct({ productIdentifier: productId });
-      return { ok: true, res };
-    }
-    if (typeof NativePurchases.purchase === "function") {
-      const res = await NativePurchases.purchase({ productIdentifier: productId });
-      return { ok: true, res };
-    }
-    return { ok: false, reason: "missing_method" };
+    const transaction = await NativePurchases.purchaseProduct({
+      productIdentifier: productId,
+      productType: PURCHASE_TYPE.SUBS,
+      quantity: 1,
+    });
+
+    return { ok: true, transaction };
   } catch (e) {
-    return { ok: false, reason: "purchase_failed", error: String(e?.message || e) };
+    const msg = String(e?.message ?? e);
+    // bred cancel-detektion (Capacitor errors varierer)
+    if (msg.toLowerCase().includes("cancel")) {
+      return { ok: false, reason: "cancelled" };
+    }
+    return { ok: false, reason: "purchase_failed", error: msg };
   }
 }
 
@@ -120,33 +97,39 @@ export async function restorePurchases() {
   if (!isNative()) return { ok: false, reason: "not_native" };
 
   try {
-    if (typeof NativePurchases.restorePurchases === "function") {
-      const res = await NativePurchases.restorePurchases();
-      return { ok: true, res };
-    }
-    if (typeof NativePurchases.restore === "function") {
-      const res = await NativePurchases.restore();
-      return { ok: true, res };
-    }
-    return { ok: false, reason: "missing_method" };
+    await NativePurchases.restorePurchases();
+    return { ok: true };
   } catch (e) {
-    return { ok: false, reason: "restore_failed", error: String(e?.message || e) };
+    return { ok: false, reason: "restore_failed", error: String(e?.message ?? e) };
   }
 }
 
-export async function getCustomerInfo() {
-  if (!isNative()) return null;
+/**
+ * Pro entitlement (client-side):
+ * - korrekt ift. sandbox/testflight, og “ikke bare localStorage=true”
+ * - production-grade kan senere udvides med server verification.
+ */
+export async function getProStatus() {
+  if (!isNative()) return { isPro: false, activeProductIds: [] };
 
   try {
-    if (typeof NativePurchases.getCustomerInfo === "function") {
-      return await NativePurchases.getCustomerInfo();
-    }
-    if (typeof NativePurchases.getPurchaserInfo === "function") {
-      return await NativePurchases.getPurchaserInfo();
-    }
-    return null;
+    const res = await NativePurchases.getPurchases({ productType: PURCHASE_TYPE.SUBS });
+    const purchases = res?.purchases ?? [];
+
+    // Capgo iOS subs har typisk isActive
+    const active = purchases.filter((p) => p?.isActive);
+
+    const activeProductIds = Array.from(
+      new Set(
+        active
+          .map((p) => p?.productIdentifier ?? p?.identifier ?? p?.id)
+          .filter(Boolean)
+      )
+    );
+
+    return { isPro: activeProductIds.length > 0, activeProductIds, _raw: purchases };
   } catch (e) {
-    console.warn("[Purchases] getCustomerInfo failed:", e);
-    return null;
+    console.log("[Purchases] getProStatus error:", e);
+    return { isPro: false, activeProductIds: [], error: String(e?.message ?? e) };
   }
 }

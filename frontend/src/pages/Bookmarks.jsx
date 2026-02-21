@@ -3,8 +3,22 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bookmark, Trash2 } from "lucide-react";
 import { getBookmarks, setBookmarks } from "../lib/bookmarks";
+import { Navigate, useLocation } from "react-router-dom";
+import { useProStatus } from "../providers/PurchasesProvider.jsx";
 
 export default function Bookmarks() {
+  const { isPro } = useProStatus();
+  const location = useLocation();
+
+  if (!isPro) {
+    return (
+      <Navigate
+        to={`/pro?src=bookmarks_locked&return=${encodeURIComponent(location.pathname)}`}
+        replace
+      />
+    );
+  }
+
   const navigate = useNavigate();
   const [items, setItems] = useState(getBookmarks());
 
@@ -92,7 +106,7 @@ export default function Bookmarks() {
 
 <div className="h-2" />
 
-        {/* Panel */}
+        {/* Panel */}x
         <div className="panel">
           {items.length === 0 ? (
             <div style={cMuted}>

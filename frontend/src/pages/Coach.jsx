@@ -7,6 +7,8 @@ import { ingestLocalPhonemeScores } from "../lib/localPhonemeStats.js";
 import wordsImg from "../assets/words.png";
 import difficultyImg from "../assets/difficulty.png";
 import accentImg from "../assets/accent.png";
+import { useNavigate } from "react-router-dom";
+import { useProStatus } from "../providers/PurchasesProvider.jsx";
 
 
 /* ------------ API base (web + native) ------------ */
@@ -107,6 +109,12 @@ function cycleValue(options, current, dir) {
 
 export default function Coach() {
   const { settings } = useSettings();
+  const nav = useNavigate();
+  const { isPro } = useProStatus();
+
+  function openPaywall(src) {
+    nav(`/pro?src=${encodeURIComponent(src)}&return=/coach`);
+  }
 
   /* ---------------- UI tokens ---------------- */
   const LIGHT_TEXT = "rgba(17,24,39,0.92)";
@@ -136,6 +144,12 @@ const [setupStep, setSetupStep] = useState(0); // 0=mode, 1=difficulty, 2=accent
 
 // ---------- Challenge mode (optional) ----------
 const [challengeOn, setChallengeOn] = useState(false);
+useEffect(() => {
+  if (!isPro && challengeOn) {
+    setChallengeOn(false);
+  }
+}, [isPro, challengeOn]);
+
 
 // “Green” definition + feel-good fairness: must hit green once within the timer.
 const CHALLENGE_GREEN = 85;
@@ -1121,10 +1135,15 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
 
     <button
       type="button"
-      onClick={() => {
+    onClick={() => {
+  if (!isPro) {
+    openPaywall("challenge_locked");
+    return;
+  }
   setChallengeOn(true);
   setSetupStep(0);
 }}
+
       style={{
         height: 36,
         padding: "0 14px",
@@ -1135,13 +1154,16 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
         letterSpacing: -0.15,
         background: challengeOn ? "rgba(33,150,243,0.95)" : "transparent",
         color: challengeOn ? "white" : "rgba(17,24,39,0.72)",
+        opacity: !isPro ? 0.75 : 1,
+        filter: !isPro ? "saturate(0.9)" : "none",
+
       }}
     >
-      Challenge
+  Challenge {!isPro ? "• Pro" : ""}
     </button>
   </div>
 
-  {challengeOn ? (
+{isPro && challengeOn ? (
     <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
       <div style={ruleBadge}>
         <span style={greenDot} />
@@ -1353,7 +1375,7 @@ style={{
 >
   {metaText}
 
-{challengeOn ? (
+{isPro && challengeOn ? (
   <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
    <div style={ruleBadge}>
   <span style={greenDot} />
@@ -1572,7 +1594,7 @@ style={{
               {lastAttempt.overall}%
             </div>
             {/* threshold marker (85%) */}
-{challengeOn ? (
+{isPro && challengeOn ? (
   <div
     style={{
       position: "absolute",

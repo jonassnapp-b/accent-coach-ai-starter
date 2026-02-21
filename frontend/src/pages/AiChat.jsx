@@ -7,6 +7,7 @@ import { AI_CHAT_LEVELS } from "../data/aiChatScenarios.js";
 import { pfColorForPct } from "../components/PhonemeFeedback.jsx";
 import { analyzeSpeechPSM } from "../lib/analyzeSpeechPSM.js";
 import { useNavigate } from "react-router-dom";
+import { useProStatus } from "../providers/PurchasesProvider.jsx";
 
 
 function isNative() {
@@ -51,6 +52,13 @@ function writeProgress(scenarioId, n) {
 }
 
 export default function AiChat() {
+  const nav = useNavigate();
+const { isPro } = useProStatus();
+
+function openPaywallForLevel() {
+  nav(`/pro?src=level_locked&return=/ai-chat`);
+}
+
   const { settings } = useSettings();
   const accentUi = settings?.accentDefault || "en_us";
 
@@ -154,9 +162,18 @@ useEffect(() => {
                 return (
                   <div key={`lvl_${lvl.level}`} style={{ marginTop: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ fontSize: 40, fontWeight: 950, letterSpacing: -0.6, color: "rgba(17,24,39,0.92)" }}>
-                        Level {lvl.level}
-                      </div>
+                     <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+  <div style={{ fontSize: 40, fontWeight: 950, letterSpacing: -0.6, color: "rgba(17,24,39,0.92)" }}>
+    Level {lvl.level}
+  </div>
+
+  {!isPro && Number(lvl.level) > 1 && (
+    <div style={{ fontSize: 12, fontWeight: 950, opacity: 0.65, border: "1px solid rgba(17,24,39,0.18)", padding: "4px 8px", borderRadius: 999 }}>
+      Premium
+    </div>
+  )}
+</div>
+
 
                       <div
                         style={{
@@ -177,7 +194,15 @@ useEffect(() => {
                           <button
                             key={s.id}
                             type="button"
-                            onClick={() => setActiveScenario({ ...s, level: lvl.level })}
+                          onClick={() => {
+  // ✅ Free tier: only Level 1
+  if (!isPro && Number(lvl.level) > 1) {
+    openPaywallForLevel();
+    return;
+  }
+  setActiveScenario({ ...s, level: lvl.level });
+}}
+
                             style={{
                               border: "none",
                               textAlign: "left",

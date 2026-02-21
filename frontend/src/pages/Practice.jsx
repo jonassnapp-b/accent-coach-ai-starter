@@ -6,10 +6,37 @@ import { ChevronLeft, Mic, Target, Bookmark, StopCircle } from "lucide-react";
 import { getBookmarks } from "../lib/bookmarks";
 import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
+import { useProStatus } from "../providers/PurchasesProvider.jsx";
 
 
 const IS_PROD = !!import.meta?.env?.PROD;
 const RESULT_KEY = "ac_practice_my_text_result_v1";
+
+const PRACTICE_DAILY_LIMIT_FREE = 3;
+const practiceKeyForToday = () => {
+  const d = new Date();
+  const day = d.toISOString().slice(0, 10); // YYYY-MM-DD
+  return `ac_practice_attempts_${day}`;
+};
+
+function getAttemptsUsedToday() {
+  try {
+    return Number(localStorage.getItem(practiceKeyForToday()) || 0);
+  } catch {
+    return 0;
+  }
+}
+
+function incrementAttemptsToday() {
+  try {
+    const key = practiceKeyForToday();
+    const n = Number(localStorage.getItem(key) || 0);
+    localStorage.setItem(key, String(n + 1));
+    return n + 1;
+  } catch {
+    return null;
+  }
+}
 
 /* ------------ API base (web + native) ------------ */
 function isNative() {
@@ -81,7 +108,22 @@ function sanitizeTextForSubmit(raw) {
 
 export default function Practice() {
   const nav = useNavigate();
-    const { settings } = useSettings();
+  const { isPro } = useProStatus();
+
+const [attemptsUsed, setAttemptsUsed] = useState(() => getAttemptsUsedToday());
+
+useEffect(() => {
+  // Opdatér når man kommer tilbage til skærmen (ny dag / restore / osv.)
+  setAttemptsUsed(getAttemptsUsedToday());
+}, []);
+
+const attemptsLeft = isPro ? Infinity : Math.max(0, PRACTICE_DAILY_LIMIT_FREE - attemptsUsed);
+
+function openPaywall(src) {
+  nav(`/pro?src=${encodeURIComponent(src)}&return=/practice`);
+}
+
+      const { settings } = useSettings();
     const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
 useEffect(() => {
   setAccentUi(settings?.accentDefault || "en_us");
@@ -263,17 +305,23 @@ const progressDeg = (clampedLen / MAX_LEN) * 360;
         title: "Train your weakest sounds",
         subtitle: "Practice specific sounds",
         Icon: Target,
-        onPress: () => nav("/weakness"),
+        onPress: () => {
+  if (!isPro) return openPaywall("weakest_locked");
+  nav("/weakness");
+},
       },
       {
         key: "bookmarks",
         title: "Bookmarks",
       subtitle: `${bookmarkCount} saved`,
         Icon: Bookmark,
-        onPress: () => nav("/bookmarks"),
+onPress: () => {
+  if (!isPro) return openPaywall("bookmarks_locked");
+  nav("/bookmarks");
+},
       },
     ];
-  }, [nav, bookmarkCount]);
+  }, [nav, bookmarkCount, isPro]);
 function disposeRecorder() {
   try {
     mediaRecRef.current?.stream?.getTracks?.().forEach((t) => t.stop());
@@ -320,6 +368,18 @@ async function startRecording() {
   if (!cleaned) return;
 
   try {
+        // ✅ Free-tier gating: 3 attempts/day (count only when starting a recording)
+    if (!isPro) {
+      const used = getAttemptsUsedToday();
+      if (used >= PRACTICE_DAILY_LIMIT_FREE) {
+        openPaywall("practice_limit");
+        return;
+      }
+      const next = incrementAttemptsToday();
+      // Hold UI i sync
+      if (typeof next === "number") setAttemptsUsed(next);
+    }
+
     await ensureMic();
     chunksRef.current = [];
     mediaRecRef.current.start();
@@ -553,9 +613,18 @@ flex: 1,
                         <Mic style={{ width: 22, height: 22, color: "rgba(139,92,246,0.95)" }} />
                       </div>
 
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.2 }}>Practice Your Text</div>
-                      </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+  <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.2 }}>
+    Practice Your Text
+  </div>
+
+  {!isPro && (
+    <div style={{ marginTop: 4, opacity: 0.65, fontWeight: 800, fontSize: 13 }}>
+      {attemptsLeft} / {PRACTICE_DAILY_LIMIT_FREE} free attempts left today
+    </div>
+  )}
+</div>
+
                     </div>
                   </motion.div>
 

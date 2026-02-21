@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import phonemeSentenceIndex from "../lib/phonemeSentenceIndex.json";
 import { loadLocalPhonemeStats } from "../lib/localPhonemeStats.js";
+import { Navigate, useLocation } from "react-router-dom";
+import { useProStatus } from "../providers/PurchasesProvider.jsx";
 
 
 /* ------------ API base (web + native) ------------ */
@@ -272,6 +274,18 @@ function AccentDropdown({ value, onChange }) {
 }
 
 export default function WeaknessLab() {
+  const { isPro } = useProStatus();
+  const location = useLocation();
+
+  if (!isPro) {
+    return (
+      <Navigate
+        to={`/pro?src=weakest_locked&return=${encodeURIComponent(location.pathname)}`}
+        replace
+      />
+    );
+  }
+
   const navigate = useNavigate();
   const { settings } = useSettings();
 
