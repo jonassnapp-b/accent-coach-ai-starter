@@ -3,16 +3,12 @@ import { Capacitor } from "@capacitor/core";
 
 export const SUBS_IDS = ["fluentup.pro.monthly", "fluentup.pro.yearly"];
 
-function isNative() {
-  return Capacitor?.isNativePlatform?.() ?? false;
-}
+const isNative = Capacitor?.isNativePlatform?.() ?? false;
 
 let capgoPromise = null;
 async function getCapgo() {
-  if (!isNative()) return null;
-  if (!capgoPromise) {
-    capgoPromise = import(/* @vite-ignore */ "@capgo/native-purchases");
-  }
+  if (!isNative) return null;
+  if (!capgoPromise) capgoPromise = import(/* @vite-ignore */ "@capgo/native-purchases");
   try {
     return await capgoPromise;
   } catch (e) {
@@ -29,7 +25,7 @@ function normalizeProduct(p) {
 }
 
 export async function initPurchases() {
-  if (!isNative()) return { ok: false, reason: "not_native" };
+  if (!isNative) return { ok: false, reason: "not_native" };
   const capgo = await getCapgo();
   if (!capgo) return { ok: false, reason: "capgo_missing" };
 
@@ -44,7 +40,7 @@ export async function initPurchases() {
 }
 
 export async function loadProducts() {
-  if (!isNative()) return [];
+  if (!isNative) return [];
   const capgo = await getCapgo();
   if (!capgo) return [];
 
@@ -63,7 +59,7 @@ export async function loadProducts() {
 }
 
 export async function buyProduct(productId) {
-  if (!isNative()) return { ok: false, reason: "not_native" };
+  if (!isNative) return { ok: false, reason: "not_native" };
   const capgo = await getCapgo();
   if (!capgo) return { ok: false, reason: "capgo_missing" };
 
@@ -83,7 +79,7 @@ export async function buyProduct(productId) {
 }
 
 export async function restorePurchases() {
-  if (!isNative()) return { ok: false, reason: "not_native" };
+  if (!isNative) return { ok: false, reason: "not_native" };
   const capgo = await getCapgo();
   if (!capgo) return { ok: false, reason: "capgo_missing" };
 
@@ -97,7 +93,7 @@ export async function restorePurchases() {
 }
 
 export async function getProStatus() {
-  if (!isNative()) return { isPro: false, activeProductIds: [] };
+  if (!isNative) return { isPro: false, activeProductIds: [] };
   const capgo = await getCapgo();
   if (!capgo) return { isPro: false, activeProductIds: [], reason: "capgo_missing" };
 
