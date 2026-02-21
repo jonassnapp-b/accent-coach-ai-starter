@@ -11,6 +11,8 @@ function isNative() {
  * IMPORTANT:
  * - Never static-import @capgo/native-purchases in web builds (Vercel), it will fail.
  * - Only load it dynamically at runtime on native platforms.
+ *
+ * The @vite-ignore comment prevents Vite/Rollup from trying to resolve it at build time.
  */
 let capgoPromise = null;
 
@@ -18,7 +20,7 @@ async function getCapgo() {
   if (!isNative()) return null;
 
   if (!capgoPromise) {
-    capgoPromise = import("@capgo/native-purchases");
+    capgoPromise = import(/* @vite-ignore */ "@capgo/native-purchases");
   }
 
   try {
@@ -31,11 +33,8 @@ async function getCapgo() {
 
 function normalizeProduct(p) {
   const id = p?.identifier ?? p?.productIdentifier ?? p?.productId ?? p?.id;
-
   const title = p?.title ?? p?.localizedTitle ?? p?.displayName ?? "";
-
   const priceString = p?.priceString ?? p?.localizedPrice ?? p?.price ?? "";
-
   return { id, title, priceString, _raw: p };
 }
 
@@ -71,12 +70,7 @@ export async function loadProducts() {
     });
 
     const rawProducts = res?.products ?? [];
-    const products = rawProducts.map(normalizeProduct).filter((p) => !!p.id);
-
-    console.log("[Purchases] loadProducts raw:", rawProducts);
-    console.log("[Purchases] loadProducts normalized:", products);
-
-    return products;
+    return rawProducts.map(normalizeProduct).filter((p) => !!p.id);
   } catch (e) {
     console.log("[Purchases] loadProducts error:", e);
     return [];
@@ -137,11 +131,7 @@ export async function getProStatus() {
     const active = purchases.filter((p) => p?.isActive);
 
     const activeProductIds = Array.from(
-      new Set(
-        active
-          .map((p) => p?.productIdentifier ?? p?.identifier ?? p?.id)
-          .filter(Boolean)
-      )
+      new Set(active.map((p) => p?.productIdentifier ?? p?.identifier ?? p?.id).filter(Boolean))
     );
 
     return { isPro: activeProductIds.length > 0, activeProductIds, _raw: purchases };
