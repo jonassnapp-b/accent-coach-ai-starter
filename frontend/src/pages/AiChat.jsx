@@ -180,6 +180,8 @@ useEffect(() => {
       color: "rgba(17,24,39,0.92)",
       boxShadow: "0 8px 18px rgba(245,158,11,0.22)",
       letterSpacing: 0.2,
+            position: "relative",
+      top: -3,
     }}
   >
     Premium
