@@ -181,7 +181,7 @@ useEffect(() => {
       boxShadow: "0 8px 18px rgba(245,158,11,0.22)",
       letterSpacing: 0.2,
             position: "relative",
-      top: -5,
+      top: -6,
     }}
   >
     Premium

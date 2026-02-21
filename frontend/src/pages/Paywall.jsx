@@ -307,35 +307,73 @@ return (
       </div>
 
       {/* footer links */}
-      <div
-        style={{
-          marginTop: 14,
-          textAlign: "center",
-          fontSize: 13,
-          color: "rgba(0,0,0,0.55)",
-          display: "flex",
-          justifyContent: "center",
-          gap: 10,
-          flexWrap: "wrap",
-        }}
-      >
-        <button
-          onClick={() => restore()}
-          disabled={loading || !isNative}
-          style={{ border: "none", background: "transparent", textDecoration: "underline", cursor: "pointer" }}
-        >
-          Restore purchases
-        </button>
-        <span>·</span>
-        <a href="/terms" target="_blank" rel="noreferrer">Terms</a>
-        <span>·</span>
-        <a href="/privacy" target="_blank" rel="noreferrer">Privacy</a>
-      </div>
+     <div
+  style={{
+    marginTop: 14,
+    textAlign: "center",
+    fontSize: 13,
+    color: "rgba(0,0,0,0.55)",
+    display: "flex",
+    justifyContent: "center",
+    gap: 10,
+    flexWrap: "wrap",
+  }}
+>
+  <button
+    onClick={() => restore()}
+    disabled={loading || !isNative}
+    style={{
+      border: "none",
+      background: "transparent",
+      cursor: loading || !isNative ? "not-allowed" : "pointer",
+      padding: 0,
+      color: "rgba(0,0,0,0.65)",
+      fontWeight: 700,
+      textDecoration: "none",
+    }}
+  >
+    Restore purchases
+  </button>
+
+  <span>·</span>
+
+  <button
+    type="button"
+    onClick={() => nav("/terms")}
+    style={{
+      border: "none",
+      background: "transparent",
+      cursor: "pointer",
+      padding: 0,
+      color: "rgba(0,0,0,0.65)",
+      fontWeight: 700,
+      textDecoration: "none",
+    }}
+  >
+    Terms
+  </button>
+
+  <span>·</span>
+
+  <button
+    type="button"
+    onClick={() => nav("/privacy")}
+    style={{
+      border: "none",
+      background: "transparent",
+      cursor: "pointer",
+      padding: 0,
+      color: "rgba(0,0,0,0.65)",
+      fontWeight: 700,
+      textDecoration: "none",
+    }}
+  >
+    Privacy
+  </button>
+</div>
 
       {/* debug (valgfrit) */}
-      <div style={{ marginTop: 10, opacity: 0.35, fontSize: 12, textAlign: "center" }}>
-        Debug: native={String(isNative)} • products={products?.length ?? 0}
-      </div>
+   
     </div>
   </div>
 );

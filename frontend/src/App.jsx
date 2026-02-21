@@ -32,6 +32,8 @@ const Coach = lazy(() => import("./pages/Coach.jsx"));
 const AiChat = lazy(() => import("./pages/AiChat.jsx"));
 const Practice = lazy(() => import("./pages/Practice.jsx"));
 const PracticeMyTextPage = lazy(() => import("./pages/PracticeMyText.jsx"));
+const Terms = lazy(() => import("./pages/Terms.jsx"));
+const Privacy = lazy(() => import("./pages/Privacy.jsx"));
 
 
 import { submitReferralOpen } from "./lib/api.js";
@@ -301,6 +303,8 @@ useEffect(() => {
                 <Route path="/coach-my-text" element={<PracticeMyTextPage />} />
                 <Route path="/weakness" element={<WeaknessLab />} />
                 <Route path="/bookmarks" element={<Bookmarks />} />
+                <Route path="/terms" element={<Terms />} />
+<Route path="/privacy" element={<Privacy />} />
                <Route path="/pro" element={<Paywall />} />
                 <Route path="*" element={<div />} />
               </Routes>
