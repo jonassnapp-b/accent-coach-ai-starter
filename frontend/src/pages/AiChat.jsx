@@ -189,7 +189,7 @@ useEffect(() => {
                     <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
                       {lvl.scenarios.map((s, idx) => {
                         const done = readProgress(s.id);
-
+const locked = !isPro && Number(lvl.level) > 1;
                         return (
                           <button
                             key={s.id}
@@ -212,17 +212,17 @@ useEffect(() => {
                             }}
                           >
                             <div
-                             style={{
-  display: "flex",
-  alignItems: "center",
-  gap: 12,
-  padding: "8px 10px",
-  borderRadius: 16,
-  border: "1px solid rgba(17,24,39,0.10)",
-  background: "#FFFFFF",
-}}
-
-                            >
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "8px 10px",
+    borderRadius: 16,
+    border: locked ? "1px solid rgba(17,24,39,0.08)" : "1px solid rgba(17,24,39,0.10)",
+    background: locked ? "rgba(17,24,39,0.04)" : "#FFFFFF", // 👈 key change
+    opacity: locked ? 0.75 : 1,
+  }}
+>
                               {/* left node */}
                               <div style={{ position: "relative", width: 72, height: 72, flex: "0 0 auto" }}>
                                 <div
