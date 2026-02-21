@@ -1,6 +1,5 @@
 // frontend/src/lib/purchases.js
 import { Capacitor } from "@capacitor/core";
-import { NativePurchases, PURCHASE_TYPE } from "@capgo/native-purchases";
 
 export const SUBS_IDS = ["fluentup.pro.monthly", "fluentup.pro.yearly"];
 
@@ -8,36 +7,45 @@ function isNative() {
   return Capacitor?.isNativePlatform?.() ?? false;
 }
 
+/**
+ * IMPORTANT:
+ * - Never static-import @capgo/native-purchases in web builds (Vercel), it will fail.
+ * - Only load it dynamically at runtime on native platforms.
+ */
+let capgoPromise = null;
+
+async function getCapgo() {
+  if (!isNative()) return null;
+
+  if (!capgoPromise) {
+    capgoPromise = import("@capgo/native-purchases");
+  }
+
+  try {
+    return await capgoPromise;
+  } catch (e) {
+    console.log("[Purchases] Failed to load @capgo/native-purchases:", e);
+    return null;
+  }
+}
+
 function normalizeProduct(p) {
-  // Capgo kan returnere lidt forskellige shapes på tværs af versioner/platforme
-  const id =
-    p?.identifier ??
-    p?.productIdentifier ??
-    p?.productId ??
-    p?.id;
+  const id = p?.identifier ?? p?.productIdentifier ?? p?.productId ?? p?.id;
 
-  const title =
-    p?.title ??
-    p?.localizedTitle ??
-    p?.displayName ??
-    "";
+  const title = p?.title ?? p?.localizedTitle ?? p?.displayName ?? "";
 
-  const priceString =
-    p?.priceString ??
-    p?.localizedPrice ??
-    p?.price ??
-    "";
+  const priceString = p?.priceString ?? p?.localizedPrice ?? p?.price ?? "";
 
-  return {
-    id,
-    title,
-    priceString,
-    _raw: p,
-  };
+  return { id, title, priceString, _raw: p };
 }
 
 export async function initPurchases() {
   if (!isNative()) return { ok: false, reason: "not_native" };
+
+  const capgo = await getCapgo();
+  if (!capgo) return { ok: false, reason: "capgo_missing" };
+
+  const { NativePurchases } = capgo;
 
   try {
     const sup = await NativePurchases.isBillingSupported();
@@ -51,6 +59,11 @@ export async function initPurchases() {
 export async function loadProducts() {
   if (!isNative()) return [];
 
+  const capgo = await getCapgo();
+  if (!capgo) return [];
+
+  const { NativePurchases, PURCHASE_TYPE } = capgo;
+
   try {
     const res = await NativePurchases.getProducts({
       productIdentifiers: SUBS_IDS,
@@ -58,9 +71,7 @@ export async function loadProducts() {
     });
 
     const rawProducts = res?.products ?? [];
-    const products = rawProducts
-      .map(normalizeProduct)
-      .filter((p) => !!p.id); // vigtigt: kun gyldige
+    const products = rawProducts.map(normalizeProduct).filter((p) => !!p.id);
 
     console.log("[Purchases] loadProducts raw:", rawProducts);
     console.log("[Purchases] loadProducts normalized:", products);
@@ -75,6 +86,11 @@ export async function loadProducts() {
 export async function buyProduct(productId) {
   if (!isNative()) return { ok: false, reason: "not_native" };
 
+  const capgo = await getCapgo();
+  if (!capgo) return { ok: false, reason: "capgo_missing" };
+
+  const { NativePurchases, PURCHASE_TYPE } = capgo;
+
   try {
     const transaction = await NativePurchases.purchaseProduct({
       productIdentifier: productId,
@@ -85,16 +101,18 @@ export async function buyProduct(productId) {
     return { ok: true, transaction };
   } catch (e) {
     const msg = String(e?.message ?? e);
-    // bred cancel-detektion (Capacitor errors varierer)
-    if (msg.toLowerCase().includes("cancel")) {
-      return { ok: false, reason: "cancelled" };
-    }
+    if (msg.toLowerCase().includes("cancel")) return { ok: false, reason: "cancelled" };
     return { ok: false, reason: "purchase_failed", error: msg };
   }
 }
 
 export async function restorePurchases() {
   if (!isNative()) return { ok: false, reason: "not_native" };
+
+  const capgo = await getCapgo();
+  if (!capgo) return { ok: false, reason: "capgo_missing" };
+
+  const { NativePurchases } = capgo;
 
   try {
     await NativePurchases.restorePurchases();
@@ -104,19 +122,18 @@ export async function restorePurchases() {
   }
 }
 
-/**
- * Pro entitlement (client-side):
- * - korrekt ift. sandbox/testflight, og “ikke bare localStorage=true”
- * - production-grade kan senere udvides med server verification.
- */
 export async function getProStatus() {
   if (!isNative()) return { isPro: false, activeProductIds: [] };
+
+  const capgo = await getCapgo();
+  if (!capgo) return { isPro: false, activeProductIds: [], reason: "capgo_missing" };
+
+  const { NativePurchases, PURCHASE_TYPE } = capgo;
 
   try {
     const res = await NativePurchases.getPurchases({ productType: PURCHASE_TYPE.SUBS });
     const purchases = res?.purchases ?? [];
 
-    // Capgo iOS subs har typisk isActive
     const active = purchases.filter((p) => p?.isActive);
 
     const activeProductIds = Array.from(
