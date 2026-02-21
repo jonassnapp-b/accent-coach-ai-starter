@@ -1,6 +1,23 @@
+import { useNavigate } from "react-router-dom";
+
 export default function Terms() {
+    const nav = useNavigate();
   return (
     <div style={{ padding: 18, maxWidth: 720, margin: "0 auto", lineHeight: 1.6 }}>
+        <button
+  onClick={() => nav(-1)}
+  style={{
+    border: "none",
+    background: "transparent",
+    fontWeight: 900,
+    fontSize: 16,
+    cursor: "pointer",
+    marginBottom: 12,
+    padding: 0,
+  }}
+>
+  ← Back
+</button>
       <h1>Terms of Service</h1>
       <p>Last updated: {new Date().toLocaleDateString()}</p>
 

@@ -92,7 +92,7 @@ return (
   <div
     style={{
       minHeight: "100vh",
-      background: "#fff",
+      background: "#2196f3",
       padding: 18,
       paddingTop: "calc(var(--safe-top) + 18px)",
       display: "flex",
@@ -144,7 +144,7 @@ return (
           <div
             style={{
               width: 22,
-              height: 280,
+              height: 360, // eller 400 hvis du vil have den endnu længere
               borderRadius: 999,
               background: "linear-gradient(180deg, #F59E0B 0%, #EF4444 35%, #EC4899 70%, rgba(236,72,153,0) 100%)",
               position: "relative",
