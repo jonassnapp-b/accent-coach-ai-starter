@@ -151,15 +151,7 @@ background: "#2196f3",
               overflow: "hidden",
             }}
           >
-            <div
-  style={{
-    position: "absolute",
-    inset: 0,
-    borderRadius: 999,
-    background:
-      "linear-gradient(180deg, #F59E0B 0%, #EF4444 35%, #EC4899 70%, rgba(236,72,153,0) 100%)",
-  }}
-/>
+        
             {/* icons */}
             <div
               style={{
@@ -199,7 +191,7 @@ background: "#2196f3",
               style={{
                 position: "absolute",
                 left: "50%",
-                top: 300,
+                top: 260,
                 transform: "translateX(-50%)",
                 width: 26,
                 height: 26,
