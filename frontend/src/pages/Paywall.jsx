@@ -86,8 +86,13 @@ const now = useMemo(() => new Date(), []);
 const day5 = useMemo(() => addDays(now, 5), [now]);
 const day7 = useMemo(() => addDays(now, 7), [now]);
 const chargeDateLabel = useMemo(() => formatLongDate(day7), [day7]);
+
 const selectedProduct = selected === "fluentup.pro.monthly" ? monthly : yearly;
 const selectedPeriodLabel = selected === "fluentup.pro.monthly" ? "per month" : "per year";
+
+const hasTrial = selected === "fluentup.pro.yearly";
+const ctaLabel = loading ? "Working…" : hasTrial ? "Start 7-day trial" : "Subscribe monthly";
+
 return (
   <div
   style={{
@@ -138,21 +143,31 @@ return (
       </div>
 
       {/* title */}
-      <h1
-        style={{
-          margin: "14px 0 22px",
-          textAlign: "center",
-          fontSize: 34,
-          lineHeight: 1.1,
-          fontWeight: 900,
-          letterSpacing: -0.5,
-          color: "#0B0B0B",
-        }}
-      >
-        How your free
-        <br />
-        7-day trial works
-      </h1>
+    <h1
+  style={{
+    margin: "14px 0 22px",
+    textAlign: "center",
+    fontSize: 34,
+    lineHeight: 1.1,
+    fontWeight: 900,
+    letterSpacing: -0.5,
+    color: "#0B0B0B",
+  }}
+>
+  {hasTrial ? (
+    <>
+      How your free
+      <br />
+      7-day trial works
+    </>
+  ) : (
+    <>
+      Go Premium
+      <br />
+      Choose a plan
+    </>
+  )}
+</h1>
       </div>
 
       {/* MID (scroll) */}
@@ -163,129 +178,136 @@ return (
     padding: "0 18px",
   }}
 >
-  {/* timeline */}
-<div style={{ display: "flex", gap: 16, alignItems: "flex-start", padding: "6px 2px" }}>
-        {/* left gradient bar */}
-        <div style={{ width: 44, display: "flex", justifyContent: "center" }}>
-          <div
-            style={{
-              width: 28,
-              height: 340, // eller 400 hvis du vil have den endnu længere
-              borderRadius: 999,
-background: "linear-gradient(180deg, #64B5F6 0%, #2196F3 40%, #1E88E5 70%, #1565C0 85%, rgba(21,101,192,0) 100%)",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-        
-            {/* icons */}
-            <div
-              style={{
-                position: "absolute",
-                left: "50%",
-                top: 18,
-                transform: "translateX(-50%)",
-                width: 26,
-                height: 26,
-                borderRadius: 999,
-                background: "rgba(255,255,255,0.35)",
-                display: "grid",
-                placeItems: "center",
-                fontSize: 14,
-              }}
-            >
-              🔒
-            </div>
-            <div
-              style={{
-                position: "absolute",
-                left: "50%",
-                top: 124,
-                transform: "translateX(-50%)",
-                width: 26,
-                height: 26,
-                borderRadius: 999,
-                background: "rgba(255,255,255,0.35)",
-                display: "grid",
-                placeItems: "center",
-                fontSize: 14,
-              }}
-            >
-              🔔
-            </div>
-            <div
-              style={{
-                position: "absolute",
-                left: "50%",
-                top: 260,
-                transform: "translateX(-50%)",
-                width: 26,
-                height: 26,
-                borderRadius: 999,
-                background: "rgba(255,255,255,0.35)",
-                display: "grid",
-                placeItems: "center",
-                fontSize: 14,
-              }}
-            >
-              ✓
-            </div>
-          </div>
+{/* timeline */}
+{hasTrial && (
+  <div style={{ display: "flex", gap: 16, alignItems: "flex-start", padding: "6px 2px" }}>
+    {/* left gradient bar */}
+    <div style={{ width: 44, display: "flex", justifyContent: "center" }}>
+      <div
+        style={{
+          width: 28,
+          height: 340,
+          borderRadius: 999,
+          background:
+            "linear-gradient(180deg, #64B5F6 0%, #2196F3 40%, #1E88E5 70%, #1565C0 85%, rgba(21,101,192,0) 100%)",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* icons */}
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: 18,
+            transform: "translateX(-50%)",
+            width: 26,
+            height: 26,
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.35)",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 14,
+          }}
+        >
+          🔒
         </div>
-
-        {/* right text blocks */}
-        <div style={{ flex: 1, paddingTop: 4 }}>
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>Today: Full access</div>
-            <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
-              Get full access to all the lessons and 8,000+ practice activities.
-            </div>
-          </div>
-
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>
-  Day 5: Your trial is ending
-</div>
-            <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
-              You'll get a reminder that your trial is ending soon.
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>Day 7: Subscription starts</div>
-            <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
-              You will be automatically charged on <b>{chargeDateLabel}</b>, unless you cancel at least 24 hours before.
-            </div>
-          </div>
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: 124,
+            transform: "translateX(-50%)",
+            width: 26,
+            height: 26,
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.35)",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 14,
+          }}
+        >
+          🔔
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: 260,
+            transform: "translateX(-50%)",
+            width: 26,
+            height: 26,
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.35)",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 14,
+          }}
+        >
+          ✓
         </div>
       </div>
+    </div>
+
+    {/* right text blocks */}
+    <div style={{ flex: 1, paddingTop: 4 }}>
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>Today: Full access</div>
+        <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
+          Enjoy full access to all lessons and 8,000+ practice activities.
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>Day 5: Your trial is ending</div>
+        <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
+          We’ll remind you when your trial is about to end.
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>Day 7: Subscription starts</div>
+        <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
+          You will be automatically charged on <b>{chargeDateLabel}</b>, unless you cancel at least 24 hours before.
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       {/* plan select (Yearly / Monthly) */}
       <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
-        <PlanCard
-          title="Yearly"
-          badge="Best value"
-          price={yearly?.priceString || "—"}
-          selected={selected === "fluentup.pro.yearly"}
-          disabled={loading}
-          onClick={() => setSelected("fluentup.pro.yearly")}
-        />
-        <PlanCard
-          title="Monthly"
-          price={monthly?.priceString || "—"}
-          selected={selected === "fluentup.pro.monthly"}
-          disabled={loading}
-          onClick={() => setSelected("fluentup.pro.monthly")}
-        />
+     <PlanCard
+  title="Yearly"
+  badge="7-day free trial"
+  price={yearly?.priceString || "—"}
+  selected={selected === "fluentup.pro.yearly"}
+  disabled={loading}
+  onClick={() => setSelected("fluentup.pro.yearly")}
+/>
+<PlanCard
+  title="Monthly"
+  price={monthly?.priceString || "—"}
+  selected={selected === "fluentup.pro.monthly"}
+  disabled={loading}
+  onClick={() => setSelected("fluentup.pro.monthly")}
+/>
       </div>
       {/* price line */}
       <div style={{ textAlign: "center", marginTop: 18, marginBottom: 12 }}>
-        <div style={{ fontSize: 18, color: "rgba(0,0,0,0.65)", fontWeight: 700 }}>
-          Redeem 7 days free, then
-        </div>
-       <div style={{ fontSize: 28, fontWeight: 900, color: "#0B0B0B", letterSpacing: -0.4 }}>
-  {selectedProduct?.priceString ? `${selectedProduct.priceString} ${selectedPeriodLabel}` : "—"}
+  <div style={{ fontSize: 18, color: "rgba(0,0,0,0.65)", fontWeight: 700 }}>
+    {hasTrial ? "Redeem 7 days free, then" : "You'll be charged"}
+  </div>
+
+  <div style={{ fontSize: 28, fontWeight: 900, color: "#0B0B0B", letterSpacing: -0.4 }}>
+    {selectedProduct?.priceString ? `${selectedProduct.priceString} ${selectedPeriodLabel}` : "—"}
+  </div>
+
+  {!hasTrial && (
+    <div style={{ marginTop: 6, fontSize: 13, color: "rgba(0,0,0,0.55)", fontWeight: 700 }}>
+      No free trial on monthly.
+    </div>
+  )}
 </div>
-      </div>
 </div>
    {/* BOTTOM (sticky) */}
 <div
@@ -331,14 +353,15 @@ background: "linear-gradient(180deg, #64B5F6 0%, #2196F3 40%, #1E88E5 70%, #1565
     : 1,
         }}
       >
-        {loading ? "Working…" : "Start 7-day trial"}
+        {ctaLabel}
       </button>
 
-      <div style={{ marginTop: 10, display: "flex", justifyContent: "center", gap: 10, alignItems: "center" }}>
-        <span style={{ fontWeight: 900, color: "rgba(0,0,0,0.55)" }}>✓</span>
-        <span style={{ fontWeight: 800, color: "rgba(0,0,0,0.55)" }}>No payment due now</span>
-      </div>
-
+     {hasTrial && (
+  <div style={{ marginTop: 10, display: "flex", justifyContent: "center", gap: 10, alignItems: "center" }}>
+    <span style={{ fontWeight: 900, color: "rgba(0,0,0,0.55)" }}>✓</span>
+    <span style={{ fontWeight: 800, color: "rgba(0,0,0,0.55)" }}>No payment due now</span>
+  </div>
+)}
       {/* footer links */}
      <div
   style={{
