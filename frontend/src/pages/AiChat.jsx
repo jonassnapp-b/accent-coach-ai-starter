@@ -167,11 +167,24 @@ useEffect(() => {
     Level {lvl.level}
   </div>
 
-  {!isPro && Number(lvl.level) > 1 && (
-    <div style={{ fontSize: 12, fontWeight: 950, opacity: 0.65, border: "1px solid rgba(17,24,39,0.18)", padding: "4px 8px", borderRadius: 999 }}>
-      Premium
-    </div>
-  )}
+{!isPro && Number(lvl.level) > 1 && (
+  <div
+    style={{
+      fontSize: 12,
+      fontWeight: 950,
+      opacity: 1,
+      borderRadius: 999,
+      padding: "4px 10px",
+      border: "1px solid rgba(161, 98, 7, 0.35)",
+      background: "linear-gradient(180deg, rgba(255,215,128,0.95), rgba(245,158,11,0.95))",
+      color: "rgba(17,24,39,0.92)",
+      boxShadow: "0 8px 18px rgba(245,158,11,0.22)",
+      letterSpacing: 0.2,
+    }}
+  >
+    Premium
+  </div>
+)}
 </div>
 
 

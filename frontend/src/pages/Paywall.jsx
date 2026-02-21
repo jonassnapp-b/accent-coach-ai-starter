@@ -43,7 +43,16 @@ function getPaywallCopy(src) {
       };
   }
 }
+function addDays(d, days) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  return x;
+}
 
+function formatLongDate(d) {
+  // “February 26” / “26. februar” afhænger af device locale
+  return new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric" }).format(d);
+}
 export default function Paywall() {
   const nav = useNavigate();
   const q = useQuery();
@@ -73,36 +82,156 @@ export default function Paywall() {
       nav(-1);
     }
   }, [isPro, nav, ret]);
-
-  return (
-    <div style={{ padding: 16, maxWidth: 520, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12 }}>
-        <div>
-          <h1 style={{ margin: 0 }}>{copy.title}</h1>
-          <p style={{ marginTop: 8, opacity: 0.8 }}>{copy.subtitle}</p>
-        </div>
-        <button onClick={() => (ret ? nav(ret) : nav(-1))} style={{ padding: "8px 10px" }}>
-          Close
+const now = useMemo(() => new Date(), []);
+const day5 = useMemo(() => addDays(now, 5), [now]);
+const day7 = useMemo(() => addDays(now, 7), [now]);
+const chargeDateLabel = useMemo(() => formatLongDate(day7), [day7]);
+const selectedProduct = selected === "fluentup.pro.monthly" ? monthly : yearly;
+const selectedPeriodLabel = selected === "fluentup.pro.monthly" ? "per month" : "per year";
+return (
+  <div
+    style={{
+      minHeight: "100vh",
+      background: "#fff",
+      padding: 18,
+      paddingTop: "calc(var(--safe-top) + 18px)",
+      display: "flex",
+      justifyContent: "center",
+    }}
+  >
+    <div style={{ width: "100%", maxWidth: 520 }}>
+      {/* top right close */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button
+          onClick={() => (ret ? nav(ret) : nav(-1))}
+          aria-label="Close"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 999,
+            border: "none",
+            background: "rgba(0,0,0,0.06)",
+            display: "grid",
+            placeItems: "center",
+            cursor: "pointer",
+          }}
+        >
+          <span style={{ fontSize: 22, lineHeight: 1, opacity: 0.55 }}>×</span>
         </button>
       </div>
 
-      <div style={{ marginTop: 14, padding: 12, borderRadius: 12, background: "rgba(0,0,0,0.04)" }}>
-        <div style={{ fontWeight: 700, marginBottom: 8 }}>Premium includes:</div>
-        <ul style={{ margin: 0, paddingLeft: 18, opacity: 0.9, lineHeight: 1.5 }}>
-          <li>Unlock all levels (2–10)</li>
-          <li>Daily Challenge mode</li>
-          <li>Unlimited practice attempts</li>
-          <li>Train your weakest sounds</li>
-          <li>Bookmarks</li>
-        </ul>
-      </div>
+      {/* title */}
+      <h1
+        style={{
+          margin: "14px 0 22px",
+          textAlign: "center",
+          fontSize: 34,
+          lineHeight: 1.1,
+          fontWeight: 900,
+          letterSpacing: -0.5,
+          color: "#0B0B0B",
+        }}
+      >
+        How your free
+        <br />
+        7-day trial works
+      </h1>
 
-      {!!lastError && (
-        <div style={{ marginTop: 12, padding: 12, borderRadius: 10, border: "1px solid rgba(255,0,0,0.35)" }}>
-          <b>Error:</b> {lastError}
+      {/* timeline */}
+      <div style={{ display: "flex", gap: 16, alignItems: "flex-start", padding: "6px 2px" }}>
+        {/* left gradient bar */}
+        <div style={{ width: 44, display: "flex", justifyContent: "center" }}>
+          <div
+            style={{
+              width: 22,
+              height: 280,
+              borderRadius: 999,
+              background: "linear-gradient(180deg, #F59E0B 0%, #EF4444 35%, #EC4899 70%, rgba(236,72,153,0) 100%)",
+              position: "relative",
+            }}
+          >
+            {/* icons */}
+            <div
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: 18,
+                transform: "translateX(-50%)",
+                width: 26,
+                height: 26,
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.35)",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 14,
+              }}
+            >
+              🔒
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: 124,
+                transform: "translateX(-50%)",
+                width: 26,
+                height: 26,
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.35)",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 14,
+              }}
+            >
+              🔔
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: 230,
+                transform: "translateX(-50%)",
+                width: 26,
+                height: 26,
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.35)",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 14,
+              }}
+            >
+              ✓
+            </div>
+          </div>
         </div>
-      )}
 
+        {/* right text blocks */}
+        <div style={{ flex: 1, paddingTop: 4 }}>
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>Today: Full access</div>
+            <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
+              Get full access to all the lessons and 10,000+ practice activities.
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>
+  Day 5: Your trial is ending
+</div>
+            <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
+              You'll get a reminder that your trial is ending soon.
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>Day 7: Subscription starts</div>
+            <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
+              You will be automatically charged on <b>{chargeDateLabel}</b>, unless you cancel at least 24 hours before.
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* plan select (Yearly / Monthly) */}
       <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
         <PlanCard
           title="Yearly"
@@ -120,52 +249,96 @@ export default function Paywall() {
           onClick={() => setSelected("fluentup.pro.monthly")}
         />
       </div>
-
-      <button
-        onClick={() => buy(selected)}
-        disabled={loading || !isNative || (selected === "fluentup.pro.yearly" && !yearly) || (selected === "fluentup.pro.monthly" && !monthly)}
-        style={{
-          marginTop: 14,
-          width: "100%",
-          padding: "12px 14px",
-          borderRadius: 12,
-          fontWeight: 800,
-        }}
-      >
-        {loading ? "Working…" : "Start Premium"}
-      </button>
-
-      <button
-        onClick={() => restore()}
-        disabled={loading || !isNative}
-        style={{
-          marginTop: 10,
-          width: "100%",
-          padding: "10px 14px",
-          borderRadius: 12,
-          opacity: 0.9,
-        }}
-      >
-        Restore Purchases
-      </button>
-
-      <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", opacity: 0.75, fontSize: 12 }}>
-        <a href="/terms" target="_blank" rel="noreferrer">Terms</a>
-        <a href="/privacy" target="_blank" rel="noreferrer">Privacy</a>
-        <button
-          type="button"
-          onClick={() => refresh()}
-          style={{ fontSize: 12, padding: 0, border: "none", background: "transparent", textDecoration: "underline", cursor: "pointer" }}
-        >
-          Reload products
-        </button>
+      {/* price line */}
+      <div style={{ textAlign: "center", marginTop: 18, marginBottom: 12 }}>
+        <div style={{ fontSize: 18, color: "rgba(0,0,0,0.65)", fontWeight: 700 }}>
+          Redeem 7 days free, then
+        </div>
+       <div style={{ fontSize: 28, fontWeight: 900, color: "#0B0B0B", letterSpacing: -0.4 }}>
+  {selectedProduct?.priceString ? `${selectedProduct.priceString} ${selectedPeriodLabel}` : "—"}
+</div>
       </div>
 
-      <div style={{ marginTop: 10, opacity: 0.6, fontSize: 12 }}>
+      {/* remind toggle (UI only) */}
+      <RemindRow />
+
+      {/* CTA */}
+      <button
+        onClick={() => buy(selected)}
+        disabled={
+  loading ||
+  !isNative ||
+  (selected === "fluentup.pro.yearly" && !yearly) ||
+  (selected === "fluentup.pro.monthly" && !monthly)
+}
+        style={{
+          marginTop: 16,
+          width: "100%",
+          padding: "16px 18px",
+          borderRadius: 999,
+          border: "none",
+          cursor:
+  loading ||
+  !isNative ||
+  (selected === "fluentup.pro.yearly" && !yearly) ||
+  (selected === "fluentup.pro.monthly" && !monthly)
+    ? "not-allowed"
+    : "pointer",   
+           fontWeight: 900,
+          fontSize: 20,
+          color: "white",
+          background: "linear-gradient(90deg, #F59E0B 0%, #EF4444 35%, #EC4899 100%)",
+          boxShadow: "0 18px 40px rgba(236,72,153,0.25)",
+          opacity:
+  loading ||
+  !isNative ||
+  (selected === "fluentup.pro.yearly" && !yearly) ||
+  (selected === "fluentup.pro.monthly" && !monthly)
+    ? 0.55
+    : 1,
+        }}
+      >
+        {loading ? "Working…" : "Start 7-day trial"}
+      </button>
+
+      <div style={{ marginTop: 10, display: "flex", justifyContent: "center", gap: 10, alignItems: "center" }}>
+        <span style={{ fontWeight: 900, color: "rgba(0,0,0,0.55)" }}>✓</span>
+        <span style={{ fontWeight: 800, color: "rgba(0,0,0,0.55)" }}>No payment due now</span>
+      </div>
+
+      {/* footer links */}
+      <div
+        style={{
+          marginTop: 14,
+          textAlign: "center",
+          fontSize: 13,
+          color: "rgba(0,0,0,0.55)",
+          display: "flex",
+          justifyContent: "center",
+          gap: 10,
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          onClick={() => restore()}
+          disabled={loading || !isNative}
+          style={{ border: "none", background: "transparent", textDecoration: "underline", cursor: "pointer" }}
+        >
+          Restore purchases
+        </button>
+        <span>·</span>
+        <a href="/terms" target="_blank" rel="noreferrer">Terms</a>
+        <span>·</span>
+        <a href="/privacy" target="_blank" rel="noreferrer">Privacy</a>
+      </div>
+
+      {/* debug (valgfrit) */}
+      <div style={{ marginTop: 10, opacity: 0.35, fontSize: 12, textAlign: "center" }}>
         Debug: native={String(isNative)} • products={products?.length ?? 0}
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 function PlanCard({ title, price, badge, selected, disabled, onClick }) {
@@ -200,5 +373,56 @@ function PlanCard({ title, price, badge, selected, disabled, onClick }) {
         <div style={{ fontWeight: 800 }}>{price}</div>
       </div>
     </button>
+  );
+}
+
+function RemindRow() {
+  const [on, setOn] = useState(false);
+
+  return (
+    <div
+      style={{
+        marginTop: 10,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        padding: "10px 6px",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 18 }}>🔔</span>
+        <div style={{ fontWeight: 800, color: "rgba(0,0,0,0.70)" }}>Remind me before my trial ends</div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setOn((v) => !v)}
+        aria-pressed={on}
+        style={{
+          width: 54,
+          height: 32,
+          borderRadius: 999,
+          border: "none",
+          background: on ? "rgba(34,197,94,0.95)" : "rgba(0,0,0,0.18)",
+          position: "relative",
+          cursor: "pointer",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: 3,
+            left: on ? 26 : 3,
+            width: 26,
+            height: 26,
+            borderRadius: 999,
+            background: "white",
+            boxShadow: "0 6px 16px rgba(0,0,0,0.18)",
+            transition: "left 160ms ease",
+          }}
+        />
+      </button>
+    </div>
   );
 }
