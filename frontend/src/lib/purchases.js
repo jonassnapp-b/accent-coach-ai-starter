@@ -1,3 +1,4 @@
+// frontend/src/lib/purchases.js
 import { Capacitor } from "@capacitor/core";
 
 export const SUBS_IDS = ["fluentup.pro.monthly", "fluentup.pro.yearly"];
@@ -16,8 +17,8 @@ async function getImpl() {
     return implPromise;
   }
 
-  // renamed file + vite-ignore so Rollup won't crawl/resolve it in web builds
-  implPromise = import(/* @vite-ignore */ "./purchases.native.cap.js");
+  // ✅ import native implementation (NO @vite-ignore on local file)
+  implPromise = import("./purchases.native.cap.js");
   return implPromise;
 }
 

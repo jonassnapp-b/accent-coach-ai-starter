@@ -1,14 +1,22 @@
-// frontend/src/lib/purchases.native.js
+// frontend/src/lib/purchases.native.cap.js
 import { Capacitor } from "@capacitor/core";
 
 export const SUBS_IDS = ["fluentup.pro.monthly", "fluentup.pro.yearly"];
 
 const isNative = Capacitor?.isNativePlatform?.() ?? false;
 
+// IMPORTANT:
+// Make the module id opaque so Vite/Rollup can't resolve it during web builds.
+const capgoId = "@capgo/native-purchases";
+
 let capgoPromise = null;
 async function getCapgo() {
   if (!isNative) return null;
-  if (!capgoPromise) capgoPromise = import(/* @vite-ignore */ "@capgo/native-purchases");
+
+  if (!capgoPromise) {
+    capgoPromise = import(/* @vite-ignore */ capgoId);
+  }
+
   try {
     return await capgoPromise;
   } catch (e) {
