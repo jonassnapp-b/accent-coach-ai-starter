@@ -143,10 +143,10 @@ return (
         <div style={{ width: 44, display: "flex", justifyContent: "center" }}>
           <div
             style={{
-              width: 22,
-              height: 380, // eller 400 hvis du vil have den endnu længere
+              width: 28,
+              height: 340, // eller 400 hvis du vil have den endnu længere
               borderRadius: 999,
-background: "linear-gradient(180deg, #64B5F6 0%, #2196F3 40%, #1E88E5 75%, #1565C0 100%)",
+background: "linear-gradient(180deg, #64B5F6 0%, #2196F3 40%, #1E88E5 70%, #1565C0 85%, rgba(21,101,192,0) 100%)",
               position: "relative",
               overflow: "hidden",
             }}
@@ -212,7 +212,7 @@ background: "linear-gradient(180deg, #64B5F6 0%, #2196F3 40%, #1E88E5 75%, #1565
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>Today: Full access</div>
             <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
-              Get full access to all the lessons and 10,000+ practice activities.
+              Get full access to all the lessons and 8,000+ practice activities.
             </div>
           </div>
 
