@@ -146,7 +146,7 @@ return (
               width: 22,
               height: 380, // eller 400 hvis du vil have den endnu længere
               borderRadius: 999,
-background: "#2196f3",
+background: "linear-gradient(180deg, #64B5F6 0%, #2196F3 40%, #1E88E5 75%, #1565C0 100%)",
               position: "relative",
               overflow: "hidden",
             }}

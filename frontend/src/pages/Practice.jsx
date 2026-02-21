@@ -618,11 +618,7 @@ flex: 1,
     Practice Your Text
   </div>
 
-  {!isPro && (
-    <div style={{ marginTop: 4, opacity: 0.65, fontWeight: 800, fontSize: 13 }}>
-      {attemptsLeft} / {PRACTICE_DAILY_LIMIT_FREE} free attempts left today
-    </div>
-  )}
+ 
 </div>
 
                     </div>
