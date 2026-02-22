@@ -286,6 +286,7 @@ return (
 />
 <PlanCard
   title="Monthly"
+  badge="No trial · Pay monthly"
   price={monthly?.priceString || "—"}
   selected={selected === "fluentup.pro.monthly"}
   disabled={loading}
