@@ -216,7 +216,7 @@ return (
           style={{
             position: "absolute",
             left: "50%",
-            top: 124,
+            top: 130,
             transform: "translateX(-50%)",
             width: 26,
             height: 26,
@@ -233,7 +233,7 @@ return (
           style={{
             position: "absolute",
             left: "50%",
-            top: 230,
+            top: 240,
             transform: "translateX(-50%)",
             width: 26,
             height: 26,
@@ -294,7 +294,7 @@ return (
           style={{
             position: "absolute",
             left: "50%",
-            top: 18,
+            top: 19,
             transform: "translateX(-50%)",
             width: 26,
             height: 26,
