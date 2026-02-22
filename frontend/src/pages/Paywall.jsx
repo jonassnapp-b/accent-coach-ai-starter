@@ -274,18 +274,78 @@ return (
     </div>
   </div>
 ) : (
-  <div style={{ padding: "6px 2px" }}>
-    <div style={{ marginBottom: 24 }}>
-      <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>Instant access</div>
-      <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
-        Your subscription starts immediately and renews monthly.
+
+  <div style={{ display: "flex", gap: 16, alignItems: "flex-start", padding: "6px 2px" }}>
+    {/* left gradient bar */}
+    <div style={{ width: 44, display: "flex", justifyContent: "center" }}>
+      <div
+        style={{
+          width: 28,
+          height: 220,
+          borderRadius: 999,
+          background:
+            "linear-gradient(180deg, #64B5F6 0%, #2196F3 50%, #1E88E5 80%, rgba(21,101,192,0) 100%)",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* icons */}
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: 18,
+            transform: "translateX(-50%)",
+            width: 26,
+            height: 26,
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.35)",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 14,
+          }}
+        >
+          ⚡
+        </div>
+
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: 150,
+            transform: "translateX(-50%)",
+            width: 26,
+            height: 26,
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.35)",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 14,
+          }}
+        >
+          ✓
+        </div>
       </div>
     </div>
 
-    <div>
-      <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>Cancel anytime</div>
-      <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
-        You can manage or cancel your subscription in Apple settings.
+    {/* right text blocks */}
+    <div style={{ flex: 1, paddingTop: 4 }}>
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>
+          Today: Instant access
+        </div>
+        <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
+          Get full access immediately when you subscribe.
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>
+          Monthly renewal
+        </div>
+        <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
+          Your subscription renews automatically each month until cancelled.
+        </div>
       </div>
     </div>
   </div>
