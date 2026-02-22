@@ -400,22 +400,14 @@ return (
   onClick={() => setSelected("fluentup.pro.monthly")}
 />
       </div>
-      {/* price line */}
-      <div style={{ textAlign: "center", marginTop: 18, marginBottom: 12 }}>
-  <div style={{ fontSize: 18, color: "rgba(0,0,0,0.65)", fontWeight: 700 }}>
-    {hasTrial ? "Redeem 7 days free, then" : "You'll be charged"}
-  </div>
-
-  <div style={{ fontSize: 28, fontWeight: 900, color: "#0B0B0B", letterSpacing: -0.4 }}>
-    {selectedProduct?.priceString ? `${selectedProduct.priceString} ${selectedPeriodLabel}` : "—"}
-  </div>
-
-  {!hasTrial && (
-    <div style={{ marginTop: 6, fontSize: 13, color: "rgba(0,0,0,0.55)", fontWeight: 700 }}>
-      No free trial on monthly.
+     {/* price line */}
+{selectedProduct?.priceString && (
+  <div style={{ textAlign: "center", marginTop: 18, marginBottom: 12 }}>
+    <div style={{ fontSize: 28, fontWeight: 900, color: "#0B0B0B", letterSpacing: -0.4 }}>
+      {selectedProduct.priceString} {selectedPeriodLabel}
     </div>
-  )}
-</div>
+  </div>
+)}
 </div>
    {/* BOTTOM (sticky) */}
 <div
@@ -439,7 +431,9 @@ return (
     }}
   />
 )}
-
+<div style={{ fontSize: 12, opacity: 0.6, marginBottom: 8 }}>
+  isNative: {String(isNative)} | loading: {String(loading)} | products: {(products || []).length} | yearlyLoaded: {String(!!yearly)} | monthlyLoaded: {String(!!monthly)}
+</div>
       {/* CTA */}
       <button
         onClick={handleBuy}
