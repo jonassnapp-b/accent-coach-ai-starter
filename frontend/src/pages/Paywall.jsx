@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePurchases } from "../providers/PurchasesProvider";
+import { scheduleTrialDay5Reminder, cancelTrialDay5Reminder } from "../lib/trialReminder";
 
 function useQuery() {
   const { search } = useLocation();
@@ -63,7 +64,8 @@ export default function Paywall() {
 
   const { loading, products, isPro, buy, restore, lastError, isNative, refresh } = usePurchases();
   const [selected, setSelected] = useState("fluentup.pro.yearly");
-
+const [remindOn, setRemindOn] = useState(false);
+const [pendingReminder, setPendingReminder] = useState(false);
   const byId = useMemo(() => {
     const m = new Map();
     for (const p of products || []) m.set(p.id, p);
@@ -74,14 +76,24 @@ export default function Paywall() {
   const monthly = byId.get("fluentup.pro.monthly");
 
   // Auto-close når Pro bliver true
-  useEffect(() => {
-    if (!isPro) return;
+useEffect(() => {
+  if (!isPro) return;
+
+  const run = async () => {
+    if (pendingReminder) {
+      await scheduleTrialDay5Reminder();
+      setPendingReminder(false);
+    }
+
     if (ret) {
       nav(ret, { replace: true });
     } else {
       nav(-1);
     }
-  }, [isPro, nav, ret]);
+  };
+
+  run();
+}, [isPro, nav, ret, pendingReminder]);
 const now = useMemo(() => new Date(), []);
 const day5 = useMemo(() => addDays(now, 5), [now]);
 const day7 = useMemo(() => addDays(now, 7), [now]);
@@ -92,7 +104,27 @@ const selectedPeriodLabel = selected === "fluentup.pro.monthly" ? "per month" : 
 
 const hasTrial = selected === "fluentup.pro.yearly";
 const ctaLabel = loading ? "Working…" : hasTrial ? "Start 7-day trial" : "Subscribe monthly";
+const handleBuy = async () => {
+  const isYearly = selected === "fluentup.pro.yearly";
 
+  // Monthly skal aldrig have day-5 reminder
+  if (!isYearly) {
+    setPendingReminder(false);
+    await cancelTrialDay5Reminder();
+    await buy(selected);
+    return;
+  }
+
+  // Yearly:
+  if (remindOn) {
+    setPendingReminder(true);
+  } else {
+    setPendingReminder(false);
+    await cancelTrialDay5Reminder();
+  }
+
+  await buy(selected);
+};
 return (
   <div
   style={{
@@ -394,11 +426,21 @@ return (
     padding: 18,
   }}
 >
-  <RemindRow />
+<RemindRow
+  value={remindOn}
+  onChange={async (next) => {
+    setRemindOn(next);
+
+    if (!next) {
+      setPendingReminder(false);
+      await cancelTrialDay5Reminder();
+    }
+  }}
+/>
 
       {/* CTA */}
       <button
-        onClick={() => buy(selected)}
+        onClick={handleBuy}
        disabled={ loading || (selected === "fluentup.pro.yearly" && !yearly) ||
   (selected === "fluentup.pro.monthly" && !monthly)
 }
@@ -546,20 +588,9 @@ function PlanCard({ title, price, badge, selected, disabled, onClick }) {
   );
 }
 
-function RemindRow() {
-  const [on, setOn] = useState(false);
-
+function RemindRow({ value, onChange }) {
   return (
-    <div
-      style={{
-        marginTop: 10,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 12,
-        padding: "10px 6px",
-      }}
-    >
+    <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 6px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ fontSize: 18 }}>🔔</span>
         <div style={{ fontWeight: 800, color: "rgba(0,0,0,0.70)" }}>Remind me before my trial ends</div>
@@ -567,14 +598,14 @@ function RemindRow() {
 
       <button
         type="button"
-        onClick={() => setOn((v) => !v)}
-        aria-pressed={on}
+        onClick={() => onChange(!value)}
+        aria-pressed={value}
         style={{
           width: 54,
           height: 32,
           borderRadius: 999,
           border: "none",
-          background: on ? "rgba(34,197,94,0.95)" : "rgba(0,0,0,0.18)",
+          background: value ? "rgba(34,197,94,0.95)" : "rgba(0,0,0,0.18)",
           position: "relative",
           cursor: "pointer",
         }}
@@ -583,7 +614,7 @@ function RemindRow() {
           style={{
             position: "absolute",
             top: 3,
-            left: on ? 26 : 3,
+            left: value ? 26 : 3,
             width: 26,
             height: 26,
             borderRadius: 999,

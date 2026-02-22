@@ -12,6 +12,7 @@
     "@awesome-cordova-plugins/in-app-purchase-2": "^8.1.0",
     "@capacitor-community/in-app-review": "^7.1.0",
     "@capacitor/core": "^7.4.4",
+    "@capacitor/local-notifications": "^7.0.5",
     "@capacitor/push-notifications": "^7.0.3",
     "@posthog/react": "^1.8.0",
     "canvas-confetti": "^1.9.4",
