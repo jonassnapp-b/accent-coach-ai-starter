@@ -426,17 +426,19 @@ return (
     padding: 18,
   }}
 >
-<RemindRow
-  value={remindOn}
-  onChange={async (next) => {
-    setRemindOn(next);
+{hasTrial && (
+  <RemindRow
+    value={remindOn}
+    onChange={async (next) => {
+      setRemindOn(next);
 
-    if (!next) {
-      setPendingReminder(false);
-      await cancelTrialDay5Reminder();
-    }
-  }}
-/>
+      if (!next) {
+        setPendingReminder(false);
+        await cancelTrialDay5Reminder();
+      }
+    }}
+  />
+)}
 
       {/* CTA */}
       <button

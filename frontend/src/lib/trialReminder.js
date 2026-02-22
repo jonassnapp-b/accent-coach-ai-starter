@@ -17,7 +17,7 @@ export async function scheduleTrialDay5Reminder() {
   // Cancel først for at undgå duplicates
   await cancelTrialDay5Reminder();
 
-  const fiveDaysMs = 5 * 24 * 60 * 60 * 1000;
+  const fiveDaysMs = 60 * 1000; // 60 sek test
   const at = new Date(Date.now() + fiveDaysMs);
 
   await LocalNotifications.schedule({
