@@ -179,7 +179,8 @@ return (
   }}
 >
 {/* timeline */}
-{hasTrial && (
+{/* timeline */}
+{hasTrial ? (
   <div style={{ display: "flex", gap: 16, alignItems: "flex-start", padding: "6px 2px" }}>
     {/* left gradient bar */}
     <div style={{ width: 44, display: "flex", justifyContent: "center" }}>
@@ -194,7 +195,6 @@ return (
           overflow: "hidden",
         }}
       >
-        {/* icons */}
         <div
           style={{
             position: "absolute",
@@ -273,6 +273,22 @@ return (
       </div>
     </div>
   </div>
+) : (
+  <div style={{ padding: "6px 2px" }}>
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>Instant access</div>
+      <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
+        Your subscription starts immediately and renews monthly.
+      </div>
+    </div>
+
+    <div>
+      <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>Cancel anytime</div>
+      <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
+        You can manage or cancel your subscription in Apple settings.
+      </div>
+    </div>
+  </div>
 )}
       {/* plan select (Yearly / Monthly) */}
       <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
@@ -286,7 +302,6 @@ return (
 />
 <PlanCard
   title="Monthly"
-  badge="No trial · Pay monthly"
   price={monthly?.priceString || "—"}
   selected={selected === "fluentup.pro.monthly"}
   disabled={loading}
