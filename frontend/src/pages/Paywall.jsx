@@ -187,7 +187,7 @@ return (
       <div
         style={{
           width: 28,
-          height: 340,
+          height: 300,
           borderRadius: 999,
           background:
             "linear-gradient(180deg, #64B5F6 0%, #2196F3 40%, #1E88E5 70%, #1565C0 85%, rgba(21,101,192,0) 100%)",
@@ -199,7 +199,7 @@ return (
           style={{
             position: "absolute",
             left: "50%",
-            top: 18,
+            top: 10,
             transform: "translateX(-50%)",
             width: 26,
             height: 26,
@@ -216,7 +216,7 @@ return (
           style={{
             position: "absolute",
             left: "50%",
-            top: 130,
+            top: 116,
             transform: "translateX(-50%)",
             width: 26,
             height: 26,
@@ -233,7 +233,7 @@ return (
           style={{
             position: "absolute",
             left: "50%",
-            top: 240,
+            top: 222,
             transform: "translateX(-50%)",
             width: 26,
             height: 26,
@@ -250,7 +250,7 @@ return (
     </div>
 
     {/* right text blocks */}
-    <div style={{ flex: 1, paddingTop: 4 }}>
+    <div style={{ flex: 1, paddingTop: 0 }}>
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>Today: Full access</div>
         <div style={{ marginTop: 6, fontSize: 16, lineHeight: 1.35, color: "rgba(0,0,0,0.70)" }}>
@@ -281,7 +281,7 @@ return (
       <div
         style={{
           width: 28,
-          height: 220,
+          height: 190,
           borderRadius: 999,
           background:
             "linear-gradient(180deg, #64B5F6 0%, #2196F3 50%, #1E88E5 80%, rgba(21,101,192,0) 100%)",
@@ -294,7 +294,7 @@ return (
           style={{
             position: "absolute",
             left: "50%",
-            top: 19,
+            top: 10,
             transform: "translateX(-50%)",
             width: 26,
             height: 26,
@@ -312,7 +312,7 @@ return (
           style={{
             position: "absolute",
             left: "50%",
-            top: 125,
+            top: 104,
             transform: "translateX(-50%)",
             width: 26,
             height: 26,
@@ -329,7 +329,7 @@ return (
     </div>
 
     {/* right text blocks */}
-    <div style={{ flex: 1, paddingTop: 4 }}>
+    <div style={{ flex: 1, paddingTop: 0 }}>
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: 24, fontWeight: 900, color: "#0B0B0B" }}>
           Today: Instant access
