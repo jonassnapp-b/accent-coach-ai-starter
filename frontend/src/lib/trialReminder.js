@@ -12,7 +12,7 @@ async function ensureReminderPermission() {
 
 export async function scheduleTrialDay5Reminder() {
   const ok = await ensureReminderPermission();
-  
+  console.log("[TrialReminder] permission ok =", ok);
   if (!ok) return { scheduled: false, reason: "no-permission" };
 
   // Cancel først for at undgå duplicates
