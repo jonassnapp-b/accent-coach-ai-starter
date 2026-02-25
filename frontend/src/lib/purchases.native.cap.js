@@ -7,20 +7,19 @@ const isNative = Capacitor?.isNativePlatform?.() ?? false;
 
 // IMPORTANT:
 // Make the module id opaque so Vite/Rollup can't resolve it during web builds.
-const capgoId = "@capgo/native-purchases";
-
 let capgoPromise = null;
 async function getCapgo() {
   if (!isNative) return null;
 
   if (!capgoPromise) {
-    capgoPromise = import(/* @vite-ignore */ capgoId);
+    // IMPORTANT: do NOT use @vite-ignore here, we WANT Vite to bundle it.
+    capgoPromise = import("@capgo/native-purchases");
   }
 
   try {
     return await capgoPromise;
   } catch (e) {
-    console.log("[Purchases] Failed to load @capgo/native-purchases:", e);
+    
     return null;
   }
 }
