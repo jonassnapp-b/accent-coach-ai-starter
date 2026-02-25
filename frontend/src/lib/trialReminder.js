@@ -12,12 +12,14 @@ async function ensureReminderPermission() {
 
 export async function scheduleTrialDay5Reminder() {
   const ok = await ensureReminderPermission();
+  console.log("[TrialReminder] permission ok =", ok);
   if (!ok) return { scheduled: false, reason: "no-permission" };
 
   // Cancel først for at undgå duplicates
   await cancelTrialDay5Reminder();
 
-  const fiveDaysMs = 60 * 1000; // 60 sek test
+const fiveDaysMs = 60 * 1000; // 1 minut
+
   const at = new Date(Date.now() + fiveDaysMs);
 
   await LocalNotifications.schedule({

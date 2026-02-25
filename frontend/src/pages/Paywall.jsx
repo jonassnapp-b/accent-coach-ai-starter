@@ -63,6 +63,18 @@ export default function Paywall() {
   const copy = getPaywallCopy(src);
 
   const { loading, products, isPro, buy, restore, lastError, isNative, refresh } = usePurchases();
+  useEffect(() => {
+  console.log(
+    "[Paywall] isNative:",
+    isNative,
+    "loading:",
+    loading,
+    "products:",
+    (products || []).length,
+    "lastError:",
+    lastError
+  );
+}, [isNative, loading, products, lastError]);
   const [selected, setSelected] = useState("fluentup.pro.yearly");
 const [remindOn, setRemindOn] = useState(false);
 const [pendingReminder, setPendingReminder] = useState(false);
@@ -431,9 +443,7 @@ return (
     }}
   />
 )}
-<div style={{ fontSize: 12, opacity: 0.6, marginBottom: 8 }}>
-  isNative: {String(isNative)} | loading: {String(loading)} | products: {(products || []).length} | yearlyLoaded: {String(!!yearly)} | monthlyLoaded: {String(!!monthly)}
-</div>
+
       {/* CTA */}
       <button
         onClick={handleBuy}
