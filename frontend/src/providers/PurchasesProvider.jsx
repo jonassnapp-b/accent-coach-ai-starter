@@ -1,4 +1,5 @@
 // src/providers/PurchasesProvider.jsx
+console.log("[BUILD] PurchasesProvider FILE EVALUATED");
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import {
@@ -12,6 +13,8 @@ import {
 const Ctx = createContext(null);
 
 export function PurchasesProvider({ children }) {
+  console.log("[BUILD] PurchasesProvider mounted");
+console.log("[BUILD] Capacitor.isNativePlatform() =", Capacitor.isNativePlatform?.());
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
   const [isPro, setIsPro] = useState(false);
@@ -65,6 +68,7 @@ export function PurchasesProvider({ children }) {
 
   // fix: remove duplicate getProStatus call
   async function refreshAllFixed() {
+    console.log("[BUILD] refreshAllFixed() called. isNative =", isNative);
     if (!isNative) {
       setLoading(false);
       setProducts([]);
@@ -77,9 +81,10 @@ export function PurchasesProvider({ children }) {
     setLastError(null);
 
     try {
+      console.log("[BUILD] calling initPurchases()");
       const init = await initPurchases();
       if (init?.ok === false) throw new Error(`init failed: ${init.reason}`);
-
+console.log("[BUILD] calling getProStatus() + loadProducts()");
       const [pro, items] = await Promise.all([getProStatus(), loadProducts()]);
 
       setProducts(items || []);
@@ -102,10 +107,10 @@ export function PurchasesProvider({ children }) {
     }
   }
 
-  useEffect(() => {
-    refreshAllFixed();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNative]);
+useEffect(() => {
+  console.log("[BUILD] useEffect triggered. isNative =", isNative);
+  refreshAllFixed();
+}, [isNative]);
 
   async function buy(planId) {
     // planId = product id string
