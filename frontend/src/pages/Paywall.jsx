@@ -78,6 +78,7 @@ export default function Paywall() {
   const [selected, setSelected] = useState("fluentup.pro.yearly");
 const [remindOn, setRemindOn] = useState(false);
 const [pendingReminder, setPendingReminder] = useState(false);
+
   const byId = useMemo(() => {
     const m = new Map();
     for (const p of products || []) m.set(p.id, p);
@@ -93,6 +94,7 @@ useEffect(() => {
 
   const run = async () => {
     if (pendingReminder) {
+      console.log("[TrialReminder] ABOUT TO SCHEDULE (caller)");
       await scheduleTrialDay5Reminder();
       setPendingReminder(false);
     }
@@ -140,10 +142,15 @@ const handleBuy = async () => {
 return (
   <div
   style={{
-    height: "100vh",
+    position: "fixed",
+    inset: 0,
+    height: "100dvh",
     background: "#fff",
     display: "flex",
     flexDirection: "column",
+    overflow: "hidden",
+    overscrollBehavior: "none",
+    touchAction: "none",
   }}
 >
     <div
@@ -159,12 +166,11 @@ return (
     {/* TOP (sticky) */}
 <div
   style={{
-    position: "sticky",
-    top: 0,
     background: "#fff",
     zIndex: 10,
     padding: 18,
     paddingTop: "calc(var(--safe-top) + 18px)",
+    flexShrink: 0,
   }}
 >
   <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -220,6 +226,9 @@ return (
     flex: 1,
     overflowY: "auto",
     padding: "0 18px",
+    WebkitOverflowScrolling: "touch",
+    overscrollBehavior: "contain",
+    touchAction: "pan-y",
   }}
 >
 {/* timeline */}
@@ -424,10 +433,10 @@ return (
    {/* BOTTOM (sticky) */}
 <div
   style={{
-    position: "sticky",
-    bottom: 0,
     background: "#fff",
     padding: 18,
+    paddingBottom: "calc(var(--safe-bottom) + 18px)",
+    flexShrink: 0,
   }}
 >
 {hasTrial && (
@@ -466,8 +475,8 @@ return (
            fontWeight: 900,
           fontSize: 20,
           color: "white",
-          background: "linear-gradient(90deg, #F59E0B 0%, #EF4444 35%, #EC4899 100%)",
-          boxShadow: "0 18px 40px rgba(236,72,153,0.25)",
+         background: "linear-gradient(180deg, #64B5F6 0%, #2196F3 40%, #1E88E5 70%, #1565C0 100%)",
+boxShadow: "0 18px 40px rgba(33,150,243,0.35)",
           opacity:
   loading ||
   !isNative ||

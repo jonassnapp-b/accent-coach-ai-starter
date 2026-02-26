@@ -391,6 +391,11 @@ export default function Settings() {
 
           {/* Privacy & data (unchanged) */}
           <Section title="PRIVACY & DATA">
+            <Row label="Build">
+  <div className="text-sm" style={{ color: "var(--muted)", fontWeight: 800 }}>
+    {String(window.__FE_BUILD_STAMP__ || "no-stamp")}
+  </div>
+</Row>
             <Row
               label="Send audio to server"
               hint="Needed for cloud scoring. Turn off to keep audio on this device (some features will be disabled)."

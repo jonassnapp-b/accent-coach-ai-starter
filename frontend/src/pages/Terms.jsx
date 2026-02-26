@@ -6,15 +6,16 @@ export default function Terms() {
     <div style={{ padding: 18, maxWidth: 720, margin: "0 auto", lineHeight: 1.6 }}>
         <button
   onClick={() => nav(-1)}
-  style={{
-    border: "none",
-    background: "transparent",
-    fontWeight: 900,
-    fontSize: 16,
-    cursor: "pointer",
-    marginBottom: 12,
-    padding: 0,
-  }}
+ style={{
+  border: "none",
+  background: "transparent",
+  fontWeight: 900,
+  fontSize: 16,
+  cursor: "pointer",
+  marginTop: "calc(var(--safe-top) + 24px)",
+  marginBottom: 12,
+  padding: 0,
+}}
 >
   ← Back
 </button>

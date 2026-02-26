@@ -13,6 +13,7 @@ def capacitor_pods
   pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
   pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
   pod 'CapacitorCommunityInAppReview', :path => '../../node_modules/@capacitor-community/in-app-review'
+  pod 'CapacitorLocalNotifications', :path => '../../node_modules/@capacitor/local-notifications'
   pod 'CapacitorPushNotifications', :path => '../../node_modules/@capacitor/push-notifications'
   pod 'CapgoNativePurchases', :path => '../../node_modules/@capgo/native-purchases'
   pod 'CapacitorVoiceRecorder', :path => '../../node_modules/capacitor-voice-recorder'

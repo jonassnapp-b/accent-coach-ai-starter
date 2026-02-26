@@ -4,6 +4,8 @@ PODS:
   - CapacitorCommunityInAppReview (7.1.0):
     - Capacitor
   - CapacitorCordova (8.1.0)
+  - CapacitorLocalNotifications (8.0.1):
+    - Capacitor
   - CapacitorPushNotifications (7.0.3):
     - Capacitor
   - CapacitorVoiceRecorder (7.0.6):
@@ -104,6 +106,7 @@ DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorCommunityInAppReview (from `../../node_modules/@capacitor-community/in-app-review`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorLocalNotifications (from `../../node_modules/@capacitor/local-notifications`)"
   - "CapacitorPushNotifications (from `../../node_modules/@capacitor/push-notifications`)"
   - CapacitorVoiceRecorder (from `../../node_modules/capacitor-voice-recorder`)
   - "CapgoNativePurchases (from `../../node_modules/@capgo/native-purchases`)"
@@ -129,6 +132,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor-community/in-app-review"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorLocalNotifications:
+    :path: "../../node_modules/@capacitor/local-notifications"
   CapacitorPushNotifications:
     :path: "../../node_modules/@capacitor/push-notifications"
   CapacitorVoiceRecorder:
@@ -140,6 +145,7 @@ SPEC CHECKSUMS:
   Capacitor: 47b825120c6b8b6d6f9f053e9350a8960d436710
   CapacitorCommunityInAppReview: 3756d05524c5cf2eccbc8ed460f77f8f8db6c141
   CapacitorCordova: e8b76fd95fc1e157775abc484c59cc0de464095d
+  CapacitorLocalNotifications: bc5325611c92ac302732413bc69244575cd4eaaf
   CapacitorPushNotifications: bdd621fbd562be34a41f4a7b1750efa000447d5a
   CapacitorVoiceRecorder: 9158861be982f32d411769723a4d813d6ce46135
   CapgoNativePurchases: c4978e4248e54fdb545581f362bbae0194bfe23d
@@ -153,6 +159,6 @@ SPEC CHECKSUMS:
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
 
-PODFILE CHECKSUM: 5e755bb56590019566826aa14a2dc56acaa0c8e6
+PODFILE CHECKSUM: 921c56af7e922958625eafdece7909dc14bd6798
 
 COCOAPODS: 1.16.2

@@ -170,7 +170,9 @@ useEffect(() => {
 
     
   const [scenarioOverlayOpen, setScenarioOverlayOpen] = useState(false);
-const showTabs = !scenarioOverlayOpen;
+const location = useLocation();
+const isPaywall = location.pathname === "/pro";
+const showTabs = !scenarioOverlayOpen && !isPaywall;
 
 useEffect(() => {
   const on = (e) => setScenarioOverlayOpen(!!e?.detail?.open);

@@ -1,6 +1,5 @@
 // frontend/src/lib/purchases.js
 import { Capacitor } from "@capacitor/core";
-console.log("[BUILD] purchases.js loaded");
 
 export const SUBS_IDS = ["fluentup.pro.monthly", "fluentup.pro.yearly"];
 
@@ -11,21 +10,15 @@ function isNative() {
 let implPromise = null;
 
 async function getImpl() {
-  console.log("[BUILD] getImpl() called");
-  console.log("[BUILD] isNative() =", isNative());
-
-  if (implPromise) {
-    console.log("[BUILD] returning cached implPromise");
-    return implPromise;
-  }
+  if (implPromise) return implPromise;
+  console.log("[Purchases] isNative() =", isNative());
 
   if (!isNative()) {
-    console.log("[BUILD] loading WEB purchases implementation");
     implPromise = import("./purchases.web.js");
     return implPromise;
   }
 
-  console.log("[BUILD] attempting native import purchases.native.cap.js");
+  // ✅ import native implementation (NO @vite-ignore on local file)
   implPromise = import("./purchases.native.cap.js");
   return implPromise;
 }
