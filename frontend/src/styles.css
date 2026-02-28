@@ -68,13 +68,11 @@ button, input, select, textarea { font-family: inherit; }
 /* Fill screen above tab bar */
 html, body, #root {
   height: 100%;
-  background: var(--bg) !important;
-  color: var(--text) !important;
-
+  background: var(--bg);
+  color: var(--text);
   width: 100%;
-  overflow-x: hidden; /* ✅ kill horizontal pan */
+  overflow-x: hidden;
 }
-
 
 /* ✅ Kill any “dark bottom gradient” coming from pages/components */
 body::before,

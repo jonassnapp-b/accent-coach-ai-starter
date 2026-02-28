@@ -2685,7 +2685,7 @@ boxShadow: PAGE_SHADOW,
             position: "relative", // ✅ gør CloseSlidesX (slide 1) relativ til denne bredde
 
         width: "100%",
-    maxWidth: 760,
+maxWidth: "100%",
         margin: "0 auto",
         display: "flex",
         flexDirection: "column",
@@ -2731,8 +2731,8 @@ style={{
   // ✅ fra phase 4: flyt hele hero-blokken op under safe-top
   placeItems: introPhase >= 4 ? "start center" : "center",
 
-  paddingLeft: 24,
-  paddingRight: 24,
+  paddingLeft: 0,
+  paddingRight: 0,
 paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 90px + ${HERO_DOWN_PX}px)` : 0,
 
   pointerEvents: "none",
@@ -2745,8 +2745,8 @@ paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 90px + ${HERO_DOWN_PX}px)` : 0
       maxWidth: 980,
       margin: "0 auto",
       textAlign: "center",
-      paddingLeft: 16,
-      paddingRight: 16,
+      paddingLeft: 0,
+      paddingRight: 0,
       paddingTop: 28,
       paddingBottom: 28,
     }}
