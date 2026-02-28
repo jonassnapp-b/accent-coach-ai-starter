@@ -314,32 +314,34 @@ export default function Settings() {
 
        {/* Speaking */}
 <Section title="SPEAKING" first>
-  <Row label="Default accent" hint="Used for IPA, target, and native TTS language.">
-    <div className="inline-flex items-center gap-2">
-      <ControlSelect
-        value={s.accentDefault}
-        onChange={(e) => setS({ ...s, accentDefault: e.target.value })}
-      >
-        <option value="en_us">🇺🇸 American English (US)</option>
-        <option value="en_br">🇬🇧 British English (UK)</option>
-      </ControlSelect>
-    </div>
-  </Row>
-   {(() => {
+ <div className="ios-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 12 }}>
+  <div>
+    <div className="ios-row-label">Default accent</div>
+    <div className="ios-row-hint">Used for IPA, target, and native TTS language.</div>
+  </div>
+
+  <div style={{ width: "100%" }}>
+    <ControlSelect
+      value={s.accentDefault}
+      onChange={(e) => setS({ ...s, accentDefault: e.target.value })}
+      style={{ width: "100%", maxWidth: 520 }}
+    >
+      <option value="en_us">🇺🇸 American English (US)</option>
+      <option value="en_br">🇬🇧 British English (UK)</option>
+    </ControlSelect>
+  </div>
+</div>
+{(() => {
   const slackVal = clamp(Number(s.slack ?? 0), -1, 1);
 
   return (
-    <div className="ios-row" style={{ alignItems: "flex-start" }}>
+    <div className="ios-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 12 }}>
       <div>
-        <div className="font-medium" style={{ color: "var(--text)" }}>
-          Difficulty (Slack)
-        </div>
-        <div className="text-sm" style={{ color: "var(--muted)" }}>
-          Controls scoring strictness. Easier = more forgiving. Stricter = harder.
-        </div>
+        <div className="ios-row-label">Difficulty (Slack)</div>
+        <div className="ios-row-hint">Controls scoring strictness. Easier = more forgiving. Stricter = harder.</div>
       </div>
 
-      <div className="grid gap-2">
+      <div style={{ display: "grid", gap: 10 }}>
         <div style={{ color: "var(--muted)", fontWeight: 800 }}>
           {slackLabel(slackVal)} ({slackVal.toFixed(2)})
         </div>
@@ -351,9 +353,11 @@ export default function Settings() {
           step="0.05"
           value={slackVal}
           onChange={(e) => setS({ ...s, slack: Number(e.target.value) })}
-          className="w-56 range-blue-white"
+          className="range-blue-white"
           style={{
             "--pct": `${Math.round(((slackVal + 1) / 2) * 100)}%`,
+            width: "100%",
+            minWidth: 0,
           }}
         />
       </div>
@@ -368,34 +372,39 @@ export default function Settings() {
 
           {/* Audio */}
           <Section title="AUDIO">
-            <Row label="Volume">
-              <div className="flex items-center gap-3">
-                <input
-  type="range"
-  min="0"
-  max="1"
-  step="0.01"
-  value={volumeVal}
-  onChange={(e) => setS({ ...s, volume: Number(e.target.value) })}
-  className="w-56 range-blue-white"
-  style={{ "--pct": `${Math.round(volumeVal * 100)}%` }}
-/>
+         <div className="ios-row">
+  <div className="ios-row-left">
+    <div className="ios-row-label">Volume</div>
+  </div>
 
+  <div className="ios-row-right" style={{ flex: 1 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        value={volumeVal}
+        onChange={(e) => setS({ ...s, volume: Number(e.target.value) })}
+        className="range-blue-white"
+        style={{
+          "--pct": `${Math.round(volumeVal * 100)}%`,
+          width: "100%",
+          minWidth: 0,
+        }}
+      />
 
-                <span className="w-12 text-right" style={{ color: "var(--muted)" }}>
-                  {Math.round(volumeVal * 100)}%
-                </span>
-              </div>
-            </Row>
+      <span style={{ width: 44, textAlign: "right", color: "var(--muted)", fontWeight: 800 }}>
+        {Math.round(volumeVal * 100)}%
+      </span>
+    </div>
+  </div>
+</div>
           </Section>
 
           {/* Privacy & data (unchanged) */}
           <Section title="PRIVACY & DATA">
-            <Row label="Build">
-  <div className="text-sm" style={{ color: "var(--muted)", fontWeight: 800 }}>
-    {String(window.__FE_BUILD_STAMP__ || "no-stamp")}
-  </div>
-</Row>
+        
             <Row
               label="Send audio to server"
               hint="Needed for cloud scoring. Turn off to keep audio on this device (some features will be disabled)."
@@ -407,29 +416,37 @@ export default function Settings() {
               />
             </Row>
 
-            <Row label="Keep recordings locally" hint="Store clips in this browser so you can replay them. Nothing is uploaded.">
-              <div className="flex flex-wrap items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={!!s.keepRecordings}
-                  onChange={(e) => setS({ ...s, keepRecordings: e.target.checked })}
-                />
-                <span className="text-sm" style={{ color: "var(--muted)" }}>
-                  Retention
-                </span>
-                <ControlInput
-                  type="number"
-                  min="1"
-                  max="30"
-                  value={s.retentionDays ?? 7}
-                  onChange={(e) => setS({ ...s, retentionDays: Number(e.target.value) })}
-                  className="w-20"
-                />
-                <span className="text-sm" style={{ color: "var(--muted)" }}>
-                  days
-                </span>
-              </div>
-            </Row>
+         <div className="ios-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 12 }}>
+  <div>
+    <div className="ios-row-label">Keep recordings locally</div>
+    <div className="ios-row-hint">Store clips in this browser so you can replay them. Nothing is uploaded.</div>
+  </div>
+
+  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
+    <input
+      type="checkbox"
+      checked={!!s.keepRecordings}
+      onChange={(e) => setS({ ...s, keepRecordings: e.target.checked })}
+    />
+
+    <span className="text-sm" style={{ color: "var(--muted)" }}>
+      Retention
+    </span>
+
+    <ControlInput
+      type="number"
+      min="1"
+      max="30"
+      value={s.retentionDays ?? 7}
+      onChange={(e) => setS({ ...s, retentionDays: Number(e.target.value) })}
+      className="w-20"
+    />
+
+    <span className="text-sm" style={{ color: "var(--muted)" }}>
+      days
+    </span>
+  </div>
+</div>
 
          <ActionRow>
   <button

@@ -1,4 +1,4 @@
- // src/pages/PracticeMyText.jsx
+// src/pages/PracticeMyText.jsx
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, ChevronDown, Volume2, Play, Pause, X, RotateCcw } from "lucide-react";
@@ -1549,6 +1549,11 @@ const heroCenterRef = useRef(null);
 const heroTopRef = useRef(null);
 const [heroDeltaY, setHeroDeltaY] = useState(0);
 
+// ✅ auto-fit scaling for the hero WORD block (container-based zoom-out)
+const heroFitOuterRef = useRef(null);
+const heroFitInnerRef = useRef(null);
+const [heroFitScale, setHeroFitScale] = useState(1);
+
 // Slide 2 (Speaking Level) animation
 const [levelPctAnim, setLevelPctAnim] = useState(0);
 const [overlayReady, setOverlayReady] = useState(false);
@@ -1732,7 +1737,41 @@ useLayoutEffect(() => {
 
   setHeroDeltaY(topMidY - centerMidY);
 }, [overlayReady, slideIdx]);
+useLayoutEffect(() => {
+  if (!overlayReady) return;
+  if (slideIdx !== 0) return;
 
+  const outer = heroFitOuterRef.current;
+  const inner = heroFitInnerRef.current;
+  if (!outer || !inner) return;
+
+  const MIN_SCALE = 0.24;
+
+  const compute = () => {
+    const ow = outer.clientWidth;
+    const oh = outer.clientHeight;
+    const iw = inner.scrollWidth;
+    const ih = inner.scrollHeight;
+
+    if (!ow || !oh || !iw || !ih) return;
+
+    const s = Math.min(1, ow / iw, oh / ih);
+    setHeroFitScale(clamp(s, MIN_SCALE, 1));
+  };
+
+  compute();
+
+  const ro = new ResizeObserver(() => compute());
+  ro.observe(outer);
+  ro.observe(inner);
+
+  window.addEventListener("resize", compute);
+
+  return () => {
+    try { ro.disconnect(); } catch {}
+    window.removeEventListener("resize", compute);
+  };
+}, [overlayReady, slideIdx, introPhase, heroText, deckPctLocked]);
 // Reset slide flow when new result comes in
 useEffect(() => {
   if (!result) return;
@@ -2703,7 +2742,7 @@ paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 90px + ${HERO_DOWN_PX}px)` : 0
   <div
     style={{
       width: "100%",
-      maxWidth: 720,
+      maxWidth: 980,
       margin: "0 auto",
       textAlign: "center",
       paddingLeft: 16,
@@ -2716,8 +2755,8 @@ paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 90px + ${HERO_DOWN_PX}px)` : 0
     <div
   style={{
     position: "relative",
-    width: "100%",
-    maxWidth: 720,
+maxWidth: "100%",
+margin: 0,
     margin: "0 auto",
     display: "flex",
     flexDirection: "column",
@@ -2726,7 +2765,7 @@ paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 90px + ${HERO_DOWN_PX}px)` : 0
     textAlign: "center",
 
     // ✅ less space between word and percent once percent is visible
-    gap: introPhase >= 1 ? 18 : 10,
+    gap: introPhase >= 1 ? 2 : 2,
 
     // ✅ lift up slightly BEFORE final phase (phase 3), then a bit more in phase 4
    transform: `translateY(${introPhase >= 4 ? 0 : -28}px)`,
@@ -2792,51 +2831,73 @@ transition: "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
     position: "absolute",
     left: "50%",
     top: "50%",
-    transform: `translate(-50%, -50%) translateY(${introPhase >= 1 ? heroDeltaY : 0}px)`,
+    transform: `translate(-59%, -50%) translateY(${introPhase >= 1 ? heroDeltaY : 0}px)`,
     transition: "transform 1200ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 900ms ease",
     opacity: introPhase >= 0 ? 1 : 0,
     zIndex: 1,
     width: "100%",
-    paddingLeft: 16,
-    paddingRight: 16,
+paddingLeft: 0,
+paddingRight: 0,
     pointerEvents: "none",
   }}
 >
+  {/* ✅ OUTER box defines the available area (this is the “zoom box”) */}
   <div
-    style={{
-      fontWeight: 1000,
-  fontSize: Math.round(computePctFontSize(heroText, 140, 80)),
+    ref={heroFitOuterRef}
+        style={{
+      width: "100%",
+  maxWidth: "100%",
+margin: 0,
 
-      lineHeight: 1.05,
-      letterSpacing: -0.4,
-      WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
-      paintOrder: "stroke fill",
-      display: "inline-block",
-      maxWidth: "100%",
+      // ✅ vigtig: når % er synlig (phase>=1) må hero-teksten ikke kunne “fylde ned”
+      height: introPhase >= 4 ? 110 : introPhase >= 1 ? 170 : 260,
+
+      overflow: "hidden",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
     }}
   >
-    <PhonemeFeedback result={result} mode="textOnly" />
+    {/* ✅ INNER is measured; we scale this to fit outer */}
+    <div
+      ref={heroFitInnerRef}
+      style={{
+        transform: `scale(${heroFitScale})`,
+        transformOrigin: "center",
+        textAlign: "center",
+        fontWeight: 1000,
+        fontSize: 69, // base size (scale handles long text)
+        lineHeight: 1.05,
+        letterSpacing: -0.4,
+        WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
+        paintOrder: "stroke fill",
+        display: "inline-block",
+        maxWidth: "100%",
+      }}
+    >
+      <PhonemeFeedback result={result} mode="textOnly" />
+    </div>
+  </div>
 
-<div
-  style={{
-    position: "absolute",
-    left: "50%",
-    top: "50%",
-transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 94 : 90}px)`,
-    fontWeight: 850,
-    fontSize: 32, // ✅ bigger
-    color: "rgba(255,255,255,0.88)",
-    opacity: introPhase === 2 ? 1 : 0,
-    transition: "opacity 520ms ease, transform 520ms ease",
-    zIndex: 2, // ✅ above the % if they ever touch
-    pointerEvents: "none",
-    textAlign: "center",
-    whiteSpace: "nowrap",
-  }}
->
-  {pickShortLineFromScore(deckPctLocked)}
-</div>
-
+  {/* keep your line exactly as you have it */}
+  <div
+    style={{
+      position: "absolute",
+      left: "50%",
+      top: "50%",
+      transform: `translate(-45%, -50%) translateY(${introPhase === 2 ? 84 : 82}px)`,
+      fontWeight: 850,
+      fontSize: 24,
+      color: "rgba(255,255,255,0.88)",
+      opacity: introPhase === 2 ? 1 : 0,
+      transition: "opacity 520ms ease, transform 520ms ease",
+      zIndex: 2,
+      pointerEvents: "none",
+      textAlign: "center",
+      whiteSpace: "nowrap",
+    }}
+  >
+    {pickShortLineFromScore(deckPctLocked)}
   </div>
 </div>
 
@@ -2846,7 +2907,7 @@ transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 94 : 90}px)`,
     position: "absolute",
     left: "50%",
     top: "50%",
-transform: "translate(-50%, -50%) translateY(-42px)",
+transform: "translate(-50%, -50%) translateY(-10px)",
     opacity: introPhase >= 1 ? 1 : 0,
     transition: "opacity 900ms ease",
     transitionDelay: introPhase >= 1 ? "220ms" : "0ms",

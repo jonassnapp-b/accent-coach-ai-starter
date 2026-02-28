@@ -240,7 +240,7 @@ return (
       <div
         style={{
           width: 28,
-          height: 310,
+          height: 398,
           borderRadius: 999,
           background:
             "linear-gradient(180deg, #64B5F6 0%, #2196F3 40%, #1E88E5 70%, #1565C0 85%, rgba(21,101,192,0) 100%)",
@@ -286,7 +286,7 @@ return (
           style={{
             position: "absolute",
             left: "50%",
-            top: 204,
+            top: 260,
             transform: "translateX(-50%)",
             width: 26,
             height: 26,
