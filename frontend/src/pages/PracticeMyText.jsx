@@ -223,14 +223,13 @@ function computeHeroFontSize(text, maxPx, minPx) {
   const t = String(text || "").trim();
   if (!t) return maxPx;
 
-  // Rough fit: longer text => smaller font
   const len = t.length;
 
-  // Tuning:
-  // <= 14 chars: keep max
-  // 40 chars: noticeably smaller
-  // 80+ chars: near min
-  const shrink = Math.max(0, len - 14) * 1.05;
+  // Aggressiv shrink:
+  // 0–20 chars: ~max
+  // 60 chars: markant mindre
+  // 120+ chars: tæt på min
+const shrink = Math.max(0, len - 18) * 2.35;
   return clamp(Math.round(maxPx - shrink), minPx, maxPx);
 }
 function computePctFontSize(text, maxPx, minPx) {
@@ -1340,7 +1339,7 @@ const SEND_PURPLE = "#8B5CF6";
   const SAFE_TOP = "env(safe-area-inset-top, 0px)";
   const HERO_DOWN_PX = 18;
   const DETAILS_DOWN_PX = 26; // tweak: 18–40 feels reasonable
-
+const PHASE4_DOWN_PX = 15; // 👈 tweak: 12–28
 
 useEffect(() => {
   const prevBody = document.body.style.background;
@@ -1536,23 +1535,19 @@ setOverallPctLocked(Math.max(0, Math.min(100, pct)));
 
 
 // ---------------- Slide flow state ----------------
+// ---------------- Slide flow state ----------------
 const [slideIdx, setSlideIdx] = useState(0);
-
-// Slide 1 animation phases
-// -1 = hidden, 0 = word fades in (center), 1 = word moves up + percent appears + count up,
-// 2 = show message (hold), 3 = message fades out, 4 = word/% collapse to top + details appear
 const [introPhase, setIntroPhase] = useState(-1);
+
+const NAV_H = 64; // lavere nav-højde
+const NAV_SAFE_H = `calc(${NAV_H}px + ${SAFE_BOTTOM})`; // ✅ nav height incl. safe-area
+const showNav = true; // global: vis på alle slides
 
 const [introPct, setIntroPct] = useState(0);
 // --- slide 1 hero anchors (center -> top) ---
 const heroCenterRef = useRef(null);
 const heroTopRef = useRef(null);
 const [heroDeltaY, setHeroDeltaY] = useState(0);
-
-// ✅ auto-fit scaling for the hero WORD block (container-based zoom-out)
-const heroFitOuterRef = useRef(null);
-const heroFitInnerRef = useRef(null);
-const [heroFitScale, setHeroFitScale] = useState(1);
 
 // Slide 2 (Speaking Level) animation
 const [levelPctAnim, setLevelPctAnim] = useState(0);
@@ -1737,41 +1732,8 @@ useLayoutEffect(() => {
 
   setHeroDeltaY(topMidY - centerMidY);
 }, [overlayReady, slideIdx]);
-useLayoutEffect(() => {
-  if (!overlayReady) return;
-  if (slideIdx !== 0) return;
 
-  const outer = heroFitOuterRef.current;
-  const inner = heroFitInnerRef.current;
-  if (!outer || !inner) return;
 
-  const MIN_SCALE = 0.24;
-
-  const compute = () => {
-    const ow = outer.clientWidth;
-    const oh = outer.clientHeight;
-    const iw = inner.scrollWidth;
-    const ih = inner.scrollHeight;
-
-    if (!ow || !oh || !iw || !ih) return;
-
-    const s = Math.min(1, ow / iw, oh / ih);
-    setHeroFitScale(clamp(s, MIN_SCALE, 1));
-  };
-
-  compute();
-
-  const ro = new ResizeObserver(() => compute());
-  ro.observe(outer);
-  ro.observe(inner);
-
-  window.addEventListener("resize", compute);
-
-  return () => {
-    try { ro.disconnect(); } catch {}
-    window.removeEventListener("resize", compute);
-  };
-}, [overlayReady, slideIdx, introPhase, heroText, deckPctLocked]);
 // Reset slide flow when new result comes in
 useEffect(() => {
   if (!result) return;
@@ -2659,8 +2621,8 @@ boxShadow: PAGE_SHADOW,
       color: "white",
       zIndex: 9999,
       paddingTop: 0,
-      paddingLeft: 24,
-      paddingRight: 24,
+paddingLeft: 0,
+    paddingRight: 0,
       paddingBottom: `calc(14px + ${SAFE_BOTTOM})`,
       overflow: "hidden",
       display: "flex",
@@ -2677,27 +2639,53 @@ boxShadow: PAGE_SHADOW,
 
  
 
-  
+      {/* ✅ Overlay logo (only on slide 1, phase 4+) */}
+    {slideIdx === 0 && introPhase >= 4 && (
+      <div
+        style={{
+  position: "absolute",
+  top: `calc(${SAFE_TOP} + -6px + ${PHASE4_DOWN_PX}px)`,
+  left: 0,
+  right: 0,
+  display: "flex",
+  justifyContent: "center",
+  pointerEvents: "none",
+  zIndex: 10001,
+
+  // ✅ extra air under the logo
+  paddingBottom: 14,
+}}
+      >
+       <img
+  src="/brand/logo.png"
+  alt="FluentUp"
+  style={{
+    height: 100,
+    width: "auto",
+    opacity: 1,
+  }}
+/>
+      </div>
+    )}
 
     {/* Centered width like other pages */}
     <div
-      style={{
-            position: "relative", // ✅ gør CloseSlidesX (slide 1) relativ til denne bredde
 
-        width: "100%",
-maxWidth: "100%",
-        margin: "0 auto",
-        display: "flex",
-        flexDirection: "column",
-        minHeight: 0,
-        flex: "1 1 auto",
-      }}
-    >
+  style={{
+    position: "relative",
+    width: "100%",
+    maxWidth: 560,          // ✅ gør alt indhold “narrow”
+    margin: "0 auto",
+    paddingLeft: 16,        // ✅ giver luft til siderne
+    paddingRight: 16,
+    display: "flex",
+    flexDirection: "column",
+    minHeight: 0,
+    flex: "1 1 auto",
+  }}
+>
 {/* CONTENT */}
 {(() => {
-  const showChevrons = slideIdx !== 0 || introPhase >= 4;
-  const CHEVRON_RESERVE_PX = 92; // nok til knapper + padding
-
   return (
     <div
       style={{
@@ -2709,14 +2697,21 @@ position: "relative",
 justifyContent: "flex-start",
         paddingTop: 0,
 
-        // ✅ ingen bund-reserve før chevrons vises (så slide 1 faktisk er centreret)
-        paddingBottom: showChevrons ? CHEVRON_RESERVE_PX : 0,
+    
       }}
-    >
-
-
-{slideIdx === 0 ? (
-  <>
+ >
+  {/* ✅ CONTENT LAYER (scrolls, leaves room for nav) */}
+  <div
+    style={{
+      position: "absolute",
+      inset: 0,
+      bottom: showNav ? NAV_SAFE_H : 0,
+      overflow: "auto",
+      WebkitOverflowScrolling: "touch",
+    }}
+  >
+    {slideIdx === 0 ? (
+      <>
     <CloseSlidesX top={`calc(${SAFE_TOP} + 24px)`} right="12px" />
 
 {/* ABSOLUTE CENTER LAYER (ONLY HERO) */}
@@ -2768,7 +2763,7 @@ margin: 0,
     gap: introPhase >= 1 ? 2 : 2,
 
     // ✅ lift up slightly BEFORE final phase (phase 3), then a bit more in phase 4
-   transform: `translateY(${introPhase >= 4 ? 0 : -28}px)`,
+   transform: `translateY(${introPhase >= 4 ? 0 : -44}px)`,
 transition: "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
 
   }}
@@ -2817,7 +2812,7 @@ transition: "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
   style={{
     position: "absolute",
     left: "50%",
-    top: `calc(${SAFE_TOP} + 86px)`, // 👈 top destination for the WORD
+    top: `calc(${SAFE_TOP} + 44px + ${PHASE4_DOWN_PX}px)`, // 👈 phase 4 down
     width: 1,
     height: 1,
     transform: "translate(-50%, -50%)",
@@ -2831,7 +2826,7 @@ transition: "transform 900ms cubic-bezier(0.2, 0.9, 0.2, 1)",
     position: "absolute",
     left: "50%",
     top: "50%",
-    transform: `translate(-59%, -50%) translateY(${introPhase >= 1 ? heroDeltaY : 0}px)`,
+    transform: `translate(-52%, -50%) translateY(${introPhase >= 1 ? heroDeltaY : 0}px)`,
     transition: "transform 1200ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 900ms ease",
     opacity: introPhase >= 0 ? 1 : 0,
     zIndex: 1,
@@ -2842,42 +2837,38 @@ paddingRight: 0,
   }}
 >
   {/* ✅ OUTER box defines the available area (this is the “zoom box”) */}
+<div
+  style={{
+    width: "100%",
+    maxWidth: "100%",
+    margin: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  }}
+>
   <div
-    ref={heroFitOuterRef}
-        style={{
-      width: "100%",
-  maxWidth: "100%",
-margin: 0,
+    style={{
+      textAlign: "center",
+      fontWeight: 1000,
+      fontSize: computeHeroFontSize(heroText, 72, 14), // ✅ længde => mindre font
+      lineHeight: 1.02,
+      letterSpacing: -0.4,
+      WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
+      paintOrder: "stroke fill",
 
-      // ✅ vigtig: når % er synlig (phase>=1) må hero-teksten ikke kunne “fylde ned”
-      height: introPhase >= 4 ? 110 : introPhase >= 1 ? 170 : 260,
+      display: "block",
+      whiteSpace: "normal",
+      wordBreak: "break-word",
+      overflowWrap: "anywhere",
 
-      overflow: "hidden",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
+      width: "min(92vw, 560px)",
+      maxWidth: "100%",
     }}
   >
-    {/* ✅ INNER is measured; we scale this to fit outer */}
-    <div
-      ref={heroFitInnerRef}
-      style={{
-        transform: `scale(${heroFitScale})`,
-        transformOrigin: "center",
-        textAlign: "center",
-        fontWeight: 1000,
-        fontSize: 69, // base size (scale handles long text)
-        lineHeight: 1.05,
-        letterSpacing: -0.4,
-        WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
-        paintOrder: "stroke fill",
-        display: "inline-block",
-        maxWidth: "100%",
-      }}
-    >
-      <PhonemeFeedback result={result} mode="textOnly" />
-    </div>
+    <PhonemeFeedback result={result} mode="textOnly" />
   </div>
+</div>
 
   {/* keep your line exactly as you have it */}
   <div
@@ -2885,9 +2876,9 @@ margin: 0,
       position: "absolute",
       left: "50%",
       top: "50%",
-      transform: `translate(-45%, -50%) translateY(${introPhase === 2 ? 84 : 82}px)`,
-      fontWeight: 850,
-      fontSize: 24,
+transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 68 : 66}px)`,
+        fontWeight: 850,
+      fontSize: 22,
       color: "rgba(255,255,255,0.88)",
       opacity: introPhase === 2 ? 1 : 0,
       transition: "opacity 520ms ease, transform 520ms ease",
@@ -2907,7 +2898,7 @@ margin: 0,
     position: "absolute",
     left: "50%",
     top: "50%",
-transform: "translate(-50%, -50%) translateY(-10px)",
+transform: `translate(-50%, -50%) translateY(${introPhase >= 4 ? (-10 + PHASE4_DOWN_PX) : -10}px)`,
     opacity: introPhase >= 1 ? 1 : 0,
     transition: "opacity 900ms ease",
     transitionDelay: introPhase >= 1 ? "220ms" : "0ms",
@@ -2937,12 +2928,12 @@ transform: "translate(-50%, -50%) translateY(-10px)",
     right: 0,
 
     // ✅ sits below the center, without shifting it
- top: introPhase >= 4 ? `calc(${SAFE_TOP} + 280px)` : "calc(50% + 120px)",
+ top: introPhase >= 4 ? `calc(${SAFE_TOP} + 250px)` : "calc(50% + 120px)",
 
 transform: introPhase >= 4 ? `translateY(${DETAILS_DOWN_PX}px)` : "translateY(-20px)",
 
 // ✅ vigtig: hold details væk fra chevrons-området
-bottom: introPhase >= 4 ? `${CHEVRON_RESERVE_PX}px` : "auto",
+bottom: introPhase >= 4 ? NAV_SAFE_H : "auto",
 overflow: introPhase >= 4 ? "auto" : "visible",
 WebkitOverflowScrolling: introPhase >= 4 ? "touch" : "auto",
 
@@ -2953,6 +2944,7 @@ WebkitOverflowScrolling: introPhase >= 4 ? "touch" : "auto",
 
     paddingLeft: 16,
     paddingRight: 16,
+    paddingBottom: introPhase >= 4 ? `calc(${SAFE_BOTTOM} + 16px)` : 0,
   }}
 >
   <div style={{ width: "100%", maxWidth: 520, margin: "0 auto" }}>
@@ -3180,6 +3172,7 @@ const bubbleTop = clamp(dotTopPx - BUBBLE_H / 2 - BUBBLE_NUDGE_UP, -6, LADDER_H 
       paddingTop: `calc(${SAFE_TOP} + 22px)`,
       paddingLeft: 24,
       paddingRight: 24,
+      paddingBottom: NAV_H, // ✅ plads til chevrons-bar
     }}
   >
     <CloseSlidesX top={`calc(${SAFE_TOP} + 24px)`} right="12px" />
@@ -3406,8 +3399,9 @@ background: "#FFFFFF",
     boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
     marginBottom: 22,
 
-    marginLeft: -24,
-marginRight: -24,
+width: "100vw",
+marginLeft: "calc(50% - 50vw)",
+marginRight: "calc(50% - 50vw)",
 
   }}
 >
@@ -3424,19 +3418,19 @@ marginRight: -24,
 </div>
 
 
-          <div
-            style={{
-              marginTop: 28,
-              
-              width: "100%",
-              marginLeft: "auto",
-              marginRight: "auto",
-              borderRadius: 28,
-              overflow: "hidden",
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.10)",
-            }}
-          >
+         <div
+  style={{
+    marginTop: 28,
+    width: "100%",
+    maxWidth: 520,          // ✅ lås videobredden
+    marginLeft: "auto",
+    marginRight: "auto",
+    borderRadius: 28,
+    overflow: "hidden",
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.10)",
+  }}
+>
             {s.mediaKind === "image" ? (
               <img src={s.mediaSrc} alt={`${s.code} visual`} style={{ width: "100%", display: "block" }} />
             ) : (
@@ -3525,7 +3519,7 @@ marginRight: -24,
             )}
           </div>
 
-         <div style={{ marginTop: 16 }}>
+<div style={{ marginTop: 16, width: "100%", maxWidth: 520, marginLeft: "auto", marginRight: "auto" }}>
   <button
     type="button"
     onClick={() => {
@@ -3839,7 +3833,8 @@ posthog?.capture("practice_my_text_retry", {
       <div style={{ marginTop: "auto" }} />
     </>
   )}
-</div>
+    </div> {/* end content layer */}
+  </div>
   );
 })()}
 
@@ -3848,22 +3843,25 @@ posthog?.capture("practice_my_text_retry", {
 
     {/* Chevrons (bottom) — show only after intro is in final phase on slide 1 */}
 {/* Chevrons (bottom) */}
-{(slideIdx !== 0 || introPhase >= 4) && (
+{showNav && (
   <div
-    style={{
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 20,
+   style={{
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  zIndex: 20,
 
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingLeft: 12,
-      paddingRight: 12,
-      paddingBottom: `calc(10px + ${SAFE_BOTTOM})`,
-    }}
+  height: NAV_SAFE_H,              // ✅ height includes safe-area
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+
+  paddingLeft: 12,
+  paddingRight: 12,
+  paddingBottom: 8,                // ✅ NO safe-area here anymore
+  background: "transparent",
+}}
   >
     <button
       type="button"
@@ -3874,9 +3872,9 @@ posthog?.capture("practice_my_text_retry", {
       disabled={slideIdx <= 0}
       aria-label="Previous"
       style={{
-        width: 52,
-        height: 52,
-        borderRadius: 20,
+       width: 49,
+height: 49,
+borderRadius: 16,
         border: "1px solid rgba(255,255,255,0.12)",
         background: "rgba(255,255,255,0.08)",
         display: "grid",
@@ -3908,9 +3906,9 @@ posthog?.capture("practice_my_text_retry", {
       disabled={slideIdx >= totalSlides - 1}
       aria-label="Next"
       style={{
-        width: 64,
-        height: 64,
-        borderRadius: 24,
+     width: 44,
+height: 44,
+borderRadius: 16,
         border: "1px solid rgba(255,255,255,0.12)",
         background: "rgba(255,255,255,0.08)",
         display: "grid",
