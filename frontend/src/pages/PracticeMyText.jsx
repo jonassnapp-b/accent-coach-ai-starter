@@ -223,13 +223,17 @@ function computeHeroFontSize(text, maxPx, minPx) {
   const t = String(text || "").trim();
   if (!t) return maxPx;
 
-  const len = t.length;
+  // Hvis der er ét langt ord, er det dét der bestemmer overflow
+  const parts = t.split(/\s+/g).filter(Boolean);
+  const longest = parts.reduce((m, w) => Math.max(m, w.length), 0);
 
-  // Aggressiv shrink:
-  // 0–20 chars: ~max
-  // 60 chars: markant mindre
-  // 120+ chars: tæt på min
-const shrink = Math.max(0, len - 18) * 2.35;
+  // Baseline shrink (som før, men lidt mildere)
+  const baseShrink = Math.max(0, t.length - 18) * 2.0;
+
+  // EKSTRA shrink for lange enkeltord (det er det der fikser "comfortable")
+  const singleWordBoost = (parts.length === 1) ? Math.max(0, longest - 7) * 6.0 : 0;
+
+  const shrink = baseShrink + singleWordBoost;
   return clamp(Math.round(maxPx - shrink), minPx, maxPx);
 }
 function computePctFontSize(text, maxPx, minPx) {
@@ -407,7 +411,76 @@ function buildWeakPhonemeSlidesFromWords(wordsArr) {
     .sort((a, b) => a.order - b.order)
     .map((x) => x.slide);
 }
+function ttsTextForPhoneme(code) {
+  const c = String(code || "").trim().toUpperCase();
+  if (!c) return "";
 
+  const MAP = {
+    /* ===== VOWELS ===== */
+    AO: "aw",
+    OH: "oh",
+    AA: "ah",
+    IX: "ih",
+    IY: "ee",
+    UW: "oo",
+    UX: "oo",
+    EH: "eh",
+    IH: "ih",
+    UH: "uh",
+    AH: "uh",
+    AX: "uh",
+    AXR: "er",
+    AE: "aeh",
+    EY: "ay",
+    AY: "eye",
+    OW: "oh",
+    AW: "ow",
+    OY: "oy",
+    ER: "er",
+
+    /* ===== STOPS ===== */
+    P: "puh",
+    B: "buh",
+    T: "tuh",
+    D: "duh",
+    K: "kuh",
+    G: "guh",
+
+    /* ===== AFFRICATES ===== */
+    CH: "ch",
+    JH: "j",
+
+    /* ===== FRICATIVES ===== */
+    F: "fff",
+    V: "vvv",
+    TH: "th",
+    DH: "th",
+    S: "sss",
+    Z: "zzz",
+    SH: "sh",
+    ZH: "zh",
+    HH: "h",
+
+    /* ===== NASALS ===== */
+    M: "mmm",
+    N: "nnn",
+    NG: "ng",
+
+    /* ===== LIQUIDS ===== */
+    L: "lll",
+    R: "rrr",
+    ER: "er",
+
+    /* ===== GLIDES ===== */
+    W: "w",
+    Y: "y"
+  };
+
+  if (MAP[c]) return MAP[c];
+
+  // Fallback: spell it out letter by letter
+  return c.split("").join(" ");
+}
 const PHONEME_SHORT_TIPS = {
   /* ---------------- VOWELS ---------------- */
   AA: "Drop your jaw and keep the mouth open. The tongue sits low and back, with relaxed lips. Hold it steady—don’t turn it into a glide.",
@@ -1920,9 +1993,10 @@ async function ensureTtsUrl({ text, accent, rate }) {
     throw new Error(`TTS failed (${r.status}): ${msg || r.statusText}`);
   }
 
-  const buf = await r.arrayBuffer();
-  const blob = new Blob([buf], { type: "audio/wav" });
-  const url = URL.createObjectURL(blob);
+const buf = await r.arrayBuffer();
+const mime = (r.headers.get("content-type") || "audio/mpeg").split(";")[0].trim();
+const blob = new Blob([buf], { type: mime });
+const url = URL.createObjectURL(blob);
 
   ttsCacheRef.current.set(key, url);
   return url;
@@ -1946,9 +2020,10 @@ async function prefetchTtsUrl({ text, accent, rate }) {
 
   if (!r.ok) return null;
 
-  const buf = await r.arrayBuffer();
-  const blob = new Blob([buf], { type: "audio/wav" });
-  const url = URL.createObjectURL(blob);
+ const buf = await r.arrayBuffer();
+const mime = (r.headers.get("content-type") || "audio/mpeg").split(";")[0].trim();
+const blob = new Blob([buf], { type: mime });
+const url = URL.createObjectURL(blob);
 
   ttsCacheRef.current.set(key, url);
   return url;
@@ -2112,13 +2187,24 @@ const activeWeakItem = useMemo(() => {
   }, [result]);
 
 useEffect(() => {
-  if (!isPhonemeOverlay) return;
-  const prev = document.body.style.overflow;
-  document.body.style.overflow = "hidden";
+  const overlayOpen = !!result && overlayReady && !isClosingSlides;
+
+  const prevBodyOverflow = document.body.style.overflow;
+  const prevBodyOverflowX = document.body.style.overflowX;
+  const prevHtmlOverflowX = document.documentElement.style.overflowX;
+
+  if (overlayOpen) {
+    document.body.style.overflow = "hidden";
+    document.body.style.overflowX = "hidden";
+    document.documentElement.style.overflowX = "hidden";
+  }
+
   return () => {
-    document.body.style.overflow = prev;
+    document.body.style.overflow = prevBodyOverflow;
+    document.body.style.overflowX = prevBodyOverflowX;
+    document.documentElement.style.overflowX = prevHtmlOverflowX;
   };
-}, [isPhonemeOverlay]);
+}, [result, overlayReady, isClosingSlides]);
 
 
   function disposeRecorder() {
@@ -2673,11 +2759,10 @@ paddingLeft: 0,
 
   style={{
     position: "relative",
-    width: "100%",
-    maxWidth: 560,          // ✅ gør alt indhold “narrow”
-    margin: "0 auto",
-    paddingLeft: 16,        // ✅ giver luft til siderne
-    paddingRight: 16,
+    width: "100%",          // ✅ gør alt indhold “narrow”
+    margin: "0",
+    paddingLeft: 0,        // ✅ giver luft til siderne
+    paddingRight: 0,
     display: "flex",
     flexDirection: "column",
     minHeight: 0,
@@ -2707,6 +2792,7 @@ justifyContent: "flex-start",
       inset: 0,
       bottom: showNav ? NAV_SAFE_H : 0,
       overflow: "auto",
+          overflowX: "hidden",
       WebkitOverflowScrolling: "touch",
     }}
   >
@@ -2851,7 +2937,7 @@ paddingRight: 0,
     style={{
       textAlign: "center",
       fontWeight: 1000,
-      fontSize: computeHeroFontSize(heroText, 72, 14), // ✅ længde => mindre font
+      fontSize: computeHeroFontSize(heroText, 72, 16), // ✅ længde => mindre font
       lineHeight: 1.02,
       letterSpacing: -0.4,
       WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
@@ -3044,7 +3130,7 @@ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
     <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
       <button
         type="button"
-        onClick={() => playDeepDiveTts(p.code, `intro_ph:${p.code}`)}
+        onClick={() => playDeepDiveTts(ttsTextForPhoneme(p.code), `intro_ph:${p.code}`)}
         aria-label={`Play ${p.code}`}
         style={{
           display: "inline-flex",
@@ -3399,9 +3485,11 @@ background: "#FFFFFF",
     boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
     marginBottom: 22,
 
-width: "100vw",
-marginLeft: "calc(50% - 50vw)",
-marginRight: "calc(50% - 50vw)",
+left: "50%",
+transform: "translateX(-50%)",
+width: "100%",
+marginLeft: 0,
+marginRight: 0,
 
   }}
 >
@@ -3567,8 +3655,7 @@ background: "#E8F2FF",
     boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
     marginBottom: 22,
 
-    marginLeft: -16,
-marginRight: -16,
+
 
   }}
 >
@@ -3712,8 +3799,7 @@ background: "#E8F2FF",
     boxShadow: "0 18px 40px rgba(0,0,0,0.12)",
     marginBottom: 22,
 
-    marginLeft: -16,
-marginRight: -16,
+    
 
   }}
 >
