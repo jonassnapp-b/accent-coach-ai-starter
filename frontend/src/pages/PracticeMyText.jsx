@@ -2382,11 +2382,13 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
         clearTimeout(t);
 
         const ct = r.headers?.get("content-type") || "";
-        if (ct.includes("application/json")) {
-          json = await r.json().catch(() => ({}));
-          console.log("SPEECHSUPER RAW JSON:", json);
-console.log("WORDS/PHONEMES/SPAN:", json?.words?.[0]?.phonemes?.[0]?.span);
-        } else {
+     if (ct.includes("application/json")) {
+  json = await r.json().catch(() => ({}));
+
+  // ✅ DEBUG: raw SpeechSuper response (så vi kan se words[].phonemes[].span)
+  console.log("SPEECHSUPER RAW JSON", json);
+  console.log("SPEECHSUPER WORDS", json?.words || json?.result?.words || json?.data?.words || null);
+} else {
           const txt = await r.text().catch(() => "");
           json = txt ? { error: txt } : {};
         }
