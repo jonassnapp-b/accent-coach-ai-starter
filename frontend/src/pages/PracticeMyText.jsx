@@ -451,24 +451,24 @@ function ttsTextForPhoneme(code) {
     JH: "j",
 
     /* ===== FRICATIVES ===== */
-    F: "fff",
-    V: "vvv",
+ F: "f",
+V: "v",
     TH: "th",
     DH: "th",
-    S: "sss",
-    Z: "zzz",
+    S: "s",
+Z: "z",
     SH: "sh",
     ZH: "zh",
     HH: "h",
 
     /* ===== NASALS ===== */
-    M: "mmm",
-    N: "nnn",
+M: "m",
+N: "n",
     NG: "ng",
 
     /* ===== LIQUIDS ===== */
-    L: "lll",
-    R: "rrr",
+L: "l",
+R: "r",
     ER: "er",
 
     /* ===== GLIDES ===== */
@@ -1452,11 +1452,26 @@ function triggerTrophyCelebration() {
 }
 
   const [accentUi, setAccentUi] = useState(settings.accentDefault || "en_us");
+  const userAudioRef = useRef(null);
+const loopTimerRef = useRef(null);
+
+// ---------------- TTS (server /api/tts) ----------------
+const ttsAudioRef = useRef(null);
+const ttsUrlRef = useRef(null); // current objectURL (non-cached)
+const ttsPlayIdRef = useRef(0);
+
+// cache objectURLs by key: `${accentUi}|${rate}|${text}`
+const ttsCacheRef = useRef(new Map());
+const ttsCurrentKeyRef = useRef(null); // which key is actually playing in ttsAudioRef
+
+const [isCorrectPlaying, setIsCorrectPlaying] = useState(false);
+
+// Deep Dive TTS (same /api/tts, but for words/sentences)
+const [deepDivePlayingKey, setDeepDivePlayingKey] = useState(null); // string|null
   useEffect(() => {
   // on unmount: stop + cleanup
   return () => {
-    try { ttsAbortRef.current?.abort(); } catch {}
-    ttsAbortRef.current = null;
+
 
     try {
       const a = ttsAudioRef.current;
@@ -1480,8 +1495,6 @@ function triggerTrophyCelebration() {
   };
 }, []);
 useEffect(() => {
-  try { ttsAbortRef.current?.abort(); } catch {}
-  ttsAbortRef.current = null;
 
   try {
     const a = ttsAudioRef.current;
@@ -1690,32 +1703,16 @@ useEffect(() => {
   };
 }, [deepDiveOpen, deepDivePhoneme?.code, accentUi, playbackRate]);
 
-
-const userAudioRef = useRef(null);
-const loopTimerRef = useRef(null);
-// ---------------- TTS (server /api/tts) ----------------
-const ttsAudioRef = useRef(null);
-const ttsUrlRef = useRef(null); // current objectURL (non-cached)
-const ttsAbortRef = useRef(null);
-const ttsPlayIdRef = useRef(0);
-
-// cache objectURLs by key: `${accentUi}|${rate}|${text}`
-const ttsCacheRef = useRef(new Map());
-
-const [isCorrectPlaying, setIsCorrectPlaying] = useState(false);
-// Deep Dive TTS (same /api/tts, but for words/sentences)
-const [deepDivePlayingKey, setDeepDivePlayingKey] = useState(null); // string|null
-
 async function playDeepDiveTts(text, key) {
   const t = String(text || "").trim();
   if (!t) return;
 
   // toggle off if same item is playing
-  if (deepDivePlayingKey === key && isCorrectPlaying) {
-    stopTtsNow();
-    setDeepDivePlayingKey(null);
-    return;
-  }
+if (ttsCurrentKeyRef.current === key && isCorrectPlaying) {
+  stopTtsNow();
+  setDeepDivePlayingKey(null);
+  return;
+}
 
   stopAllAudio();
 
@@ -1724,10 +1721,41 @@ async function playDeepDiveTts(text, key) {
 
   try {
     setDeepDivePlayingKey(key);
+    ttsCurrentKeyRef.current = key;
     const url = await ensureTtsUrl({ text: t, accent, rate });
     await playTtsUrl(url, { rate, loop: false });
   } catch (e) {
     setDeepDivePlayingKey(null);
+    if (!IS_PROD) setErr(e?.message || String(e));
+    else setErr("TTS failed. Try again.");
+  }
+}
+
+async function playPhonemeCoachTts(code) {
+  const c = String(code || "").trim().toUpperCase();
+  if (!c) return;
+
+  stopAllAudio();
+
+  const accent = accentUi === "en_br" ? "en_br" : "en_us";
+  const rate = Number(playbackRate ?? 1.0) || 1.0;
+
+  const text = ttsTextForPhoneme(c);
+  const key = `ph:${accent}|${rate}|${c}`;
+
+  // toggle off if same phoneme is playing
+  if (ttsCurrentKeyRef.current === key && isCorrectPlaying) {
+    stopTtsNow();
+    return;
+  }
+
+  try {
+    setDeepDivePlayingKey(null);
+    ttsCurrentKeyRef.current = key;
+
+    const url = await ensureTtsUrl({ text, accent, rate });
+    await playTtsUrl(url, { rate, loop: false });
+  } catch (e) {
     if (!IS_PROD) setErr(e?.message || String(e));
     else setErr("TTS failed. Try again.");
   }
@@ -1950,9 +1978,6 @@ function stopAllAudio() {
 }
 
 function stopTtsNow() {
-  try { ttsAbortRef.current?.abort(); } catch {}
-  ttsAbortRef.current = null;
-
   try {
     const a = ttsAudioRef.current;
     if (a) {
@@ -1965,7 +1990,7 @@ function stopTtsNow() {
   // revoke only non-cached url
   try { if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current); } catch {}
   ttsUrlRef.current = null;
-
+ttsCurrentKeyRef.current = null;
   setIsCorrectPlaying(false);
 }
 
@@ -1978,15 +2003,11 @@ async function ensureTtsUrl({ text, accent, rate }) {
   if (cached) return cached;
 
   const base = getApiBase();
-  const controller = new AbortController();
-  ttsAbortRef.current = controller;
-
-  const r = await fetch(`${base}/api/tts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    signal: controller.signal,
-    body: JSON.stringify({ text: t, accent, rate }),
-  });
+const r = await fetch(`${base}/api/tts`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ text: t, accent, rate }),
+});
 
   if (!r.ok) {
     const msg = await r.text().catch(() => "");
@@ -2052,7 +2073,7 @@ a.onended = () => {
   if (ttsPlayIdRef.current !== myPlayId) return;
   setIsCorrectPlaying(false);
   setDeepDivePlayingKey(null);
-
+ttsCurrentKeyRef.current = null;
   if (loop) {
     loopTimerRef.current = setTimeout(async () => {
       if (ttsPlayIdRef.current !== myPlayId) return;
@@ -2068,10 +2089,13 @@ a.onended = () => {
 
 
   try {
-    await a.play();
-  } catch {
-    setIsCorrectPlaying(false);
-  }
+  await a.play();
+} catch (e) {
+  setIsCorrectPlaying(false);
+  setDeepDivePlayingKey(null);
+  ttsCurrentKeyRef.current = null;
+  if (!IS_PROD) setErr(`audio.play() failed: ${e?.name || ""} ${e?.message || e}`);
+}
 }
 
 
@@ -2102,17 +2126,21 @@ async function playCorrectTts() {
 
   const accent = accentUi === "en_br" ? "en_br" : "en_us";
   const rate = Number(playbackRate ?? 1.0) || 1.0;
-
+const correctKey = `correct:${accent}|${rate}|${text}`;
   // if already playing the same “correct”, pause/stop
-  if (isCorrectPlaying) {
-    stopTtsNow();
-    return;
-  }
+// if already playing the same “correct”, pause/stop
+if (ttsCurrentKeyRef.current === correctKey && isCorrectPlaying) {
+  stopTtsNow();
+  return;
+}
 
-  try {
-    const url = await ensureTtsUrl({ text, accent, rate });
-    await playTtsUrl(url, { rate, loop: loopOn });
-  } catch (e) {
+try {
+  setDeepDivePlayingKey(null);
+  ttsCurrentKeyRef.current = correctKey;
+
+  const url = await ensureTtsUrl({ text, accent, rate });
+  await playTtsUrl(url, { rate, loop: loopOn });
+} catch (e) {
     if (!IS_PROD) setErr(e?.message || String(e));
     else setErr("TTS failed. Try again.");
   }
@@ -2356,6 +2384,8 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
         const ct = r.headers?.get("content-type") || "";
         if (ct.includes("application/json")) {
           json = await r.json().catch(() => ({}));
+          console.log("SPEECHSUPER RAW JSON:", json);
+console.log("WORDS/PHONEMES/SPAN:", json?.words?.[0]?.phonemes?.[0]?.span);
         } else {
           const txt = await r.text().catch(() => "");
           json = txt ? { error: txt } : {};
@@ -3130,7 +3160,7 @@ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
     <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
       <button
         type="button"
-        onClick={() => playDeepDiveTts(ttsTextForPhoneme(p.code), `intro_ph:${p.code}`)}
+        onClick={() => playPhonemeCoachTts(p.code)}
         aria-label={`Play ${p.code}`}
         style={{
           display: "inline-flex",
