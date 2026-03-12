@@ -7,9 +7,7 @@ export default async function handler(req, res) {
     const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      return res.status(500).json({
-        error: "Missing OPENAI_API_KEY"
-      });
+      return res.status(500).json({ error: "Missing OPENAI_API_KEY" });
     }
 
     const { accent = "en_us" } = req.body || {};
@@ -18,13 +16,30 @@ export default async function handler(req, res) {
 
     const voice = normalizedAccent === "en_br" ? "sage" : "alloy";
 
+    const instructions =
+      normalizedAccent === "en_br"
+        ? "You are FluentUp Conversation Coach. Have a natural real-time spoken English conversation. Speak in natural British English. Be warm, concise, and voice-friendly. The first thing you say should ask what the user wants to talk about today, while naturally offering many possible topics. Do not mention scenarios. Keep replies conversational and normal length. If the user interrupts, adapt naturally."
+        : "You are FluentUp Conversation Coach. Have a natural real-time spoken English conversation. Speak in natural American English. Be warm, concise, and voice-friendly. The first thing you say should ask what the user wants to talk about today, while naturally offering many possible topics. Do not mention scenarios. Keep replies conversational and normal length. If the user interrupts, adapt naturally.";
+
     const payload = {
-      model: "gpt-realtime-preview",
       voice,
-      modalities: ["audio", "text"]
+      instructions,
+      output_modalities: ["audio"],
+      audio: {
+        input: {
+          turn_detection: {
+            type: "server_vad",
+            create_response: true,
+            interrupt_response: true,
+            prefix_padding_ms: 300,
+            silence_duration_ms: 500,
+            threshold: 0.5
+          }
+        }
+      }
     };
 
-    console.log("[realtime-session] sending payload:", payload);
+    console.log("[realtime-session] payload:", payload);
 
     const response = await fetch(
       "https://api.openai.com/v1/realtime/client_secrets",
@@ -42,7 +57,7 @@ export default async function handler(req, res) {
     console.log("[realtime-session] status:", response.status);
     console.log("[realtime-session] raw response:", rawText);
 
-    let data = null;
+    let data;
     try {
       data = JSON.parse(rawText);
     } catch {
