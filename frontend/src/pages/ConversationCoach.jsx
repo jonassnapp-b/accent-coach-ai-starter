@@ -3,252 +3,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Mic, RotateCcw } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
-import { scorePronunciation } from "../lib/conversationCoach";
+import { createRealtimeConversation } from "../lib/realtimeConversation.js";
 
-const API_BASE =
-  (import.meta?.env?.VITE_API_BASE || "").replace(/\/+$/, "") ||
-  window.location.origin.replace(/\/+$/, "");
-
-const PRONUN_THRESHOLD = 85;
-const OPENING_LINE =
-  "What would you like to talk about today? We can talk about work, study, travel, fitness, goals, daily life, movies, music, food, culture, technology, money, memories, or anything else you want.";
-
-const SYSTEM_PROMPT = `
-You are FluentUp Conversation Coach.
-
-Your job is to run a natural real-time spoken conversation for accent practice.
-This is NOT a scenarios page and NOT a chat bubble UI.
-The user sees only your latest message on screen.
-
-Rules:
-- Sound natural, warm, conversational, and voice-friendly.
-- Replies should usually be normal length: around 2-5 sentences.
-- Keep the conversation moving.
-- Remember the ongoing conversation context.
-- After the user speaks, mention pronunciation improvements clearly.
-- Mention all meaningful pronunciation issues you see, but do it naturally and compactly.
-- If there are multiple weak sounds or words, summarize them clearly.
-- Then continue the conversation with a relevant follow-up.
-- The first message of a new conversation should ask what the user wants to talk about today.
-- In that first message, offer many possible directions naturally, without calling them "scenarios".
-- Never output markdown.
-- Return valid JSON only.
-
-Return this JSON shape:
-{
-  "assistant_reply": "the full text the AI should say on screen and aloud",
-  "feedback_summary": "short pronunciation summary for the visual feedback area",
-  "suggested_repeat": "a short word or phrase to repeat, or empty string"
-}
-`.trim();
-
-function safeJsonParse(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}
-
-async function safeJson(res) {
-  const text = await res.text();
-  const parsed = safeJsonParse(text);
-  if (parsed) return parsed;
-  throw new Error(text || `HTTP ${res.status}`);
-}
-
-function extractTranscript(scoreJson) {
-  return String(
-    scoreJson?.recognitionText ||
-      scoreJson?.transcript ||
-      scoreJson?.text ||
-      scoreJson?.result?.recognitionText ||
-      ""
-  ).trim();
-}
-
-function getScore(obj) {
-  const v =
-    obj?.accuracyScore ??
-    obj?.overallAccuracy ??
-    obj?.accuracy ??
-    obj?.pronunciation ??
-    obj?.score ??
-    obj?.overall ??
-    obj?.pronunciationAccuracy ??
-    obj?.accuracy_score;
-
-  const n = Number(v);
-  if (!Number.isFinite(n)) return null;
-  return n <= 1 ? Math.round(n * 100) : Math.round(n);
-}
-
-function uniqByLowestScore(items, keyField) {
-  const map = new Map();
-
-  for (const item of items) {
-    const key = String(item?.[keyField] || "").trim();
-    if (!key) continue;
-
-    const prev = map.get(key);
-    const score = Number.isFinite(item?.score) ? item.score : -1;
-
-    if (!prev) {
-      map.set(key, item);
-      continue;
-    }
-
-    const prevScore = Number.isFinite(prev?.score) ? prev.score : -1;
-    if (score < prevScore) {
-      map.set(key, item);
-    }
-  }
-
-  return Array.from(map.values()).sort((a, b) => {
-    const as = Number.isFinite(a.score) ? a.score : -1;
-    const bs = Number.isFinite(b.score) ? b.score : -1;
-    return as - bs;
-  });
-}
-
-function extractWeakWordsAll(scoreJson) {
-  const words =
-    (Array.isArray(scoreJson?.words) && scoreJson.words) ||
-    (Array.isArray(scoreJson?.result?.words) && scoreJson.result.words) ||
-    (Array.isArray(scoreJson?.data?.words) && scoreJson.data.words) ||
-    [];
-
-  const mapped = words
-    .map((w) => ({
-      word: String(w?.word || w?.text || "").trim(),
-      score: getScore(w),
-    }))
-    .filter((w) => w.word && (w.score == null || w.score < PRONUN_THRESHOLD));
-
-  return uniqByLowestScore(mapped, "word");
-}
-
-function extractWeakPhonemesAll(scoreJson) {
-  const topLevel =
-    (Array.isArray(scoreJson?.phonemes) && scoreJson.phonemes) ||
-    (Array.isArray(scoreJson?.result?.phonemes) && scoreJson.result.phonemes) ||
-    (Array.isArray(scoreJson?.data?.phonemes) && scoreJson.data.phonemes) ||
-    [];
-
-  const fromWords = (
-    (Array.isArray(scoreJson?.words) && scoreJson.words) ||
-    (Array.isArray(scoreJson?.result?.words) && scoreJson.result.words) ||
-    (Array.isArray(scoreJson?.data?.words) && scoreJson.data.words) ||
-    []
-  ).flatMap((w) =>
-    (Array.isArray(w?.phonemes) ? w.phonemes : []).map((p) => ({
-      phoneme: p?.phoneme || p?.label || p?.phone || p?.ipa || p?.symbol || "",
-      score: getScore(p),
-    }))
-  );
-
-  const all = [...topLevel, ...fromWords]
-    .map((p) => ({
-      label: String(p?.phoneme || p?.label || p?.phone || p?.ipa || p?.symbol || "").trim().toUpperCase(),
-      score: getScore(p),
-    }))
-    .filter((p) => p.label && (p.score == null || p.score < PRONUN_THRESHOLD));
-
-  return uniqByLowestScore(all, "label");
-}
-
-function buildOpeningUserPrompt() {
-  return `
-Start a brand new open-ended voice conversation.
-
-Requirements:
-- Ask what the user wants to talk about today.
-- Offer many possible directions naturally, such as work, study, travel, fitness, relationships, goals, daily life, movies, music, food, culture, technology, money, memories, or plans.
-- Do NOT mention "scenarios".
-- Make it sound like a real live conversation opener.
-- No pronunciation feedback yet because the user has not spoken yet.
-`.trim();
-}
-
-function buildTurnUserPrompt({ transcript, weakPhonemes, weakWords }) {
-  const phonemeText = weakPhonemes.length
-    ? weakPhonemes.map((p) => `${p.label} ${p.score ?? "?"}%`).join(", ")
-    : "none";
-
-  const wordText = weakWords.length
-    ? weakWords.map((w) => `${w.word} ${w.score ?? "?"}%`).join(", ")
-    : "none";
-
-  return `
-User transcript:
-"${transcript}"
-
-Pronunciation issues found:
-Weak phonemes: ${phonemeText}
-Weak words: ${wordText}
-
-Respond naturally in a real conversation.
-You must:
-1. Briefly mention pronunciation improvements.
-2. Mention all meaningful issues compactly.
-3. Continue the conversation with a relevant follow-up.
-4. Keep it voice-friendly and natural.
-`.trim();
-}
-
-async function requestConversationTurn({ history, userPrompt }) {
-  const res = await fetch(`${API_BASE}/api/conv/next`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      system: SYSTEM_PROMPT,
-      history,
-      user: userPrompt,
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || "Conversation request failed");
-  }
-
-  const data = await safeJson(res);
-
-  return {
-    assistant_reply:
-      String(
-        data?.assistant_reply ||
-          data?.reply ||
-          data?.message ||
-          "Tell me a little more."
-      ).trim(),
-    feedback_summary:
-      String(data?.feedback_summary || data?.coach_feedback || "").trim(),
-    suggested_repeat: String(data?.suggested_repeat || "").trim(),
-  };
-}
-
-function scoreColor(score) {
-  if (!Number.isFinite(score)) return "#94A3B8";
-  if (score >= 85) return "#22C55E";
-  if (score >= 70) return "#F59E0B";
-  return "#EF4444";
-}
-async function unlockAudioPlayback() {
-  try {
-    const a = new Audio();
-    a.muted = true;
-    a.playsInline = true;
-    a.src =
-      "data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAFAAAGAAACcQCA" +
-      "////////////////////////////////////////////////////////////////" +
-      "////////////////////////////////////////////////////////////////" +
-      "////////////////////////////////////////////////////////////////";
-    await a.play().catch(() => {});
-    a.pause();
-    a.src = "";
-  } catch {}
-}
 export default function ConversationCoach() {
   const { settings } = useSettings?.() || { settings: {} };
   const accent = settings?.accentDefault || "en_us";
@@ -261,297 +17,164 @@ export default function ConversationCoach() {
   const [hasEnteredConversation, setHasEnteredConversation] = useState(false);
   const [hasConversationStarted, setHasConversationStarted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [error, setError] = useState("");
   const [holdScale, setHoldScale] = useState(1);
 
-  const mediaRecorderRef = useRef(null);
-  const chunksRef = useRef([]);
-  const streamRef = useRef(null);
-  const aiAudioRef = useRef(null);
-  const historyRef = useRef([]);
+  const realtimeRef = useRef(null);
   const mountedRef = useRef(true);
   const holdStartedRef = useRef(false);
 
-  const isBusy = isAnalyzing || isStartingConversation;
+  const isBusy = isStartingConversation;
 
-   useEffect(() => {
+  useEffect(() => {
     mountedRef.current = true;
 
     return () => {
       mountedRef.current = false;
-      stopAiAudio();
-      stopRecordingInternal(true);
-      cleanupStream();
+      try {
+        realtimeRef.current?.disconnect?.();
+      } catch {}
     };
   }, []);
 
-  function cleanupStream() {
-    try {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-      }
-    } catch {}
-    streamRef.current = null;
-  }
-
-  function stopAiAudio() {
-    try {
-      const a = aiAudioRef.current;
-      if (a) {
-        a.pause();
-        a.currentTime = 0;
-        a.src = "";
-      }
-    } catch {}
-    aiAudioRef.current = null;
-    if (mountedRef.current) setIsAiSpeaking(false);
-  }
-
-  async function speakAssistantText(text) {
-    const t = String(text || "").trim();
-    if (!t) return;
-
-    stopAiAudio();
-
-    const res = await fetch(`${API_BASE}/api/tts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: t,
-        accent: accent === "en_br" ? "en_br" : "en_us",
-        rate: 1.0,
-      }),
-    });
-
-    if (!res.ok) {
-      const msg = await res.text().catch(() => "");
-      throw new Error(msg || "TTS failed");
-    }
-
-    const buf = await res.arrayBuffer();
-    const mime = (res.headers.get("content-type") || "audio/mpeg").split(";")[0].trim();
-    const blob = new Blob([buf], { type: mime });
-    const url = URL.createObjectURL(blob);
-
-    const audio = new Audio(url);
-    aiAudioRef.current = audio;
-
-    setIsAiSpeaking(true);
-
-    audio.onended = () => {
-      URL.revokeObjectURL(url);
-      if (aiAudioRef.current === audio) aiAudioRef.current = null;
-      if (mountedRef.current) setIsAiSpeaking(false);
-    };
-
-    audio.onerror = () => {
-      URL.revokeObjectURL(url);
-      if (aiAudioRef.current === audio) aiAudioRef.current = null;
-      if (mountedRef.current) setIsAiSpeaking(false);
-    };
-
-    await audio.play();
-  }
-
   async function startNewConversation() {
-    stopAiAudio();
-    stopRecordingInternal(true);
-    cleanupStream();
-
-    setError("");
-    setAssistantText("");
-    setFeedbackSummary("");
-    setSuggestedRepeat("");
-    setWeakPhonemes([]);
-    setWeakWords([]);
-    setHasConversationStarted(false);
-    setHoldScale(1);
-
-    historyRef.current = [];
-    setIsStartingConversation(true);
-
     try {
-      setAssistantText(OPENING_LINE);
-      historyRef.current = [{ role: "assistant", content: OPENING_LINE }];
+      try {
+        realtimeRef.current?.disconnect?.();
+      } catch {}
 
-      await speakAssistantText(OPENING_LINE);
+      setError("");
+      setAssistantText("");
+      setFeedbackSummary("");
+      setSuggestedRepeat("");
+      setWeakPhonemes([]);
+      setWeakWords([]);
+      setHasConversationStarted(false);
+      setHoldScale(1);
+      setIsAiSpeaking(false);
+      setIsRecording(false);
+      setIsStartingConversation(true);
+
+      const rt = await createRealtimeConversation({
+        accent,
+        onRemoteAudio: () => {
+          if (mountedRef.current) setIsAiSpeaking(true);
+        },
+        onMessage: (msg) => {
+          console.log("[realtime msg]", msg);
+
+          const type = msg?.type || "";
+
+          if (type === "response.created") {
+            setAssistantText("");
+            setIsAiSpeaking(true);
+          }
+
+          if (
+            type === "response.output_text.delta" ||
+            type === "response.text.delta" ||
+            type === "response.audio_transcript.delta"
+          ) {
+            const delta = String(msg?.delta || "");
+            if (delta) {
+              setAssistantText((prev) => `${prev || ""}${delta}`);
+            }
+          }
+
+          if (type === "input_audio_buffer.speech_started") {
+            setIsAiSpeaking(false);
+          }
+
+          if (
+            type === "response.done" ||
+            type === "output_audio_buffer.stopped" ||
+            type === "output_audio_buffer.cleared"
+          ) {
+            setIsAiSpeaking(false);
+          }
+
+          if (type === "error") {
+            const serverMsg =
+              msg?.error?.message || msg?.error?.code || "Realtime session error.";
+            setError(serverMsg);
+            setIsAiSpeaking(false);
+          }
+        },
+        onError: (err) => {
+          console.error("[realtime error]", err);
+          setError(err?.message || "Realtime connection failed.");
+          setIsAiSpeaking(false);
+        },
+      });
+
+      realtimeRef.current = rt;
+      await rt.connect();
+
+      // Trigger the assistant to speak first
+      const ok = rt.startAssistantGreeting?.();
+      if (!ok) {
+        setError("Failed to trigger assistant greeting.");
+      }
     } catch (err) {
       console.error(err);
-      setError(err?.message || "Failed to start conversation audio.");
+      setError(err?.message || "Failed to start realtime conversation.");
     } finally {
       if (mountedRef.current) setIsStartingConversation(false);
     }
   }
+
   async function handleEnterConversation() {
-    await unlockAudioPlayback();
     setHasEnteredConversation(true);
     await startNewConversation();
   }
-  async function createRecorder() {
-    cleanupStream();
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    streamRef.current = stream;
-
-    let options = {};
-    if (typeof MediaRecorder !== "undefined" && typeof MediaRecorder.isTypeSupported === "function") {
-      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
-        options = { mimeType: "audio/webm;codecs=opus" };
-      } else if (MediaRecorder.isTypeSupported("audio/webm")) {
-        options = { mimeType: "audio/webm" };
-      }
-    }
-
-    let mr;
-    try {
-      mr = new MediaRecorder(stream, options);
-    } catch {
-      mr = new MediaRecorder(stream);
-    }
-
-    chunksRef.current = [];
-    mr.ondataavailable = (e) => {
-      if (e.data?.size) chunksRef.current.push(e.data);
-    };
-
-    mr.onstop = async () => {
-      const blob = new Blob(chunksRef.current, {
-        type: chunksRef.current?.[0]?.type || mr.mimeType || "audio/webm",
-      });
-      chunksRef.current = [];
-      cleanupStream();
-      await handleUserTurn(blob);
-    };
-
-    mediaRecorderRef.current = mr;
-    return mr;
-  }
-
-  async function startRecordingInternal() {
-    if (isBusy || isRecording) return;
-
-    setError("");
-    setHoldScale(1.08);
-
-    stopAiAudio();
-
-    try {
-      const mr = await createRecorder();
-      mr.start();
-      setIsRecording(true);
-    } catch (err) {
-      console.error(err);
-      setHoldScale(1);
-      setIsRecording(false);
-      setError("Microphone access failed. Please try again.");
-    }
-  }
-
-  function stopRecordingInternal(forceSilent = false) {
-    setHoldScale(1);
-
-    const mr = mediaRecorderRef.current;
-    if (!mr) return;
-
-    try {
-      if (mr.state !== "inactive") {
-        mr.stop();
-      }
-    } catch {
-      cleanupStream();
-    }
-
-    mediaRecorderRef.current = null;
-
-    if (!forceSilent && mountedRef.current) {
-      setIsRecording(false);
-    }
-    if (forceSilent && mountedRef.current) {
-      setIsRecording(false);
-    }
-  }
-
-  async function handleUserTurn(audioBlob) {
-    try {
-      setIsRecording(false);
-      setIsAnalyzing(true);
-      setError("");
-
-      const scoring = await scorePronunciation(audioBlob, "", accent);
-      const transcript = extractTranscript(scoring);
-
-      if (!transcript) {
-        setError("I couldn’t hear a clear answer. Try again.");
-        return;
-      }
-      setHasConversationStarted(true);
-      const weakP = extractWeakPhonemesAll(scoring);
-      const weakW = extractWeakWordsAll(scoring);
-
-      setWeakPhonemes(weakP);
-      setWeakWords(weakW);
-
-      const history = [...historyRef.current, { role: "user", content: transcript }];
-
-      const reply = await requestConversationTurn({
-        history,
-        userPrompt: buildTurnUserPrompt({
-          transcript,
-          weakPhonemes: weakP,
-          weakWords: weakW,
-        }),
-      });
-
-      const nextText = reply?.assistant_reply || "That was interesting. Tell me a little more.";
-      const nextFeedback =
-        reply?.feedback_summary ||
-        (weakP.length || weakW.length
-          ? "Focus on the weak sounds and words shown below."
-          : "Nice clarity. Keep going.");
-
-      setAssistantText(nextText);
-      setFeedbackSummary(nextFeedback);
-      setSuggestedRepeat(reply?.suggested_repeat || "");
-
-      historyRef.current = [
-        ...history,
-        { role: "assistant", content: nextText },
-      ];
-
-      await speakAssistantText(nextText);
-    } catch (err) {
-      console.error(err);
-      setError("Something went wrong. Please try again.");
-    } finally {
-      if (mountedRef.current) {
-        setIsAnalyzing(false);
-      }
-    }
-  }
-
-  async function handleHoldStart(e) {
+  function handleHoldStart(e) {
     e?.preventDefault?.();
     if (holdStartedRef.current) return;
     holdStartedRef.current = true;
-    await startRecordingInternal();
+
+    const ok = realtimeRef.current?.startUserInput?.();
+    if (!ok) {
+      setError("Microphone is not ready.");
+      holdStartedRef.current = false;
+      return;
+    }
+
+    setIsAiSpeaking(false);
+    setIsRecording(true);
+    setHasConversationStarted(true);
+    setError("");
+    setFeedbackSummary("");
+    setSuggestedRepeat("");
+    setWeakPhonemes([]);
+    setWeakWords([]);
+    setHoldScale(1.08);
   }
 
   function handleHoldEnd(e) {
     e?.preventDefault?.();
     if (!holdStartedRef.current) return;
     holdStartedRef.current = false;
-    stopRecordingInternal(false);
+
+    realtimeRef.current?.stopUserInput?.();
+
+    setIsRecording(false);
+    setHoldScale(1);
+    setFeedbackSummary("Analyzing your pronunciation...");
   }
 
   useEffect(() => {
     function endAnywhere() {
       if (!holdStartedRef.current) return;
       holdStartedRef.current = false;
-      stopRecordingInternal(false);
+
+      realtimeRef.current?.stopUserInput?.();
+
+      setIsRecording(false);
+      setHoldScale(1);
+      setFeedbackSummary("Analyzing your pronunciation...");
     }
 
     window.addEventListener("pointerup", endAnywhere);
@@ -649,7 +272,8 @@ export default function ConversationCoach() {
                   height: 56,
                   borderRadius: 18,
                   border: "none",
-                  background: "linear-gradient(135deg, #3FA3FF 0%, #2196F3 60%, #1769C7 100%)",
+                  background:
+                    "linear-gradient(135deg, #3FA3FF 0%, #2196F3 60%, #1769C7 100%)",
                   color: "#FFFFFF",
                   fontWeight: 900,
                   fontSize: 17,
@@ -712,7 +336,8 @@ export default function ConversationCoach() {
                         lineHeight: 1.45,
                         fontWeight: 800,
                         color: "#334155",
-                        marginBottom: weakPhonemes.length || weakWords.length || suggestedRepeat ? 10 : 0,
+                        marginBottom:
+                          weakPhonemes.length || weakWords.length || suggestedRepeat ? 10 : 0,
                       }}
                     >
                       {feedbackSummary}
@@ -721,7 +346,14 @@ export default function ConversationCoach() {
 
                   {weakPhonemes.length ? (
                     <div style={{ marginBottom: weakWords.length || suggestedRepeat ? 10 : 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 900, color: "#64748B", marginBottom: 6 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 900,
+                          color: "#64748B",
+                          marginBottom: 6,
+                        }}
+                      >
                         Weak sounds
                       </div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -735,7 +367,7 @@ export default function ConversationCoach() {
                               border: "1px solid rgba(15,23,42,0.08)",
                               fontSize: 12,
                               fontWeight: 900,
-                              color: scoreColor(p.score),
+                              color: "#94A3B8",
                             }}
                           >
                             {p.label} {Number.isFinite(p.score) ? `${p.score}%` : ""}
@@ -747,7 +379,14 @@ export default function ConversationCoach() {
 
                   {weakWords.length ? (
                     <div style={{ marginBottom: suggestedRepeat ? 10 : 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 900, color: "#64748B", marginBottom: 6 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 900,
+                          color: "#64748B",
+                          marginBottom: 6,
+                        }}
+                      >
                         Weak words
                       </div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -761,7 +400,7 @@ export default function ConversationCoach() {
                               border: "1px solid rgba(15,23,42,0.08)",
                               fontSize: 12,
                               fontWeight: 900,
-                              color: scoreColor(w.score),
+                              color: "#94A3B8",
                             }}
                           >
                             {w.word} {Number.isFinite(w.score) ? `${w.score}%` : ""}
@@ -880,7 +519,10 @@ export default function ConversationCoach() {
                 fontWeight: 900,
                 fontSize: 16,
                 cursor: isBusy || !hasConversationStarted ? "not-allowed" : "pointer",
-                boxShadow: isBusy || !hasConversationStarted ? "none" : "0 10px 28px rgba(15,23,42,0.05)",
+                boxShadow:
+                  isBusy || !hasConversationStarted
+                    ? "none"
+                    : "0 10px 28px rgba(15,23,42,0.05)",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
