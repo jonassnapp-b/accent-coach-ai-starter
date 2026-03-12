@@ -195,7 +195,14 @@ You must:
 }
 
 async function requestConversationTurn({ history, userPrompt }) {
-  const res = await fetch(`${API_BASE}/api/conv/next`, {
+  const url = `${API_BASE}/api/conv/next`;
+
+  console.log("[ConversationCoach][conv] POST", url, {
+    history,
+    userPrompt,
+  });
+
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -205,23 +212,36 @@ async function requestConversationTurn({ history, userPrompt }) {
     }),
   });
 
+  const raw = await res.text().catch(() => "");
+
+  console.log("[ConversationCoach][conv] response", {
+    ok: res.ok,
+    status: res.status,
+    statusText: res.statusText,
+    raw,
+  });
+
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || "Conversation request failed");
+    throw new Error(
+      `[conv ${res.status}] ${raw || res.statusText || "Conversation request failed"}`
+    );
   }
 
-  const data = await safeJson(res);
+  const data = safeJsonParse(raw);
+  if (!data) {
+    throw new Error(`[conv] Invalid JSON response: ${raw || "(empty body)"}`);
+  }
 
   return {
-    assistant_reply:
-      String(
-        data?.assistant_reply ||
-          data?.reply ||
-          data?.message ||
-          "Tell me a little more."
-      ).trim(),
-    feedback_summary:
-      String(data?.feedback_summary || data?.coach_feedback || "").trim(),
+    assistant_reply: String(
+      data?.assistant_reply ||
+      data?.reply ||
+      data?.message ||
+      "Tell me a little more."
+    ).trim(),
+    feedback_summary: String(
+      data?.feedback_summary || data?.coach_feedback || ""
+    ).trim(),
     suggested_repeat: String(data?.suggested_repeat || "").trim(),
   };
 }
@@ -275,7 +295,7 @@ export default function ConversationCoach() {
   const holdStartedRef = useRef(false);
 
   const isBusy = isAnalyzing || isStartingConversation;
-
+  console.log("[ConversationCoach] API_BASE =", API_BASE);
    useEffect(() => {
     mountedRef.current = true;
 
