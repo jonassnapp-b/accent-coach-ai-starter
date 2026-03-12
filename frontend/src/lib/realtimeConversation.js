@@ -1,6 +1,6 @@
 // frontend/src/lib/realtimeConversation.js
 
-const REALTIME_MODEL = "gpt-4o-realtime-preview";
+const REALTIME_MODEL = "gpt-realtime";
 
 function waitForDataChannelOpen(dc, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
@@ -142,10 +142,9 @@ export async function createRealtimeConversation({
       `https://api.openai.com/v1/realtime?model=${REALTIME_MODEL}`,
       {
         method: "POST",
-        headers: {
+     headers: {
   Authorization: `Bearer ${ephemeralKey}`,
   "Content-Type": "application/sdp",
-  "openai-beta": "realtime=v1",
 },
         body: offer.sdp,
       }
