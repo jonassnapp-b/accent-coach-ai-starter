@@ -24,7 +24,7 @@ export default async function handler(req, res) {
       instructions,
       voice: normalizedAccent === "en_br" ? "sage" : "alloy"
     };
-
+console.log("OPENAI PAYLOAD:", JSON.stringify(payload, null, 2));
     const response = await fetch(
       "https://api.openai.com/v1/realtime/client_secrets",
       {
@@ -36,7 +36,8 @@ export default async function handler(req, res) {
         body: JSON.stringify(payload)
       }
     );
-
+console.log("OPENAI STATUS:", response.status);
+console.log("OPENAI RESPONSE:", rawText);
     const data = await response.json();
 
     if (!response.ok) {
