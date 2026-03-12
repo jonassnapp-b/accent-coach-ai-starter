@@ -14,7 +14,7 @@ import { SettingsProvider } from "./lib/settings-store.jsx";
 
 import Record from "./pages/Record.jsx";
 import Feedback from "./pages/Feedback.jsx";
-import ConversationCoach from "./pages/ConversationCoach.jsx";
+
 
 import { Mic, AudioWaveform, Settings as SettingsIcon, MessageCircle } from "lucide-react";
 import SplashSequence from "./components/SplashSequence";
