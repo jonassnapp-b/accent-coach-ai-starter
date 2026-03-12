@@ -315,6 +315,12 @@ export default function ConversationCoach() {
 
     stopAiAudio();
 
+    console.log("[ConversationCoach][TTS] requesting:", {
+      text: t,
+      accent: accent === "en_br" ? "en_br" : "en_us",
+      url: `${API_BASE}/api/tts`,
+    });
+
     const res = await fetch(`${API_BASE}/api/tts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -325,34 +331,68 @@ export default function ConversationCoach() {
       }),
     });
 
+    console.log("[ConversationCoach][TTS] response:", {
+      ok: res.ok,
+      status: res.status,
+      statusText: res.statusText,
+      contentType: res.headers.get("content-type"),
+    });
+
     if (!res.ok) {
       const msg = await res.text().catch(() => "");
-      throw new Error(msg || "TTS failed");
+      throw new Error(`[TTS HTTP ${res.status}] ${msg || res.statusText || "TTS failed"}`);
     }
 
     const buf = await res.arrayBuffer();
     const mime = (res.headers.get("content-type") || "audio/mpeg").split(";")[0].trim();
+
+    console.log("[ConversationCoach][TTS] audio bytes:", buf.byteLength, "mime:", mime);
+
+    if (!buf.byteLength) {
+      throw new Error("[TTS] Empty audio response");
+    }
+
     const blob = new Blob([buf], { type: mime });
     const url = URL.createObjectURL(blob);
 
-    const audio = new Audio(url);
-    aiAudioRef.current = audio;
+    const audio = new Audio();
+    audio.playsInline = true;
+    audio.preload = "auto";
+    audio.src = url;
 
+    aiAudioRef.current = audio;
     setIsAiSpeaking(true);
 
     audio.onended = () => {
+      console.log("[ConversationCoach][TTS] ended");
       URL.revokeObjectURL(url);
       if (aiAudioRef.current === audio) aiAudioRef.current = null;
       if (mountedRef.current) setIsAiSpeaking(false);
     };
 
-    audio.onerror = () => {
+    audio.onerror = (e) => {
+      console.error("[ConversationCoach][TTS] audio element error", e);
       URL.revokeObjectURL(url);
       if (aiAudioRef.current === audio) aiAudioRef.current = null;
-      if (mountedRef.current) setIsAiSpeaking(false);
+      if (mountedRef.current) {
+        setIsAiSpeaking(false);
+        setError("TTS audio element failed to play.");
+      }
     };
 
-    await audio.play();
+    try {
+      await audio.play();
+      console.log("[ConversationCoach][TTS] play() success");
+    } catch (err) {
+      console.error("[ConversationCoach][TTS] play() failed:", err);
+      URL.revokeObjectURL(url);
+      if (aiAudioRef.current === audio) aiAudioRef.current = null;
+      if (mountedRef.current) {
+        setIsAiSpeaking(false);
+        setError(`TTS play failed: ${err?.message || String(err)}`);
+      }
+      throw err;
+    }
   }
 
   async function startNewConversation() {
@@ -385,25 +425,32 @@ export default function ConversationCoach() {
       setAssistantText(nextText);
       historyRef.current = [{ role: "assistant", content: nextText }];
 
-      await speakAssistantText(nextText);
+         await speakAssistantText(nextText);
     } catch (err) {
-      console.error(err);
+      console.error("[ConversationCoach][startNewConversation] failed:", err);
+
       const fallback =
         "What would you like to talk about today? We can talk about work, study, travel, fitness, goals, daily life, movies, music, food, culture, technology, money, memories, or anything else you want.";
+
       setAssistantText(fallback);
       historyRef.current = [{ role: "assistant", content: fallback }];
-      try {
-        await speakAssistantText(fallback);
-      } catch {}
+      setError(err?.message || String(err));
     } finally {
       if (mountedRef.current) setIsStartingConversation(false);
     }
   }
-  async function handleEnterConversation() {
-  await unlockAudioPlayback();
-  setHasEnteredConversation(true);
-  await startNewConversation();
-}
+   async function handleEnterConversation() {
+    try {
+      console.log("[ConversationCoach] enter click");
+      await unlockAudioPlayback();
+      console.log("[ConversationCoach] audio unlock attempted");
+      setHasEnteredConversation(true);
+      await startNewConversation();
+    } catch (err) {
+      console.error("[ConversationCoach] handleEnterConversation failed:", err);
+      setError(err?.message || String(err));
+    }
+  }
   async function createRecorder() {
     cleanupStream();
 
