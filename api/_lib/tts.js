@@ -177,13 +177,11 @@ export async function getTtsAudio({ text, accent = "en_us", rate = 1.0, voice = 
     }
   }
 
-   if (!mp3?.audioBuffer) {
+  if (!mp3?.audioBuffer) {
     throw new Error("No TTS provider available (Azure/OpenAI both failed).");
   }
 
-  return {
-    audioBuffer: mp3.audioBuffer,
-    mime: mp3.mime || "audio/mpeg",
-  };
+  const wav = await toWavPcm16Mono16k(mp3.audioBuffer, ".mp3");
+  return { audioBuffer: wav, mime: "audio/wav" };
 }
 
