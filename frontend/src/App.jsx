@@ -127,6 +127,7 @@ function PracticeGate() {
 /* ---------------- Tabs ---------------- */
 const TABS = [
   { path: "/ai-chat", label: "Scenarios", Icon: MessageCircle, element: <AiChat /> },
+  { path: "/coach", label: "Coach", Icon: AudioWaveform, element: <Coach /> },
   { path: "/conversation-coach", label: "Talk", Icon: AudioWaveform, element: <ConversationCoach /> },
   { path: "/practice", label: "Practice", Icon: Mic, element: <Practice /> },
   { path: "/settings", label: "Settings", Icon: SettingsIcon, element: <Settings /> },
@@ -222,10 +223,10 @@ useEffect(() => {
 
     const idle = (cb) =>
       (window.requestIdleCallback ? window.requestIdleCallback(cb) : setTimeout(cb, 350));
-    idle(() => {
-        prefetchRoute("/ai-chat");
-
-        prefetchRoute("/coach");
+   idle(() => {
+  prefetchRoute("/ai-chat");
+  prefetchRoute("/coach");
+  prefetchRoute("/conversation-coach");
   prefetchRoute("/imitate");
   prefetchRoute("/weakness");
   prefetchRoute("/bookmarks");
