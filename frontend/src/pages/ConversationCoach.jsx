@@ -232,7 +232,21 @@ function scoreColor(score) {
   if (score >= 70) return "#F59E0B";
   return "#EF4444";
 }
-
+async function unlockAudioPlayback() {
+  try {
+    const a = new Audio();
+    a.muted = true;
+    a.playsInline = true;
+    a.src =
+      "data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAFAAAGAAACcQCA" +
+      "////////////////////////////////////////////////////////////////" +
+      "////////////////////////////////////////////////////////////////" +
+      "////////////////////////////////////////////////////////////////";
+    await a.play().catch(() => {});
+    a.pause();
+    a.src = "";
+  } catch {}
+}
 export default function ConversationCoach() {
   const { settings } = useSettings?.() || { settings: {} };
   const accent = settings?.accentDefault || "en_us";
@@ -386,8 +400,9 @@ export default function ConversationCoach() {
     }
   }
   async function handleEnterConversation() {
-  await startNewConversation();
+  await unlockAudioPlayback();
   setHasEnteredConversation(true);
+  await startNewConversation();
 }
   async function createRecorder() {
     cleanupStream();
