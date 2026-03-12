@@ -17,6 +17,7 @@ export default function ConversationCoach() {
   const [hasEnteredConversation, setHasEnteredConversation] = useState(false);
   const [hasConversationStarted, setHasConversationStarted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [error, setError] = useState("");
