@@ -242,6 +242,7 @@ export default function ConversationCoach() {
   const [suggestedRepeat, setSuggestedRepeat] = useState("");
   const [weakPhonemes, setWeakPhonemes] = useState([]);
   const [weakWords, setWeakWords] = useState([]);
+  const [hasEnteredConversation, setHasEnteredConversation] = useState(false);
   const [hasConversationStarted, setHasConversationStarted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
 
@@ -348,7 +349,7 @@ export default function ConversationCoach() {
     cleanupStream();
 
     setError("");
-       setAssistantText("");
+    setAssistantText("");
     setFeedbackSummary("");
     setSuggestedRepeat("");
     setWeakPhonemes([]);
@@ -591,234 +592,305 @@ export default function ConversationCoach() {
       >
         <div style={{ height: 12 }} />
 
-              {assistantText ? (
+        {!hasEnteredConversation ? (
           <div
             style={{
-              minHeight: 156,
-              borderRadius: 28,
-              background: "#FFFFFF",
-              border: "1px solid rgba(15,23,42,0.08)",
-              boxShadow: "0 16px 42px rgba(15,23,42,0.08)",
-              padding: "22px 20px",
+              flex: 1,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              textAlign: "center",
             }}
           >
             <div
               style={{
-                fontSize: 22,
-                lineHeight: 1.45,
-                fontWeight: 800,
-                letterSpacing: -0.25,
-                color: "#0F172A",
-                maxWidth: 620,
-              }}
-            >
-              {assistantText}
-            </div>
-          </div>
-        ) : null}
-
-        <div style={{ marginTop: 14, minHeight: 112 }}>
-          {(feedbackSummary || weakPhonemes.length || weakWords.length || suggestedRepeat) ? (
-            <div
-              style={{
-                background: "rgba(255,255,255,0.86)",
+                width: "100%",
+                maxWidth: 520,
+                background: "#FFFFFF",
                 border: "1px solid rgba(15,23,42,0.08)",
-                boxShadow: "0 10px 28px rgba(15,23,42,0.05)",
-                borderRadius: 22,
-                padding: "14px 14px 12px",
-              }}
-            >
-              {feedbackSummary ? (
-                <div
-                  style={{
-                    fontSize: 14,
-                    lineHeight: 1.45,
-                    fontWeight: 800,
-                    color: "#334155",
-                    marginBottom: weakPhonemes.length || weakWords.length || suggestedRepeat ? 10 : 0,
-                  }}
-                >
-                  {feedbackSummary}
-                </div>
-              ) : null}
-
-              {weakPhonemes.length ? (
-                <div style={{ marginBottom: weakWords.length || suggestedRepeat ? 10 : 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 900, color: "#64748B", marginBottom: 6 }}>
-                    Weak sounds
-                  </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {weakPhonemes.map((p) => (
-                      <span
-                        key={`${p.label}-${p.score}`}
-                        style={{
-                          padding: "7px 10px",
-                          borderRadius: 999,
-                          background: "#F8FAFC",
-                          border: "1px solid rgba(15,23,42,0.08)",
-                          fontSize: 12,
-                          fontWeight: 900,
-                          color: scoreColor(p.score),
-                        }}
-                      >
-                        {p.label} {Number.isFinite(p.score) ? `${p.score}%` : ""}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {weakWords.length ? (
-                <div style={{ marginBottom: suggestedRepeat ? 10 : 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 900, color: "#64748B", marginBottom: 6 }}>
-                    Weak words
-                  </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {weakWords.map((w) => (
-                      <span
-                        key={`${w.word}-${w.score}`}
-                        style={{
-                          padding: "7px 10px",
-                          borderRadius: 999,
-                          background: "#F8FAFC",
-                          border: "1px solid rgba(15,23,42,0.08)",
-                          fontSize: 12,
-                          fontWeight: 900,
-                          color: scoreColor(w.score),
-                        }}
-                      >
-                        {w.word} {Number.isFinite(w.score) ? `${w.score}%` : ""}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {suggestedRepeat ? (
-                <div style={{ fontSize: 13, fontWeight: 900, color: "#0F172A" }}>
-                  Try again: {suggestedRepeat}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: 280,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 16,
-            }}
-          >
-            <button
-              type="button"
-              onPointerDown={handleHoldStart}
-              onPointerUp={handleHoldEnd}
-              onPointerLeave={(e) => {
-                if (isRecording) handleHoldEnd(e);
-              }}
-              onPointerCancel={handleHoldEnd}
-              disabled={isBusy}
-              style={{
-                width: 184,
-                height: 184,
-                borderRadius: "50%",
-                border: "none",
-                background: circleBg,
-                color: "#FFFFFF",
-                cursor: isBusy ? "not-allowed" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transform: `scale(${holdScale})`,
-                transition: "transform 120ms ease, box-shadow 120ms ease, background 120ms ease",
-                boxShadow: circleShadow,
-                opacity: isBusy ? 0.76 : 1,
-                touchAction: "none",
-                userSelect: "none",
-                WebkitUserSelect: "none",
-              }}
-            >
-              <Mic size={56} strokeWidth={2.5} />
-            </button>
-
-            <div
-              style={{
-                fontSize: 16,
-                fontWeight: 900,
-                letterSpacing: -0.2,
-                color: "#2563EB",
+                boxShadow: "0 16px 42px rgba(15,23,42,0.08)",
+                borderRadius: 28,
+                padding: "28px 22px",
                 textAlign: "center",
               }}
             >
-              {isRecording
-                ? "Listening..."
-                : isAnalyzing
-                ? "Analyzing..."
-                : isStartingConversation
-                ? "Starting conversation..."
-                : isAiSpeaking
-                ? "Hold to interrupt and talk"
-                : "Hold to talk"}
-            </div>
-
-            {!!error && (
               <div
                 style={{
-                  maxWidth: 420,
-                  textAlign: "center",
-                  fontSize: 14,
-                  fontWeight: 800,
-                  lineHeight: 1.4,
-                  color: "#B91C1C",
+                  fontSize: 30,
+                  fontWeight: 900,
+                  lineHeight: 1.1,
+                  letterSpacing: -0.4,
+                  marginBottom: 10,
                 }}
               >
-                {error}
+                AI Conversation Coach
               </div>
-            )}
+
+              <div
+                style={{
+                  fontSize: 16,
+                  lineHeight: 1.5,
+                  color: "#475569",
+                  fontWeight: 700,
+                  marginBottom: 22,
+                }}
+              >
+                Start a live conversation and get pronunciation feedback while you speak.
+              </div>
+
+              <button
+                type="button"
+                onClick={handleEnterConversation}
+                disabled={isStartingConversation}
+                style={{
+                  width: "100%",
+                  height: 56,
+                  borderRadius: 18,
+                  border: "none",
+                  background: "linear-gradient(135deg, #3FA3FF 0%, #2196F3 60%, #1769C7 100%)",
+                  color: "#FFFFFF",
+                  fontWeight: 900,
+                  fontSize: 17,
+                  cursor: isStartingConversation ? "not-allowed" : "pointer",
+                  boxShadow: "0 16px 34px rgba(33,150,243,0.30)",
+                  opacity: isStartingConversation ? 0.78 : 1,
+                }}
+              >
+                {isStartingConversation ? "Starting..." : "Start Conversation"}
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            {assistantText ? (
+              <div
+                style={{
+                  minHeight: 156,
+                  borderRadius: 28,
+                  background: "#FFFFFF",
+                  border: "1px solid rgba(15,23,42,0.08)",
+                  boxShadow: "0 16px 42px rgba(15,23,42,0.08)",
+                  padding: "22px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 22,
+                    lineHeight: 1.45,
+                    fontWeight: 800,
+                    letterSpacing: -0.25,
+                    color: "#0F172A",
+                    maxWidth: 620,
+                  }}
+                >
+                  {assistantText}
+                </div>
+              </div>
+            ) : null}
+
+            <div style={{ marginTop: 14, minHeight: 112 }}>
+              {(feedbackSummary || weakPhonemes.length || weakWords.length || suggestedRepeat) ? (
+                <div
+                  style={{
+                    background: "rgba(255,255,255,0.86)",
+                    border: "1px solid rgba(15,23,42,0.08)",
+                    boxShadow: "0 10px 28px rgba(15,23,42,0.05)",
+                    borderRadius: 22,
+                    padding: "14px 14px 12px",
+                  }}
+                >
+                  {feedbackSummary ? (
+                    <div
+                      style={{
+                        fontSize: 14,
+                        lineHeight: 1.45,
+                        fontWeight: 800,
+                        color: "#334155",
+                        marginBottom: weakPhonemes.length || weakWords.length || suggestedRepeat ? 10 : 0,
+                      }}
+                    >
+                      {feedbackSummary}
+                    </div>
+                  ) : null}
+
+                  {weakPhonemes.length ? (
+                    <div style={{ marginBottom: weakWords.length || suggestedRepeat ? 10 : 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 900, color: "#64748B", marginBottom: 6 }}>
+                        Weak sounds
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {weakPhonemes.map((p) => (
+                          <span
+                            key={`${p.label}-${p.score}`}
+                            style={{
+                              padding: "7px 10px",
+                              borderRadius: 999,
+                              background: "#F8FAFC",
+                              border: "1px solid rgba(15,23,42,0.08)",
+                              fontSize: 12,
+                              fontWeight: 900,
+                              color: scoreColor(p.score),
+                            }}
+                          >
+                            {p.label} {Number.isFinite(p.score) ? `${p.score}%` : ""}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {weakWords.length ? (
+                    <div style={{ marginBottom: suggestedRepeat ? 10 : 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 900, color: "#64748B", marginBottom: 6 }}>
+                        Weak words
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {weakWords.map((w) => (
+                          <span
+                            key={`${w.word}-${w.score}`}
+                            style={{
+                              padding: "7px 10px",
+                              borderRadius: 999,
+                              background: "#F8FAFC",
+                              border: "1px solid rgba(15,23,42,0.08)",
+                              fontSize: 12,
+                              fontWeight: 900,
+                              color: scoreColor(w.score),
+                            }}
+                          >
+                            {w.word} {Number.isFinite(w.score) ? `${w.score}%` : ""}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {suggestedRepeat ? (
+                    <div style={{ fontSize: 13, fontWeight: 900, color: "#0F172A" }}>
+                      Try again: {suggestedRepeat}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: 280,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 16,
+                }}
+              >
+                <button
+                  type="button"
+                  onPointerDown={handleHoldStart}
+                  onPointerUp={handleHoldEnd}
+                  onPointerLeave={(e) => {
+                    if (isRecording) handleHoldEnd(e);
+                  }}
+                  onPointerCancel={handleHoldEnd}
+                  disabled={isBusy}
+                  style={{
+                    width: 184,
+                    height: 184,
+                    borderRadius: "50%",
+                    border: "none",
+                    background: circleBg,
+                    color: "#FFFFFF",
+                    cursor: isBusy ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transform: `scale(${holdScale})`,
+                    transition: "transform 120ms ease, box-shadow 120ms ease, background 120ms ease",
+                    boxShadow: circleShadow,
+                    opacity: isBusy ? 0.76 : 1,
+                    touchAction: "none",
+                    userSelect: "none",
+                    WebkitUserSelect: "none",
+                  }}
+                >
+                  <Mic size={56} strokeWidth={2.5} />
+                </button>
+
+                <div
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 900,
+                    letterSpacing: -0.2,
+                    color: "#2563EB",
+                    textAlign: "center",
+                  }}
+                >
+                  {isRecording
+                    ? "Listening..."
+                    : isAnalyzing
+                    ? "Analyzing..."
+                    : isStartingConversation
+                    ? "Starting conversation..."
+                    : isAiSpeaking
+                    ? "Hold to interrupt and talk"
+                    : "Hold to talk"}
+                </div>
+
+                {!!error && (
+                  <div
+                    style={{
+                      maxWidth: 420,
+                      textAlign: "center",
+                      fontSize: 14,
+                      fontWeight: 800,
+                      lineHeight: 1.4,
+                      color: "#B91C1C",
+                    }}
+                  >
+                    {error}
+                  </div>
+                )}
+              </div>
+            </div>
 
             <button
-          type="button"
-          onClick={startNewConversation}
-          disabled={isBusy || !hasConversationStarted}
-          style={{
-            width: "100%",
-            height: 54,
-            borderRadius: 18,
-            border: "1px solid rgba(15,23,42,0.08)",
-            background: isBusy || !hasConversationStarted ? "#E5E7EB" : "#FFFFFF",
-            color: isBusy || !hasConversationStarted ? "#94A3B8" : "#0F172A",
-            fontWeight: 900,
-            fontSize: 16,
-            cursor: isBusy || !hasConversationStarted ? "not-allowed" : "pointer",
-            boxShadow: isBusy || !hasConversationStarted ? "none" : "0 10px 28px rgba(15,23,42,0.05)",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            marginTop: 8,
-            opacity: isBusy || !hasConversationStarted ? 0.72 : 1,
-          }}
-        >
-          <RotateCcw size={18} />
-          New Conversation
-        </button>
+              type="button"
+              onClick={startNewConversation}
+              disabled={isBusy || !hasConversationStarted}
+              style={{
+                width: "100%",
+                height: 54,
+                borderRadius: 18,
+                border: "1px solid rgba(15,23,42,0.08)",
+                background: isBusy || !hasConversationStarted ? "#E5E7EB" : "#FFFFFF",
+                color: isBusy || !hasConversationStarted ? "#94A3B8" : "#0F172A",
+                fontWeight: 900,
+                fontSize: 16,
+                cursor: isBusy || !hasConversationStarted ? "not-allowed" : "pointer",
+                boxShadow: isBusy || !hasConversationStarted ? "none" : "0 10px 28px rgba(15,23,42,0.05)",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                marginTop: 8,
+                opacity: isBusy || !hasConversationStarted ? 0.72 : 1,
+              }}
+            >
+              <RotateCcw size={18} />
+              New Conversation
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
