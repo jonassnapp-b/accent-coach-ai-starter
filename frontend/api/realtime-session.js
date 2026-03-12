@@ -19,24 +19,26 @@ export default async function handler(req, res) {
         ? "You are FluentUp Conversation Coach. Have a natural real-time spoken English conversation. Speak in natural British English. Be warm, concise, and voice-friendly. The first thing you say should ask what the user wants to talk about today while naturally offering many possible topics. Do not mention scenarios. Keep replies conversational and normal length. If the user interrupts, adapt naturally."
         : "You are FluentUp Conversation Coach. Have a natural real-time spoken English conversation. Speak in natural American English. Be warm, concise, and voice-friendly. The first thing you say should ask what the user wants to talk about today while naturally offering many possible topics. Do not mention scenarios. Keep replies conversational and normal length. If the user interrupts, adapt naturally.";
 
-    const payload = {
-      model: "gpt-realtime",
-      voice: normalizedAccent === "en_br" ? "sage" : "alloy",
-      instructions,
-      output_modalities: ["audio"],
-      audio: {
-        input: {
-          turn_detection: {
-            type: "server_vad",
-            create_response: true,
-            interrupt_response: true,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 500,
-            threshold: 0.5
-          }
+  const payload = {
+  session: {
+    model: "gpt-realtime",
+    voice: normalizedAccent === "en_br" ? "sage" : "alloy",
+    instructions,
+    modalities: ["audio"],
+    audio: {
+      input: {
+        turn_detection: {
+          type: "server_vad",
+          create_response: true,
+          interrupt_response: true,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 500,
+          threshold: 0.5
         }
       }
-    };
+    }
+  }
+};
 
     console.log("[realtime-session] payload:", JSON.stringify(payload, null, 2));
 
