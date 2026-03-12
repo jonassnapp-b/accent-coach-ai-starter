@@ -194,53 +194,35 @@ You must:
 `.trim();
 }
 
-async function requestConversationTurn({ history, accent }) {
-  const url = `${API_BASE}/api/ai-chat-turn`;
-
- console.log("[ConversationCoach][conv] POST", url, {
-  history,
-  accent,
-});
-
-  const res = await fetch(url, {
+async function requestConversationTurn({ history, userPrompt }) {
+  const res = await fetch(`${API_BASE}/api/conv/next`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      scenarioId: "open_conversation",
-      scenarioTitle: "Open Conversation",
-      scenarioSubtitle: "Talk about anything naturally",
-      level: "medium",
-      accent: accent === "en_br" ? "en_br" : "en_us",
+      system: SYSTEM_PROMPT,
       history,
+      user: userPrompt,
     }),
   });
 
-  const raw = await res.text().catch(() => "");
-
-  console.log("[ConversationCoach][conv] response", {
-    ok: res.ok,
-    status: res.status,
-    statusText: res.statusText,
-    raw,
-  });
-
   if (!res.ok) {
-    throw new Error(
-      `[conv ${res.status}] ${raw || res.statusText || "Conversation request failed"}`
-    );
+    const text = await res.text().catch(() => "");
+    throw new Error(text || "Conversation request failed");
   }
 
-  const data = safeJsonParse(raw);
-  if (!data) {
-    throw new Error(`[conv] Invalid JSON response: ${raw || "(empty body)"}`);
-  }
+  const data = await safeJson(res);
 
   return {
-    assistant_reply: String(
-      data?.assistantText || "Tell me a little more."
-    ).trim(),
-    feedback_summary: "",
-    suggested_repeat: String(data?.expectedUserReply || "").trim(),
+    assistant_reply:
+      String(
+        data?.assistant_reply ||
+          data?.reply ||
+          data?.message ||
+          "Tell me a little more."
+      ).trim(),
+    feedback_summary:
+      String(data?.feedback_summary || data?.coach_feedback || "").trim(),
+    suggested_repeat: String(data?.suggested_repeat || "").trim(),
   };
 }
 
@@ -267,7 +249,7 @@ async function unlockAudioPlayback() {
 }
 export default function ConversationCoach() {
   const { settings } = useSettings?.() || { settings: {} };
-  const [accent, setAccent] = useState(settings?.accentDefault || "en_us");
+  const accent = settings?.accentDefault || "en_us";
 
   const [assistantText, setAssistantText] = useState("");
   const [feedbackSummary, setFeedbackSummary] = useState("");
@@ -293,10 +275,7 @@ export default function ConversationCoach() {
   const holdStartedRef = useRef(false);
 
   const isBusy = isAnalyzing || isStartingConversation;
-    useEffect(() => {
-    setAccent(settings?.accentDefault || "en_us");
-  }, [settings?.accentDefault]);
-  console.log("[ConversationCoach] API_BASE =", API_BASE);
+
    useEffect(() => {
     mountedRef.current = true;
 
@@ -336,12 +315,6 @@ export default function ConversationCoach() {
 
     stopAiAudio();
 
-    console.log("[ConversationCoach][TTS] requesting:", {
-      text: t,
-      accent: accent === "en_br" ? "en_br" : "en_us",
-      url: `${API_BASE}/api/tts`,
-    });
-
     const res = await fetch(`${API_BASE}/api/tts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -352,68 +325,34 @@ export default function ConversationCoach() {
       }),
     });
 
-    console.log("[ConversationCoach][TTS] response:", {
-      ok: res.ok,
-      status: res.status,
-      statusText: res.statusText,
-      contentType: res.headers.get("content-type"),
-    });
-
     if (!res.ok) {
       const msg = await res.text().catch(() => "");
-      throw new Error(`[TTS HTTP ${res.status}] ${msg || res.statusText || "TTS failed"}`);
+      throw new Error(msg || "TTS failed");
     }
 
     const buf = await res.arrayBuffer();
     const mime = (res.headers.get("content-type") || "audio/mpeg").split(";")[0].trim();
-
-    console.log("[ConversationCoach][TTS] audio bytes:", buf.byteLength, "mime:", mime);
-
-    if (!buf.byteLength) {
-      throw new Error("[TTS] Empty audio response");
-    }
-
     const blob = new Blob([buf], { type: mime });
     const url = URL.createObjectURL(blob);
 
-    const audio = new Audio();
-    audio.playsInline = true;
-    audio.preload = "auto";
-    audio.src = url;
-
+    const audio = new Audio(url);
     aiAudioRef.current = audio;
+
     setIsAiSpeaking(true);
 
     audio.onended = () => {
-      console.log("[ConversationCoach][TTS] ended");
       URL.revokeObjectURL(url);
       if (aiAudioRef.current === audio) aiAudioRef.current = null;
       if (mountedRef.current) setIsAiSpeaking(false);
     };
 
-    audio.onerror = (e) => {
-      console.error("[ConversationCoach][TTS] audio element error", e);
+    audio.onerror = () => {
       URL.revokeObjectURL(url);
       if (aiAudioRef.current === audio) aiAudioRef.current = null;
-      if (mountedRef.current) {
-        setIsAiSpeaking(false);
-        setError("TTS audio element failed to play.");
-      }
+      if (mountedRef.current) setIsAiSpeaking(false);
     };
 
-    try {
-      await audio.play();
-      console.log("[ConversationCoach][TTS] play() success");
-    } catch (err) {
-      console.error("[ConversationCoach][TTS] play() failed:", err);
-      URL.revokeObjectURL(url);
-      if (aiAudioRef.current === audio) aiAudioRef.current = null;
-      if (mountedRef.current) {
-        setIsAiSpeaking(false);
-        setError(`TTS play failed: ${err?.message || String(err)}`);
-      }
-      throw err;
-    }
+    await audio.play();
   }
 
   async function startNewConversation() {
@@ -434,9 +373,9 @@ export default function ConversationCoach() {
     setIsStartingConversation(true);
 
     try {
-        const opener = await requestConversationTurn({
+      const opener = await requestConversationTurn({
         history: [],
-        accent,
+        userPrompt: buildOpeningUserPrompt(),
       });
 
       const nextText =
@@ -446,32 +385,25 @@ export default function ConversationCoach() {
       setAssistantText(nextText);
       historyRef.current = [{ role: "assistant", content: nextText }];
 
-         await speakAssistantText(nextText);
+      await speakAssistantText(nextText);
     } catch (err) {
-      console.error("[ConversationCoach][startNewConversation] failed:", err);
-
+      console.error(err);
       const fallback =
         "What would you like to talk about today? We can talk about work, study, travel, fitness, goals, daily life, movies, music, food, culture, technology, money, memories, or anything else you want.";
-
       setAssistantText(fallback);
       historyRef.current = [{ role: "assistant", content: fallback }];
-      setError(err?.message || String(err));
+      try {
+        await speakAssistantText(fallback);
+      } catch {}
     } finally {
       if (mountedRef.current) setIsStartingConversation(false);
     }
   }
-   async function handleEnterConversation() {
-    try {
-      console.log("[ConversationCoach] enter click");
-      await unlockAudioPlayback();
-      console.log("[ConversationCoach] audio unlock attempted");
-      setHasEnteredConversation(true);
-      await startNewConversation();
-    } catch (err) {
-      console.error("[ConversationCoach] handleEnterConversation failed:", err);
-      setError(err?.message || String(err));
-    }
-  }
+  async function handleEnterConversation() {
+  await unlockAudioPlayback();
+  setHasEnteredConversation(true);
+  await startNewConversation();
+}
   async function createRecorder() {
     cleanupStream();
 
@@ -578,9 +510,13 @@ export default function ConversationCoach() {
 
       const history = [...historyRef.current, { role: "user", content: transcript }];
 
-          const reply = await requestConversationTurn({
+      const reply = await requestConversationTurn({
         history,
-        accent,
+        userPrompt: buildTurnUserPrompt({
+          transcript,
+          weakPhonemes: weakP,
+          weakWords: weakW,
+        }),
       });
 
       const nextText = reply?.assistant_reply || "That was interesting. Tell me a little more.";
@@ -741,36 +677,6 @@ export default function ConversationCoach() {
           </div>
         ) : (
           <>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-end",
-                marginBottom: 10,
-              }}
-            >
-              <select
-                value={accent}
-                onChange={(e) => setAccent(e.target.value)}
-                disabled={isBusy || isRecording}
-                style={{
-                  height: 42,
-                  borderRadius: 14,
-                  padding: "0 14px",
-                  border: "1px solid rgba(15,23,42,0.10)",
-                  background: "#FFFFFF",
-                  color: "#0F172A",
-                  fontWeight: 800,
-                  fontSize: 14,
-                  cursor: isBusy || isRecording ? "not-allowed" : "pointer",
-                  outline: "none",
-                  boxShadow: "0 8px 20px rgba(15,23,42,0.05)",
-                }}
-              >
-                <option value="en_us">🇺🇸 American</option>
-                <option value="en_br">🇬🇧 British</option>
-              </select>
-            </div>
             {assistantText ? (
               <div
                 style={{
