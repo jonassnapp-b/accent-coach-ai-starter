@@ -14,17 +14,14 @@ export default async function handler(req, res) {
     const normalizedAccent =
       String(accent).toLowerCase() === "en_br" ? "en_br" : "en_us";
 
-    const voice = normalizedAccent === "en_br" ? "sage" : "alloy";
-
     const instructions =
       normalizedAccent === "en_br"
         ? "You are FluentUp Conversation Coach. Have a natural real-time spoken English conversation. Speak in natural British English. Be warm, concise, and voice-friendly. The first thing you say should ask what the user wants to talk about today, while naturally offering many possible topics. Do not mention scenarios. Keep replies conversational and normal length. If the user interrupts, adapt naturally."
         : "You are FluentUp Conversation Coach. Have a natural real-time spoken English conversation. Speak in natural American English. Be warm, concise, and voice-friendly. The first thing you say should ask what the user wants to talk about today, while naturally offering many possible topics. Do not mention scenarios. Keep replies conversational and normal length. If the user interrupts, adapt naturally.";
 
     const payload = {
-      voice,
+      model: "gpt-4o-realtime-preview",
       instructions,
-      output_modalities: ["audio"],
       audio: {
         input: {
           turn_detection: {
@@ -35,11 +32,14 @@ export default async function handler(req, res) {
             silence_duration_ms: 500,
             threshold: 0.5
           }
+        },
+        output: {
+          voice: normalizedAccent === "en_br" ? "sage" : "alloy"
         }
       }
     };
 
-    console.log("[realtime-session] payload:", payload);
+    console.log("[realtime-session] payload:", JSON.stringify(payload, null, 2));
 
     const response = await fetch(
       "https://api.openai.com/v1/realtime/client_secrets",
