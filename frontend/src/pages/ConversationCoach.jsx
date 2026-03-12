@@ -10,6 +10,8 @@ const API_BASE =
   window.location.origin.replace(/\/+$/, "");
 
 const PRONUN_THRESHOLD = 85;
+const OPENING_LINE =
+  "What would you like to talk about today? We can talk about work, study, travel, fitness, goals, daily life, movies, music, food, culture, technology, money, memories, or anything else you want.";
 
 const SYSTEM_PROMPT = `
 You are FluentUp Conversation Coach.
@@ -373,37 +375,22 @@ export default function ConversationCoach() {
     setIsStartingConversation(true);
 
     try {
-      const opener = await requestConversationTurn({
-        history: [],
-        userPrompt: buildOpeningUserPrompt(),
-      });
+      setAssistantText(OPENING_LINE);
+      historyRef.current = [{ role: "assistant", content: OPENING_LINE }];
 
-      const nextText =
-        opener?.assistant_reply ||
-        "What would you like to talk about today? We can talk about work, study, travel, fitness, goals, daily life, movies, music, food, culture, technology, money, memories, or anything else you want.";
-
-      setAssistantText(nextText);
-      historyRef.current = [{ role: "assistant", content: nextText }];
-
-      await speakAssistantText(nextText);
+      await speakAssistantText(OPENING_LINE);
     } catch (err) {
       console.error(err);
-      const fallback =
-        "What would you like to talk about today? We can talk about work, study, travel, fitness, goals, daily life, movies, music, food, culture, technology, money, memories, or anything else you want.";
-      setAssistantText(fallback);
-      historyRef.current = [{ role: "assistant", content: fallback }];
-      try {
-        await speakAssistantText(fallback);
-      } catch {}
+      setError(err?.message || "Failed to start conversation audio.");
     } finally {
       if (mountedRef.current) setIsStartingConversation(false);
     }
   }
   async function handleEnterConversation() {
-  await unlockAudioPlayback();
-  setHasEnteredConversation(true);
-  await startNewConversation();
-}
+    await unlockAudioPlayback();
+    setHasEnteredConversation(true);
+    await startNewConversation();
+  }
   async function createRecorder() {
     cleanupStream();
 
