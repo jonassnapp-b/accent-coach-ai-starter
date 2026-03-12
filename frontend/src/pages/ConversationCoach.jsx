@@ -262,9 +262,8 @@ export default function ConversationCoach() {
 
   const isBusy = isAnalyzing || isStartingConversation;
 
-  useEffect(() => {
+   useEffect(() => {
     mountedRef.current = true;
-    startNewConversation();
 
     return () => {
       mountedRef.current = false;
@@ -272,7 +271,6 @@ export default function ConversationCoach() {
       stopRecordingInternal(true);
       cleanupStream();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function cleanupStream() {
@@ -387,7 +385,10 @@ export default function ConversationCoach() {
       if (mountedRef.current) setIsStartingConversation(false);
     }
   }
-
+  async function handleEnterConversation() {
+    setHasEnteredConversation(true);
+    await startNewConversation();
+  }
   async function createRecorder() {
     cleanupStream();
 
