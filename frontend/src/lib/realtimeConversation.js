@@ -140,9 +140,10 @@ export async function createRealtimeConversation({
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${ephemeralKey}`,
-          "Content-Type": "application/sdp",
-        },
+  Authorization: `Bearer ${ephemeralKey}`,
+  "Content-Type": "application/sdp",
+  "openai-beta": "realtime=v1",
+},
         body: offer.sdp,
       }
     );
