@@ -487,7 +487,6 @@ N: "n",
     /* ===== LIQUIDS ===== */
 L: "l",
 R: "r",
-    ER: "er",
 
     /* ===== GLIDES ===== */
     W: "w",
@@ -2898,7 +2897,6 @@ paddingTop: introPhase >= 4 ? `calc(${SAFE_TOP} + 90px + ${HERO_DOWN_PX}px)` : 0
   style={{
     position: "relative",
 maxWidth: "100%",
-margin: 0,
     margin: "0 auto",
     display: "flex",
     flexDirection: "column",
