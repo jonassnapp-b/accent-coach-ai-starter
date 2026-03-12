@@ -194,12 +194,13 @@ You must:
 `.trim();
 }
 
-async function requestConversationTurn({ history }) {
+async function requestConversationTurn({ history, accent }) {
   const url = `${API_BASE}/api/ai-chat-turn`;
 
-  console.log("[ConversationCoach][conv] POST", url, {
-    history,
-  });
+ console.log("[ConversationCoach][conv] POST", url, {
+  history,
+  accent,
+});
 
   const res = await fetch(url, {
     method: "POST",
