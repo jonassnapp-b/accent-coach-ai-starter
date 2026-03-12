@@ -266,7 +266,7 @@ async function unlockAudioPlayback() {
 }
 export default function ConversationCoach() {
   const { settings } = useSettings?.() || { settings: {} };
-  const accent = settings?.accentDefault || "en_us";
+  const [accent, setAccent] = useState(settings?.accentDefault || "en_us");
 
   const [assistantText, setAssistantText] = useState("");
   const [feedbackSummary, setFeedbackSummary] = useState("");
@@ -292,6 +292,9 @@ export default function ConversationCoach() {
   const holdStartedRef = useRef(false);
 
   const isBusy = isAnalyzing || isStartingConversation;
+    useEffect(() => {
+    setAccent(settings?.accentDefault || "en_us");
+  }, [settings?.accentDefault]);
   console.log("[ConversationCoach] API_BASE =", API_BASE);
    useEffect(() => {
     mountedRef.current = true;
@@ -430,9 +433,10 @@ export default function ConversationCoach() {
     setIsStartingConversation(true);
 
     try {
-     const opener = await requestConversationTurn({
-  history: [],
-});
+        const opener = await requestConversationTurn({
+        history: [],
+        accent,
+      });
 
       const nextText =
         opener?.assistant_reply ||
@@ -573,9 +577,10 @@ export default function ConversationCoach() {
 
       const history = [...historyRef.current, { role: "user", content: transcript }];
 
-     const reply = await requestConversationTurn({
-  history,
-});
+          const reply = await requestConversationTurn({
+        history,
+        accent,
+      });
 
       const nextText = reply?.assistant_reply || "That was interesting. Tell me a little more.";
       const nextFeedback =
@@ -735,6 +740,36 @@ export default function ConversationCoach() {
           </div>
         ) : (
           <>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                marginBottom: 10,
+              }}
+            >
+              <select
+                value={accent}
+                onChange={(e) => setAccent(e.target.value)}
+                disabled={isBusy || isRecording}
+                style={{
+                  height: 42,
+                  borderRadius: 14,
+                  padding: "0 14px",
+                  border: "1px solid rgba(15,23,42,0.10)",
+                  background: "#FFFFFF",
+                  color: "#0F172A",
+                  fontWeight: 800,
+                  fontSize: 14,
+                  cursor: isBusy || isRecording ? "not-allowed" : "pointer",
+                  outline: "none",
+                  boxShadow: "0 8px 20px rgba(15,23,42,0.05)",
+                }}
+              >
+                <option value="en_us">🇺🇸 American</option>
+                <option value="en_br">🇬🇧 British</option>
+              </select>
+            </div>
             {assistantText ? (
               <div
                 style={{
