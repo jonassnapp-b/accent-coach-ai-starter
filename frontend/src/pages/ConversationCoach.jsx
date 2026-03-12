@@ -386,9 +386,9 @@ export default function ConversationCoach() {
     }
   }
   async function handleEnterConversation() {
-    setHasEnteredConversation(true);
-    await startNewConversation();
-  }
+  await startNewConversation();
+  setHasEnteredConversation(true);
+}
   async function createRecorder() {
     cleanupStream();
 
