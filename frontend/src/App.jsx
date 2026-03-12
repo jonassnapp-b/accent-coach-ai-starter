@@ -306,7 +306,6 @@ useEffect(() => {
                 <Route path="/record" element={<PracticeGate />} />
                 <Route path="/practice-my-text" element={<PracticeMyTextPage />} />
                 <Route path="/coach-my-text" element={<PracticeMyTextPage />} />
-                <Route path="/conversation-coach" element={<ConversationCoach />} />
                 <Route path="/weakness" element={<WeaknessLab />} />
                 <Route path="/bookmarks" element={<Bookmarks />} />
                 <Route path="/terms" element={<Terms />} />
