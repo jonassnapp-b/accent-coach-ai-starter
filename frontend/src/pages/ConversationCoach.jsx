@@ -194,21 +194,23 @@ You must:
 `.trim();
 }
 
-async function requestConversationTurn({ history, userPrompt }) {
-  const url = `${API_BASE}/api/conv/next`;
+async function requestConversationTurn({ history }) {
+  const url = `${API_BASE}/api/ai-chat-turn`;
 
   console.log("[ConversationCoach][conv] POST", url, {
     history,
-    userPrompt,
   });
 
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      system: SYSTEM_PROMPT,
+      scenarioId: "open_conversation",
+      scenarioTitle: "Open Conversation",
+      scenarioSubtitle: "Talk about anything naturally",
+      level: "medium",
+      accent: accent === "en_br" ? "en_br" : "en_us",
       history,
-      user: userPrompt,
     }),
   });
 
@@ -234,15 +236,10 @@ async function requestConversationTurn({ history, userPrompt }) {
 
   return {
     assistant_reply: String(
-      data?.assistant_reply ||
-      data?.reply ||
-      data?.message ||
-      "Tell me a little more."
+      data?.assistantText || "Tell me a little more."
     ).trim(),
-    feedback_summary: String(
-      data?.feedback_summary || data?.coach_feedback || ""
-    ).trim(),
-    suggested_repeat: String(data?.suggested_repeat || "").trim(),
+    feedback_summary: "",
+    suggested_repeat: String(data?.expectedUserReply || "").trim(),
   };
 }
 
@@ -433,10 +430,9 @@ export default function ConversationCoach() {
     setIsStartingConversation(true);
 
     try {
-      const opener = await requestConversationTurn({
-        history: [],
-        userPrompt: buildOpeningUserPrompt(),
-      });
+     const opener = await requestConversationTurn({
+  history: [],
+});
 
       const nextText =
         opener?.assistant_reply ||
@@ -577,14 +573,9 @@ export default function ConversationCoach() {
 
       const history = [...historyRef.current, { role: "user", content: transcript }];
 
-      const reply = await requestConversationTurn({
-        history,
-        userPrompt: buildTurnUserPrompt({
-          transcript,
-          weakPhonemes: weakP,
-          weakWords: weakW,
-        }),
-      });
+     const reply = await requestConversationTurn({
+  history,
+});
 
       const nextText = reply?.assistant_reply || "That was interesting. Tell me a little more.";
       const nextFeedback =
