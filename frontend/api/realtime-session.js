@@ -24,7 +24,6 @@ const payload = {
     type: "realtime",
     model: "gpt-realtime",
     instructions,
-    modalities: ["audio"],
     audio: {
       input: {
         turn_detection: {
