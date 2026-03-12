@@ -81,7 +81,7 @@ export async function createRealtimeConversation({
       );
     }
 
-    const ephemeralKey = tokenData?.client_secret?.value;
+    const ephemeralKey = tokenData?.value;
     if (!ephemeralKey) {
       throw new Error("Missing realtime client secret");
     }
