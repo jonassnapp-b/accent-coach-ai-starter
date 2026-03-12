@@ -14,6 +14,7 @@ import { SettingsProvider } from "./lib/settings-store.jsx";
 
 import Record from "./pages/Record.jsx";
 import Feedback from "./pages/Feedback.jsx";
+import ConversationCoach from "./pages/ConversationCoach.jsx";
 
 import { Mic, AudioWaveform, Settings as SettingsIcon, MessageCircle } from "lucide-react";
 import SplashSequence from "./components/SplashSequence";
@@ -31,6 +32,7 @@ const Bookmarks  = lazy(() => import("./pages/Bookmarks.jsx"));
 const Coach = lazy(() => import("./pages/Coach.jsx"));
 const AiChat = lazy(() => import("./pages/AiChat.jsx"));
 const Practice = lazy(() => import("./pages/Practice.jsx"));
+const ConversationCoach = lazy(() => import("./pages/ConversationCoach.jsx"));
 const PracticeMyTextPage = lazy(() => import("./pages/PracticeMyText.jsx"));
 const Terms = lazy(() => import("./pages/Terms.jsx"));
 const Privacy = lazy(() => import("./pages/Privacy.jsx"));
@@ -79,6 +81,7 @@ const routePrefetch = {
   "/ai-chat":   () => import("./pages/AiChat.jsx"),
   "/coach":     () => import("./pages/Coach.jsx"),
   "/practice":  () => import("./pages/Practice.jsx"),
+    "/conversation-coach": () => import("./pages/ConversationCoach.jsx"),
     "/practice-my-text": () => import("./pages/PracticeMyText.jsx"),
       "/coach-my-text":    () => import("./pages/PracticeMyText.jsx"),
 
@@ -123,10 +126,10 @@ function PracticeGate() {
 /* ---------------- Tabs ---------------- */
 /* ---------------- Tabs ---------------- */
 const TABS = [
-  { path: "/ai-chat",  label: "Scenarios",  Icon: MessageCircle, element: <AiChat /> },
-  { path: "/coach",    label: "Talk",     Icon: AudioWaveform, element: <Coach /> },
-  { path: "/practice", label: "Practice", Icon: Mic,           element: <Practice /> },
-  { path: "/settings", label: "Settings", Icon: SettingsIcon,  element: <Settings /> },
+  { path: "/ai-chat", label: "Scenarios", Icon: MessageCircle, element: <AiChat /> },
+  { path: "/conversation-coach", label: "Talk", Icon: AudioWaveform, element: <ConversationCoach /> },
+  { path: "/practice", label: "Practice", Icon: Mic, element: <Practice /> },
+  { path: "/settings", label: "Settings", Icon: SettingsIcon, element: <Settings /> },
 ];
 
 
@@ -303,6 +306,7 @@ useEffect(() => {
                 <Route path="/record" element={<PracticeGate />} />
                 <Route path="/practice-my-text" element={<PracticeMyTextPage />} />
                 <Route path="/coach-my-text" element={<PracticeMyTextPage />} />
+                <Route path="/conversation-coach" element={<ConversationCoach />} />
                 <Route path="/weakness" element={<WeaknessLab />} />
                 <Route path="/bookmarks" element={<Bookmarks />} />
                 <Route path="/terms" element={<Terms />} />

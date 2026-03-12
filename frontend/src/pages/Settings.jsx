@@ -332,12 +332,12 @@ export default function Settings() {
   </div>
 </div>
 {(() => {
-  const slackVal = clamp(Number(s.slack ?? 0), -1, 1);
+  const slackVal = clamp(Number(s.slack ?? 1), -1, 1);
 
   return (
     <div className="ios-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 12 }}>
       <div>
-        <div className="ios-row-label">Difficulty (Slack)</div>
+        <div className="ios-row-label">Difficulty</div>
         <div className="ios-row-hint">Controls scoring strictness. Easier = more forgiving. Stricter = harder.</div>
       </div>
 

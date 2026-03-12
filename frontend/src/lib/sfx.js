@@ -1,7 +1,10 @@
 // src/lib/sfx.js
 // Tiny sound engine (Web Audio) – no external files required.
+import trophyMp3 from "../assets/sfx/trophy.mp3";
 let ctx = null;
 let master = null;
+let trophyBuffer = null;
+let trophyLoadingPromise = null;
 
 function ensureCtx() {
   if (!ctx) {
@@ -32,7 +35,25 @@ export function setVolume(vol01) {
   ensureCtx();
   master.gain.value = Math.max(0, Math.min(1, Number(vol01) || 0));
 }
+async function loadTrophyBuffer() {
+  ensureCtx();
 
+  if (trophyBuffer) return trophyBuffer;
+  if (trophyLoadingPromise) return trophyLoadingPromise;
+
+  trophyLoadingPromise = fetch(trophyMp3)
+    .then((r) => r.arrayBuffer())
+    .then((arr) => ctx.decodeAudioData(arr))
+    .then((decoded) => {
+      trophyBuffer = decoded;
+      return decoded;
+    })
+    .finally(() => {
+      trophyLoadingPromise = null;
+    });
+
+  return trophyLoadingPromise;
+}
 // ----- low-level beep with envelope -----
 function beep(freq = 440, t0 = ctx.currentTime, len = 0.18, type = "sine", gain = 0.9) {
   const o = ctx.createOscillator();
@@ -101,7 +122,21 @@ export function fanfare() {
     ]
   );
 }
+export function trophy() {
+  try {
+    ensureCtx();
 
+    if (typeof ctx.resume === "function" && ctx.state === "suspended") {
+      ctx.resume();
+    }
+
+    const audio = new Audio(trophyMp3);
+    audio.preload = "auto";
+    audio.playsInline = true;
+audio.volume = 0.001;
+    audio.play().catch(() => {});
+  } catch {}
+}
 // 4) Optional short haptic (web + Capacitor friendly)
 export function hapticShort() {
   try {

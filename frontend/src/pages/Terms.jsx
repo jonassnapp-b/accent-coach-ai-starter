@@ -21,7 +21,17 @@ export default function Terms() {
 </button>
       <h1>Terms of Service</h1>
       <p>Last updated: {new Date().toLocaleDateString()}</p>
-
+<p>
+  For iOS purchases, the End User License Agreement (EULA) is Apple’s Standard Terms of Use:
+  {" "}
+  <a
+    href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+    target="_blank"
+    rel="noreferrer"
+  >
+    https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+  </a>
+</p>
       <h2>1. Overview</h2>
       <p>
         Welcome to FluentUp ("the App"), operated by FluentUp.

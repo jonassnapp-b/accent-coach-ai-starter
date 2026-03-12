@@ -1297,9 +1297,14 @@ const letterSegments = useMemo(() => {
   const lettersFromPhonics = Array.isArray(cmuData?.lettersByIdx) ? cmuData.lettersByIdx : [];
 
   // If phonics letters missing/empty -> fallback split by phoneme count
-  const allEmpty = !lettersFromPhonics.length || lettersFromPhonics.every((s) => !String(s || "").trim());
-  const letters = allEmpty ? splitEvenly(wordText, scores.length || 1) : lettersFromPhonics;
+ const hasExactPhonicsMap =
+  lettersFromPhonics.length === scores.length &&
+  lettersFromPhonics.some((s) => String(s || "").trim());
 
+const letters = hasExactPhonicsMap
+  ? lettersFromPhonics
+  : splitEvenly(wordText, scores.length || 1);
+  
   // Merge empty segments into previous so we don't get gaps
   const out = [];
   for (let i = 0; i < Math.max(scores.length, letters.length); i++) {

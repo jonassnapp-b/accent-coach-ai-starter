@@ -19,7 +19,7 @@ export const defaultSettings = {
   autoPlayNative: false, // Imitate tab only
   ttsRate: 1.0,
   // Difficulty (SpeechSuper slack)
-  slack: 0, // -1..1 (0 = recommended)
+  slack: 1, // -1..1 (1 = strictest)
 
   // Audio
   volume: 0.6, // 0–1 (GLOBAL volume used across the app)

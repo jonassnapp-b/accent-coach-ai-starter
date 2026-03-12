@@ -14,7 +14,7 @@ import { useProStatus } from "../providers/PurchasesProvider.jsx";
 const IS_PROD = !!import.meta?.env?.PROD;
 const RETRY_INTENT_KEY = "ac_my_text_retry_intent_v1";
 const TROPHY_REACHED_PCT = 95; // justér hvis du vil gøre den hårdere/lettere
-const TROPHY_REACHED_KEY = "ac_my_text_trophy_reached_v1";
+
 
 const MAX_FREE_PRACTICE_ATTEMPTS = 3;
 
@@ -44,21 +44,6 @@ function incAttemptsToday() {
     return null;
   }
 }
-
-function hasTrophyCelebrated() {
-  try {
-    return localStorage.getItem(TROPHY_REACHED_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function markTrophyCelebrated() {
-  try {
-    localStorage.setItem(TROPHY_REACHED_KEY, "1");
-  } catch {}
-}
-
 
 /* ------------ API base (web + native) ------------ */
 function isNative() {
@@ -169,12 +154,40 @@ function pickFeedback(json) {
 }
 function heroColorForPct(pct) {
   const n = Number(pct);
-  if (!Number.isFinite(n)) return "rgba(255,255,255,0.92)";
+  if (!Number.isFinite(n)) return "#ffffff";
 
-  // ✅ Hard thresholds (så 63% aldrig bliver grøn)
-  if (n >= 85) return "#22c55e";  // green
-  if (n >= 75) return "#eab308";  // yellow
-  return "#ef4444";               // red
+  const clamped = Math.max(0, Math.min(100, n));
+
+  // 0 = red, 60 = yellow/orange, 120 = green
+  const hue = Math.round((clamped / 100) * 120);
+  return `hsl(${hue} 78% 52%)`;
+}
+
+function heroBadgeStyleForPct(pct) {
+  const n = Number(pct);
+
+  if (!Number.isFinite(n)) {
+    return {
+      background: "rgba(255,255,255,0.22)",
+      border: "none",
+      color: "#ffffff",
+      boxShadow: "0 10px 26px rgba(0,0,0,0.16)",
+    };
+  }
+
+  let color = "#ef4444"; // < 60 = red
+
+  if (n >= 95) color = "#22c55e";       // Native-level clarity.
+  else if (n >= 90) color = "#4ade80";  // Excellent pronunciation.
+  else if (n >= 75) color = "#eab308";  // Strong performance.
+  else if (n >= 60) color = "#f97316";  // Room for improvement.
+
+  return {
+    background: color,
+    border: "none",
+    color: "#ffffff",
+    boxShadow: `0 12px 28px ${hexToRgba(color, 0.34)}`,
+  };
 }
 function hexToRgba(hex, a = 1) {
   const h = String(hex || "").replace("#", "").trim();
@@ -223,18 +236,23 @@ function computeHeroFontSize(text, maxPx, minPx) {
   const t = String(text || "").trim();
   if (!t) return maxPx;
 
-  // Hvis der er ét langt ord, er det dét der bestemmer overflow
   const parts = t.split(/\s+/g).filter(Boolean);
+  const words = parts.length;
+  const chars = t.length;
   const longest = parts.reduce((m, w) => Math.max(m, w.length), 0);
 
-  // Baseline shrink (som før, men lidt mildere)
-  const baseShrink = Math.max(0, t.length - 18) * 2.0;
+  let size = maxPx;
 
-  // EKSTRA shrink for lange enkeltord (det er det der fikser "comfortable")
-  const singleWordBoost = (parts.length === 1) ? Math.max(0, longest - 7) * 6.0 : 0;
+  // total længde
+  size -= Math.max(0, chars - 10) * 2.6;
 
-  const shrink = baseShrink + singleWordBoost;
-  return clamp(Math.round(maxPx - shrink), minPx, maxPx);
+  // antal ord
+  size -= Math.max(0, words - 2) * 5.5;
+
+  // langt enkeltord
+  size -= Math.max(0, longest - 6) * 3.5;
+
+  return clamp(Math.round(size), minPx, maxPx);
 }
 function computePctFontSize(text, maxPx, minPx) {
   const t = String(text || "").trim();
@@ -1435,39 +1453,25 @@ const [trophyCelebration, setTrophyCelebration] = useState(false);
 const trophyTimerRef = useRef(null);
 
 function triggerTrophyCelebration() {
-  // kun én gang per device
-  if (hasTrophyCelebrated()) return;
+  setTrophyCelebration(false);
 
-  markTrophyCelebrated();
+  try {
+    if (trophyTimerRef.current) clearTimeout(trophyTimerRef.current);
+  } catch {}
 
-  if (canPlaySfx) sfx.success({ strength: 2 });
+  requestAnimationFrame(() => {
+    setTrophyCelebration(true);
 
-  setTrophyCelebration(true);
+    if (canPlaySfx) sfx.trophy();
 
-  try { if (trophyTimerRef.current) clearTimeout(trophyTimerRef.current); } catch {}
-  trophyTimerRef.current = setTimeout(() => {
-    setTrophyCelebration(false);
-    trophyTimerRef.current = null;
-  }, 2400);
+    trophyTimerRef.current = setTimeout(() => {
+      setTrophyCelebration(false);
+      trophyTimerRef.current = null;
+    }, 2400);
+  });
 }
 
   const [accentUi, setAccentUi] = useState(settings.accentDefault || "en_us");
-  const userAudioRef = useRef(null);
-const loopTimerRef = useRef(null);
-
-// ---------------- TTS (server /api/tts) ----------------
-const ttsAudioRef = useRef(null);
-const ttsUrlRef = useRef(null); // current objectURL (non-cached)
-const ttsPlayIdRef = useRef(0);
-
-// cache objectURLs by key: `${accentUi}|${rate}|${text}`
-const ttsCacheRef = useRef(new Map());
-const ttsCurrentKeyRef = useRef(null); // which key is actually playing in ttsAudioRef
-
-const [isCorrectPlaying, setIsCorrectPlaying] = useState(false);
-
-// Deep Dive TTS (same /api/tts, but for words/sentences)
-const [deepDivePlayingKey, setDeepDivePlayingKey] = useState(null); // string|null
   useEffect(() => {
   // on unmount: stop + cleanup
   return () => {
@@ -1703,16 +1707,32 @@ useEffect(() => {
   };
 }, [deepDiveOpen, deepDivePhoneme?.code, accentUi, playbackRate]);
 
+
+const userAudioRef = useRef(null);
+const loopTimerRef = useRef(null);
+// ---------------- TTS (server /api/tts) ----------------
+const ttsAudioRef = useRef(null);
+const ttsUrlRef = useRef(null); // current objectURL (non-cached)
+
+const ttsPlayIdRef = useRef(0);
+
+// cache objectURLs by key: `${accentUi}|${rate}|${text}`
+const ttsCacheRef = useRef(new Map());
+
+const [isCorrectPlaying, setIsCorrectPlaying] = useState(false);
+// Deep Dive TTS (same /api/tts, but for words/sentences)
+const [deepDivePlayingKey, setDeepDivePlayingKey] = useState(null); // string|null
+
 async function playDeepDiveTts(text, key) {
   const t = String(text || "").trim();
   if (!t) return;
 
   // toggle off if same item is playing
-if (ttsCurrentKeyRef.current === key && isCorrectPlaying) {
-  stopTtsNow();
-  setDeepDivePlayingKey(null);
-  return;
-}
+  if (deepDivePlayingKey === key && isCorrectPlaying) {
+    stopTtsNow();
+    setDeepDivePlayingKey(null);
+    return;
+  }
 
   stopAllAudio();
 
@@ -1721,41 +1741,10 @@ if (ttsCurrentKeyRef.current === key && isCorrectPlaying) {
 
   try {
     setDeepDivePlayingKey(key);
-    ttsCurrentKeyRef.current = key;
     const url = await ensureTtsUrl({ text: t, accent, rate });
     await playTtsUrl(url, { rate, loop: false });
   } catch (e) {
     setDeepDivePlayingKey(null);
-    if (!IS_PROD) setErr(e?.message || String(e));
-    else setErr("TTS failed. Try again.");
-  }
-}
-
-async function playPhonemeCoachTts(code) {
-  const c = String(code || "").trim().toUpperCase();
-  if (!c) return;
-
-  stopAllAudio();
-
-  const accent = accentUi === "en_br" ? "en_br" : "en_us";
-  const rate = Number(playbackRate ?? 1.0) || 1.0;
-
-  const text = ttsTextForPhoneme(c);
-  const key = `ph:${accent}|${rate}|${c}`;
-
-  // toggle off if same phoneme is playing
-  if (ttsCurrentKeyRef.current === key && isCorrectPlaying) {
-    stopTtsNow();
-    return;
-  }
-
-  try {
-    setDeepDivePlayingKey(null);
-    ttsCurrentKeyRef.current = key;
-
-    const url = await ensureTtsUrl({ text, accent, rate });
-    await playTtsUrl(url, { rate, loop: false });
-  } catch (e) {
     if (!IS_PROD) setErr(e?.message || String(e));
     else setErr("TTS failed. Try again.");
   }
@@ -1990,7 +1979,7 @@ function stopTtsNow() {
   // revoke only non-cached url
   try { if (ttsUrlRef.current) URL.revokeObjectURL(ttsUrlRef.current); } catch {}
   ttsUrlRef.current = null;
-ttsCurrentKeyRef.current = null;
+
   setIsCorrectPlaying(false);
 }
 
@@ -2073,7 +2062,7 @@ a.onended = () => {
   if (ttsPlayIdRef.current !== myPlayId) return;
   setIsCorrectPlaying(false);
   setDeepDivePlayingKey(null);
-ttsCurrentKeyRef.current = null;
+
   if (loop) {
     loopTimerRef.current = setTimeout(async () => {
       if (ttsPlayIdRef.current !== myPlayId) return;
@@ -2089,13 +2078,10 @@ ttsCurrentKeyRef.current = null;
 
 
   try {
-  await a.play();
-} catch (e) {
-  setIsCorrectPlaying(false);
-  setDeepDivePlayingKey(null);
-  ttsCurrentKeyRef.current = null;
-  if (!IS_PROD) setErr(`audio.play() failed: ${e?.name || ""} ${e?.message || e}`);
-}
+    await a.play();
+  } catch {
+    setIsCorrectPlaying(false);
+  }
 }
 
 
@@ -2126,21 +2112,17 @@ async function playCorrectTts() {
 
   const accent = accentUi === "en_br" ? "en_br" : "en_us";
   const rate = Number(playbackRate ?? 1.0) || 1.0;
-const correctKey = `correct:${accent}|${rate}|${text}`;
+
   // if already playing the same “correct”, pause/stop
-// if already playing the same “correct”, pause/stop
-if (ttsCurrentKeyRef.current === correctKey && isCorrectPlaying) {
-  stopTtsNow();
-  return;
-}
+  if (isCorrectPlaying) {
+    stopTtsNow();
+    return;
+  }
 
-try {
-  setDeepDivePlayingKey(null);
-  ttsCurrentKeyRef.current = correctKey;
-
-  const url = await ensureTtsUrl({ text, accent, rate });
-  await playTtsUrl(url, { rate, loop: loopOn });
-} catch (e) {
+  try {
+    const url = await ensureTtsUrl({ text, accent, rate });
+    await playTtsUrl(url, { rate, loop: loopOn });
+  } catch (e) {
     if (!IS_PROD) setErr(e?.message || String(e));
     else setErr("TTS failed. Try again.");
   }
@@ -2382,13 +2364,9 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
         clearTimeout(t);
 
         const ct = r.headers?.get("content-type") || "";
-     if (ct.includes("application/json")) {
-  json = await r.json().catch(() => ({}));
-
-  // ✅ DEBUG: raw SpeechSuper response (så vi kan se words[].phonemes[].span)
-  console.log("SPEECHSUPER RAW JSON", json);
-  console.log("SPEECHSUPER WORDS", json?.words || json?.result?.words || json?.data?.words || null);
-} else {
+        if (ct.includes("application/json")) {
+          json = await r.json().catch(() => ({}));
+        } else {
           const txt = await r.text().catch(() => "");
           json = txt ? { error: txt } : {};
         }
@@ -2405,10 +2383,7 @@ const t = setTimeout(() => controller.abort(), timeoutMs);
 
       const overall = Number(psm?.overall ?? json?.overall ?? 0);
 
-      if (canPlaySfx) {
-        if (overall >= 90) sfx.success({ strength: 2 });
-        else if (overall >= 75) sfx.success({ strength: 1 });
-      }
+          // no success sound below trophy threshold
 
       const payload = {
         ...json,
@@ -2445,13 +2420,6 @@ try {
     setTimeout(() => openEnjoyingModal(), 900);
   }
 } catch {}
-
-
-const trophyReached = Number(payload.overall) >= TROPHY_REACHED_PCT;
-
-if (trophyReached) {
-  triggerTrophyCelebration();
-}
 
 
 try { sessionStorage.setItem(RESULT_KEY, JSON.stringify(payload)); } catch {}
@@ -2492,7 +2460,17 @@ useEffect(() => {
   sendToServer(blob, url);
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [accentUi]);
+useEffect(() => {
+  if (!result) return;
+  if (!overlayReady) return;
+  if (slideIdx !== 0) return;
 
+  const overall = Number(result?.overall ?? result?.pronunciation ?? result?.overallAccuracy ?? 0);
+  if (overall < TROPHY_REACHED_PCT) return;
+
+  triggerTrophyCelebration();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [result, overlayReady, slideIdx]);
 const CloseSlidesX = ({ top = `calc(${SAFE_TOP} + 24px)`, right = "12px" }) => (
   <button
     type="button"
@@ -2753,8 +2731,59 @@ paddingLeft: 0,
         line-height: inherit !important;
         font-weight: inherit !important;
       }
-    `}</style>
 
+      @keyframes pmt-confetti-fall {
+        0% {
+          transform: translateY(0) rotate(0deg);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(110vh) rotate(540deg);
+          opacity: 0.95;
+        }
+      }
+    `}</style>
+{trophyCelebration && (
+  <div
+    aria-hidden="true"
+    style={{
+      position: "absolute",
+      inset: 0,
+      overflow: "hidden",
+      pointerEvents: "none",
+      zIndex: 10000,
+    }}
+  >
+    {Array.from({ length: 28 }).map((_, i) => {
+      const left = `${4 + ((i * 97) % 92)}%`;
+      const delay = `${(i % 7) * 0.08}s`;
+      const duration = `${2.2 + (i % 5) * 0.18}s`;
+      const size = 8 + (i % 4) * 3;
+
+      const colors = ["#FDE047", "#22C55E", "#60A5FA", "#FB7185", "#FFFFFF"];
+      const color = colors[i % colors.length];
+
+      return (
+        <div
+          key={`confetti_${i}`}
+          style={{
+            position: "absolute",
+            top: "-24px",
+            left,
+            width: size,
+            height: Math.round(size * 1.6),
+            borderRadius: 2,
+            background: color,
+            opacity: 0.95,
+            transform: `rotate(${i * 17}deg)`,
+            animation: `pmt-confetti-fall ${duration} linear ${delay} forwards`,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+          }}
+        />
+      );
+    })}
+  </div>
+)}
  
 
       {/* ✅ Overlay logo (only on slide 1, phase 4+) */}
@@ -2965,25 +2994,26 @@ paddingRight: 0,
     justifyContent: "center",
   }}
 >
-  <div
-    style={{
-      textAlign: "center",
-      fontWeight: 1000,
-      fontSize: computeHeroFontSize(heroText, 72, 16), // ✅ længde => mindre font
-      lineHeight: 1.02,
-      letterSpacing: -0.4,
-      WebkitTextStroke: "1.25px rgba(0,0,0,0.20)",
-      paintOrder: "stroke fill",
+<div
+  style={{
+    textAlign: "center",
+    fontWeight: 1000,
+    fontSize: computeHeroFontSize(heroText, 72, 24),
+    lineHeight: 0.96,
+    letterSpacing: -0.8,
+    WebkitTextStroke: "1px rgba(0,0,0,0.20)",
+    paintOrder: "stroke fill",
 
-      display: "block",
-      whiteSpace: "normal",
-      wordBreak: "break-word",
-      overflowWrap: "anywhere",
+    display: "block",
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+    overflowWrap: "anywhere",
 
-      width: "min(92vw, 560px)",
-      maxWidth: "100%",
-    }}
-  >
+    width: "min(84vw, 420px)",
+    maxWidth: "84vw",
+    margin: "0 auto",
+  }}
+>
     <PhonemeFeedback result={result} mode="textOnly" />
   </div>
 </div>
@@ -2994,19 +3024,40 @@ paddingRight: 0,
       position: "absolute",
       left: "50%",
       top: "50%",
-transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 68 : 66}px)`,
-        fontWeight: 850,
-      fontSize: 22,
-      color: "rgba(255,255,255,0.88)",
-      opacity: introPhase === 2 ? 1 : 0,
+  transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 92 : 90}px)`,
+        opacity: introPhase === 2 ? 1 : 0,
       transition: "opacity 520ms ease, transform 520ms ease",
       zIndex: 2,
       pointerEvents: "none",
-      textAlign: "center",
-      whiteSpace: "nowrap",
+      display: "flex",
+      justifyContent: "center",
+      width: "100%",
+      paddingLeft: 16,
+      paddingRight: 16,
+      boxSizing: "border-box",
     }}
   >
-    {pickShortLineFromScore(deckPctLocked)}
+    <div
+      style={{
+        ...heroBadgeStyleForPct(deckPctLocked),
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        textAlign: "center",
+        padding: "12px 18px",
+        borderRadius: 20,
+        minHeight: 52,
+        maxWidth: "min(92vw, 420px)",
+        fontWeight: 900,
+        fontSize: 22,
+        lineHeight: 1.15,
+        letterSpacing: -0.25,
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+      }}
+    >
+      {pickShortLineFromScore(deckPctLocked)}
+    </div>
   </div>
 </div>
 
@@ -3162,7 +3213,7 @@ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
     <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
       <button
         type="button"
-        onClick={() => playPhonemeCoachTts(p.code)}
+        onClick={() => playDeepDiveTts(ttsTextForPhoneme(p.code), `intro_ph:${p.code}`)}
         aria-label={`Play ${p.code}`}
         style={{
           display: "inline-flex",
