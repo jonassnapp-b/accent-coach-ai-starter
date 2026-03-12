@@ -242,7 +242,9 @@ export default function ConversationCoach() {
   const [suggestedRepeat, setSuggestedRepeat] = useState("");
   const [weakPhonemes, setWeakPhonemes] = useState([]);
   const [weakWords, setWeakWords] = useState([]);
+  const [hasConversationStarted, setHasConversationStarted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
@@ -346,11 +348,12 @@ export default function ConversationCoach() {
     cleanupStream();
 
     setError("");
-    setAssistantText("");
+       setAssistantText("");
     setFeedbackSummary("");
     setSuggestedRepeat("");
     setWeakPhonemes([]);
     setWeakWords([]);
+    setHasConversationStarted(false);
     setHoldScale(1);
 
     historyRef.current = [];
@@ -481,7 +484,7 @@ export default function ConversationCoach() {
         setError("I couldn’t hear a clear answer. Try again.");
         return;
       }
-
+      setHasConversationStarted(true);
       const weakP = extractWeakPhonemesAll(scoring);
       const weakW = extractWeakWordsAll(scoring);
 
@@ -588,33 +591,35 @@ export default function ConversationCoach() {
       >
         <div style={{ height: 12 }} />
 
-        <div
-          style={{
-            minHeight: 156,
-            borderRadius: 28,
-            background: "#FFFFFF",
-            border: "1px solid rgba(15,23,42,0.08)",
-            boxShadow: "0 16px 42px rgba(15,23,42,0.08)",
-            padding: "22px 20px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            textAlign: "center",
-          }}
-        >
+              {assistantText ? (
           <div
             style={{
-              fontSize: 22,
-              lineHeight: 1.45,
-              fontWeight: 800,
-              letterSpacing: -0.25,
-              color: "#0F172A",
-              maxWidth: 620,
+              minHeight: 156,
+              borderRadius: 28,
+              background: "#FFFFFF",
+              border: "1px solid rgba(15,23,42,0.08)",
+              boxShadow: "0 16px 42px rgba(15,23,42,0.08)",
+              padding: "22px 20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
             }}
           >
-            {assistantText || "Starting conversation..."}
+            <div
+              style={{
+                fontSize: 22,
+                lineHeight: 1.45,
+                fontWeight: 800,
+                letterSpacing: -0.25,
+                color: "#0F172A",
+                maxWidth: 620,
+              }}
+            >
+              {assistantText}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div style={{ marginTop: 14, minHeight: 112 }}>
           {(feedbackSummary || weakPhonemes.length || weakWords.length || suggestedRepeat) ? (
@@ -788,26 +793,27 @@ export default function ConversationCoach() {
           </div>
         </div>
 
-        <button
+            <button
           type="button"
           onClick={startNewConversation}
-          disabled={isBusy}
+          disabled={isBusy || !hasConversationStarted}
           style={{
             width: "100%",
             height: 54,
             borderRadius: 18,
             border: "1px solid rgba(15,23,42,0.08)",
-            background: "#FFFFFF",
-            color: "#0F172A",
+            background: isBusy || !hasConversationStarted ? "#E5E7EB" : "#FFFFFF",
+            color: isBusy || !hasConversationStarted ? "#94A3B8" : "#0F172A",
             fontWeight: 900,
             fontSize: 16,
-            cursor: isBusy ? "not-allowed" : "pointer",
-            boxShadow: "0 10px 28px rgba(15,23,42,0.05)",
+            cursor: isBusy || !hasConversationStarted ? "not-allowed" : "pointer",
+            boxShadow: isBusy || !hasConversationStarted ? "none" : "0 10px 28px rgba(15,23,42,0.05)",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
             gap: 10,
             marginTop: 8,
+            opacity: isBusy || !hasConversationStarted ? 0.72 : 1,
           }}
         >
           <RotateCcw size={18} />
