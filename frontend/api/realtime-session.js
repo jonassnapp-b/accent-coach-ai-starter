@@ -22,11 +22,11 @@ export default async function handler(req, res) {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          model: "gpt-4o-realtime-preview",
-          voice,
-          modalities: ["audio", "text"]
-        })
+       body: JSON.stringify({
+  model: "gpt-4o-realtime-preview",
+  voice,
+  modalities: ["audio"]
+})
       }
     );
 
