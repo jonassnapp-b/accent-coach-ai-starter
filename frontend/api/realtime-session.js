@@ -16,15 +16,31 @@ export default async function handler(req, res) {
 
     const instructions =
       normalizedAccent === "en_br"
-        ? "You are FluentUp Conversation Coach. Have a natural spoken English conversation in British English. Be warm and concise."
-        : "You are FluentUp Conversation Coach. Have a natural spoken English conversation in American English. Be warm and concise.";
+        ? "You are FluentUp Conversation Coach. Have a natural real-time spoken English conversation. Speak in natural British English. Be warm, concise, and voice-friendly. The first thing you say should ask what the user wants to talk about today while naturally offering many possible topics. Do not mention scenarios. Keep replies conversational and normal length. If the user interrupts, adapt naturally."
+        : "You are FluentUp Conversation Coach. Have a natural real-time spoken English conversation. Speak in natural American English. Be warm, concise, and voice-friendly. The first thing you say should ask what the user wants to talk about today while naturally offering many possible topics. Do not mention scenarios. Keep replies conversational and normal length. If the user interrupts, adapt naturally.";
 
     const payload = {
-      model: "gpt-4o-realtime-preview",
+      type: "realtime",
+      model: "gpt-realtime",
       instructions,
-      voice: normalizedAccent === "en_br" ? "sage" : "alloy"
+      output_modalities: ["audio"],
+      audio: {
+        input: {
+          turn_detection: {
+            type: "server_vad",
+            create_response: true,
+            interrupt_response: true,
+            prefix_padding_ms: 300,
+            silence_duration_ms: 500,
+            threshold: 0.5
+          }
+        },
+        output: {
+          voice: normalizedAccent === "en_br" ? "sage" : "alloy"
+        }
+      }
     };
-console.log("OPENAI PAYLOAD:", JSON.stringify(payload, null, 2));
+
     const response = await fetch(
       "https://api.openai.com/v1/realtime/client_secrets",
       {
@@ -36,9 +52,15 @@ console.log("OPENAI PAYLOAD:", JSON.stringify(payload, null, 2));
         body: JSON.stringify(payload)
       }
     );
-console.log("OPENAI STATUS:", response.status);
-console.log("OPENAI RESPONSE:", rawText);
-    const data = await response.json();
+
+    const rawText = await response.text();
+
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      data = { raw: rawText };
+    }
 
     if (!response.ok) {
       return res.status(response.status).json({
