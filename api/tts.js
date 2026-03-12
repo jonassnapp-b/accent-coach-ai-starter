@@ -34,6 +34,7 @@ export default async function handler(req, res) {
 const voice = voiceRaw ? String(voiceRaw).trim() : "";
 
 const { audioBuffer, mime } = await getTtsAudio({ text, accent, rate, voice });
+console.log("[api/tts] bytes", audioBuffer?.length || 0, "mime", mime, "text", text);
 
     res.setHeader("Content-Type", mime || "audio/mpeg");
     res.setHeader("Cache-Control", "no-store");
