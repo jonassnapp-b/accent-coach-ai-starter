@@ -138,17 +138,23 @@ export async function createRealtimeConversation({
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
-    const sdpRes = await fetch(
-      `https://api.openai.com/v1/realtime?model=${REALTIME_MODEL}`,
-      {
-        method: "POST",
-     headers: {
-  Authorization: `Bearer ${ephemeralKey}`,
-  "Content-Type": "application/sdp",
-},
-        body: offer.sdp,
-      }
-    );
+   const formData = new FormData();
+formData.append("sdp", offer.sdp);
+formData.append(
+  "session",
+  JSON.stringify({
+    type: "realtime",
+    model: REALTIME_MODEL,
+  })
+);
+
+const sdpRes = await fetch("https://api.openai.com/v1/realtime/calls", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${ephemeralKey}`,
+  },
+  body: formData,
+});
 
     const answerSdp = await sdpRes.text();
 
