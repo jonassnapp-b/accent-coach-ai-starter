@@ -290,10 +290,7 @@ formData.append(
   "session",
   JSON.stringify({
     type: "realtime",
-    model: REALTIME_MODEL,
-    input_audio_transcription: {
-      model: "gpt-4o-mini-transcribe"
-    }
+    model: REALTIME_MODEL
   })
 );
 
