@@ -130,7 +130,7 @@ export default function ConversationCoach() {
           refText: assistantText || "Please answer naturally in English",
         }),
       });
-
+      console.log("[ConversationCoach][analyze-speech] request path =", "/api/analyze-speech");
       const rawText = await res.text();
       let data = {};
       try {
@@ -139,7 +139,9 @@ export default function ConversationCoach() {
         data = { rawText };
       }
 
+      console.log("[ConversationCoach][analyze-speech] url =", res.url);
       console.log("[ConversationCoach][analyze-speech] status =", res.status);
+      console.log("[ConversationCoach][analyze-speech] statusText =", res.statusText);
       console.log("[ConversationCoach][analyze-speech] body =", data);
 
       if (!res.ok) {
