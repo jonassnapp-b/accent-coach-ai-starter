@@ -167,19 +167,28 @@ const sdpRes = await fetch("https://api.openai.com/v1/realtime/calls", {
       sdp: answerSdp,
     });
 
-    await waitForDataChannelOpen(dc);
-    isConnected = true;
+  await waitForDataChannelOpen(dc);
+
+sendEvent({
+  type: "session.update",
+  session: {
+    instructions:
+      "You are an English conversation coach. Speak only in English at all times. Never use Portuguese or any other language. Keep responses concise and natural.",
+  },
+});
+
+isConnected = true;
   }
 
-  function startAssistantGreeting() {
-    return sendEvent({
-      type: "response.create",
-      response: {
-        instructions:
-          "Start the conversation now. Ask what the user wants to talk about today and naturally offer many possible topics. Do not mention scenarios.",
-      },
-    });
-  }
+function startAssistantGreeting() {
+  return sendEvent({
+    type: "response.create",
+    response: {
+      instructions:
+        "Speak only in English. Start with a short, natural greeting. Ask what the user wants to talk about today, then briefly offer a few possible topics in one concise sentence. Keep it simple and not too long.",
+    },
+  });
+}
 
   function interruptAssistant() {
     sendEvent({ type: "response.cancel" });
