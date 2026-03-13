@@ -138,12 +138,12 @@ export default function ConversationCoach() {
 const res = await fetch(`${base}/api/analyze-speech`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          audioBase64: recording.base64,
-          mime: recording.mimeType || "audio/webm",
-          accent,
-          refText: assistantText || "Please answer naturally in English",
-        }),
+       body: JSON.stringify({
+  audioBase64: recording.base64,
+  mime: recording.mimeType || "audio/webm",
+  accent,
+  refText: "",
+}),
       });
       console.log("[ConversationCoach][analyze-speech] request path =", `${base}/api/analyze-speech`);
       const rawText = await res.text();
