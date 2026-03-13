@@ -120,7 +120,7 @@ export default function ConversationCoach() {
     }
 
     try {
-        const res = await fetch("/api/analyze-speech", {
+        const res = await fetch("/api/analyze-speech/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -130,7 +130,7 @@ export default function ConversationCoach() {
           refText: assistantText || "Please answer naturally in English",
         }),
       });
-      console.log("[ConversationCoach][analyze-speech] request path =", "/api/analyze-speech");
+      console.log("[ConversationCoach][analyze-speech] request path =", "/api/analyze-speech/");
       const rawText = await res.text();
       let data = {};
       try {
