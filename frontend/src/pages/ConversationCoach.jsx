@@ -28,6 +28,7 @@ export default function ConversationCoach() {
   const holdStartedRef = useRef(false);
   const userSpeechStartedRef = useRef(false);
   const suppressNextAssistantResponseRef = useRef(false);
+  const waitingForUserReleaseRef = useRef(false);
 
   const isBusy = isStartingConversation;
 
@@ -125,13 +126,17 @@ export default function ConversationCoach() {
             }
           }
 
-          if (type === "response.done") {
+                  if (type === "response.done") {
             if (suppressNextAssistantResponseRef.current) {
               suppressNextAssistantResponseRef.current = false;
               setIsAiSpeaking(false);
               setIsAnalyzing(false);
               setError("");
-              setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
+
+              if (!waitingForUserReleaseRef.current) {
+                setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
+              }
+
               return;
             }
 
@@ -158,7 +163,7 @@ export default function ConversationCoach() {
             setIsAnalyzing(false);
           }
 
-          if (type === "error") {
+                 if (type === "error") {
             const serverMsg =
               msg?.error?.message || msg?.error?.code || "Realtime session error.";
 
@@ -169,7 +174,11 @@ export default function ConversationCoach() {
               setError("");
               setIsAiSpeaking(false);
               setIsAnalyzing(false);
-              setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
+
+              if (!waitingForUserReleaseRef.current) {
+                setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
+              }
+
               return;
             }
 
@@ -212,6 +221,7 @@ export default function ConversationCoach() {
     holdStartedRef.current = true;
     userSpeechStartedRef.current = false;
     suppressNextAssistantResponseRef.current = false;
+    waitingForUserReleaseRef.current = true;
 
     const ok = realtimeRef.current?.startUserInput?.();
     if (!ok) {
@@ -236,6 +246,7 @@ export default function ConversationCoach() {
     e?.preventDefault?.();
     if (!holdStartedRef.current) return;
     holdStartedRef.current = false;
+    waitingForUserReleaseRef.current = false;
 
     realtimeRef.current?.stopUserInput?.();
 
@@ -258,6 +269,7 @@ export default function ConversationCoach() {
     function endAnywhere() {
       if (!holdStartedRef.current) return;
       holdStartedRef.current = false;
+      waitingForUserReleaseRef.current = false;
 
       realtimeRef.current?.stopUserInput?.();
 
