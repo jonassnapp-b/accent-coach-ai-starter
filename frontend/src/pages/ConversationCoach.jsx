@@ -11,6 +11,7 @@ export default function ConversationCoach() {
 
   const [assistantText, setAssistantText] = useState("");
   const [feedbackSummary, setFeedbackSummary] = useState("");
+  const [feedbackTip, setFeedbackTip] = useState("");
   const [suggestedRepeat, setSuggestedRepeat] = useState("");
   const [weakPhonemes, setWeakPhonemes] = useState([]);
   const [weakWords, setWeakWords] = useState([]);
@@ -42,7 +43,110 @@ export default function ConversationCoach() {
       } catch {}
     };
   }, []);
+  function pronunciationLabel(score) {
+    if (score >= 90) return "Excellent clarity";
+    if (score >= 80) return "Good clarity";
+    if (score >= 70) return "Understandable";
+    return "Needs improvement";
+  }
 
+  function buildSpeechTip({ weakPhonemes: phonemes, weakWords: words, fluency, rhythm, speed }) {
+    const topPhoneme = phonemes?.[0];
+    const topWord = words?.[0];
+
+    if (topPhoneme?.label === "θ") return 'Focus on the /th/ sound in "three"';
+    if (topPhoneme?.label === "ð") return 'Keep the voiced /th/ soft and steady';
+    if (topPhoneme?.label === "R") return "Keep your /r/ sound clearer and more consistent";
+    if (topPhoneme?.label) return `Focus on the /${topPhoneme.label.toLowerCase()}/ sound`;
+
+    if (topWord?.word) return `Say "${topWord.word}" more clearly`;
+
+    if (typeof fluency === "number" && fluency < 75) return "Try to speak a little more smoothly";
+    if (typeof rhythm === "number" && rhythm < 75) return "Keep a steadier rhythm across the sentence";
+    if (typeof speed === "number" && speed > 115) return "Slow down slightly for clearer pronunciation";
+    if (typeof speed === "number" && speed < 75) return "Speak a little more confidently and steadily";
+
+    return "Nice job — keep your pronunciation steady";
+  }
+
+  function applySpeechFeedback(ui) {
+    const overallAccuracy = Number(ui?.overallAccuracy || 0);
+
+    const weakPhonemes = (ui?.words || [])
+      .flatMap((w) => w?.phonemes || [])
+      .map((p) => ({
+        label: String(p?.phoneme || p?.ph || "").trim().toUpperCase(),
+        score: Number(p?.accuracyScore || 0),
+      }))
+      .filter((p) => p.label && Number.isFinite(p.score) && p.score < 85)
+      .sort((a, b) => a.score - b.score)
+      .filter((p, index, arr) => arr.findIndex((x) => x.label === p.label) === index)
+      .slice(0, 2);
+
+    const weakWords = (ui?.words || [])
+      .map((w) => ({
+        word: String(w?.word || w?.w || "").trim(),
+        score: Number(w?.accuracyScore || 0),
+      }))
+      .filter((w) => w.word && Number.isFinite(w.score) && w.score < 85)
+      .sort((a, b) => a.score - b.score)
+      .slice(0, 2);
+
+    setFeedbackSummary(
+      `Pronunciation: ${overallAccuracy}% — ${pronunciationLabel(overallAccuracy)}`
+    );
+    setWeakPhonemes(weakPhonemes);
+    setWeakWords(weakWords);
+    setSuggestedRepeat("");
+    setFeedbackTip(
+      buildSpeechTip({
+        weakPhonemes,
+        weakWords,
+        fluency: ui?.fluency,
+        rhythm: ui?.rhythm,
+        speed: ui?.speed,
+      })
+    );
+  }
+
+  async function analyzeUserTurn(recording) {
+    if (!recording?.base64) {
+      setIsAnalyzing(false);
+      setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
+      setFeedbackTip("");
+      setWeakPhonemes([]);
+      setWeakWords([]);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/analyze-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audioBase64: recording.base64,
+          mime: recording.mimeType || "audio/webm",
+          accent,
+          refText: assistantText || "Please answer naturally in English",
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Speech analysis failed.");
+      }
+
+      applySpeechFeedback(data);
+    } catch (err) {
+      setError(err?.message || "Speech analysis failed.");
+      setFeedbackTip("");
+      setWeakPhonemes([]);
+      setWeakWords([]);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }
   async function startNewConversation() {
     try {
       try {
@@ -52,6 +156,7 @@ export default function ConversationCoach() {
       setError("");
       setAssistantText("");
       setFeedbackSummary("");
+      setFeedbackTip("");
       setSuggestedRepeat("");
       setWeakPhonemes([]);
       setWeakWords([]);
@@ -235,20 +340,22 @@ export default function ConversationCoach() {
     setIsAnalyzing(false);
     setHasConversationStarted(true);
     setError("");
+    setError("");
     setFeedbackSummary("");
+    setFeedbackTip("");
     setSuggestedRepeat("");
     setWeakPhonemes([]);
     setWeakWords([]);
     setHoldScale(1.08);
   }
 
-  function handleHoldEnd(e) {
+  async function handleHoldEnd(e) {
     e?.preventDefault?.();
     if (!holdStartedRef.current) return;
     holdStartedRef.current = false;
     waitingForUserReleaseRef.current = false;
 
-    realtimeRef.current?.stopUserInput?.();
+    const recording = await realtimeRef.current?.stopUserInput?.();
 
     setIsRecording(false);
     setHoldScale(1);
@@ -257,21 +364,29 @@ export default function ConversationCoach() {
       suppressNextAssistantResponseRef.current = true;
       setIsAnalyzing(false);
       setError("");
+      setFeedbackTip("");
+      setWeakPhonemes([]);
+      setWeakWords([]);
       setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
       return;
     }
 
     setIsAnalyzing(true);
     setFeedbackSummary("Analyzing your pronunciation...");
+    setFeedbackTip("");
+    setWeakPhonemes([]);
+    setWeakWords([]);
+
+    await analyzeUserTurn(recording);
   }
 
   useEffect(() => {
-    function endAnywhere() {
+    async function endAnywhere() {
       if (!holdStartedRef.current) return;
       holdStartedRef.current = false;
       waitingForUserReleaseRef.current = false;
 
-      realtimeRef.current?.stopUserInput?.();
+      const recording = await realtimeRef.current?.stopUserInput?.();
 
       setIsRecording(false);
       setHoldScale(1);
@@ -280,12 +395,20 @@ export default function ConversationCoach() {
         suppressNextAssistantResponseRef.current = true;
         setIsAnalyzing(false);
         setError("");
+        setFeedbackTip("");
+        setWeakPhonemes([]);
+        setWeakWords([]);
         setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
         return;
       }
 
       setIsAnalyzing(true);
       setFeedbackSummary("Analyzing your pronunciation...");
+      setFeedbackTip("");
+      setWeakPhonemes([]);
+      setWeakWords([]);
+
+      await analyzeUserTurn(recording);
     }
 
     window.addEventListener("pointerup", endAnywhere);
@@ -430,7 +553,7 @@ export default function ConversationCoach() {
             ) : null}
 
             <div style={{ marginTop: 14, minHeight: 112 }}>
-              {(feedbackSummary || weakPhonemes.length || weakWords.length || suggestedRepeat) ? (
+              {(feedbackSummary || weakPhonemes.length || weakWords.length || feedbackTip) ? (
                 <div
                   style={{
                     background: "rgba(255,255,255,0.86)",
@@ -521,9 +644,21 @@ export default function ConversationCoach() {
                     </div>
                   ) : null}
 
-                  {suggestedRepeat ? (
-                    <div style={{ fontSize: 13, fontWeight: 900, color: "#0F172A" }}>
-                      Try again: {suggestedRepeat}
+                                  {feedbackTip ? (
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 900,
+                          color: "#64748B",
+                          marginBottom: 6,
+                        }}
+                      >
+                        Tip
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 900, color: "#0F172A" }}>
+                        {feedbackTip}
+                      </div>
                     </div>
                   ) : null}
                 </div>

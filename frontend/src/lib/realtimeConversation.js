@@ -1,7 +1,34 @@
 // frontend/src/lib/realtimeConversation.js
 
 const REALTIME_MODEL = "gpt-realtime";
+function pickSupportedMimeType() {
+  if (typeof MediaRecorder === "undefined") return "";
+  const candidates = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4",
+    "audio/mpeg",
+  ];
+  for (const type of candidates) {
+    try {
+      if (MediaRecorder.isTypeSupported(type)) return type;
+    } catch {}
+  }
+  return "";
+}
 
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      const base64 = result.includes(",") ? result.split(",")[1] : result;
+      resolve(base64 || "");
+    };
+    reader.onerror = () => reject(new Error("Failed to read recorded audio"));
+    reader.readAsDataURL(blob);
+  });
+}
 function waitForDataChannelOpen(dc, timeoutMs = 10000) {
   return new Promise((resolve, reject) => {
     if (!dc) {
@@ -53,6 +80,12 @@ export async function createRealtimeConversation({
   let localAudioTrack = null;
   let isConnected = false;
 
+  let mediaRecorder = null;
+  let mediaRecorderMimeType = "";
+  let recordingChunks = [];
+  let currentRecordingPromise = null;
+  let resolveCurrentRecording = null;
+
   function safeEmitError(err) {
     console.error("[realtimeConversation]", err);
     if (typeof onError === "function") onError(err);
@@ -63,7 +96,120 @@ export async function createRealtimeConversation({
     dc.send(JSON.stringify(evt));
     return true;
   }
+  function ensureRecorderReady() {
+    if (!localStream) return false;
+    if (mediaRecorder) return true;
 
+    try {
+      mediaRecorderMimeType = pickSupportedMimeType();
+      mediaRecorder = mediaRecorderMimeType
+        ? new MediaRecorder(localStream, { mimeType: mediaRecorderMimeType })
+        : new MediaRecorder(localStream);
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event?.data && event.data.size > 0) {
+          recordingChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        try {
+          const blobType = mediaRecorderMimeType || recordingChunks?.[0]?.type || "audio/webm";
+          const blob = new Blob(recordingChunks, { type: blobType });
+          const base64 = blob.size > 0 ? await blobToBase64(blob) : "";
+          resolveCurrentRecording?.({
+            blob,
+            mimeType: blobType,
+            base64,
+            size: blob.size,
+          });
+        } catch (err) {
+          resolveCurrentRecording?.({
+            blob: null,
+            mimeType: mediaRecorderMimeType || "audio/webm",
+            base64: "",
+            size: 0,
+            error: err?.message || "Failed to build recording blob",
+          });
+        } finally {
+          recordingChunks = [];
+          currentRecordingPromise = null;
+          resolveCurrentRecording = null;
+        }
+      };
+
+      return true;
+    } catch (err) {
+      safeEmitError(err);
+      return false;
+    }
+  }
+
+  function startLocalRecording() {
+    if (!ensureRecorderReady() || !mediaRecorder) return false;
+    if (mediaRecorder.state === "recording") return true;
+
+    try {
+      recordingChunks = [];
+      currentRecordingPromise = new Promise((resolve) => {
+        resolveCurrentRecording = resolve;
+      });
+      mediaRecorder.start();
+      return true;
+    } catch (err) {
+      safeEmitError(err);
+      currentRecordingPromise = null;
+      resolveCurrentRecording = null;
+      return false;
+    }
+  }
+
+  function stopLocalRecording() {
+    if (!mediaRecorder) {
+      return Promise.resolve({
+        blob: null,
+        mimeType: "",
+        base64: "",
+        size: 0,
+      });
+    }
+
+    if (mediaRecorder.state !== "recording") {
+      return (
+        currentRecordingPromise ||
+        Promise.resolve({
+          blob: null,
+          mimeType: mediaRecorderMimeType || "",
+          base64: "",
+          size: 0,
+        })
+      );
+    }
+
+    const pending =
+      currentRecordingPromise ||
+      Promise.resolve({
+        blob: null,
+        mimeType: mediaRecorderMimeType || "",
+        base64: "",
+        size: 0,
+      });
+
+    try {
+      mediaRecorder.stop();
+    } catch (err) {
+      safeEmitError(err);
+      return Promise.resolve({
+        blob: null,
+        mimeType: mediaRecorderMimeType || "",
+        base64: "",
+        size: 0,
+        error: err?.message || "Failed to stop local recording",
+      });
+    }
+
+    return pending;
+  }
   async function connect() {
     const tokenRes = await fetch("/api/realtime-session", {
       method: "POST",
@@ -180,11 +326,12 @@ sendEvent({
 
 isConnected = true;
   }
-
+  
 function startAssistantGreeting() {
   return sendEvent({
     type: "response.create",
     response: {
+      modalities: ["audio", "text"],
       instructions:
         "Speak only in English. Start with a short, natural greeting. Ask what the user wants to talk about today, then briefly offer a few possible topics in one concise sentence. Keep it simple and not too long.",
     },
@@ -201,20 +348,38 @@ function startAssistantGreeting() {
 
     interruptAssistant();
     localAudioTrack.enabled = true;
+    startLocalRecording();
     return true;
   }
 
   function stopUserInput() {
-    if (!localAudioTrack) return false;
+    if (!localAudioTrack) {
+      return Promise.resolve({
+        ok: false,
+        blob: null,
+        mimeType: "",
+        base64: "",
+        size: 0,
+      });
+    }
+
     localAudioTrack.enabled = false;
-    return true;
+
+    return stopLocalRecording().then((result) => ({
+      ok: true,
+      ...(result || {}),
+    }));
   }
 
   function disconnect() {
     try {
       if (localAudioTrack) localAudioTrack.enabled = false;
     } catch {}
-
+    try {
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+      }
+    } catch {}
     try {
       if (dc) dc.close();
     } catch {}
@@ -236,11 +401,16 @@ function startAssistantGreeting() {
       }
     } catch {}
 
-    dc = null;
+     dc = null;
     pc = null;
     localStream = null;
     localAudioTrack = null;
     remoteAudioEl = null;
+    mediaRecorder = null;
+    mediaRecorderMimeType = "";
+    recordingChunks = [];
+    currentRecordingPromise = null;
+    resolveCurrentRecording = null;
     isConnected = false;
   }
 
