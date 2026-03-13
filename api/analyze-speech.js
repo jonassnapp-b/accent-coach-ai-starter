@@ -514,6 +514,7 @@ try {
 
     const uiAccent = dictDialect === "en_br" ? "en-GB" : "en-US";
     const ui = mapSpeechsuperToUi(ss, refText, uiAccent);
+    console.log("MAPPED_UI_RESULT", JSON.stringify(ui, null, 2));
 // -------- WeaknessLab save (ONLY ONCE per request) --------
 try {
   const phonemes = [];
