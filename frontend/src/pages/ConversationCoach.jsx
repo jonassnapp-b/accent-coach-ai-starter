@@ -63,49 +63,84 @@ export default function ConversationCoach() {
         onRemoteAudio: () => {
           if (mountedRef.current) setIsAiSpeaking(true);
         },
-        onMessage: (msg) => {
-          console.log("[realtime msg]", msg);
+     onMessage: (msg) => {
+  console.log("[realtime msg]", msg);
 
-          const type = msg?.type || "";
+  const type = msg?.type || "";
 
-          if (type === "response.created") {
-            setAssistantText("");
-            setIsAiSpeaking(true);
-          }
-
-         if (
-  type === "response.audio_transcript.done" ||
-  type === "response.output_text.done" ||
-  type === "response.text.done"
-) {
-  const finalText = String(
-    msg?.transcript || msg?.text || msg?.delta || ""
-  ).trim();
-
-  if (finalText) {
-    setAssistantText((prev) => (prev ? prev : finalText));
+  if (type === "response.created") {
+    setAssistantText("");
+    setIsAiSpeaking(true);
   }
-}
 
-          if (type === "input_audio_buffer.speech_started") {
-            setIsAiSpeaking(false);
-          }
+  const deltaText =
+    typeof msg?.delta === "string"
+      ? msg.delta
+      : typeof msg?.text === "string"
+      ? msg.text
+      : typeof msg?.transcript === "string"
+      ? msg.transcript
+      : typeof msg?.part?.text === "string"
+      ? msg.part.text
+      : typeof msg?.part?.transcript === "string"
+      ? msg.part.transcript
+      : typeof msg?.item?.content?.[0]?.text === "string"
+      ? msg.item.content[0].text
+      : typeof msg?.item?.content?.[0]?.transcript === "string"
+      ? msg.item.content[0].transcript
+      : "";
 
-          if (
-            type === "response.done" ||
-            type === "output_audio_buffer.stopped" ||
-            type === "output_audio_buffer.cleared"
-          ) {
-            setIsAiSpeaking(false);
-          }
+  if (
+    type === "response.output_text.delta" ||
+    type === "response.text.delta" ||
+    type === "response.audio_transcript.delta" ||
+    type === "response.output_text.done" ||
+    type === "response.text.done" ||
+    type === "response.audio_transcript.done" ||
+    type === "response.content_part.added" ||
+    type === "response.content_part.done"
+  ) {
+    if (deltaText) {
+      setAssistantText((prev) => {
+        const next = `${prev || ""}${deltaText}`;
+        return next.trimStart();
+      });
+    }
+  }
 
-          if (type === "error") {
-            const serverMsg =
-              msg?.error?.message || msg?.error?.code || "Realtime session error.";
-            setError(serverMsg);
-            setIsAiSpeaking(false);
-          }
-        },
+  if (type === "response.done") {
+    const finalText =
+      typeof msg?.response?.output?.[0]?.content?.[0]?.transcript === "string"
+        ? msg.response.output[0].content[0].transcript
+        : typeof msg?.response?.output?.[0]?.content?.[0]?.text === "string"
+        ? msg.response.output[0].content[0].text
+        : "";
+
+    if (finalText) {
+      setAssistantText(finalText);
+    }
+
+    setIsAiSpeaking(false);
+  }
+
+  if (type === "input_audio_buffer.speech_started") {
+    setIsAiSpeaking(false);
+  }
+
+  if (
+    type === "output_audio_buffer.stopped" ||
+    type === "output_audio_buffer.cleared"
+  ) {
+    setIsAiSpeaking(false);
+  }
+
+  if (type === "error") {
+    const serverMsg =
+      msg?.error?.message || msg?.error?.code || "Realtime session error.";
+    setError(serverMsg);
+    setIsAiSpeaking(false);
+  }
+},
         onError: (err) => {
           console.error("[realtime error]", err);
           setError(err?.message || "Realtime connection failed.");
