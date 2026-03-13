@@ -73,16 +73,19 @@ export default function ConversationCoach() {
             setIsAiSpeaking(true);
           }
 
-          if (
-            type === "response.output_text.delta" ||
-            type === "response.text.delta" ||
-            type === "response.audio_transcript.delta"
-          ) {
-            const delta = String(msg?.delta || "");
-            if (delta) {
-              setAssistantText((prev) => `${prev || ""}${delta}`);
-            }
-          }
+         if (
+  type === "response.audio_transcript.done" ||
+  type === "response.output_text.done" ||
+  type === "response.text.done"
+) {
+  const finalText = String(
+    msg?.transcript || msg?.text || msg?.delta || ""
+  ).trim();
+
+  if (finalText) {
+    setAssistantText((prev) => (prev ? prev : finalText));
+  }
+}
 
           if (type === "input_audio_buffer.speech_started") {
             setIsAiSpeaking(false);
