@@ -26,6 +26,8 @@ export default function ConversationCoach() {
   const realtimeRef = useRef(null);
   const mountedRef = useRef(true);
   const holdStartedRef = useRef(false);
+  const userSpeechStartedRef = useRef(false);
+  const suppressNextAssistantResponseRef = useRef(false);
 
   const isBusy = isStartingConversation;
 
