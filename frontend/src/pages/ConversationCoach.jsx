@@ -65,84 +65,119 @@ export default function ConversationCoach() {
         onRemoteAudio: () => {
           if (mountedRef.current) setIsAiSpeaking(true);
         },
-     onMessage: (msg) => {
-  console.log("[realtime msg]", msg);
+        onMessage: (msg) => {
+          console.log("[realtime msg]", msg);
 
-  const type = msg?.type || "";
+          const type = msg?.type || "";
 
-  if (type === "response.created") {
-    setAssistantText("");
-    setIsAiSpeaking(true);
-  }
+          if (type === "input_audio_buffer.speech_started") {
+            userSpeechStartedRef.current = true;
+            setIsAiSpeaking(false);
+            setIsAnalyzing(false);
+            setError("");
+            setFeedbackSummary("");
+          }
 
-  const deltaText =
-    typeof msg?.delta === "string"
-      ? msg.delta
-      : typeof msg?.text === "string"
-      ? msg.text
-      : typeof msg?.transcript === "string"
-      ? msg.transcript
-      : typeof msg?.part?.text === "string"
-      ? msg.part.text
-      : typeof msg?.part?.transcript === "string"
-      ? msg.part.transcript
-      : typeof msg?.item?.content?.[0]?.text === "string"
-      ? msg.item.content[0].text
-      : typeof msg?.item?.content?.[0]?.transcript === "string"
-      ? msg.item.content[0].transcript
-      : "";
+          if (type === "response.created") {
+            if (suppressNextAssistantResponseRef.current) {
+              realtimeRef.current?.interruptAssistant?.();
+              setIsAiSpeaking(false);
+              return;
+            }
 
-  if (
-    type === "response.output_text.delta" ||
-    type === "response.text.delta" ||
-    type === "response.audio_transcript.delta" ||
-    type === "response.output_text.done" ||
-    type === "response.text.done" ||
-    type === "response.audio_transcript.done" ||
-    type === "response.content_part.added" ||
-    type === "response.content_part.done"
-  ) {
-    if (deltaText) {
-      setAssistantText((prev) => {
-        const next = `${prev || ""}${deltaText}`;
-        return next.trimStart();
-      });
-    }
-  }
+            setAssistantText("");
+            setIsAiSpeaking(true);
+            setIsAnalyzing(false);
+          }
 
-  if (type === "response.done") {
-    const finalText =
-      typeof msg?.response?.output?.[0]?.content?.[0]?.transcript === "string"
-        ? msg.response.output[0].content[0].transcript
-        : typeof msg?.response?.output?.[0]?.content?.[0]?.text === "string"
-        ? msg.response.output[0].content[0].text
-        : "";
+          const deltaText =
+            typeof msg?.delta === "string"
+              ? msg.delta
+              : typeof msg?.text === "string"
+              ? msg.text
+              : typeof msg?.transcript === "string"
+              ? msg.transcript
+              : typeof msg?.part?.text === "string"
+              ? msg.part.text
+              : typeof msg?.part?.transcript === "string"
+              ? msg.part.transcript
+              : typeof msg?.item?.content?.[0]?.text === "string"
+              ? msg.item.content[0].text
+              : typeof msg?.item?.content?.[0]?.transcript === "string"
+              ? msg.item.content[0].transcript
+              : "";
 
-    if (finalText) {
-      setAssistantText(finalText);
-    }
+          if (
+            type === "response.output_text.delta" ||
+            type === "response.text.delta" ||
+            type === "response.audio_transcript.delta" ||
+            type === "response.output_text.done" ||
+            type === "response.text.done" ||
+            type === "response.audio_transcript.done" ||
+            type === "response.content_part.added" ||
+            type === "response.content_part.done"
+          ) {
+            if (!suppressNextAssistantResponseRef.current && deltaText) {
+              setAssistantText((prev) => {
+                const next = `${prev || ""}${deltaText}`;
+                return next.trimStart();
+              });
+            }
+          }
 
-    setIsAiSpeaking(false);
-  }
+          if (type === "response.done") {
+            if (suppressNextAssistantResponseRef.current) {
+              suppressNextAssistantResponseRef.current = false;
+              setIsAiSpeaking(false);
+              setIsAnalyzing(false);
+              setError("");
+              setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
+              return;
+            }
 
-  if (type === "input_audio_buffer.speech_started") {
-    setIsAiSpeaking(false);
-  }
+            const finalText =
+              typeof msg?.response?.output?.[0]?.content?.[0]?.transcript === "string"
+                ? msg.response.output[0].content[0].transcript
+                : typeof msg?.response?.output?.[0]?.content?.[0]?.text === "string"
+                ? msg.response.output[0].content[0].text
+                : "";
 
-  if (
-    type === "output_audio_buffer.stopped" ||
-    type === "output_audio_buffer.cleared"
-  ) {
-    setIsAiSpeaking(false);
-  }
+            if (finalText) {
+              setAssistantText(finalText);
+            }
 
-  if (type === "error") {
-    const serverMsg =
-      msg?.error?.message || msg?.error?.code || "Realtime session error.";
-    setError(serverMsg);
-    setIsAiSpeaking(false);
-  }
-},
+            setIsAiSpeaking(false);
+            setIsAnalyzing(false);
+          }
+
+          if (
+            type === "output_audio_buffer.stopped" ||
+            type === "output_audio_buffer.cleared"
+          ) {
+            setIsAiSpeaking(false);
+            setIsAnalyzing(false);
+          }
+
+          if (type === "error") {
+            const serverMsg =
+              msg?.error?.message || msg?.error?.code || "Realtime session error.";
+
+            if (
+              typeof serverMsg === "string" &&
+              serverMsg.toLowerCase().includes("no active response found")
+            ) {
+              setError("");
+              setIsAiSpeaking(false);
+              setIsAnalyzing(false);
+              setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
+              return;
+            }
+
+            setError(serverMsg);
+            setIsAiSpeaking(false);
+            setIsAnalyzing(false);
+          }
+        },
         onError: (err) => {
           console.error("[realtime error]", err);
           setError(err?.message || "Realtime connection failed.");
@@ -175,6 +210,8 @@ export default function ConversationCoach() {
     e?.preventDefault?.();
     if (holdStartedRef.current) return;
     holdStartedRef.current = true;
+    userSpeechStartedRef.current = false;
+    suppressNextAssistantResponseRef.current = false;
 
     const ok = realtimeRef.current?.startUserInput?.();
     if (!ok) {
@@ -185,6 +222,7 @@ export default function ConversationCoach() {
 
     setIsAiSpeaking(false);
     setIsRecording(true);
+    setIsAnalyzing(false);
     setHasConversationStarted(true);
     setError("");
     setFeedbackSummary("");
@@ -203,6 +241,16 @@ export default function ConversationCoach() {
 
     setIsRecording(false);
     setHoldScale(1);
+
+    if (!userSpeechStartedRef.current) {
+      suppressNextAssistantResponseRef.current = true;
+      setIsAnalyzing(false);
+      setError("");
+      setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
+      return;
+    }
+
+    setIsAnalyzing(true);
     setFeedbackSummary("Analyzing your pronunciation...");
   }
 
@@ -215,6 +263,16 @@ export default function ConversationCoach() {
 
       setIsRecording(false);
       setHoldScale(1);
+
+      if (!userSpeechStartedRef.current) {
+        suppressNextAssistantResponseRef.current = true;
+        setIsAnalyzing(false);
+        setError("");
+        setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
+        return;
+      }
+
+      setIsAnalyzing(true);
       setFeedbackSummary("Analyzing your pronunciation...");
     }
 
