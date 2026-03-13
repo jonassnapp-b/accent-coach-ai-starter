@@ -291,6 +291,9 @@ formData.append(
   JSON.stringify({
     type: "realtime",
     model: REALTIME_MODEL,
+    input_audio_transcription: {
+      model: "gpt-4o-mini-transcribe"
+    }
   })
 );
 
@@ -321,9 +324,6 @@ sendEvent({
     type: "realtime",
     instructions:
       "You are an English conversation coach. Speak only in English at all times. Never use Portuguese or any other language. Keep responses concise and natural.",
-    input_audio_transcription: {
-      model: "gpt-4o-mini-transcribe"
-    }
   },
 });
 
