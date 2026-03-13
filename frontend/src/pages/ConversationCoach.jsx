@@ -36,7 +36,7 @@ export default function ConversationCoach() {
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [error, setError] = useState("");
   const [holdScale, setHoldScale] = useState(1);
-
+  const [isWaitingToContinue, setIsWaitingToContinue] = useState(false);
   const realtimeRef = useRef(null);
   const mountedRef = useRef(true);
   const holdStartedRef = useRef(false);
@@ -195,6 +195,7 @@ const res = await fetch(`${base}/api/analyze-speech`, {
       setHoldScale(1);
       setIsAiSpeaking(false);
       setIsRecording(false);
+      setIsWaitingToContinue(false);
       setIsStartingConversation(true);
 
       const rt = await createRealtimeConversation({
@@ -369,6 +370,7 @@ const res = await fetch(`${base}/api/analyze-speech`, {
     setIsAiSpeaking(false);
     setIsRecording(true);
     setIsAnalyzing(false);
+    setIsWaitingToContinue(false);
     setHasConversationStarted(true);
     setError("");
     setFeedbackSummary("");
@@ -401,6 +403,8 @@ const res = await fetch(`${base}/api/analyze-speech`, {
       return;
     }
 
+       suppressNextAssistantResponseRef.current = true;
+    setIsWaitingToContinue(true);
     setIsAnalyzing(true);
     setFeedbackSummary("Analyzing your pronunciation...");
     setFeedbackTip("");
@@ -432,6 +436,8 @@ const res = await fetch(`${base}/api/analyze-speech`, {
         return;
       }
 
+        suppressNextAssistantResponseRef.current = true;
+      setIsWaitingToContinue(true);
       setIsAnalyzing(true);
       setFeedbackSummary("Analyzing your pronunciation...");
       setFeedbackTip("");
@@ -457,7 +463,11 @@ const res = await fetch(`${base}/api/analyze-speech`, {
   const circleShadow = isRecording
     ? "0 0 0 14px rgba(33,150,243,0.16), 0 0 42px rgba(33,150,243,0.52), 0 18px 42px rgba(33,150,243,0.30)"
     : "0 12px 30px rgba(33,150,243,0.22)";
-
+  function handleContinueAfterFeedback() {
+    setError("");
+    setIsWaitingToContinue(false);
+    realtimeRef.current?.requestAssistantReply?.();
+  }
   return (
     <div
       style={{
@@ -674,7 +684,7 @@ const res = await fetch(`${base}/api/analyze-speech`, {
                     </div>
                   ) : null}
 
-                                  {feedbackTip ? (
+                                                   {feedbackTip ? (
                     <div>
                       <div
                         style={{
@@ -690,6 +700,28 @@ const res = await fetch(`${base}/api/analyze-speech`, {
                         {feedbackTip}
                       </div>
                     </div>
+                  ) : null}
+
+                  {isWaitingToContinue && !isAnalyzing ? (
+                    <button
+                      type="button"
+                      onClick={handleContinueAfterFeedback}
+                      style={{
+                        marginTop: 12,
+                        width: "100%",
+                        height: 44,
+                        borderRadius: 14,
+                        border: "none",
+                        background: "#2196F3",
+                        color: "#FFFFFF",
+                        fontSize: 14,
+                        fontWeight: 900,
+                        cursor: "pointer",
+                        boxShadow: "0 10px 24px rgba(33,150,243,0.22)",
+                      }}
+                    >
+                      Continue conversation
+                    </button>
                   ) : null}
                 </div>
               ) : null}

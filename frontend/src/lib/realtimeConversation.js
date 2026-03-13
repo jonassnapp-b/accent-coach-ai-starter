@@ -336,7 +336,15 @@ function startAssistantGreeting() {
     },
   });
 }
-
+function requestAssistantReply() {
+  return sendEvent({
+    type: "response.create",
+    response: {
+      instructions:
+        "Speak only in English. Continue the conversation naturally based on what the user just said. Keep it concise. Ask only one short follow-up question.",
+    },
+  });
+}
   function interruptAssistant() {
     sendEvent({ type: "response.cancel" });
     sendEvent({ type: "output_audio_buffer.clear" });
@@ -419,6 +427,7 @@ function startAssistantGreeting() {
     sendEvent,
     interruptAssistant,
     startAssistantGreeting,
+    requestAssistantReply,
     startUserInput,
     stopUserInput,
   };
