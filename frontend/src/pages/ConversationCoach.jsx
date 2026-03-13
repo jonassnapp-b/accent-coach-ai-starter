@@ -43,6 +43,7 @@ export default function ConversationCoach() {
   const userSpeechStartedRef = useRef(false);
   const suppressNextAssistantResponseRef = useRef(false);
   const waitingForUserReleaseRef = useRef(false);
+  const lastUserTranscriptRef = useRef("");
 
   const isBusy = isStartingConversation;
 
@@ -81,7 +82,40 @@ export default function ConversationCoach() {
 
     return "Nice job — keep your pronunciation steady";
   }
+  function extractUserTranscriptFromMessage(msg) {
+    const type = String(msg?.type || "");
 
+    const directTranscript =
+      typeof msg?.transcript === "string"
+        ? msg.transcript
+        : typeof msg?.text === "string"
+        ? msg.text
+        : typeof msg?.delta === "string"
+        ? msg.delta
+        : typeof msg?.item?.content?.[0]?.transcript === "string"
+        ? msg.item.content[0].transcript
+        : typeof msg?.item?.content?.[0]?.text === "string"
+        ? msg.item.content[0].text
+        : typeof msg?.part?.transcript === "string"
+        ? msg.part.transcript
+        : typeof msg?.part?.text === "string"
+        ? msg.part.text
+        : "";
+
+    const itemRole = String(msg?.item?.role || "").toLowerCase();
+
+    const isUserTranscriptEvent =
+      type === "conversation.item.input_audio_transcription.completed" ||
+      type === "input_audio_transcription.completed" ||
+      type === "conversation.item.input_audio_transcription.delta" ||
+      type === "input_audio_transcription.delta" ||
+      (type === "conversation.item.created" && itemRole === "user") ||
+      (type === "conversation.item.updated" && itemRole === "user");
+
+    if (!isUserTranscriptEvent) return "";
+
+    return String(directTranscript || "").replace(/\s+/g, " ").trim();
+  }
   function applySpeechFeedback(ui) {
     const overallAccuracy = Number(ui?.overallAccuracy || 0);
 
@@ -132,18 +166,33 @@ export default function ConversationCoach() {
       return;
     }
 
-    try {
-        const base = getApiBase();
+    const transcriptRefText = String(lastUserTranscriptRef.current || "")
+      .replace(/\s+/g, " ")
+      .trim();
 
+    if (!transcriptRefText) {
+      setIsAnalyzing(false);
+      setError("");
+      setFeedbackSummary("I couldn’t transcribe what you said. Please try again.");
+      setFeedbackTip("");
+      setWeakPhonemes([]);
+      setWeakWords([]);
+      setIsWaitingToContinue(false);
+      return;
+    }
+
+    try {
+      const base = getApiBase();
+      console.log("[ConversationCoach] analyze refText =", transcriptRefText);
 const res = await fetch(`${base}/api/analyze-speech`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-       body: JSON.stringify({
-  audioBase64: recording.base64,
-  mime: recording.mimeType || "audio/webm",
-  accent,
-  refText: "",
-}),
+             body: JSON.stringify({
+        audioBase64: recording.base64,
+        mime: recording.mimeType || "audio/webm",
+        accent,
+        refText: transcriptRefText,
+      }),
       });
       console.log("[ConversationCoach][analyze-speech] request path =", `${base}/api/analyze-speech`);
       const rawText = await res.text();
@@ -184,7 +233,7 @@ const res = await fetch(`${base}/api/analyze-speech`, {
         realtimeRef.current?.disconnect?.();
       } catch {}
 
-      setError("");
+           setError("");
       setAssistantText("");
       setFeedbackSummary("");
       setFeedbackTip("");
@@ -197,6 +246,7 @@ const res = await fetch(`${base}/api/analyze-speech`, {
       setIsRecording(false);
       setIsWaitingToContinue(false);
       setIsStartingConversation(true);
+      lastUserTranscriptRef.current = "";
 
       const rt = await createRealtimeConversation({
         accent,
@@ -207,6 +257,12 @@ const res = await fetch(`${base}/api/analyze-speech`, {
           console.log("[realtime msg]", msg);
 
           const type = msg?.type || "";
+
+          const userTranscript = extractUserTranscriptFromMessage(msg);
+          if (userTranscript) {
+            lastUserTranscriptRef.current = userTranscript;
+            console.log("[ConversationCoach] user transcript =", userTranscript);
+          }
 
           if (type === "input_audio_buffer.speech_started") {
             userSpeechStartedRef.current = true;
@@ -359,6 +415,7 @@ const res = await fetch(`${base}/api/analyze-speech`, {
     userSpeechStartedRef.current = false;
     suppressNextAssistantResponseRef.current = false;
     waitingForUserReleaseRef.current = true;
+    lastUserTranscriptRef.current = "";
 
     const ok = realtimeRef.current?.startUserInput?.();
     if (!ok) {
