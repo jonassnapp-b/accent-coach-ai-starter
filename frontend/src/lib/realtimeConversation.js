@@ -1,6 +1,6 @@
 // frontend/src/lib/realtimeConversation.js
 
-const REALTIME_MODEL = "gpt-realtime";
+const REALTIME_MODEL = "gpt-4o-realtime-preview";
 function pickSupportedMimeType() {
   if (typeof MediaRecorder === "undefined") return "";
   const candidates = [
