@@ -120,7 +120,7 @@ export default function ConversationCoach() {
     }
 
     try {
-      const res = await fetch("/api/analyze-speech", {
+        const res = await fetch("/api/analyze-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -131,10 +131,24 @@ export default function ConversationCoach() {
         }),
       });
 
-      const data = await res.json().catch(() => ({}));
+      const rawText = await res.text();
+      let data = {};
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        data = { rawText };
+      }
+
+      console.log("[ConversationCoach][analyze-speech] status =", res.status);
+      console.log("[ConversationCoach][analyze-speech] body =", data);
 
       if (!res.ok) {
-        throw new Error(data?.error || "Speech analysis failed.");
+        throw new Error(
+          data?.error ||
+            data?.detail ||
+            data?.rawText ||
+            `Speech analysis failed (${res.status})`
+        );
       }
 
       applySpeechFeedback(data);
@@ -339,7 +353,6 @@ export default function ConversationCoach() {
     setIsRecording(true);
     setIsAnalyzing(false);
     setHasConversationStarted(true);
-    setError("");
     setError("");
     setFeedbackSummary("");
     setFeedbackTip("");
