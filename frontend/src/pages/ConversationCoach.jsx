@@ -4,7 +4,20 @@ import React, { useEffect, useRef, useState } from "react";
 import { Mic, RotateCcw } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import { createRealtimeConversation } from "../lib/realtimeConversation.js";
+function isNative() {
+  return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
+}
 
+function getApiBase() {
+  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
+  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
+  if (isNative()) {
+    const base = (ls || env).replace(/\/+$/, "");
+    if (!base) throw new Error("VITE_API_BASE (or localStorage.apiBase) is not set — required on iOS.");
+    return base;
+  }
+  return (ls || env || window.location.origin).replace(/\/+$/, "");
+}
 export default function ConversationCoach() {
   const { settings } = useSettings?.() || { settings: {} };
   const accent = settings?.accentDefault || "en_us";
@@ -120,7 +133,9 @@ export default function ConversationCoach() {
     }
 
     try {
-        const res = await fetch("/api/analyze-speech/", {
+        const base = getApiBase();
+
+const res = await fetch(`${base}/api/analyze-speech`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -130,7 +145,7 @@ export default function ConversationCoach() {
           refText: assistantText || "Please answer naturally in English",
         }),
       });
-      console.log("[ConversationCoach][analyze-speech] request path =", "/api/analyze-speech/");
+      console.log("[ConversationCoach][analyze-speech] request path =", `${base}/api/analyze-speech`);
       const rawText = await res.text();
       let data = {};
       try {
