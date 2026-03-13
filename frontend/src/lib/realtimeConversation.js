@@ -331,7 +331,6 @@ function startAssistantGreeting() {
   return sendEvent({
     type: "response.create",
     response: {
-      modalities: ["audio", "text"],
       instructions:
         "Speak only in English. Start with a short, natural greeting. Ask what the user wants to talk about today, then briefly offer a few possible topics in one concise sentence. Keep it simple and not too long.",
     },
