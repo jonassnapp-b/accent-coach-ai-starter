@@ -167,11 +167,12 @@ const sdpRes = await fetch("https://api.openai.com/v1/realtime/calls", {
       sdp: answerSdp,
     });
 
-  await waitForDataChannelOpen(dc);
+await waitForDataChannelOpen(dc);
 
 sendEvent({
   type: "session.update",
   session: {
+    type: "realtime",
     instructions:
       "You are an English conversation coach. Speak only in English at all times. Never use Portuguese or any other language. Keep responses concise and natural.",
   },
