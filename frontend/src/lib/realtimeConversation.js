@@ -87,13 +87,16 @@ export async function createRealtimeConversation({
   onMessage,
   onError,
 }) {
-    const selectedVoice = accent === "en_br" ? "cedar" : "marin";
+  const selectedVoice = accent === "en_br" ? "cedar" : "marin";
   let pc = null;
   let dc = null;
   let localStream = null;
   let remoteAudioEl = null;
   let localAudioTrack = null;
   let isConnected = false;
+  let remoteAudioContext = null;
+  let remoteGainNode = null;
+  let remoteSourceNode = null;
 
   let mediaRecorder = null;
   let mediaRecorderMimeType = "";
@@ -258,15 +261,51 @@ console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realti
     remoteAudioEl = document.createElement("audio");
     remoteAudioEl.autoplay = true;
     remoteAudioEl.playsInline = true;
-    remoteAudioEl.volume = 0.35;
+    remoteAudioEl.volume = 1;
 
-    pc.ontrack = (event) => {
+    pc.ontrack = async (event) => {
       const stream = event.streams?.[0];
       if (!stream) return;
-      remoteAudioEl.srcObject = stream;
-      if (typeof onRemoteAudio === "function") onRemoteAudio(remoteAudioEl, stream);
-    };
 
+      remoteAudioEl.srcObject = stream;
+      remoteAudioEl.muted = true;
+
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) {
+          if (typeof onRemoteAudio === "function") onRemoteAudio(remoteAudioEl, stream);
+          return;
+        }
+
+        if (!remoteAudioContext) {
+          remoteAudioContext = new AudioCtx();
+        }
+
+        if (remoteAudioContext.state === "suspended") {
+          await remoteAudioContext.resume();
+        }
+
+        if (remoteSourceNode) {
+          try { remoteSourceNode.disconnect(); } catch {}
+        }
+        if (remoteGainNode) {
+          try { remoteGainNode.disconnect(); } catch {}
+        }
+
+        remoteSourceNode = remoteAudioContext.createMediaStreamSource(stream);
+        remoteGainNode = remoteAudioContext.createGain();
+        remoteGainNode.gain.value = 0.18;
+
+        remoteSourceNode.connect(remoteGainNode);
+        remoteGainNode.connect(remoteAudioContext.destination);
+
+        if (typeof onRemoteAudio === "function") onRemoteAudio(remoteAudioEl, stream);
+      } catch (err) {
+        console.error("[realtimeConversation] remote gain setup failed", err);
+        remoteAudioEl.muted = false;
+        if (typeof onRemoteAudio === "function") onRemoteAudio(remoteAudioEl, stream);
+      }
+    };
     dc = pc.createDataChannel("oai-events");
 
     dc.onmessage = (event) => {
@@ -431,7 +470,21 @@ function requestAssistantReply() {
         remoteAudioEl.srcObject = null;
       }
     } catch {}
+    try {
+      if (remoteSourceNode) remoteSourceNode.disconnect();
+    } catch {}
 
+    try {
+      if (remoteGainNode) remoteGainNode.disconnect();
+    } catch {}
+
+    try {
+      if (remoteAudioContext) remoteAudioContext.close();
+    } catch {}
+
+    remoteSourceNode = null;
+    remoteGainNode = null;
+    remoteAudioContext = null;
      dc = null;
     pc = null;
     localStream = null;
