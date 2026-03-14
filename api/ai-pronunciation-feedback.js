@@ -14,7 +14,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing transcript" });
     }
 
-    const prompt = `
+const prompt = `
 You are an English pronunciation coach.
 
 User said:
@@ -23,15 +23,22 @@ User said:
 Pronunciation scores from Azure:
 ${JSON.stringify(scores || {}, null, 2)}
 
-Write ONE short spoken feedback message (1 sentence).
-
-Example style:
-"Nice job. Your pronunciation was clear, but try stressing the word 'technology' more."
-
-Return JSON only:
+Return JSON only in this exact shape:
 {
-  "spokenFeedback": string
+  "feedbackSummary": string,
+  "feedbackTip": string,
+  "weakWords": [{ "word": string, "score": number }],
+  "spokenFeedbackText": string,
+  "nextAssistantText": string
 }
+
+Rules:
+- feedbackSummary: very short summary for UI, e.g. "Pronunciation: 92% — Good clarity"
+- feedbackTip: one short practical improvement tip
+- weakWords: up to 2 weakest words if visible from scores, otherwise []
+- spokenFeedbackText: one short sentence the app can speak aloud
+- nextAssistantText: one short natural follow-up question to continue the conversation
+- Keep everything concise, encouraging, and natural.
 `;
 
     const resp = await client.responses.create({
@@ -44,8 +51,12 @@ Return JSON only:
     const parsed = JSON.parse(out);
 
     return res.status(200).json({
-      spokenFeedback: parsed.spokenFeedback
-    });
+  feedbackSummary: parsed.feedbackSummary || "",
+  feedbackTip: parsed.feedbackTip || "",
+  weakWords: Array.isArray(parsed.weakWords) ? parsed.weakWords : [],
+  spokenFeedbackText: parsed.spokenFeedbackText || "",
+  nextAssistantText: parsed.nextAssistantText || "",
+});
 
   } catch (err) {
     return res.status(500).json({

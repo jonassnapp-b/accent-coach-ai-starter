@@ -96,7 +96,7 @@ console.log("[azure] raw =", raw);
       data?.DisplayText ||
       "";
 
-    const pa = nbest?.PronunciationAssessment || {};
+    const pa = nbest || {};
 
     const words = Array.isArray(nbest?.Words)
       ? nbest.Words.map((w) => ({
