@@ -382,19 +382,14 @@ async function analyzeUserTurn(recording) {
             }
           }
 
-                  if (type === "response.done") {
-            if (suppressNextAssistantResponseRef.current) {
-              suppressNextAssistantResponseRef.current = false;
-              setIsAiSpeaking(false);
-              setIsAnalyzing(false);
-              setError("");
-
-              if (!waitingForUserReleaseRef.current) {
-                setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
-              }
-
-              return;
-            }
+                if (type === "response.done") {
+  if (suppressNextAssistantResponseRef.current) {
+    suppressNextAssistantResponseRef.current = false;
+    setIsAiSpeaking(false);
+    setIsAnalyzing(false);
+    setError("");
+    return;
+  }
 
             const finalText =
               typeof msg?.response?.output?.[0]?.content?.[0]?.transcript === "string"
@@ -419,24 +414,19 @@ async function analyzeUserTurn(recording) {
             setIsAnalyzing(false);
           }
 
-                 if (type === "error") {
-            const serverMsg =
-              msg?.error?.message || msg?.error?.code || "Realtime session error.";
+                if (type === "error") {
+  const serverMsg =
+    msg?.error?.message || msg?.error?.code || "Realtime session error.";
 
-            if (
-              typeof serverMsg === "string" &&
-              serverMsg.toLowerCase().includes("no active response found")
-            ) {
-              setError("");
-              setIsAiSpeaking(false);
-              setIsAnalyzing(false);
-
-              if (!waitingForUserReleaseRef.current) {
-                setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
-              }
-
-              return;
-            }
+  if (
+    typeof serverMsg === "string" &&
+    serverMsg.toLowerCase().includes("no active response found")
+  ) {
+    setError("");
+    setIsAiSpeaking(false);
+    setIsAnalyzing(false);
+    return;
+  }
 
             setError(serverMsg);
             setIsAiSpeaking(false);
