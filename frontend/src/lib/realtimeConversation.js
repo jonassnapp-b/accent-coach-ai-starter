@@ -1,6 +1,20 @@
 // frontend/src/lib/realtimeConversation.js
 
 const REALTIME_MODEL = "gpt-realtime";
+function isNative() {
+  return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
+}
+
+function getApiBase() {
+  const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
+  const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
+  if (isNative()) {
+    const base = (ls || env).replace(/\/+$/, "");
+    if (!base) throw new Error("VITE_API_BASE (or localStorage.apiBase) is not set — required on iOS.");
+    return base;
+  }
+  return (ls || env || window.location.origin).replace(/\/+$/, "");
+}
 function pickSupportedMimeType() {
   if (typeof MediaRecorder === "undefined") return "";
   const candidates = [
@@ -211,8 +225,10 @@ export async function createRealtimeConversation({
 
     return pending;
   }
-  async function connect() {
-    const tokenRes = await fetch("/api/realtime-session", {
+async function connect() {
+  const base = getApiBase();
+console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realtime-session`);
+  const tokenRes = await fetch(`${base}/api/realtime-session`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ accent }),
