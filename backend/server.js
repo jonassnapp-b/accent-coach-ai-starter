@@ -42,7 +42,7 @@ const alignTts = await loadDefault("../api/align-tts.js", "align-tts");
 const tts = await loadDefault("../api/tts.js", "tts");
 const azurePronunciation = await loadDefault("../api/azure-pronunciation.js", "azure-pronunciation");
 const aiPronunciationFeedback = await loadDefault("../api/ai-pronunciation-feedback.js", "ai-pronunciation-feedback");
-
+const realtimeSession = await loadDefault("../api/realtime-session.js", "realtime-session");
 /* =========================
    Optional backend store (Upstash Redis)
    ========================= */
@@ -169,7 +169,7 @@ app.all("/api/align-tts", alignTts);
 app.all("/api/tts", tts);
 app.all("/api/azure-pronunciation", azurePronunciation);
 app.all("/api/ai-pronunciation-feedback", aiPronunciationFeedback);
-
+app.all("/api/realtime-session", realtimeSession);
 // ✅ analyze-speech is an Express Router -> mount at /api
 app.use("/api/analyze-speech", analyzeSpeechRouter);
 /**
