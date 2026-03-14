@@ -298,17 +298,26 @@ console.log("[ConversationCoach] ai json =", aiJson);
       throw new Error(aiJson?.error || "AI feedback failed");
     }
 
-    setFeedbackSummary(
-      aiJson?.feedbackSummary ||
-        `Pronunciation: ${Math.round(Number(azureJson?.pronunciation || 0))}%`
-    );
+   setFeedbackSummary(
+  aiJson?.feedbackSummary ||
+    `Pronunciation: ${Math.round(Number(azureJson?.pronunciation || 0))}%`
+);
 
-    setFeedbackTip(aiJson?.feedbackTip || "");
-    setWeakPhonemes([]);
-    setWeakWords(Array.isArray(aiJson?.weakWords) ? aiJson.weakWords.slice(0, 2) : []);
-    setSpokenFeedbackText(aiJson?.spokenFeedbackText || "");
-    setPendingNextAssistantText(aiJson?.nextAssistantText || "");
-    setIsWaitingToContinue(true);
+setFeedbackTip(aiJson?.feedbackTip || "");
+setWeakPhonemes([]);
+setWeakWords(Array.isArray(aiJson?.weakWords) ? aiJson.weakWords.slice(0, 2) : []);
+
+const spokenText = String(aiJson?.spokenFeedbackText || "").trim();
+setSpokenFeedbackText(spokenText);
+setPendingNextAssistantText(aiJson?.nextAssistantText || "");
+
+if (spokenText) {
+  setIsAiSpeaking(true);
+  await speakText(spokenText);
+  setIsAiSpeaking(false);
+}
+
+setIsWaitingToContinue(true);
 } catch (err) {
   const msg =
     err?.name === "AbortError"
@@ -614,13 +623,6 @@ async function handleContinueAfterFeedback() {
   try {
     setError("");
     setIsWaitingToContinue(false);
-
-    if (spokenFeedbackText) {
-      setIsAiSpeaking(true);
-      console.log("[ConversationCoach] speaking text =", spokenFeedbackText);
-      await speakText(spokenFeedbackText);
-      setIsAiSpeaking(false);
-    }
 
     if (pendingNextAssistantText) {
       setAssistantText(pendingNextAssistantText);
