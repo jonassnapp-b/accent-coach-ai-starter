@@ -16,12 +16,11 @@ export default async function handler(req, res) {
     if (!audioBase64) {
       return res.status(400).json({ error: "Missing audioBase64" });
     }
+const audioBuffer = Buffer.from(audioBase64, "base64");
 
-    const audioBuffer = Buffer.from(audioBase64, "base64");
+const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed`;
 
-    const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed`;
-
-    const paHeader = Buffer.from(
+const paHeader = Buffer.from(
   JSON.stringify({
     GradingSystem: "HundredMark",
     Dimension: "Comprehensive",
@@ -29,8 +28,10 @@ export default async function handler(req, res) {
     ScenarioId: "unscripted",
   })
 ).toString("base64");
+
 console.log("[azure] mime =", mime);
 console.log("[azure] audio bytes =", audioBuffer.length);
+
 const azureRes = await fetch(url, {
   method: "POST",
   headers: {
@@ -42,7 +43,7 @@ const azureRes = await fetch(url, {
   body: audioBuffer,
 });
 
-    const raw = await azureRes.text();
+const raw = await azureRes.text();
 console.log("[azure] status =", azureRes.status);
 console.log("[azure] raw =", raw);
     let data = {};
