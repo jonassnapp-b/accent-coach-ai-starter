@@ -54,10 +54,17 @@ console.log("[azure] raw =", raw);
     }
 
     if (!azureRes.ok) {
-      return res.status(azureRes.status).json({
-        error: data?.error || data?.RecognitionStatus || raw || "Azure pronunciation failed",
-      });
-    }
+  console.log("[azure] non-200 status =", azureRes.status);
+  console.log("[azure] non-200 raw =", raw);
+
+  return res.status(azureRes.status).json({
+    error: data?.error || data?.RecognitionStatus || raw || "Azure pronunciation failed",
+    azureStatus: azureRes.status,
+    azureRaw: raw,
+    sentMime: mime || "audio/webm",
+    audioBytes: audioBuffer.length,
+  });
+}
 
     const nbest = Array.isArray(data?.NBest) ? data.NBest[0] : null;
     const displayText =
