@@ -203,13 +203,16 @@ try {
   aiRes = await fetch(`${base}/api/ai-pronunciation-feedback`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
+ body: JSON.stringify({
   transcript: userTranscript,
   scores: {
     overallAccuracy: azureJson?.overallAccuracy,
     fluency: azureJson?.fluency,
+    completeness: azureJson?.completeness,
     pronunciation: azureJson?.pronunciation,
+    prosody: azureJson?.prosody,
     words: azureJson?.words,
+    raw: azureJson?.raw,
   },
 }),
     signal: aiController.signal,
@@ -260,16 +263,18 @@ setIsWaitingToContinue(false);
         realtimeRef.current?.disconnect?.();
       } catch {}
 
-          setError("");
+         setError("");
 setAssistantText("");
 setFeedbackSummary("");
 setHasConversationStarted(false);
-      setHoldScale(1);
-      setIsAiSpeaking(false);
-      setIsRecording(false);
-      setIsWaitingToContinue(false);
-      setIsStartingConversation(true);
-      lastUserTranscriptRef.current = "";
+setHoldScale(1);
+setIsAiSpeaking(false);
+setIsRecording(false);
+setIsWaitingToContinue(false);
+setSpokenFeedbackText("");
+setPendingNextAssistantText("");
+setIsStartingConversation(true);
+lastUserTranscriptRef.current = "";
 
       const rt = await createRealtimeConversation({
         accent,
@@ -437,13 +442,15 @@ setHasConversationStarted(false);
       return;
     }
 
-    setIsAiSpeaking(false);
-    setIsRecording(true);
-    setIsAnalyzing(false);
-    setIsWaitingToContinue(false);
-    setHasConversationStarted(true);
-    setError("");
-  setFeedbackSummary("");
+   setIsAiSpeaking(false);
+setIsRecording(true);
+setIsAnalyzing(false);
+setIsWaitingToContinue(false);
+setHasConversationStarted(true);
+setError("");
+setFeedbackSummary("");
+setSpokenFeedbackText("");
+setPendingNextAssistantText("");
 setHoldScale(1.08);
   }
 
@@ -654,7 +661,28 @@ async function handleContinueAfterFeedback() {
                 </div>
               </div>
             ) : null}
-
+<div style={{ marginTop: 14, minHeight: 64 }}>
+  {isWaitingToContinue && !isAnalyzing ? (
+    <button
+      type="button"
+      onClick={handleContinueAfterFeedback}
+      style={{
+        width: "100%",
+        height: 52,
+        borderRadius: 18,
+        border: "none",
+        background: "#2196F3",
+        color: "#FFFFFF",
+        fontSize: 16,
+        fontWeight: 900,
+        cursor: "pointer",
+        boxShadow: "0 10px 24px rgba(33,150,243,0.22)",
+      }}
+    >
+      Continue conversation
+    </button>
+  ) : null}
+</div>
           
 
             <div
