@@ -96,6 +96,7 @@ export async function createRealtimeConversation({
   let isConnected = false;
   let remoteAudioContext = null;
   let remoteGainNode = null;
+  let remoteCompressorNode = null;
   let remoteSourceNode = null;
 
   let mediaRecorder = null;
@@ -281,18 +282,30 @@ console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realti
           await remoteAudioContext.resume();
         }
 
-        if (remoteSourceNode) {
+         if (remoteSourceNode) {
           try { remoteSourceNode.disconnect(); } catch {}
+        }
+        if (remoteCompressorNode) {
+          try { remoteCompressorNode.disconnect(); } catch {}
         }
         if (remoteGainNode) {
           try { remoteGainNode.disconnect(); } catch {}
         }
 
         remoteSourceNode = remoteAudioContext.createMediaStreamSource(stream);
-        remoteGainNode = remoteAudioContext.createGain();
-        remoteGainNode.gain.value = 0.9;
 
-        remoteSourceNode.connect(remoteGainNode);
+        remoteCompressorNode = remoteAudioContext.createDynamicsCompressor();
+        remoteCompressorNode.threshold.value = -24;
+        remoteCompressorNode.knee.value = 18;
+        remoteCompressorNode.ratio.value = 10;
+        remoteCompressorNode.attack.value = 0.003;
+        remoteCompressorNode.release.value = 0.2;
+
+        remoteGainNode = remoteAudioContext.createGain();
+        remoteGainNode.gain.value = 1.35;
+
+        remoteSourceNode.connect(remoteCompressorNode);
+        remoteCompressorNode.connect(remoteGainNode);
         remoteGainNode.connect(remoteAudioContext.destination);
 
         if (typeof onRemoteAudio === "function") onRemoteAudio(null, stream);
@@ -470,6 +483,10 @@ function requestAssistantReply() {
     } catch {}
 
     try {
+      if (remoteCompressorNode) remoteCompressorNode.disconnect();
+    } catch {}
+
+    try {
       if (remoteGainNode) remoteGainNode.disconnect();
     } catch {}
 
@@ -477,7 +494,8 @@ function requestAssistantReply() {
       if (remoteAudioContext) remoteAudioContext.close();
     } catch {}
 
-    remoteSourceNode = null;
+      remoteSourceNode = null;
+    remoteCompressorNode = null;
     remoteGainNode = null;
     remoteAudioContext = null;
      dc = null;
