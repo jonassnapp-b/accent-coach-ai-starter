@@ -87,7 +87,8 @@ export async function createRealtimeConversation({
   onMessage,
   onError,
 }) {
-  const selectedVoice = accent === "en_br" ? "verse" : "marin";
+  const selectedVoice = accent === "en_br" ? "cedar" : "marin";
+const useAzurePlayback = accent === "en_br";
   console.log("[realtimeConversation] accent =", accent);
 console.log("[realtimeConversation] selectedVoice =", selectedVoice);
   let pc = null;
@@ -306,9 +307,12 @@ console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realti
         remoteGainNode = remoteAudioContext.createGain();
         remoteGainNode.gain.value = 1.35;
 
-        remoteSourceNode.connect(remoteCompressorNode);
-        remoteCompressorNode.connect(remoteGainNode);
-        remoteGainNode.connect(remoteAudioContext.destination);
+       remoteSourceNode.connect(remoteCompressorNode);
+remoteCompressorNode.connect(remoteGainNode);
+
+if (!useAzurePlayback) {
+  remoteGainNode.connect(remoteAudioContext.destination);
+}
 
         if (typeof onRemoteAudio === "function") onRemoteAudio(null, stream);
       } catch (err) {

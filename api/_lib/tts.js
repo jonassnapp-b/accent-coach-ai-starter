@@ -82,26 +82,27 @@ async function fetchOpenAiMp3({ text, accent, rate }) {
   if (!openai) return null;
 
   const a = (accent || "en_us").toLowerCase();
-  const voice = a === "en_br" ? "cedar" : "marin";
 
-const speed = Number(rate ?? 1.0) || 1.0;
+  if (a === "en_br") {
+    return null;
+  }
 
-const speech = await openai.audio.speech.create({
-  model: "gpt-4o-mini-tts",
-  voice,
-  input: text,
-  format: "mp3",
-  speed,
-  instructions:
-    a === "en_br"
-      ? "Speak natural British English. Warm and human, not robotic."
-      : "Speak natural American English. Warm and human, not robotic.",
-});
+  const speed = Number(rate ?? 1.0) || 1.0;
 
+  const speech = await openai.audio.speech.create({
+    model: "gpt-4o-mini-tts",
+    voice: "marin",
+    input: text,
+    format: "mp3",
+    speed,
+    instructions: "Speak natural American English. Warm and human, not robotic.",
+  });
 
   const buf = Buffer.from(await speech.arrayBuffer());
   return { audioBuffer: buf, mime: "audio/mpeg" };
 }
+
+
 
 // Convert any audio buffer (mp3/wav/whatever) -> WAV PCM16 mono 16k
 async function toWavPcm16Mono16k(inputBuf, inputExt = ".mp3") {
@@ -119,7 +120,7 @@ ffmpeg(inPath)
   .audioChannels(1)
   .audioFrequency(16000)
   .audioCodec("pcm_s16le")
-  .audioFilters("highpass=f=120,lowpass=f=7000,equalizer=f=2800:t=q:w=1.2:g=3,loudnorm=I=-15:TP=-2:LRA=7")
+  .audioFilters("highpass=f=150,lowpass=f=7600,equalizer=f=2200:t=q:w=1.0:g=2,equalizer=f=3400:t=q:w=1.1:g=4,equalizer=f=5000:t=q:w=1.0:g=2,loudnorm=I=-15:TP=-2:LRA=7")
   .format("wav")
       .on("error", async (err) => {
         try { await fs.unlink(inPath); } catch {}

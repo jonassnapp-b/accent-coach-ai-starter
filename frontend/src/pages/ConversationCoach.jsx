@@ -283,9 +283,11 @@ lastUserTranscriptRef.current = "";
 console.log("[ConversationCoach] starting realtime with accent =", selectedAccent);
    const rt = await createRealtimeConversation({
   accent: selectedAccent,
-  onRemoteAudio: () => {
-          if (mountedRef.current) setIsAiSpeaking(true);
-        },
+onRemoteAudio: () => {
+  if (!mountedRef.current) return;
+  if (selectedAccent === "en_br") return;
+  setIsAiSpeaking(true);
+},
         onMessage: (msg) => {
           console.log("[realtime msg]", msg);
 
@@ -352,7 +354,7 @@ console.log("[ConversationCoach] starting realtime with accent =", selectedAccen
             }
           }
 
-                if (type === "response.done") {
+             if (type === "response.done") {
   if (suppressNextAssistantResponseRef.current) {
     suppressNextAssistantResponseRef.current = false;
     setIsAiSpeaking(false);
@@ -361,20 +363,37 @@ console.log("[ConversationCoach] starting realtime with accent =", selectedAccen
     return;
   }
 
-            const finalText =
-              typeof msg?.response?.output?.[0]?.content?.[0]?.transcript === "string"
-                ? msg.response.output[0].content[0].transcript
-                : typeof msg?.response?.output?.[0]?.content?.[0]?.text === "string"
-                ? msg.response.output[0].content[0].text
-                : "";
+  const finalText =
+    typeof msg?.response?.output?.[0]?.content?.[0]?.transcript === "string"
+      ? msg.response.output[0].content[0].transcript
+      : typeof msg?.response?.output?.[0]?.content?.[0]?.text === "string"
+      ? msg.response.output[0].content[0].text
+      : "";
 
-            if (finalText) {
-              setAssistantText(finalText);
-            }
+  if (finalText) {
+    setAssistantText(finalText);
+  }
 
-            setIsAiSpeaking(false);
-            setIsAnalyzing(false);
-          }
+  if (selectedAccent === "en_br" && finalText) {
+    setIsAnalyzing(false);
+    setIsAiSpeaking(true);
+
+    speakText(finalText)
+      .then(() => {
+        setIsAiSpeaking(false);
+      })
+      .catch((err) => {
+        console.error("[ConversationCoach] british TTS playback failed", err);
+        setError(err?.message || "British TTS playback failed.");
+        setIsAiSpeaking(false);
+      });
+
+    return;
+  }
+
+  setIsAiSpeaking(false);
+  setIsAnalyzing(false);
+}
 
           if (
             type === "output_audio_buffer.stopped" ||
