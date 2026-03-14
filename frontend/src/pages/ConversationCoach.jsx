@@ -78,9 +78,10 @@ console.log("[ConversationCoach] tts status =", res.status);
         ttsAudioRef.current = new Audio();
       }
 
-      const a = ttsAudioRef.current;
-      a.src = url;
-      a.onended = () => {
+const a = ttsAudioRef.current;
+a.src = url;
+a.volume = 1;
+a.onended = () => {
         URL.revokeObjectURL(url);
         resolve();
       };
