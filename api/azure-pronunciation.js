@@ -47,9 +47,9 @@ const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conve
 const paHeader = Buffer.from(
   JSON.stringify({
     GradingSystem: "HundredMark",
+    Granularity: "Phoneme",
     Dimension: "Comprehensive",
-    EnableMiscue: false,
-    ScenarioId: "unscripted",
+    EnableMiscue: false
   })
 ).toString("base64");
 
