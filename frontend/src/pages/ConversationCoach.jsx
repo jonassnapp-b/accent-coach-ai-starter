@@ -151,29 +151,51 @@ function getStrictPronunciationScore(ui) {
 }
 
 function stricterLabel(score) {
-  if (score >= 95) return "Excellent";
-  if (score >= 88) return "Good";
-  if (score >= 80) return "Fair";
+  if (score >= 97) return "Excellent";
+  if (score >= 90) return "Good";
+  if (score >= 82) return "Fair";
   return "Needs work";
 }
-  function buildSpeechTip({ weakPhonemes: phonemes, weakWords: words, fluency, rhythm, speed }) {
-    const topPhoneme = phonemes?.[0];
-    const topWord = words?.[0];
+function buildSpeechTip({ weakPhonemes: phonemes, weakWords: words, fluency }) {
+  const topPhoneme = phonemes?.[0];
+  const secondPhoneme = phonemes?.[1];
+  const topWord = words?.[0];
+  const secondWord = words?.[1];
 
-    if (topPhoneme?.label === "θ") return 'Focus on the /th/ sound in "three"';
-    if (topPhoneme?.label === "ð") return 'Keep the voiced /th/ soft and steady';
-    if (topPhoneme?.label === "R") return "Keep your /r/ sound clearer and more consistent";
-    if (topPhoneme?.label) return `Focus on the /${topPhoneme.label.toLowerCase()}/ sound`;
-
-    if (topWord?.word) return `Say "${topWord.word}" more clearly`;
-
-    if (typeof fluency === "number" && fluency < 75) return "Try to speak a little more smoothly";
-    if (typeof rhythm === "number" && rhythm < 75) return "Keep a steadier rhythm across the sentence";
-    if (typeof speed === "number" && speed > 115) return "Slow down slightly for clearer pronunciation";
-    if (typeof speed === "number" && speed < 75) return "Speak a little more confidently and steadily";
-
-    return "Nice job — keep your pronunciation steady";
+  if (topWord?.word && secondWord?.word) {
+    return `The weakest words were "${topWord.word}" and "${secondWord.word}" — make those clearer.`;
   }
+
+  if (topWord?.word) {
+    return `The word "${topWord.word}" was the least clear — repeat it more carefully.`;
+  }
+
+  if (topPhoneme?.label === "θ") {
+    return 'Your weakest sound was /th/ — keep the tongue lightly between the teeth.';
+  }
+
+  if (topPhoneme?.label === "ð") {
+    return 'Your weakest sound was voiced /th/ — keep it softer and voiced.';
+  }
+
+  if (topPhoneme?.label === "R") {
+    return "Your /r/ sound was weak — make it more controlled and consistent.";
+  }
+
+  if (topPhoneme?.label && secondPhoneme?.label) {
+    return `The weakest sounds were /${topPhoneme.label}/ and /${secondPhoneme.label}/ — focus on those.`;
+  }
+
+  if (topPhoneme?.label) {
+    return `Your weakest sound was /${topPhoneme.label}/ — focus on that sound.`;
+  }
+
+  if (typeof fluency === "number" && fluency < 75) {
+    return "Your fluency dropped — try to keep the sentence smoother and less choppy.";
+  }
+
+  return "Overall solid, but tighten the weakest sounds and words.";
+}
   function extractUserTranscriptFromMessage(msg) {
     const type = String(msg?.type || "");
 
@@ -308,6 +330,31 @@ console.log("[ConversationCoach] azure json =", azureJson);
   const aiController = new AbortController();
 const aiTimeout = setTimeout(() => aiController.abort(), 15000);
 
+const strictScore = getStrictPronunciationScore(azureJson);
+
+const uiWeakWords = (Array.isArray(azureJson?.words) ? azureJson.words : [])
+  .map((w) => ({
+    word: String(w?.word || "").trim(),
+    score: Number(w?.accuracyScore || 0),
+  }))
+  .filter((w) => w.word && Number.isFinite(w.score) && w.score > 0 && w.score < 90)
+  .sort((a, b) => a.score - b.score)
+  .slice(0, 3);
+
+const uiWeakPhonemes = (Array.isArray(azureJson?.words) ? azureJson.words : [])
+  .flatMap((w) =>
+    Array.isArray(w?.phonemes)
+      ? w.phonemes.map((p) => ({
+          label: String(p?.phoneme || "").trim(),
+          score: Number(p?.accuracyScore || 0),
+        }))
+      : []
+  )
+  .filter((p) => p.label && Number.isFinite(p.score) && p.score > 0 && p.score < 90)
+  .sort((a, b) => a.score - b.score)
+  .filter((p, i, arr) => arr.findIndex((x) => x.label === p.label) === i)
+  .slice(0, 4);
+
 let aiRes;
 
 try {
@@ -315,17 +362,18 @@ try {
   aiRes = await fetch(`${base}/api/ai-pronunciation-feedback`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-  transcript: userTranscript,
-  scores: {
-    overallAccuracy: azureJson?.overallAccuracy,
-    fluency: azureJson?.fluency,
-    completeness: azureJson?.completeness,
-    pronunciation: azureJson?.pronunciation,
-    prosody: azureJson?.prosody,
-    words: azureJson?.words,
-  },
-}),
+    body: JSON.stringify({
+      transcript: userTranscript,
+      scores: {
+        strictScore,
+        overallAccuracy: azureJson?.overallAccuracy,
+        fluency: azureJson?.fluency,
+        pronunciation: azureJson?.pronunciation,
+        weakWords: uiWeakWords,
+        weakPhonemes: uiWeakPhonemes,
+        words: azureJson?.words,
+      },
+    }),
     signal: aiController.signal,
   });
 } finally {
@@ -340,48 +388,24 @@ console.log("[ConversationCoach] ai json =", aiJson);
       throw new Error(aiJson?.error || "AI feedback failed");
     }
 
-const strictScore = getStrictPronunciationScore(azureJson);
-
 setScoreBreakdown({
   strict: strictScore,
   accuracy: Math.round(Number(azureJson?.overallAccuracy || 0)),
   fluency: Math.round(Number(azureJson?.fluency || 0)),
-  completeness: Math.round(Number(azureJson?.completeness || 0)),
-  prosody: Math.round(Number(azureJson?.prosody || 0)),
 });
 
-setFeedbackSummary(
-  aiJson?.feedbackSummary ||
-    `Pronunciation: ${strictScore}% — ${stricterLabel(strictScore)}`
-);
-
-setFeedbackTip(aiJson?.feedbackTip || "");
-
-const uiWeakWords = (Array.isArray(azureJson?.words) ? azureJson.words : [])
-  .map((w) => ({
-    word: String(w?.word || "").trim(),
-    score: Number(w?.accuracyScore || 0),
-  }))
-  .filter((w) => w.word && w.score < 90)
-  .sort((a, b) => a.score - b.score)
-  .slice(0, 3);
-
-const uiWeakPhonemes = (Array.isArray(azureJson?.words) ? azureJson.words : [])
-  .flatMap((w) =>
-    Array.isArray(w?.phonemes)
-      ? w.phonemes.map((p) => ({
-          label: String(p?.phoneme || "").trim(),
-          score: Number(p?.accuracyScore || 0),
-        }))
-      : []
-  )
-  .filter((p) => p.label && p.score < 90)
-  .sort((a, b) => a.score - b.score)
-  .filter((p, i, arr) => arr.findIndex((x) => x.label === p.label) === i)
-  .slice(0, 4);
+setFeedbackSummary(`Pronunciation: ${strictScore}% — ${stricterLabel(strictScore)}`);
 
 setWeakPhonemes(uiWeakPhonemes);
 setWeakWords(uiWeakWords);
+
+setFeedbackTip(
+  buildSpeechTip({
+    weakPhonemes: uiWeakPhonemes,
+    weakWords: uiWeakWords,
+    fluency: Number(azureJson?.fluency || 0),
+  })
+);
 
 const spokenText = String(aiJson?.spokenFeedbackText || "").trim();
 setSpokenFeedbackText(spokenText);
@@ -875,13 +899,11 @@ async function handleContinueAfterFeedback() {
       marginBottom: weakPhonemes.length || weakWords.length || suggestedRepeat ? 10 : 0,
     }}
   >
-    {[
-      ["Strict", scoreBreakdown.strict],
-      ["Accuracy", scoreBreakdown.accuracy],
-      ["Fluency", scoreBreakdown.fluency],
-      ["Completeness", scoreBreakdown.completeness],
-      ["Prosody", scoreBreakdown.prosody],
-    ].map(([label, value]) => (
+{[
+  ["Strict", scoreBreakdown.strict],
+  ["Accuracy", scoreBreakdown.accuracy],
+  ["Fluency", scoreBreakdown.fluency],
+].map(([label, value]) => (
       <span
         key={label}
         style={{
