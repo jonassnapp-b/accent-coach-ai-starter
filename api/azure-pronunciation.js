@@ -61,7 +61,7 @@ const azureRes = await fetch(url, {
   headers: {
     "Ocp-Apim-Subscription-Key": key,
     "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
-    Accept: "application/json;text/xml",
+    Accept: "application/json",
     "Pronunciation-Assessment": paHeader,
   },
   body: wavBuffer,
@@ -98,23 +98,40 @@ console.log("[azure] raw =", raw);
 
     const pa = nbest || {};
 
-    const words = Array.isArray(nbest?.Words)
-      ? nbest.Words.map((w) => ({
-          word: w?.Word || "",
-          accuracyScore: Number(w?.PronunciationAssessment?.AccuracyScore ?? 0),
-          errorType: w?.PronunciationAssessment?.ErrorType || "",
-        }))
-      : [];
-
-    return res.status(200).json({
-      transcript: displayText,
-      overallAccuracy: Number(pa?.AccuracyScore ?? 0),
-      fluency: Number(pa?.FluencyScore ?? 0),
-      completeness: Number(pa?.CompletenessScore ?? 0),
-      pronunciation: Number(pa?.PronScore ?? 0),
-      words,
-      raw: data,
-    });
+ const words = Array.isArray(nbest?.Words)
+  ? nbest.Words.map((w) => ({
+      word: w?.Word || "",
+      accuracyScore: Number(
+        w?.AccuracyScore ?? w?.PronunciationAssessment?.AccuracyScore ?? 0
+      ),
+      errorType: w?.ErrorType || w?.PronunciationAssessment?.ErrorType || "",
+      syllables: Array.isArray(w?.Syllables)
+        ? w.Syllables.map((s) => ({
+            syllable: s?.Syllable || "",
+            grapheme: s?.Grapheme || "",
+            accuracyScore: Number(s?.AccuracyScore ?? 0),
+          }))
+        : [],
+     phonemes: Array.isArray(w?.Phonemes)
+  ? w.Phonemes.map((p) => ({
+      phoneme: p?.Phoneme || "",
+      accuracyScore: Number(p?.AccuracyScore ?? 0),
+      offset: Number(p?.Offset ?? 0),
+      duration: Number(p?.Duration ?? 0),
+    }))
+  : [],
+    }))
+  : [];
+return res.status(200).json({
+  transcript: displayText,
+  overallAccuracy: Number(pa?.AccuracyScore ?? 0),
+  fluency: Number(pa?.FluencyScore ?? 0),
+  completeness: Number(pa?.CompletenessScore ?? 0),
+  pronunciation: Number(pa?.PronScore ?? 0),
+  prosody: Number(pa?.ProsodyScore ?? 0),
+  words,
+  raw: data,
+});
   } catch (err) {
     return res.status(500).json({
       error: err?.message || "Azure pronunciation failed",
