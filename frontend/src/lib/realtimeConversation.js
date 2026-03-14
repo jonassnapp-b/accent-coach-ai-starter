@@ -290,7 +290,7 @@ console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realti
 
         remoteSourceNode = remoteAudioContext.createMediaStreamSource(stream);
         remoteGainNode = remoteAudioContext.createGain();
-        remoteGainNode.gain.value = 0.15;
+        remoteGainNode.gain.value = 0.5;
 
         remoteSourceNode.connect(remoteGainNode);
         remoteGainNode.connect(remoteAudioContext.destination);
