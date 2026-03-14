@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   try {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    const { transcript, scores } = req.body || {};
+    const { transcript, scores, accent } = req.body || {};
 const allWords = Array.isArray(scores?.words) ? scores.words : [];
 
 const weakWords = allWords
@@ -34,6 +34,10 @@ const weakPhonemes = allWords
   .filter((p) => p.phoneme && Number.isFinite(p.score) && p.score > 0)
   .sort((a, b) => a.score - b.score)
   .slice(0, 5);
+  const targetAccent =
+  String(accent || "en_us").toLowerCase() === "en_br"
+    ? "British English"
+    : "American English";
     if (!transcript) {
       return res.status(400).json({ error: "Missing transcript" });
     }
@@ -41,13 +45,22 @@ const weakPhonemes = allWords
 const prompt = `
 You are an English pronunciation coach for a speaking app.
 
-You must create spoken feedback using the Azure data below.
-Do not be vague.
-Do not say "good job", "great job", "nice work", or similar empty praise unless you immediately follow it with a specific weak word or weak sound.
-Do not guess mistakes that are not supported by the data.
+Create spoken feedback using ONLY the Azure pronunciation data below.
+Speak like a helpful human teacher talking to a normal learner.
+Use simple everyday English.
+Do not sound robotic, technical, or overly formal.
+Do not use IPA or technical phoneme symbols unless absolutely necessary.
+Instead of technical symbols, prefer plain explanations like:
+- "the th sound"
+- "the r sound"
+- "the ending sound"
+- "the middle of the word"
 
 User said:
 "${transcript}"
+
+Target accent:
+${targetAccent}
 
 Top-level Azure scores:
 ${JSON.stringify(
@@ -75,17 +88,23 @@ Return JSON only in this exact shape:
 }
 
 Rules for spokenFeedbackText:
-- 2 to 4 sentences only.
-- Sound natural when spoken aloud.
-- Sentence 1: briefly summarize the overall result using the real Azure scores.
-- Sentence 2: MUST name the weakest word if one exists.
-- If a weak phoneme exists, mention the weakest sound in simple learner-friendly language.
-- If fluency is below 85, mention that the rhythm or smoothness needs improvement.
-- If pronunciation is strong overall, still mention the weakest specific area.
-- Never output generic feedback with no specific word or sound.
+- 2 to 4 short sentences only.
+- Make it easy for an average learner to understand.
+- Do not mention score numbers in the spoken feedback.
+- Start with a short natural overall impression.
+- Then mention the weakest word if one exists.
+- If there is a clear weak sound, explain it in simple learner-friendly language.
+- If fluency is weaker, mention that the sentence needs to sound smoother.
+- If the pronunciation is strong overall, say that briefly, but still mention the main weak area.
+- Never say only "good job", "great job", or "nice work".
+- Never give generic advice like "improve a couple of sounds".
 - If weakWords is not empty, you MUST mention at least one of those words explicitly.
-- If weakPhonemes is not empty, you MUST mention at least one of those phonemes explicitly.
-- Keep it concrete and specific.
+- Keep it concrete, simple, and human.
+
+Good examples:
+- "That was mostly clear, but the word 'birthday' was weaker than the rest. The th sound needs a little more work."
+- "Overall that sounded good, but 'comfortable' was less clear. Try to make the middle of that word cleaner."
+- "Your sentence was understandable, but one word stood out as weaker: 'thought'. The th sound was the main issue."
 
 Rules for nextAssistantText:
 - One short natural follow-up question only.

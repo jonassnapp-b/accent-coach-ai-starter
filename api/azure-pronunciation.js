@@ -19,11 +19,13 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Missing Azure env vars" });
     }
 
-    const { audioBase64, mime } = req.body || {};
+    const { audioBase64, mime, accent } = req.body || {};
 
     if (!audioBase64) {
       return res.status(400).json({ error: "Missing audioBase64" });
     }
+    const accentNorm = String(accent || "en_us").toLowerCase();
+const language = accentNorm === "en_br" ? "en-GB" : "en-US";
 const audioBuffer = Buffer.from(audioBase64, "base64");
 console.log("[azure] entered wav conversion");
 const inputPath = path.join(os.tmpdir(), `input-${Date.now()}.webm`);
@@ -42,7 +44,7 @@ await new Promise((resolve, reject) => {
 
 const wavBuffer = fs.readFileSync(outputPath);
 console.log("[azure] wav bytes =", wavBuffer.length);
-const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed`;
+const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${encodeURIComponent(language)}&format=detailed`;
 
 const paHeader = Buffer.from(
   JSON.stringify({
