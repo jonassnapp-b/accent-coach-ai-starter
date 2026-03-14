@@ -102,6 +102,7 @@ export async function createRealtimeConversation({
 
     try {
       mediaRecorderMimeType = pickSupportedMimeType();
+      console.log("[realtimeConversation] picked mime =", mediaRecorderMimeType);
       mediaRecorder = mediaRecorderMimeType
         ? new MediaRecorder(localStream, { mimeType: mediaRecorderMimeType })
         : new MediaRecorder(localStream);
