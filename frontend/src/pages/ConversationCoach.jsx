@@ -279,9 +279,9 @@ setPendingNextAssistantText("");
 setIsStartingConversation(true);
 lastUserTranscriptRef.current = "";
 
-      const rt = await createRealtimeConversation({
-        accent,
-        onRemoteAudio: () => {
+   const rt = await createRealtimeConversation({
+  accent: selectedAccent,
+  onRemoteAudio: () => {
           if (mountedRef.current) setIsAiSpeaking(true);
         },
         onMessage: (msg) => {
