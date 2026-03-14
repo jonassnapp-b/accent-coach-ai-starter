@@ -21,7 +21,8 @@ function getApiBase() {
 
 export default function ConversationCoach() {
   const { settings } = useSettings?.() || { settings: {} };
-  const accent = settings?.accentDefault || "en_us";
+  const defaultAccent = settings?.accentDefault === "en_br" ? "en_br" : "en_us";
+const [selectedAccent, setSelectedAccent] = useState(defaultAccent);
 
   const [assistantText, setAssistantText] = useState("");
 const [feedbackSummary, setFeedbackSummary] = useState("");
@@ -55,10 +56,10 @@ async function speakText(text) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      text: t,
-      accent: "en_us",
-      rate: 1,
-    }),
+  text: t,
+  accent: selectedAccent,
+  rate: 1,
+}),
   });
 console.log("[ConversationCoach] tts status =", res.status);
   if (!res.ok) {
@@ -165,10 +166,11 @@ console.log("[ConversationCoach] calling", `${base}/api/azure-pronunciation`);
   azureRes = await fetch(`${base}/api/azure-pronunciation`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      audioBase64: recording.base64,
-      mime: recording.mimeType || "audio/webm",
-    }),
+   body: JSON.stringify({
+  audioBase64: recording.base64,
+  mime: recording.mimeType || "audio/webm",
+  accent: selectedAccent,
+}),
     signal: azureController.signal,
   });
 } finally {
@@ -203,8 +205,9 @@ try {
   aiRes = await fetch(`${base}/api/ai-pronunciation-feedback`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
- body: JSON.stringify({
+body: JSON.stringify({
   transcript: userTranscript,
+  accent: selectedAccent,
   scores: {
     overallAccuracy: azureJson?.overallAccuracy,
     fluency: azureJson?.fluency,
@@ -632,35 +635,86 @@ async function handleContinueAfterFeedback() {
           </div>
         ) : (
           <>
-            {assistantText ? (
-              <div
-                style={{
-                  minHeight: 156,
-                  borderRadius: 28,
-                  background: "#FFFFFF",
-                  border: "1px solid rgba(15,23,42,0.08)",
-                  boxShadow: "0 16px 42px rgba(15,23,42,0.08)",
-                  padding: "22px 20px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  textAlign: "center",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 22,
-                    lineHeight: 1.45,
-                    fontWeight: 800,
-                    letterSpacing: -0.25,
-                    color: "#0F172A",
-                    maxWidth: 620,
-                  }}
-                >
-                  {assistantText}
-                </div>
-              </div>
-            ) : null}
+           {assistantText ? (
+  <div
+    style={{
+      minHeight: 156,
+      borderRadius: 28,
+      background: "#FFFFFF",
+      border: "1px solid rgba(15,23,42,0.08)",
+      boxShadow: "0 16px 42px rgba(15,23,42,0.08)",
+      padding: "22px 20px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      textAlign: "center",
+    }}
+  >
+    <div
+      style={{
+        fontSize: 22,
+        lineHeight: 1.45,
+        fontWeight: 800,
+        letterSpacing: -0.25,
+        color: "#0F172A",
+        maxWidth: 620,
+      }}
+    >
+      {assistantText}
+    </div>
+  </div>
+) : null}
+
+<div
+  style={{
+    marginTop: 14,
+    display: "flex",
+    gap: 10,
+  }}
+>
+  <button
+    type="button"
+    onClick={() => setSelectedAccent("en_us")}
+    disabled={isRecording || isAnalyzing || isAiSpeaking}
+    style={{
+      flex: 1,
+      height: 46,
+      borderRadius: 16,
+      border: selectedAccent === "en_us" ? "none" : "1px solid rgba(15,23,42,0.08)",
+      background: selectedAccent === "en_us" ? "#2196F3" : "#FFFFFF",
+      color: selectedAccent === "en_us" ? "#FFFFFF" : "#0F172A",
+      fontSize: 14,
+      fontWeight: 900,
+      cursor: isRecording || isAnalyzing || isAiSpeaking ? "not-allowed" : "pointer",
+      boxShadow: selectedAccent === "en_us" ? "0 10px 24px rgba(33,150,243,0.22)" : "none",
+      opacity: isRecording || isAnalyzing || isAiSpeaking ? 0.7 : 1,
+    }}
+  >
+    American
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setSelectedAccent("en_br")}
+    disabled={isRecording || isAnalyzing || isAiSpeaking}
+    style={{
+      flex: 1,
+      height: 46,
+      borderRadius: 16,
+      border: selectedAccent === "en_br" ? "none" : "1px solid rgba(15,23,42,0.08)",
+      background: selectedAccent === "en_br" ? "#2196F3" : "#FFFFFF",
+      color: selectedAccent === "en_br" ? "#FFFFFF" : "#0F172A",
+      fontSize: 14,
+      fontWeight: 900,
+      cursor: isRecording || isAnalyzing || isAiSpeaking ? "not-allowed" : "pointer",
+      boxShadow: selectedAccent === "en_br" ? "0 10px 24px rgba(33,150,243,0.22)" : "none",
+      opacity: isRecording || isAnalyzing || isAiSpeaking ? 0.7 : 1,
+    }}
+  >
+    British
+  </button>
+</div>
+
 <div style={{ marginTop: 14, minHeight: 64 }}>
   {isWaitingToContinue && !isAnalyzing ? (
     <button
