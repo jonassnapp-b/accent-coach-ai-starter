@@ -280,6 +280,7 @@ setPendingNextAssistantText("");
 setIsStartingConversation(true);
 lastUserTranscriptRef.current = "";
 
+console.log("[ConversationCoach] starting realtime with accent =", selectedAccent);
    const rt = await createRealtimeConversation({
   accent: selectedAccent,
   onRemoteAudio: () => {
