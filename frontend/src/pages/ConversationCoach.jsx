@@ -610,7 +610,55 @@ async function handleContinueAfterFeedback() {
               >
                 Start a live conversation and get pronunciation feedback while you speak.
               </div>
+<div
+  style={{
+    marginBottom: 16,
+    display: "flex",
+    gap: 10,
+  }}
+>
+  <button
+    type="button"
+    onClick={() => setSelectedAccent("en_us")}
+    disabled={isStartingConversation}
+    style={{
+      flex: 1,
+      height: 46,
+      borderRadius: 16,
+      border: selectedAccent === "en_us" ? "none" : "1px solid rgba(15,23,42,0.08)",
+      background: selectedAccent === "en_us" ? "#2196F3" : "#FFFFFF",
+      color: selectedAccent === "en_us" ? "#FFFFFF" : "#0F172A",
+      fontSize: 14,
+      fontWeight: 900,
+      cursor: isStartingConversation ? "not-allowed" : "pointer",
+      boxShadow: selectedAccent === "en_us" ? "0 10px 24px rgba(33,150,243,0.22)" : "none",
+      opacity: isStartingConversation ? 0.7 : 1,
+    }}
+  >
+    American
+  </button>
 
+  <button
+    type="button"
+    onClick={() => setSelectedAccent("en_br")}
+    disabled={isStartingConversation}
+    style={{
+      flex: 1,
+      height: 46,
+      borderRadius: 16,
+      border: selectedAccent === "en_br" ? "none" : "1px solid rgba(15,23,42,0.08)",
+      background: selectedAccent === "en_br" ? "#2196F3" : "#FFFFFF",
+      color: selectedAccent === "en_br" ? "#FFFFFF" : "#0F172A",
+      fontSize: 14,
+      fontWeight: 900,
+      cursor: isStartingConversation ? "not-allowed" : "pointer",
+      boxShadow: selectedAccent === "en_br" ? "0 10px 24px rgba(33,150,243,0.22)" : "none",
+      opacity: isStartingConversation ? 0.7 : 1,
+    }}
+  >
+    British
+  </button>
+</div>
               <button
                 type="button"
                 onClick={handleEnterConversation}
@@ -666,55 +714,7 @@ async function handleContinueAfterFeedback() {
   </div>
 ) : null}
 
-<div
-  style={{
-    marginTop: 14,
-    display: "flex",
-    gap: 10,
-  }}
->
-  <button
-    type="button"
-    onClick={() => setSelectedAccent("en_us")}
-    disabled={isRecording || isAnalyzing || isAiSpeaking}
-    style={{
-      flex: 1,
-      height: 46,
-      borderRadius: 16,
-      border: selectedAccent === "en_us" ? "none" : "1px solid rgba(15,23,42,0.08)",
-      background: selectedAccent === "en_us" ? "#2196F3" : "#FFFFFF",
-      color: selectedAccent === "en_us" ? "#FFFFFF" : "#0F172A",
-      fontSize: 14,
-      fontWeight: 900,
-      cursor: isRecording || isAnalyzing || isAiSpeaking ? "not-allowed" : "pointer",
-      boxShadow: selectedAccent === "en_us" ? "0 10px 24px rgba(33,150,243,0.22)" : "none",
-      opacity: isRecording || isAnalyzing || isAiSpeaking ? 0.7 : 1,
-    }}
-  >
-    American
-  </button>
 
-  <button
-    type="button"
-    onClick={() => setSelectedAccent("en_br")}
-    disabled={isRecording || isAnalyzing || isAiSpeaking}
-    style={{
-      flex: 1,
-      height: 46,
-      borderRadius: 16,
-      border: selectedAccent === "en_br" ? "none" : "1px solid rgba(15,23,42,0.08)",
-      background: selectedAccent === "en_br" ? "#2196F3" : "#FFFFFF",
-      color: selectedAccent === "en_br" ? "#FFFFFF" : "#0F172A",
-      fontSize: 14,
-      fontWeight: 900,
-      cursor: isRecording || isAnalyzing || isAiSpeaking ? "not-allowed" : "pointer",
-      boxShadow: selectedAccent === "en_br" ? "0 10px 24px rgba(33,150,243,0.22)" : "none",
-      opacity: isRecording || isAnalyzing || isAiSpeaking ? 0.7 : 1,
-    }}
-  >
-    British
-  </button>
-</div>
 
 <div style={{ marginTop: 14, minHeight: 64 }}>
   {isWaitingToContinue && !isAnalyzing ? (
