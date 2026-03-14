@@ -12,11 +12,22 @@ export default async function handler(req, res) {
 
     const { accent = "en_us" } = req.body || {};
 
-    const session = await client.beta.realtime.sessions.create({
-      model: "gpt-realtime",
-      voice: accent === "en_br" ? "alloy" : "verse",
-    });
-
+  const session = await client.realtime.clientSecrets.create({
+  session: {
+    type: "realtime",
+    model: "gpt-realtime",
+    audio: {
+      output: {
+        voice: accent === "en_br" ? "alloy" : "verse",
+      },
+    },
+  },
+});
+console.log("[realtime-session] session keys =", Object.keys(session || {}));
+console.log("[realtime-session] has client_secret =", !!session?.client_secret?.value);
+console.log("[realtime-session] session type =", session?.type);
+console.log("[realtime-session] model =", session?.model);
+console.log("[realtime-session] raw session =", JSON.stringify(session, null, 2));
     return res.status(200).json(session);
   } catch (err) {
     console.error("[realtime-session] error", err);
