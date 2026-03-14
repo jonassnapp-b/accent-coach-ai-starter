@@ -24,11 +24,7 @@ export default function ConversationCoach() {
   const accent = settings?.accentDefault || "en_us";
 
   const [assistantText, setAssistantText] = useState("");
-  const [feedbackSummary, setFeedbackSummary] = useState("");
-  const [feedbackTip, setFeedbackTip] = useState("");
-  const [suggestedRepeat, setSuggestedRepeat] = useState("");
-  const [weakPhonemes, setWeakPhonemes] = useState([]);
-  const [weakWords, setWeakWords] = useState([]);
+const [feedbackSummary, setFeedbackSummary] = useState("");
   const [hasEnteredConversation, setHasEnteredConversation] = useState(false);
   const [hasConversationStarted, setHasConversationStarted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -40,7 +36,6 @@ export default function ConversationCoach() {
   const [isWaitingToContinue, setIsWaitingToContinue] = useState(false);
   const [pendingNextAssistantText, setPendingNextAssistantText] = useState("");
 const [spokenFeedbackText, setSpokenFeedbackText] = useState("");
-const [scoreBreakdown, setScoreBreakdown] = useState(null);
 const ttsAudioRef = useRef(null);
   const realtimeRef = useRef(null);
   const mountedRef = useRef(true);
@@ -111,91 +106,8 @@ console.log("[ConversationCoach] tts status =", res.status);
       } catch {}
     };
   }, []);
-  function pronunciationLabel(score) {
-    if (score >= 90) return "Excellent clarity";
-    if (score >= 80) return "Good clarity";
-    if (score >= 70) return "Understandable";
-    return "Needs improvement";
-  }
-function flattenPhonemes(words = []) {
-  return words.flatMap((w) =>
-    Array.isArray(w?.phonemes)
-      ? w.phonemes.map((p) => ({
-          word: w?.word || "",
-          phoneme: String(p?.phoneme || "").trim(),
-          score: Number(p?.accuracyScore || 0),
-        }))
-      : []
-  );
-}
 
-function getStrictPronunciationScore(ui) {
-  const pron = Number(ui?.pronunciation || 0);
-  const words = Array.isArray(ui?.words) ? ui.words : [];
-  const phonemes = flattenPhonemes(words);
 
-  const weakWords = words.filter((w) => Number(w?.accuracyScore || 0) < 85);
-  const veryWeakWords = words.filter((w) => Number(w?.accuracyScore || 0) < 75);
-
-  const weakPhonemes = phonemes.filter((p) => p.score < 85);
-  const veryWeakPhonemes = phonemes.filter((p) => p.score < 75);
-
-  let penalty = 0;
-  penalty += weakWords.length * 1.5;
-  penalty += veryWeakWords.length * 2.5;
-  penalty += weakPhonemes.length * 0.5;
-  penalty += veryWeakPhonemes.length * 1.0;
-
-  const strict = Math.max(0, Math.min(100, pron - penalty));
-  return Math.round(strict);
-}
-
-function stricterLabel(score) {
-  if (score >= 97) return "Excellent";
-  if (score >= 90) return "Good";
-  if (score >= 82) return "Fair";
-  return "Needs work";
-}
-function buildSpeechTip({ weakPhonemes: phonemes, weakWords: words, fluency }) {
-  const topPhoneme = phonemes?.[0];
-  const secondPhoneme = phonemes?.[1];
-  const topWord = words?.[0];
-  const secondWord = words?.[1];
-
-  if (topWord?.word && secondWord?.word) {
-    return `The weakest words were "${topWord.word}" and "${secondWord.word}" — make those clearer.`;
-  }
-
-  if (topWord?.word) {
-    return `The word "${topWord.word}" was the least clear — repeat it more carefully.`;
-  }
-
-  if (topPhoneme?.label === "θ") {
-    return 'Your weakest sound was /th/ — keep the tongue lightly between the teeth.';
-  }
-
-  if (topPhoneme?.label === "ð") {
-    return 'Your weakest sound was voiced /th/ — keep it softer and voiced.';
-  }
-
-  if (topPhoneme?.label === "R") {
-    return "Your /r/ sound was weak — make it more controlled and consistent.";
-  }
-
-  if (topPhoneme?.label && secondPhoneme?.label) {
-    return `The weakest sounds were /${topPhoneme.label}/ and /${secondPhoneme.label}/ — focus on those.`;
-  }
-
-  if (topPhoneme?.label) {
-    return `Your weakest sound was /${topPhoneme.label}/ — focus on that sound.`;
-  }
-
-  if (typeof fluency === "number" && fluency < 75) {
-    return "Your fluency dropped — try to keep the sentence smoother and less choppy.";
-  }
-
-  return "Overall solid, but tighten the weakest sounds and words.";
-}
   function extractUserTranscriptFromMessage(msg) {
     const type = String(msg?.type || "");
 
@@ -230,55 +142,13 @@ function buildSpeechTip({ weakPhonemes: phonemes, weakWords: words, fluency }) {
 
     return String(directTranscript || "").replace(/\s+/g, " ").trim();
   }
-  function applySpeechFeedback(ui) {
-    const overallAccuracy = Number(ui?.overallAccuracy || 0);
 
-    const weakPhonemes = (ui?.words || [])
-      .flatMap((w) => w?.phonemes || [])
-      .map((p) => ({
-        label: String(p?.phoneme || p?.ph || "").trim().toUpperCase(),
-        score: Number(p?.accuracyScore || 0),
-      }))
-      .filter((p) => p.label && Number.isFinite(p.score) && p.score < 85)
-      .sort((a, b) => a.score - b.score)
-      .filter((p, index, arr) => arr.findIndex((x) => x.label === p.label) === index)
-      .slice(0, 2);
-
-    const weakWords = (ui?.words || [])
-      .map((w) => ({
-        word: String(w?.word || w?.w || "").trim(),
-        score: Number(w?.accuracyScore || 0),
-      }))
-      .filter((w) => w.word && Number.isFinite(w.score) && w.score < 85)
-      .sort((a, b) => a.score - b.score)
-      .slice(0, 2);
-
-    setFeedbackSummary(
-      `Pronunciation: ${overallAccuracy}% — ${pronunciationLabel(overallAccuracy)}`
-    );
-    setWeakPhonemes(weakPhonemes);
-    setWeakWords(weakWords);
-    setSuggestedRepeat("");
-    setFeedbackTip(
-      buildSpeechTip({
-        weakPhonemes,
-        weakWords,
-        fluency: ui?.fluency,
-        rhythm: ui?.rhythm,
-        speed: ui?.speed,
-      })
-    );
-  }
 
 async function analyzeUserTurn(recording) {
   if (!recording?.base64) {
-    setIsAnalyzing(false);
-    setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
-    setFeedbackTip("");
-    setWeakPhonemes([]);
-    setWeakWords([]);
-    setIsWaitingToContinue(false);
-    setScoreBreakdown(null);
+setIsAnalyzing(false);
+setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
+setIsWaitingToContinue(false);
     return;
   }
 
@@ -315,45 +185,16 @@ console.log("[ConversationCoach] azure json =", azureJson);
     const userTranscript = String(azureJson?.transcript || "").trim();
 
     if (!userTranscript) {
-      setFeedbackSummary("I couldn’t transcribe what you said. Please try again.");
-      setFeedbackTip("");
-      setWeakPhonemes([]);
-      setWeakWords([]);
-      setSpokenFeedbackText("");
-      setScoreBreakdown(null);
-      setPendingNextAssistantText("");
-      setIsWaitingToContinue(false);
-      setIsAnalyzing(false);
+setFeedbackSummary("I couldn’t transcribe what you said. Please try again.");
+setSpokenFeedbackText("");
+setPendingNextAssistantText("");
+setIsWaitingToContinue(false);
+setIsAnalyzing(false);
       return;
     }
 
   const aiController = new AbortController();
 const aiTimeout = setTimeout(() => aiController.abort(), 15000);
-
-const strictScore = getStrictPronunciationScore(azureJson);
-
-const uiWeakWords = (Array.isArray(azureJson?.words) ? azureJson.words : [])
-  .map((w) => ({
-    word: String(w?.word || "").trim(),
-    score: Number(w?.accuracyScore || 0),
-  }))
-  .filter((w) => w.word && Number.isFinite(w.score) && w.score > 0 && w.score < 90)
-  .sort((a, b) => a.score - b.score)
-  .slice(0, 3);
-
-const uiWeakPhonemes = (Array.isArray(azureJson?.words) ? azureJson.words : [])
-  .flatMap((w) =>
-    Array.isArray(w?.phonemes)
-      ? w.phonemes.map((p) => ({
-          label: String(p?.phoneme || "").trim(),
-          score: Number(p?.accuracyScore || 0),
-        }))
-      : []
-  )
-  .filter((p) => p.label && Number.isFinite(p.score) && p.score > 0 && p.score < 90)
-  .sort((a, b) => a.score - b.score)
-  .filter((p, i, arr) => arr.findIndex((x) => x.label === p.label) === i)
-  .slice(0, 4);
 
 let aiRes;
 
@@ -362,18 +203,15 @@ try {
   aiRes = await fetch(`${base}/api/ai-pronunciation-feedback`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      transcript: userTranscript,
-      scores: {
-        strictScore,
-        overallAccuracy: azureJson?.overallAccuracy,
-        fluency: azureJson?.fluency,
-        pronunciation: azureJson?.pronunciation,
-        weakWords: uiWeakWords,
-        weakPhonemes: uiWeakPhonemes,
-        words: azureJson?.words,
-      },
-    }),
+  body: JSON.stringify({
+  transcript: userTranscript,
+  scores: {
+    overallAccuracy: azureJson?.overallAccuracy,
+    fluency: azureJson?.fluency,
+    pronunciation: azureJson?.pronunciation,
+    words: azureJson?.words,
+  },
+}),
     signal: aiController.signal,
   });
 } finally {
@@ -388,24 +226,7 @@ console.log("[ConversationCoach] ai json =", aiJson);
       throw new Error(aiJson?.error || "AI feedback failed");
     }
 
-setScoreBreakdown({
-  strict: strictScore,
-  accuracy: Math.round(Number(azureJson?.overallAccuracy || 0)),
-  fluency: Math.round(Number(azureJson?.fluency || 0)),
-});
-
-setFeedbackSummary(`Pronunciation: ${strictScore}% — ${stricterLabel(strictScore)}`);
-
-setWeakPhonemes(uiWeakPhonemes);
-setWeakWords(uiWeakWords);
-
-setFeedbackTip(
-  buildSpeechTip({
-    weakPhonemes: uiWeakPhonemes,
-    weakWords: uiWeakWords,
-    fluency: Number(azureJson?.fluency || 0),
-  })
-);
+setFeedbackSummary("");
 
 const spokenText = String(aiJson?.spokenFeedbackText || "").trim();
 setSpokenFeedbackText(spokenText);
@@ -425,14 +246,10 @@ setIsWaitingToContinue(true);
       : err?.message || "Speech analysis failed.";
 
   setError(msg);
-  setFeedbackSummary(msg);
-  setFeedbackTip("");
-  setWeakPhonemes([]);
-  setWeakWords([]);
-  setSpokenFeedbackText("");
-  setScoreBreakdown(null);
-  setPendingNextAssistantText("");
-  setIsWaitingToContinue(false);
+setFeedbackSummary(msg);
+setSpokenFeedbackText("");
+setPendingNextAssistantText("");
+setIsWaitingToContinue(false);
 } finally {
   setIsAnalyzing(false);
 }
@@ -630,13 +447,8 @@ setIsWaitingToContinue(true);
     setIsWaitingToContinue(false);
     setHasConversationStarted(true);
     setError("");
-    setFeedbackSummary("");
-    setFeedbackTip("");
-    setSuggestedRepeat("");
-    setWeakPhonemes([]);
-    setWeakWords([]);
-    setHoldScale(1.08);
-    setScoreBreakdown(null);
+  setFeedbackSummary("");
+setHoldScale(1.08);
   }
 
   async function handleHoldEnd(e) {
@@ -653,21 +465,15 @@ setIsWaitingToContinue(true);
     if (!userSpeechStartedRef.current) {
       suppressNextAssistantResponseRef.current = true;
       setIsAnalyzing(false);
-      setError("");
-      setFeedbackTip("");
-      setWeakPhonemes([]);
-      setWeakWords([]);
-      setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
+  setError("");
+setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
       return;
     }
 
        suppressNextAssistantResponseRef.current = true;
     setIsWaitingToContinue(true);
     setIsAnalyzing(true);
-    setFeedbackSummary("Analyzing your pronunciation...");
-    setFeedbackTip("");
-    setWeakPhonemes([]);
-    setWeakWords([]);
+  setFeedbackSummary("Analyzing your pronunciation...");
 
     await analyzeUserTurn(recording);
   }
@@ -686,21 +492,15 @@ setIsWaitingToContinue(true);
       if (!userSpeechStartedRef.current) {
         suppressNextAssistantResponseRef.current = true;
         setIsAnalyzing(false);
-        setError("");
-        setFeedbackTip("");
-        setWeakPhonemes([]);
-        setWeakWords([]);
-        setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
+      setError("");
+setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
         return;
       }
 
         suppressNextAssistantResponseRef.current = true;
       setIsWaitingToContinue(true);
       setIsAnalyzing(true);
-      setFeedbackSummary("Analyzing your pronunciation...");
-      setFeedbackTip("");
-      setWeakPhonemes([]);
-      setWeakWords([]);
+     setFeedbackSummary("Analyzing your pronunciation...");
 
       await analyzeUserTurn(recording);
     }
@@ -859,177 +659,7 @@ async function handleContinueAfterFeedback() {
               </div>
             ) : null}
 
-            <div style={{ marginTop: 14, minHeight: 112 }}>
-              {(feedbackSummary || weakPhonemes.length || weakWords.length || feedbackTip) ? (
-                <div
-                  style={{
-                    background: "rgba(255,255,255,0.86)",
-                    border: "1px solid rgba(15,23,42,0.08)",
-                    boxShadow: "0 10px 28px rgba(15,23,42,0.05)",
-                    borderRadius: 22,
-                    padding: "14px 14px 12px",
-                  }}
-                >
-                {feedbackSummary ? (
-  <div
-    style={{
-      fontSize: 14,
-      lineHeight: 1.45,
-      fontWeight: 800,
-      color: "#334155",
-      marginBottom:
-        scoreBreakdown ||
-        weakPhonemes.length ||
-        weakWords.length ||
-        suggestedRepeat
-          ? 10
-          : 0,
-    }}
-  >
-    {feedbackSummary}
-  </div>
-) : null}
-
-{scoreBreakdown ? (
-  <div
-    style={{
-      display: "flex",
-      gap: 8,
-      flexWrap: "wrap",
-      marginBottom: weakPhonemes.length || weakWords.length || suggestedRepeat ? 10 : 0,
-    }}
-  >
-{[
-  ["Strict", scoreBreakdown.strict],
-  ["Accuracy", scoreBreakdown.accuracy],
-  ["Fluency", scoreBreakdown.fluency],
-].map(([label, value]) => (
-      <span
-        key={label}
-        style={{
-          padding: "7px 10px",
-          borderRadius: 999,
-          background: "#F8FAFC",
-          border: "1px solid rgba(15,23,42,0.08)",
-          fontSize: 12,
-          fontWeight: 900,
-          color: "#334155",
-        }}
-      >
-        {label}: {Number.isFinite(value) ? `${value}%` : "—"}
-      </span>
-    ))}
-  </div>
-) : null}
-
-                  {weakPhonemes.length ? (
-                    <div style={{ marginBottom: weakWords.length || suggestedRepeat ? 10 : 0 }}>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 900,
-                          color: "#64748B",
-                          marginBottom: 6,
-                        }}
-                      >
-                        Weak sounds
-                      </div>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        {weakPhonemes.map((p) => (
-                          <span
-                            key={`${p.label}-${p.score}`}
-                            style={{
-                              padding: "7px 10px",
-                              borderRadius: 999,
-                              background: "#F8FAFC",
-                              border: "1px solid rgba(15,23,42,0.08)",
-                              fontSize: 12,
-                              fontWeight: 900,
-                              color: "#94A3B8",
-                            }}
-                          >
-                            {p.label} {Number.isFinite(p.score) ? `${p.score}%` : ""}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {weakWords.length ? (
-                    <div style={{ marginBottom: suggestedRepeat ? 10 : 0 }}>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 900,
-                          color: "#64748B",
-                          marginBottom: 6,
-                        }}
-                      >
-                        Weak words
-                      </div>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        {weakWords.map((w) => (
-                          <span
-                            key={`${w.word}-${w.score}`}
-                            style={{
-                              padding: "7px 10px",
-                              borderRadius: 999,
-                              background: "#F8FAFC",
-                              border: "1px solid rgba(15,23,42,0.08)",
-                              fontSize: 12,
-                              fontWeight: 900,
-                              color: "#94A3B8",
-                            }}
-                          >
-                            {w.word} {Number.isFinite(w.score) ? `${w.score}%` : ""}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-
-                                                   {feedbackTip ? (
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 900,
-                          color: "#64748B",
-                          marginBottom: 6,
-                        }}
-                      >
-                        Tip
-                      </div>
-                      <div style={{ fontSize: 13, fontWeight: 900, color: "#0F172A" }}>
-                        {feedbackTip}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {isWaitingToContinue && !isAnalyzing ? (
-                    <button
-                      type="button"
-                      onClick={handleContinueAfterFeedback}
-                      style={{
-                        marginTop: 12,
-                        width: "100%",
-                        height: 44,
-                        borderRadius: 14,
-                        border: "none",
-                        background: "#2196F3",
-                        color: "#FFFFFF",
-                        fontSize: 14,
-                        fontWeight: 900,
-                        cursor: "pointer",
-                        boxShadow: "0 10px 24px rgba(33,150,243,0.22)",
-                      }}
-                    >
-                      Continue conversation
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
+          
 
             <div
               style={{
