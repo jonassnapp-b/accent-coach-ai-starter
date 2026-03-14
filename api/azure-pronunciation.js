@@ -21,25 +21,30 @@ export default async function handler(req, res) {
 
     const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed`;
 
-    const azureRes = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Ocp-Apim-Subscription-Key": key,
-        "Content-Type": mime || "audio/webm",
-        Accept: "application/json;text/xml",
-        "Pronunciation-Assessment": JSON.stringify({
-          ReferenceText: "",
-          GradingSystem: "HundredMark",
-          Dimension: "Comprehensive",
-          EnableMiscue: false,
-          ScenarioId: "unscripted",
-        }),
-      },
-      body: audioBuffer,
-    });
+    const paHeader = Buffer.from(
+  JSON.stringify({
+    GradingSystem: "HundredMark",
+    Dimension: "Comprehensive",
+    EnableMiscue: false,
+    ScenarioId: "unscripted",
+  })
+).toString("base64");
+console.log("[azure] mime =", mime);
+console.log("[azure] audio bytes =", audioBuffer.length);
+const azureRes = await fetch(url, {
+  method: "POST",
+  headers: {
+    "Ocp-Apim-Subscription-Key": key,
+    "Content-Type": mime || "audio/webm",
+    Accept: "application/json;text/xml",
+    "Pronunciation-Assessment": paHeader,
+  },
+  body: audioBuffer,
+});
 
     const raw = await azureRes.text();
-
+console.log("[azure] status =", azureRes.status);
+console.log("[azure] raw =", raw);
     let data = {};
     try {
       data = raw ? JSON.parse(raw) : {};
