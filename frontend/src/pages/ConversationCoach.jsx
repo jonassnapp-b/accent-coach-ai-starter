@@ -260,14 +260,10 @@ setIsWaitingToContinue(false);
         realtimeRef.current?.disconnect?.();
       } catch {}
 
-           setError("");
-      setAssistantText("");
-      setFeedbackSummary("");
-      setFeedbackTip("");
-      setSuggestedRepeat("");
-      setWeakPhonemes([]);
-      setWeakWords([]);
-      setHasConversationStarted(false);
+          setError("");
+setAssistantText("");
+setFeedbackSummary("");
+setHasConversationStarted(false);
       setHoldScale(1);
       setIsAiSpeaking(false);
       setIsRecording(false);
