@@ -25,6 +25,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing audioBase64" });
     }
 const audioBuffer = Buffer.from(audioBase64, "base64");
+console.log("[azure] entered wav conversion");
 const inputPath = path.join(os.tmpdir(), `input-${Date.now()}.webm`);
 const outputPath = path.join(os.tmpdir(), `output-${Date.now()}.wav`);
 
@@ -40,6 +41,7 @@ await new Promise((resolve, reject) => {
 });
 
 const wavBuffer = fs.readFileSync(outputPath);
+console.log("[azure] wav bytes =", wavBuffer.length);
 const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed`;
 
 const paHeader = Buffer.from(
@@ -52,7 +54,7 @@ const paHeader = Buffer.from(
 ).toString("base64");
 
 console.log("[azure] mime =", mime);
-console.log("[azure] audio bytes =", audioBuffer.length);
+console.log("[azure] input bytes =", audioBuffer.length);
 
 const azureRes = await fetch(url, {
   method: "POST",
