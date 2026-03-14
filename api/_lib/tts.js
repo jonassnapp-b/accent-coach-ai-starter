@@ -114,12 +114,12 @@ async function toWavPcm16Mono16k(inputBuf, inputExt = ".mp3") {
   await fs.writeFile(inPath, inputBuf);
 
   return new Promise((resolve, reject) => {
-   ffmpeg(inPath)
+ffmpeg(inPath)
   .noVideo()
   .audioChannels(1)
   .audioFrequency(16000)
   .audioCodec("pcm_s16le")
-  .audioFilters("volume=2.2")
+  .audioFilters("loudnorm=I=-16:TP=-1.5:LRA=11,volume=2.8")
   .format("wav")
       .on("error", async (err) => {
         try { await fs.unlink(inPath); } catch {}
