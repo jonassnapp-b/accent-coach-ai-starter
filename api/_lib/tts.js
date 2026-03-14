@@ -119,7 +119,7 @@ ffmpeg(inPath)
   .audioChannels(1)
   .audioFrequency(16000)
   .audioCodec("pcm_s16le")
-  .audioFilters("loudnorm=I=-18:TP=-2:LRA=7")
+  .audioFilters("highpass=f=120,lowpass=f=7000,equalizer=f=2800:t=q:w=1.2:g=3,loudnorm=I=-15:TP=-2:LRA=7")
   .format("wav")
       .on("error", async (err) => {
         try { await fs.unlink(inPath); } catch {}
