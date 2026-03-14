@@ -273,11 +273,16 @@ try {
   aiRes = await fetch(`${base}/api/ai-pronunciation-feedback`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      assistantPrompt: assistantText || "",
-      userTranscript,
-      azureScores: azureJson,
-    }),
+   body: JSON.stringify({
+  transcript: userTranscript,
+  scores: {
+    overallAccuracy: azureJson?.overallAccuracy,
+    fluency: azureJson?.fluency,
+    completeness: azureJson?.completeness,
+    pronunciation: azureJson?.pronunciation,
+    words: azureJson?.words,
+  },
+}),
     signal: aiController.signal,
   });
 } finally {
