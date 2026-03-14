@@ -267,14 +267,10 @@ console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realti
       const stream = event.streams?.[0];
       if (!stream) return;
 
-      remoteAudioEl.srcObject = stream;
-      remoteAudioEl.muted = true;
-
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtx) {
-          if (typeof onRemoteAudio === "function") onRemoteAudio(remoteAudioEl, stream);
-          return;
+          throw new Error("Web Audio API not available");
         }
 
         if (!remoteAudioContext) {
@@ -294,16 +290,15 @@ console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realti
 
         remoteSourceNode = remoteAudioContext.createMediaStreamSource(stream);
         remoteGainNode = remoteAudioContext.createGain();
-        remoteGainNode.gain.value = 0.18;
+        remoteGainNode.gain.value = 0.15;
 
         remoteSourceNode.connect(remoteGainNode);
         remoteGainNode.connect(remoteAudioContext.destination);
 
-        if (typeof onRemoteAudio === "function") onRemoteAudio(remoteAudioEl, stream);
+        if (typeof onRemoteAudio === "function") onRemoteAudio(null, stream);
       } catch (err) {
         console.error("[realtimeConversation] remote gain setup failed", err);
-        remoteAudioEl.muted = false;
-        if (typeof onRemoteAudio === "function") onRemoteAudio(remoteAudioEl, stream);
+        safeEmitError(err);
       }
     };
     dc = pc.createDataChannel("oai-events");
