@@ -40,6 +40,7 @@ export default function ConversationCoach() {
   const [isWaitingToContinue, setIsWaitingToContinue] = useState(false);
   const [pendingNextAssistantText, setPendingNextAssistantText] = useState("");
 const [spokenFeedbackText, setSpokenFeedbackText] = useState("");
+const [scoreBreakdown, setScoreBreakdown] = useState(null);
 const ttsAudioRef = useRef(null);
   const realtimeRef = useRef(null);
   const mountedRef = useRef(true);
@@ -116,7 +117,45 @@ console.log("[ConversationCoach] tts status =", res.status);
     if (score >= 70) return "Understandable";
     return "Needs improvement";
   }
+function flattenPhonemes(words = []) {
+  return words.flatMap((w) =>
+    Array.isArray(w?.phonemes)
+      ? w.phonemes.map((p) => ({
+          word: w?.word || "",
+          phoneme: String(p?.phoneme || "").trim(),
+          score: Number(p?.accuracyScore || 0),
+        }))
+      : []
+  );
+}
 
+function getStrictPronunciationScore(ui) {
+  const pron = Number(ui?.pronunciation || 0);
+  const words = Array.isArray(ui?.words) ? ui.words : [];
+  const phonemes = flattenPhonemes(words);
+
+  const weakWords = words.filter((w) => Number(w?.accuracyScore || 0) < 85);
+  const veryWeakWords = words.filter((w) => Number(w?.accuracyScore || 0) < 75);
+
+  const weakPhonemes = phonemes.filter((p) => p.score < 85);
+  const veryWeakPhonemes = phonemes.filter((p) => p.score < 75);
+
+  let penalty = 0;
+  penalty += weakWords.length * 1.5;
+  penalty += veryWeakWords.length * 2.5;
+  penalty += weakPhonemes.length * 0.5;
+  penalty += veryWeakPhonemes.length * 1.0;
+
+  const strict = Math.max(0, Math.min(100, pron - penalty));
+  return Math.round(strict);
+}
+
+function stricterLabel(score) {
+  if (score >= 95) return "Excellent";
+  if (score >= 88) return "Good";
+  if (score >= 80) return "Fair";
+  return "Needs work";
+}
   function buildSpeechTip({ weakPhonemes: phonemes, weakWords: words, fluency, rhythm, speed }) {
     const topPhoneme = phonemes?.[0];
     const topWord = words?.[0];
@@ -217,6 +256,7 @@ async function analyzeUserTurn(recording) {
     setWeakPhonemes([]);
     setWeakWords([]);
     setIsWaitingToContinue(false);
+    setScoreBreakdown(null);
     return;
   }
 
@@ -258,6 +298,7 @@ console.log("[ConversationCoach] azure json =", azureJson);
       setWeakPhonemes([]);
       setWeakWords([]);
       setSpokenFeedbackText("");
+      setScoreBreakdown(null);
       setPendingNextAssistantText("");
       setIsWaitingToContinue(false);
       setIsAnalyzing(false);
@@ -274,13 +315,14 @@ try {
   aiRes = await fetch(`${base}/api/ai-pronunciation-feedback`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-   body: JSON.stringify({
+  body: JSON.stringify({
   transcript: userTranscript,
   scores: {
     overallAccuracy: azureJson?.overallAccuracy,
     fluency: azureJson?.fluency,
     completeness: azureJson?.completeness,
     pronunciation: azureJson?.pronunciation,
+    prosody: azureJson?.prosody,
     words: azureJson?.words,
   },
 }),
@@ -298,14 +340,48 @@ console.log("[ConversationCoach] ai json =", aiJson);
       throw new Error(aiJson?.error || "AI feedback failed");
     }
 
-   setFeedbackSummary(
+const strictScore = getStrictPronunciationScore(azureJson);
+
+setScoreBreakdown({
+  strict: strictScore,
+  accuracy: Math.round(Number(azureJson?.overallAccuracy || 0)),
+  fluency: Math.round(Number(azureJson?.fluency || 0)),
+  completeness: Math.round(Number(azureJson?.completeness || 0)),
+  prosody: Math.round(Number(azureJson?.prosody || 0)),
+});
+
+setFeedbackSummary(
   aiJson?.feedbackSummary ||
-    `Pronunciation: ${Math.round(Number(azureJson?.pronunciation || 0))}%`
+    `Pronunciation: ${strictScore}% — ${stricterLabel(strictScore)}`
 );
 
 setFeedbackTip(aiJson?.feedbackTip || "");
-setWeakPhonemes([]);
-setWeakWords(Array.isArray(aiJson?.weakWords) ? aiJson.weakWords.slice(0, 2) : []);
+
+const uiWeakWords = (Array.isArray(azureJson?.words) ? azureJson.words : [])
+  .map((w) => ({
+    word: String(w?.word || "").trim(),
+    score: Number(w?.accuracyScore || 0),
+  }))
+  .filter((w) => w.word && w.score < 90)
+  .sort((a, b) => a.score - b.score)
+  .slice(0, 3);
+
+const uiWeakPhonemes = (Array.isArray(azureJson?.words) ? azureJson.words : [])
+  .flatMap((w) =>
+    Array.isArray(w?.phonemes)
+      ? w.phonemes.map((p) => ({
+          label: String(p?.phoneme || "").trim(),
+          score: Number(p?.accuracyScore || 0),
+        }))
+      : []
+  )
+  .filter((p) => p.label && p.score < 90)
+  .sort((a, b) => a.score - b.score)
+  .filter((p, i, arr) => arr.findIndex((x) => x.label === p.label) === i)
+  .slice(0, 4);
+
+setWeakPhonemes(uiWeakPhonemes);
+setWeakWords(uiWeakWords);
 
 const spokenText = String(aiJson?.spokenFeedbackText || "").trim();
 setSpokenFeedbackText(spokenText);
@@ -330,6 +406,7 @@ setIsWaitingToContinue(true);
   setWeakPhonemes([]);
   setWeakWords([]);
   setSpokenFeedbackText("");
+  setScoreBreakdown(null);
   setPendingNextAssistantText("");
   setIsWaitingToContinue(false);
 } finally {
@@ -535,6 +612,7 @@ setIsWaitingToContinue(true);
     setWeakPhonemes([]);
     setWeakWords([]);
     setHoldScale(1.08);
+    setScoreBreakdown(null);
   }
 
   async function handleHoldEnd(e) {
@@ -768,20 +846,59 @@ async function handleContinueAfterFeedback() {
                     padding: "14px 14px 12px",
                   }}
                 >
-                  {feedbackSummary ? (
-                    <div
-                      style={{
-                        fontSize: 14,
-                        lineHeight: 1.45,
-                        fontWeight: 800,
-                        color: "#334155",
-                        marginBottom:
-                          weakPhonemes.length || weakWords.length || suggestedRepeat ? 10 : 0,
-                      }}
-                    >
-                      {feedbackSummary}
-                    </div>
-                  ) : null}
+                {feedbackSummary ? (
+  <div
+    style={{
+      fontSize: 14,
+      lineHeight: 1.45,
+      fontWeight: 800,
+      color: "#334155",
+      marginBottom:
+        scoreBreakdown ||
+        weakPhonemes.length ||
+        weakWords.length ||
+        suggestedRepeat
+          ? 10
+          : 0,
+    }}
+  >
+    {feedbackSummary}
+  </div>
+) : null}
+
+{scoreBreakdown ? (
+  <div
+    style={{
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap",
+      marginBottom: weakPhonemes.length || weakWords.length || suggestedRepeat ? 10 : 0,
+    }}
+  >
+    {[
+      ["Strict", scoreBreakdown.strict],
+      ["Accuracy", scoreBreakdown.accuracy],
+      ["Fluency", scoreBreakdown.fluency],
+      ["Completeness", scoreBreakdown.completeness],
+      ["Prosody", scoreBreakdown.prosody],
+    ].map(([label, value]) => (
+      <span
+        key={label}
+        style={{
+          padding: "7px 10px",
+          borderRadius: 999,
+          background: "#F8FAFC",
+          border: "1px solid rgba(15,23,42,0.08)",
+          fontSize: 12,
+          fontWeight: 900,
+          color: "#334155",
+        }}
+      >
+        {label}: {Number.isFinite(value) ? `${value}%` : "—"}
+      </span>
+    ))}
+  </div>
+) : null}
 
                   {weakPhonemes.length ? (
                     <div style={{ marginBottom: weakWords.length || suggestedRepeat ? 10 : 0 }}>
