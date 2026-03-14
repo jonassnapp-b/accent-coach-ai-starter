@@ -18,6 +18,55 @@ function getApiBase() {
   }
   return (ls || env || window.location.origin).replace(/\/+$/, "");
 }
+async function speakText(text) {
+  const t = String(text || "").trim();
+  if (!t) return;
+
+  const base = getApiBase();
+
+  const res = await fetch(`${base}/api/tts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text: t,
+      accent: "en_us",
+      rate: 1,
+    }),
+  });
+
+  if (!res.ok) {
+    const msg = await res.text().catch(() => "");
+    throw new Error(msg || "TTS failed");
+  }
+
+  const buf = await res.arrayBuffer();
+  const mime = (res.headers.get("content-type") || "audio/mpeg").split(";")[0].trim();
+  const blob = new Blob([buf], { type: mime });
+  const url = URL.createObjectURL(blob);
+
+  return new Promise((resolve, reject) => {
+    try {
+      if (!ttsAudioRef.current) {
+        ttsAudioRef.current = new Audio();
+      }
+
+      const a = ttsAudioRef.current;
+      a.src = url;
+      a.onended = () => {
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      a.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Failed to play TTS"));
+      };
+      a.play().catch(reject);
+    } catch (err) {
+      URL.revokeObjectURL(url);
+      reject(err);
+    }
+  });
+}
 export default function ConversationCoach() {
   const { settings } = useSettings?.() || { settings: {} };
   const accent = settings?.accentDefault || "en_us";
@@ -37,6 +86,9 @@ export default function ConversationCoach() {
   const [error, setError] = useState("");
   const [holdScale, setHoldScale] = useState(1);
   const [isWaitingToContinue, setIsWaitingToContinue] = useState(false);
+  const [pendingNextAssistantText, setPendingNextAssistantText] = useState("");
+const [spokenFeedbackText, setSpokenFeedbackText] = useState("");
+const ttsAudioRef = useRef(null);
   const realtimeRef = useRef(null);
   const mountedRef = useRef(true);
   const holdStartedRef = useRef(false);
@@ -156,77 +208,88 @@ export default function ConversationCoach() {
     );
   }
 
-  async function analyzeUserTurn(recording) {
-    if (!recording?.base64) {
-      setIsAnalyzing(false);
-      setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
-      setFeedbackTip("");
-      setWeakPhonemes([]);
-      setWeakWords([]);
-      return;
+async function analyzeUserTurn(recording) {
+  if (!recording?.base64) {
+    setIsAnalyzing(false);
+    setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
+    setFeedbackTip("");
+    setWeakPhonemes([]);
+    setWeakWords([]);
+    setIsWaitingToContinue(false);
+    return;
+  }
+
+  try {
+    const base = getApiBase();
+
+    const azureRes = await fetch(`${base}/api/azure-pronunciation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        audioBase64: recording.base64,
+        mime: recording.mimeType || "audio/webm",
+      }),
+    });
+
+    const azureJson = await azureRes.json().catch(() => ({}));
+
+    if (!azureRes.ok) {
+      throw new Error(azureJson?.error || "Azure pronunciation failed");
     }
 
-    const transcriptRefText = String(lastUserTranscriptRef.current || "")
-      .replace(/\s+/g, " ")
-      .trim();
+    const userTranscript = String(azureJson?.transcript || "").trim();
 
-    if (!transcriptRefText) {
-      setIsAnalyzing(false);
-      setError("");
+    if (!userTranscript) {
       setFeedbackSummary("I couldn’t transcribe what you said. Please try again.");
       setFeedbackTip("");
       setWeakPhonemes([]);
       setWeakWords([]);
+      setSpokenFeedbackText("");
+      setPendingNextAssistantText("");
       setIsWaitingToContinue(false);
+      setIsAnalyzing(false);
       return;
     }
 
-    try {
-      const base = getApiBase();
-      console.log("[ConversationCoach] analyze refText =", transcriptRefText);
-const res = await fetch(`${base}/api/analyze-speech`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-             body: JSON.stringify({
-        audioBase64: recording.base64,
-        mime: recording.mimeType || "audio/webm",
-        accent,
-        refText: transcriptRefText,
+    const aiRes = await fetch(`${base}/api/ai-pronunciation-feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        assistantPrompt: assistantText || "",
+        userTranscript,
+        azureScores: azureJson,
       }),
-      });
-      console.log("[ConversationCoach][analyze-speech] request path =", `${base}/api/analyze-speech`);
-      const rawText = await res.text();
-      let data = {};
-      try {
-        data = rawText ? JSON.parse(rawText) : {};
-      } catch {
-        data = { rawText };
-      }
+    });
 
-      console.log("[ConversationCoach][analyze-speech] url =", res.url);
-      console.log("[ConversationCoach][analyze-speech] status =", res.status);
-      console.log("[ConversationCoach][analyze-speech] statusText =", res.statusText);
-      console.log("[ConversationCoach][analyze-speech] body =", data);
+    const aiJson = await aiRes.json().catch(() => ({}));
 
-      if (!res.ok) {
-        throw new Error(
-          data?.error ||
-            data?.detail ||
-            data?.rawText ||
-            `Speech analysis failed (${res.status})`
-        );
-      }
-
-      applySpeechFeedback(data);
-    } catch (err) {
-      setError(err?.message || "Speech analysis failed.");
-      setFeedbackTip("");
-      setWeakPhonemes([]);
-      setWeakWords([]);
-    } finally {
-      setIsAnalyzing(false);
+    if (!aiRes.ok) {
+      throw new Error(aiJson?.error || "AI feedback failed");
     }
+
+    setFeedbackSummary(
+      aiJson?.feedbackSummary ||
+        `Pronunciation: ${Math.round(Number(azureJson?.pronunciation || 0))}%`
+    );
+
+    setFeedbackTip(aiJson?.feedbackTip || "");
+    setWeakPhonemes([]);
+    setWeakWords(Array.isArray(aiJson?.weakWords) ? aiJson.weakWords.slice(0, 2) : []);
+    setSpokenFeedbackText(aiJson?.spokenFeedbackText || "");
+    setPendingNextAssistantText(aiJson?.nextAssistantText || "");
+    setIsWaitingToContinue(true);
+  } catch (err) {
+    setError(err?.message || "Speech analysis failed.");
+    setFeedbackTip("");
+    setWeakPhonemes([]);
+    setWeakWords([]);
+    setSpokenFeedbackText("");
+    setPendingNextAssistantText("");
+    setIsWaitingToContinue(false);
+  } finally {
+    setIsAnalyzing(false);
   }
+}
   async function startNewConversation() {
     try {
       try {
@@ -520,11 +583,26 @@ const res = await fetch(`${base}/api/analyze-speech`, {
   const circleShadow = isRecording
     ? "0 0 0 14px rgba(33,150,243,0.16), 0 0 42px rgba(33,150,243,0.52), 0 18px 42px rgba(33,150,243,0.30)"
     : "0 12px 30px rgba(33,150,243,0.22)";
-  function handleContinueAfterFeedback() {
+async function handleContinueAfterFeedback() {
+  try {
     setError("");
     setIsWaitingToContinue(false);
-    realtimeRef.current?.requestAssistantReply?.();
+
+    if (spokenFeedbackText) {
+      setIsAiSpeaking(true);
+      await speakText(spokenFeedbackText);
+      setIsAiSpeaking(false);
+    }
+
+    if (pendingNextAssistantText) {
+      setAssistantText(pendingNextAssistantText);
+      setPendingNextAssistantText("");
+    }
+  } catch (err) {
+    setIsAiSpeaking(false);
+    setError(err?.message || "Failed to continue conversation.");
   }
+}
   return (
     <div
       style={{
@@ -902,6 +980,7 @@ const res = await fetch(`${base}/api/analyze-speech`, {
           </>
         )}
       </div>
+      <audio ref={ttsAudioRef} />
     </div>
   );
 }
