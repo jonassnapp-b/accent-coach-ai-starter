@@ -18,6 +18,36 @@ function getApiBase() {
   }
   return (ls || env || window.location.origin).replace(/\/+$/, "");
 }
+
+export default function ConversationCoach() {
+  const { settings } = useSettings?.() || { settings: {} };
+  const accent = settings?.accentDefault || "en_us";
+
+  const [assistantText, setAssistantText] = useState("");
+  const [feedbackSummary, setFeedbackSummary] = useState("");
+  const [feedbackTip, setFeedbackTip] = useState("");
+  const [suggestedRepeat, setSuggestedRepeat] = useState("");
+  const [weakPhonemes, setWeakPhonemes] = useState([]);
+  const [weakWords, setWeakWords] = useState([]);
+  const [hasEnteredConversation, setHasEnteredConversation] = useState(false);
+  const [hasConversationStarted, setHasConversationStarted] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const [isStartingConversation, setIsStartingConversation] = useState(false);
+  const [error, setError] = useState("");
+  const [holdScale, setHoldScale] = useState(1);
+  const [isWaitingToContinue, setIsWaitingToContinue] = useState(false);
+  const [pendingNextAssistantText, setPendingNextAssistantText] = useState("");
+const [spokenFeedbackText, setSpokenFeedbackText] = useState("");
+const ttsAudioRef = useRef(null);
+  const realtimeRef = useRef(null);
+  const mountedRef = useRef(true);
+  const holdStartedRef = useRef(false);
+  const userSpeechStartedRef = useRef(false);
+  const suppressNextAssistantResponseRef = useRef(false);
+  const waitingForUserReleaseRef = useRef(false);
+  const lastUserTranscriptRef = useRef("");
 async function speakText(text) {
   const t = String(text || "").trim();
   if (!t) return;
@@ -67,36 +97,6 @@ async function speakText(text) {
     }
   });
 }
-export default function ConversationCoach() {
-  const { settings } = useSettings?.() || { settings: {} };
-  const accent = settings?.accentDefault || "en_us";
-
-  const [assistantText, setAssistantText] = useState("");
-  const [feedbackSummary, setFeedbackSummary] = useState("");
-  const [feedbackTip, setFeedbackTip] = useState("");
-  const [suggestedRepeat, setSuggestedRepeat] = useState("");
-  const [weakPhonemes, setWeakPhonemes] = useState([]);
-  const [weakWords, setWeakWords] = useState([]);
-  const [hasEnteredConversation, setHasEnteredConversation] = useState(false);
-  const [hasConversationStarted, setHasConversationStarted] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
-  const [isStartingConversation, setIsStartingConversation] = useState(false);
-  const [error, setError] = useState("");
-  const [holdScale, setHoldScale] = useState(1);
-  const [isWaitingToContinue, setIsWaitingToContinue] = useState(false);
-  const [pendingNextAssistantText, setPendingNextAssistantText] = useState("");
-const [spokenFeedbackText, setSpokenFeedbackText] = useState("");
-const ttsAudioRef = useRef(null);
-  const realtimeRef = useRef(null);
-  const mountedRef = useRef(true);
-  const holdStartedRef = useRef(false);
-  const userSpeechStartedRef = useRef(false);
-  const suppressNextAssistantResponseRef = useRef(false);
-  const waitingForUserReleaseRef = useRef(false);
-  const lastUserTranscriptRef = useRef("");
-
   const isBusy = isStartingConversation;
 
   useEffect(() => {
@@ -222,14 +222,24 @@ async function analyzeUserTurn(recording) {
   try {
     const base = getApiBase();
 
-    const azureRes = await fetch(`${base}/api/azure-pronunciation`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        audioBase64: recording.base64,
-        mime: recording.mimeType || "audio/webm",
-      }),
-    });
+  const azureController = new AbortController();
+const azureTimeout = setTimeout(() => azureController.abort(), 15000);
+
+let azureRes;
+
+try {
+  azureRes = await fetch(`${base}/api/azure-pronunciation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      audioBase64: recording.base64,
+      mime: recording.mimeType || "audio/webm",
+    }),
+    signal: azureController.signal,
+  });
+} finally {
+  clearTimeout(azureTimeout);
+}
 
     const azureJson = await azureRes.json().catch(() => ({}));
 
@@ -251,15 +261,25 @@ async function analyzeUserTurn(recording) {
       return;
     }
 
-    const aiRes = await fetch(`${base}/api/ai-pronunciation-feedback`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        assistantPrompt: assistantText || "",
-        userTranscript,
-        azureScores: azureJson,
-      }),
-    });
+  const aiController = new AbortController();
+const aiTimeout = setTimeout(() => aiController.abort(), 15000);
+
+let aiRes;
+
+try {
+  aiRes = await fetch(`${base}/api/ai-pronunciation-feedback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      assistantPrompt: assistantText || "",
+      userTranscript,
+      azureScores: azureJson,
+    }),
+    signal: aiController.signal,
+  });
+} finally {
+  clearTimeout(aiTimeout);
+}
 
     const aiJson = await aiRes.json().catch(() => ({}));
 
@@ -278,17 +298,23 @@ async function analyzeUserTurn(recording) {
     setSpokenFeedbackText(aiJson?.spokenFeedbackText || "");
     setPendingNextAssistantText(aiJson?.nextAssistantText || "");
     setIsWaitingToContinue(true);
-  } catch (err) {
-    setError(err?.message || "Speech analysis failed.");
-    setFeedbackTip("");
-    setWeakPhonemes([]);
-    setWeakWords([]);
-    setSpokenFeedbackText("");
-    setPendingNextAssistantText("");
-    setIsWaitingToContinue(false);
-  } finally {
-    setIsAnalyzing(false);
-  }
+} catch (err) {
+  const msg =
+    err?.name === "AbortError"
+      ? "Speech analysis timed out."
+      : err?.message || "Speech analysis failed.";
+
+  setError(msg);
+  setFeedbackSummary(msg);
+  setFeedbackTip("");
+  setWeakPhonemes([]);
+  setWeakWords([]);
+  setSpokenFeedbackText("");
+  setPendingNextAssistantText("");
+  setIsWaitingToContinue(false);
+} finally {
+  setIsAnalyzing(false);
+}
 }
   async function startNewConversation() {
     try {
