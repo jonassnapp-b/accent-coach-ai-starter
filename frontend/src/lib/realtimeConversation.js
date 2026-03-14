@@ -4,11 +4,11 @@ const REALTIME_MODEL = "gpt-realtime";
 function pickSupportedMimeType() {
   if (typeof MediaRecorder === "undefined") return "";
   const candidates = [
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/mp4",
-    "audio/mpeg",
-  ];
+  "audio/ogg;codecs=opus",
+  "audio/ogg",
+  "audio/webm;codecs=opus",
+  "audio/webm",
+];
   for (const type of candidates) {
     try {
       if (MediaRecorder.isTypeSupported(type)) return type;
