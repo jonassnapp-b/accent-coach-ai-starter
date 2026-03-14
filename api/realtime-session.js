@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     model: "gpt-realtime",
     audio: {
       output: {
-        voice: accent === "en_br" ? "alloy" : "verse",
+        voice: accent === "en_br" ? "cedar" : "marin",
       },
     },
   },
