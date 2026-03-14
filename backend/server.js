@@ -40,6 +40,8 @@ const ping = await loadDefault("../api/ping.js", "ping");
 const analyzeSpeechRouter = await loadDefault("../api/analyze-speech.js", "analyze-speech router");
 const alignTts = await loadDefault("../api/align-tts.js", "align-tts");
 const tts = await loadDefault("../api/tts.js", "tts");
+const azurePronunciation = await loadDefault("../api/azure-pronunciation.js", "azure-pronunciation");
+const aiPronunciationFeedback = await loadDefault("../api/ai-pronunciation-feedback.js", "ai-pronunciation-feedback");
 
 /* =========================
    Optional backend store (Upstash Redis)
@@ -165,10 +167,11 @@ app.get("/api/health", (_req, res) => {
 app.all("/api/ping", ping);
 app.all("/api/align-tts", alignTts);
 app.all("/api/tts", tts);
+app.all("/api/azure-pronunciation", azurePronunciation);
+app.all("/api/ai-pronunciation-feedback", aiPronunciationFeedback);
 
 // ✅ analyze-speech is an Express Router -> mount at /api
 app.use("/api/analyze-speech", analyzeSpeechRouter);
-
 /**
  * ✅ Weakness Router mounting (robust)
  * This makes the endpoint work whether api/weakness.js defines:
