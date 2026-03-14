@@ -55,6 +55,7 @@ async function speakText(text) {
   const base = getApiBase();
 
   const res = await fetch(`${base}/api/tts`, {
+    
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -63,7 +64,7 @@ async function speakText(text) {
       rate: 1,
     }),
   });
-
+console.log("[ConversationCoach] tts status =", res.status);
   if (!res.ok) {
     const msg = await res.text().catch(() => "");
     throw new Error(msg || "TTS failed");
@@ -290,6 +291,7 @@ try {
 }
 
     const aiJson = await aiRes.json().catch(() => ({}));
+    console.log("[ConversationCoach] spokenFeedbackText =", aiJson?.spokenFeedbackText);
 console.log("[ConversationCoach] ai status =", aiRes.status, aiRes.url);
 console.log("[ConversationCoach] ai json =", aiJson);
     if (!aiRes.ok) {
@@ -615,6 +617,7 @@ async function handleContinueAfterFeedback() {
 
     if (spokenFeedbackText) {
       setIsAiSpeaking(true);
+      console.log("[ConversationCoach] speaking text =", spokenFeedbackText);
       await speakText(spokenFeedbackText);
       setIsAiSpeaking(false);
     }
