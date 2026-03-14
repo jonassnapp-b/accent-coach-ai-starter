@@ -258,7 +258,7 @@ console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realti
     remoteAudioEl = document.createElement("audio");
     remoteAudioEl.autoplay = true;
     remoteAudioEl.playsInline = true;
-    remoteAudioEl.volume = 0.6;
+    remoteAudioEl.volume = 0.35;
 
     pc.ontrack = (event) => {
       const stream = event.streams?.[0];
