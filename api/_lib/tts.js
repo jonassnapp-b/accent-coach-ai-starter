@@ -82,7 +82,7 @@ async function fetchOpenAiMp3({ text, accent, rate }) {
   if (!openai) return null;
 
   const a = (accent || "en_us").toLowerCase();
-  const voice = a === "en_br" ? "sage" : "alloy";
+  const voice = a === "en_br" ? "cedar" : "marin";
 
 const speed = Number(rate ?? 1.0) || 1.0;
 
@@ -147,33 +147,17 @@ export async function getTtsAudio({ text, accent = "en_us", rate = 1.0, voice = 
 
   let mp3 = null;
 
-  // ✅ British: Azure first (real en-GB voices)
-  if (a === "en_br") {
+  try {
+    mp3 = await fetchOpenAiMp3({ text: t, accent: a, rate });
+  } catch (e) {
+    console.error("[tts] OpenAI failed:", e?.message || e);
+  }
+
+  if (!mp3) {
     try {
       mp3 = await fetchAzureMp3({ text: t, accent: a, rate, voice });
     } catch (e) {
       console.error("[tts] Azure failed:", e?.message || e);
-    }
-    if (!mp3) {
-      try {
-        mp3 = await fetchOpenAiMp3({ text: t, accent: a, rate });
-      } catch (e) {
-        console.error("[tts] OpenAI failed:", e?.message || e);
-      }
-    }
-  } else {
-    // ✅ American: OpenAI first
-    try {
-      mp3 = await fetchOpenAiMp3({ text: t, accent: a, rate });
-    } catch (e) {
-      console.error("[tts] OpenAI failed:", e?.message || e);
-    }
-    if (!mp3) {
-      try {
-        mp3 = await fetchAzureMp3({ text: t, accent: a, rate, voice });
-      } catch (e) {
-        console.error("[tts] Azure failed:", e?.message || e);
-      }
     }
   }
 
