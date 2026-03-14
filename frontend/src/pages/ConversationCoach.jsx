@@ -228,6 +228,7 @@ const azureTimeout = setTimeout(() => azureController.abort(), 15000);
 let azureRes;
 
 try {
+console.log("[ConversationCoach] calling", `${base}/api/azure-pronunciation`);
   azureRes = await fetch(`${base}/api/azure-pronunciation`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -242,7 +243,8 @@ try {
 }
 
     const azureJson = await azureRes.json().catch(() => ({}));
-
+console.log("[ConversationCoach] azure status =", azureRes.status, azureRes.url);
+console.log("[ConversationCoach] azure json =", azureJson);
     if (!azureRes.ok) {
       throw new Error(azureJson?.error || "Azure pronunciation failed");
     }
@@ -267,6 +269,7 @@ const aiTimeout = setTimeout(() => aiController.abort(), 15000);
 let aiRes;
 
 try {
+  console.log("[ConversationCoach] calling", `${base}/api/ai-pronunciation-feedback`);
   aiRes = await fetch(`${base}/api/ai-pronunciation-feedback`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -282,7 +285,8 @@ try {
 }
 
     const aiJson = await aiRes.json().catch(() => ({}));
-
+console.log("[ConversationCoach] ai status =", aiRes.status, aiRes.url);
+console.log("[ConversationCoach] ai json =", aiJson);
     if (!aiRes.ok) {
       throw new Error(aiJson?.error || "AI feedback failed");
     }
