@@ -87,7 +87,7 @@ export async function createRealtimeConversation({
   onMessage,
   onError,
 }) {
-  const selectedVoice = accent === "en_br" ? "cedar" : "marin";
+  const selectedVoice = accent === "en_br" ? "verse" : "marin";
   console.log("[realtimeConversation] accent =", accent);
 console.log("[realtimeConversation] selectedVoice =", selectedVoice);
   let pc = null;
@@ -404,9 +404,6 @@ function startAssistantGreeting() {
   return sendEvent({
     type: "response.create",
     response: {
-      audio: {
-        voice: selectedVoice,
-      },
       instructions:
         "Speak only in English. Start with a short, natural greeting. Ask what the user wants to talk about today, then briefly offer a few possible topics in one concise sentence. Keep it simple and not too long.",
     },
@@ -416,9 +413,6 @@ function requestAssistantReply() {
   return sendEvent({
     type: "response.create",
     response: {
-      audio: {
-        voice: selectedVoice,
-      },
       instructions:
         "Speak only in English. Continue the conversation naturally based on what the user just said. Keep it concise. Ask only one short follow-up question.",
     },
