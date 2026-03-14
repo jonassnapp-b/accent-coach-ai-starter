@@ -87,6 +87,7 @@ export async function createRealtimeConversation({
   onMessage,
   onError,
 }) {
+    const selectedVoice = accent === "en_br" ? "cedar" : "marin";
   let pc = null;
   let dc = null;
   let localStream = null;
@@ -257,6 +258,7 @@ console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realti
     remoteAudioEl = document.createElement("audio");
     remoteAudioEl.autoplay = true;
     remoteAudioEl.playsInline = true;
+    remoteAudioEl.volume = 1;
 
     pc.ontrack = (event) => {
       const stream = event.streams?.[0];
@@ -338,6 +340,11 @@ sendEvent({
     type: "realtime",
     instructions:
       "You are an English conversation coach. Speak only in English at all times. Never use Portuguese or any other language. Keep responses concise and natural.",
+    audio: {
+      output: {
+        voice: selectedVoice,
+      },
+    },
   },
 });
 
