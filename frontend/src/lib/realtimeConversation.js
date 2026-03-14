@@ -383,6 +383,7 @@ const sdpRes = await fetch("https://api.openai.com/v1/realtime/calls", {
 
 await waitForDataChannelOpen(dc);
 
+console.log("[realtimeConversation] sending session.update voice =", selectedVoice);
 sendEvent({
   type: "session.update",
   session: {

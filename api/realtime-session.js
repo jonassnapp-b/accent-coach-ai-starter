@@ -10,15 +10,19 @@ export default async function handler(req, res) {
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    const { accent = "en_us" } = req.body || {};
+ const { accent = "en_us" } = req.body || {};
+const selectedVoice = accent === "en_br" ? "cedar" : "marin";
 
-  const session = await client.realtime.clientSecrets.create({
+console.log("[realtime-session] accent =", accent);
+console.log("[realtime-session] selectedVoice =", selectedVoice);
+
+const session = await client.realtime.clientSecrets.create({
   session: {
     type: "realtime",
     model: "gpt-realtime",
     audio: {
       output: {
-        voice: accent === "en_br" ? "cedar" : "marin",
+        voice: selectedVoice,
       },
     },
   },
