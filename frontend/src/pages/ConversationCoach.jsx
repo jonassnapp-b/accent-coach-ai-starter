@@ -749,11 +749,15 @@ setFeedbackSummary("Analyzing your pronunciation...");
   const circleShadow = isRecording
     ? "0 0 0 14px rgba(33,150,243,0.16), 0 0 42px rgba(33,150,243,0.52), 0 18px 42px rgba(33,150,243,0.30)"
     : "0 12px 30px rgba(33,150,243,0.22)";
-    function startPracticeFlowFromWords(words = []) {
+function startPracticeFlowFromWords(words = []) {
   if (!Array.isArray(words) || words.length === 0) return false;
+
+  setIsWaitingToContinue(false);
   setPracticeWords(words);
   setCurrentPracticeIndex(0);
   setIsPracticeActive(true);
+  setIsPracticeRecording(false);
+  setIsPracticeAnalyzing(false);
   setPracticeFeedbackText("");
   setPracticeLastScore(null);
   setPracticeRecordingResult(null);
@@ -801,12 +805,12 @@ async function handlePlayPracticeWord() {
   }
 }
 
-function handlePracticeHoldStart(e) {
+async function handlePracticeHoldStart(e) {
   e?.preventDefault?.();
   if (practiceHoldStartedRef.current) return;
   practiceHoldStartedRef.current = true;
 
-  const ok = realtimeRef.current?.startUserInput?.();
+  const ok = await realtimeRef.current?.startPracticeRecording?.();
   if (!ok) {
     practiceHoldStartedRef.current = false;
     setError("Microphone is not ready.");
@@ -824,7 +828,7 @@ async function handlePracticeHoldEnd(e) {
   if (!practiceHoldStartedRef.current) return;
   practiceHoldStartedRef.current = false;
 
-  const recording = await realtimeRef.current?.stopUserInput?.();
+  const recording = await realtimeRef.current?.stopPracticeRecording?.();
   setIsPracticeRecording(false);
   setIsPracticeAnalyzing(true);
 
@@ -1084,18 +1088,17 @@ async function handleContinueAfterFeedback() {
       <button
         type="button"
         onClick={handlePlayPracticeWord}
-        style={{
-          flex: 1,
-          height: 46,
-          borderRadius: 16,
-          border: "none",
-          background: "#2196F3",
-          color: "#FFFFFF",
-          fontSize: 15,
-          fontWeight: 900,
-          cursor: "pointer",
-          boxShadow: "0 10px 24px rgba(33,150,243,0.22)",
-        }}
+     style={{
+  flex: 1,
+  height: 46,
+  borderRadius: 16,
+  border: "1px solid rgba(15,23,42,0.08)",
+  background: "#FFFFFF",
+  color: "#0F172A",
+  fontSize: 15,
+  fontWeight: 900,
+  cursor: "pointer",
+}}
       >
         Hear word
       </button>

@@ -102,11 +102,18 @@ console.log("[realtimeConversation] selectedVoice =", selectedVoice);
   let remoteCompressorNode = null;
   let remoteSourceNode = null;
 
-  let mediaRecorder = null;
-  let mediaRecorderMimeType = "";
-  let recordingChunks = [];
-  let currentRecordingPromise = null;
-  let resolveCurrentRecording = null;
+let mediaRecorder = null;
+let mediaRecorderMimeType = "";
+let recordingChunks = [];
+let currentRecordingPromise = null;
+let resolveCurrentRecording = null;
+
+let practiceStream = null;
+let practiceRecorder = null;
+let practiceRecorderMimeType = "";
+let practiceChunks = [];
+let currentPracticePromise = null;
+let resolveCurrentPractice = null;
 
   function safeEmitError(err) {
     console.error("[realtimeConversation]", err);
@@ -233,6 +240,137 @@ console.log("[realtimeConversation] selectedVoice =", selectedVoice);
 
     return pending;
   }
+  async function startPracticeRecording() {
+  if (practiceRecorder && practiceRecorder.state === "recording") return true;
+
+  try {
+    practiceStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    });
+
+    practiceRecorderMimeType = pickSupportedMimeType();
+    practiceChunks = [];
+    currentPracticePromise = new Promise((resolve) => {
+      resolveCurrentPractice = resolve;
+    });
+
+    practiceRecorder = practiceRecorderMimeType
+      ? new MediaRecorder(practiceStream, { mimeType: practiceRecorderMimeType })
+      : new MediaRecorder(practiceStream);
+
+    practiceRecorder.ondataavailable = (event) => {
+      if (event?.data && event.data.size > 0) {
+        practiceChunks.push(event.data);
+      }
+    };
+
+    practiceRecorder.onstop = async () => {
+      try {
+        const blobType = practiceRecorderMimeType || practiceChunks?.[0]?.type || "audio/webm";
+        const blob = new Blob(practiceChunks, { type: blobType });
+        const base64 = blob.size > 0 ? await blobToBase64(blob) : "";
+
+        resolveCurrentPractice?.({
+          blob,
+          mimeType: blobType,
+          base64,
+          size: blob.size,
+        });
+      } catch (err) {
+        resolveCurrentPractice?.({
+          blob: null,
+          mimeType: practiceRecorderMimeType || "audio/webm",
+          base64: "",
+          size: 0,
+          error: err?.message || "Failed to build practice blob",
+        });
+      } finally {
+        try {
+          if (practiceStream) {
+            practiceStream.getTracks().forEach((t) => t.stop());
+          }
+        } catch {}
+
+        practiceStream = null;
+        practiceRecorder = null;
+        practiceRecorderMimeType = "";
+        practiceChunks = [];
+        currentPracticePromise = null;
+        resolveCurrentPractice = null;
+      }
+    };
+
+    practiceRecorder.start();
+    return true;
+  } catch (err) {
+    safeEmitError(err);
+    currentPracticePromise = null;
+    resolveCurrentPractice = null;
+
+    try {
+      if (practiceStream) {
+        practiceStream.getTracks().forEach((t) => t.stop());
+      }
+    } catch {}
+
+    practiceStream = null;
+    practiceRecorder = null;
+    practiceRecorderMimeType = "";
+    practiceChunks = [];
+    return false;
+  }
+}
+
+function stopPracticeRecording() {
+  if (!practiceRecorder) {
+    return Promise.resolve({
+      blob: null,
+      mimeType: "",
+      base64: "",
+      size: 0,
+    });
+  }
+
+  if (practiceRecorder.state !== "recording") {
+    return (
+      currentPracticePromise ||
+      Promise.resolve({
+        blob: null,
+        mimeType: practiceRecorderMimeType || "",
+        base64: "",
+        size: 0,
+      })
+    );
+  }
+
+  const pending =
+    currentPracticePromise ||
+    Promise.resolve({
+      blob: null,
+      mimeType: practiceRecorderMimeType || "",
+      base64: "",
+      size: 0,
+    });
+
+  try {
+    practiceRecorder.stop();
+  } catch (err) {
+    safeEmitError(err);
+    return Promise.resolve({
+      blob: null,
+      mimeType: practiceRecorderMimeType || "",
+      base64: "",
+      size: 0,
+      error: err?.message || "Failed to stop practice recording",
+    });
+  }
+
+  return pending;
+}
 async function connect() {
   const base = getApiBase();
 console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realtime-session`);
@@ -501,31 +639,54 @@ function requestAssistantReply() {
       if (remoteAudioContext) remoteAudioContext.close();
     } catch {}
 
-      remoteSourceNode = null;
-    remoteCompressorNode = null;
-    remoteGainNode = null;
-    remoteAudioContext = null;
-     dc = null;
-    pc = null;
-    localStream = null;
-    localAudioTrack = null;
-    remoteAudioEl = null;
-    mediaRecorder = null;
-    mediaRecorderMimeType = "";
-    recordingChunks = [];
-    currentRecordingPromise = null;
-    resolveCurrentRecording = null;
-    isConnected = false;
+ try {
+  if (practiceRecorder && practiceRecorder.state === "recording") {
+    practiceRecorder.stop();
+  }
+} catch {}
+
+try {
+  if (practiceStream) {
+    practiceStream.getTracks().forEach((t) => t.stop());
+  }
+} catch {}
+
+remoteSourceNode = null;
+remoteCompressorNode = null;
+remoteGainNode = null;
+remoteAudioContext = null;
+dc = null;
+pc = null;
+localStream = null;
+localAudioTrack = null;
+remoteAudioEl = null;
+
+mediaRecorder = null;
+mediaRecorderMimeType = "";
+recordingChunks = [];
+currentRecordingPromise = null;
+resolveCurrentRecording = null;
+
+practiceStream = null;
+practiceRecorder = null;
+practiceRecorderMimeType = "";
+practiceChunks = [];
+currentPracticePromise = null;
+resolveCurrentPractice = null;
+
+isConnected = false;
   }
 
-  return {
-    connect,
-    disconnect,
-    sendEvent,
-    interruptAssistant,
-    startAssistantGreeting,
-    requestAssistantReply,
-    startUserInput,
-    stopUserInput,
-  };
+return {
+  connect,
+  disconnect,
+  sendEvent,
+  interruptAssistant,
+  startAssistantGreeting,
+  requestAssistantReply,
+  startUserInput,
+  stopUserInput,
+  startPracticeRecording,
+  stopPracticeRecording,
+};
 }

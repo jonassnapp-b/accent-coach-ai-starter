@@ -88,7 +88,7 @@ Return JSON only in this exact shape:
 }
 
 Rules for spokenFeedbackText:
-- 2 to 4 short sentences only.
+- 3 to 5 short sentences only.
 - Make it easy for an average learner to understand.
 - Do not mention score numbers in the spoken feedback.
 - Start with a short natural overall impression.
@@ -99,6 +99,7 @@ Rules for spokenFeedbackText:
 - Never say only "good job", "great job", or "nice work".
 - Never give generic advice like "improve a couple of sounds".
 - If weakWords is not empty, you MUST mention at least one of those words explicitly.
+- Make it sound like real coaching and explanation, not filler.
 - Keep it concrete, simple, and human.
 
 Good examples:
