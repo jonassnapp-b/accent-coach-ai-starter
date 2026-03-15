@@ -809,24 +809,43 @@ async function handleContinueAfterFeedback() {
                   <Mic size={56} strokeWidth={2.5} />
                 </button>
 
-                <div
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 900,
-                    letterSpacing: -0.2,
-                    color: "#2563EB",
-                    textAlign: "center",
-                  }}
-                >
-                  {isRecording
-                    ? "Listening..."
-                    : isAnalyzing
-                    ? "Analyzing..."
-                    : isStartingConversation
-                    ? "Starting conversation..."
-                    : isAiSpeaking
-                    ? "Hold to interrupt and talk"
-                    : "Hold to talk"}
+              <div
+  style={{
+    fontSize: 16,
+    fontWeight: 900,
+    letterSpacing: -0.2,
+    color: "#2563EB",
+    textAlign: "center",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  }}
+>
+              {isRecording ? (
+  "Listening..."
+) : isAnalyzing ? (
+  <>
+    <span
+      style={{
+        width: 16,
+        height: 16,
+        border: "2px solid rgba(37,99,235,0.22)",
+        borderTop: "2px solid #2563EB",
+        borderRadius: "50%",
+        display: "inline-block",
+        animation: "conversationCoachSpin 0.8s linear infinite",
+      }}
+    />
+    <span>Analyzing...</span>
+  </>
+) : isStartingConversation ? (
+  "Starting conversation..."
+) : isAiSpeaking ? (
+  "Hold to interrupt and talk"
+) : (
+  "Hold to talk"
+)}
                 </div>
 
                 {!!error && (
@@ -879,6 +898,12 @@ async function handleContinueAfterFeedback() {
         )}
       </div>
       <audio ref={ttsAudioRef} />
+<style>{`
+  @keyframes conversationCoachSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+`}</style>
     </div>
   );
 }
