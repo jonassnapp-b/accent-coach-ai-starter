@@ -29,8 +29,9 @@ const [feedbackSummary, setFeedbackSummary] = useState("");
   const [hasEnteredConversation, setHasEnteredConversation] = useState(false);
   const [hasConversationStarted, setHasConversationStarted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isPreparingFeedbackAudio, setIsPreparingFeedbackAudio] = useState(false);
+const [isAnalyzing, setIsAnalyzing] = useState(false);
+const [isPreparingFeedbackAudio, setIsPreparingFeedbackAudio] = useState(false);
+const [isWorkingOnFeedback, setIsWorkingOnFeedback] = useState(false);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [error, setError] = useState("");
@@ -38,7 +39,18 @@ const [feedbackSummary, setFeedbackSummary] = useState("");
   const [isWaitingToContinue, setIsWaitingToContinue] = useState(false);
   const [pendingNextAssistantText, setPendingNextAssistantText] = useState("");
 const [spokenFeedbackText, setSpokenFeedbackText] = useState("");
+
+const [practiceWords, setPracticeWords] = useState([]);
+const [currentPracticeIndex, setCurrentPracticeIndex] = useState(0);
+const [isPracticeActive, setIsPracticeActive] = useState(false);
+const [isPracticeRecording, setIsPracticeRecording] = useState(false);
+const [isPracticeAnalyzing, setIsPracticeAnalyzing] = useState(false);
+const [practiceFeedbackText, setPracticeFeedbackText] = useState("");
+const [practiceLastScore, setPracticeLastScore] = useState(null);
+const [practiceRecordingResult, setPracticeRecordingResult] = useState(null);
+
 const ttsAudioRef = useRef(null);
+const practiceHoldStartedRef = useRef(false);
   const realtimeRef = useRef(null);
   const mountedRef = useRef(true);
   const holdStartedRef = useRef(false);
@@ -46,6 +58,7 @@ const ttsAudioRef = useRef(null);
   const suppressNextAssistantResponseRef = useRef(false);
   const waitingForUserReleaseRef = useRef(false);
   const lastUserTranscriptRef = useRef("");
+  const feedbackBusyRef = useRef(false);
 async function speakText(text) {
   const t = String(text || "").trim();
   if (!t) return;
@@ -86,6 +99,7 @@ a.src = url;
 a.volume = 1;
 a.onplaying = () => {
   setIsPreparingFeedbackAudio(false);
+  setIsWorkingOnFeedback(false);
 };
 a.onended = () => {
   setIsPreparingFeedbackAudio(false);
@@ -107,8 +121,93 @@ a.play().catch((err) => {
     }
   });
 }
-  const isBusy = isStartingConversation;
+const isBusy = isStartingConversation;
+const WEAK_WORD_THRESHOLD = 75;
 
+const ACCENT_DIFFERENCE_NOTES = {
+  water: {
+    en_us: "In American English this often sounds more like wa-der with a softer middle sound.",
+    en_br: "In British English this is usually said more like waw-tuh with a clear t sound."
+  },
+  better: {
+    en_us: "In American English this often sounds more like be-der with a softer middle sound.",
+    en_br: "In British English this usually keeps a clearer t sound: be-tuh."
+  },
+  schedule: {
+    en_us: "In American English this usually starts with an sk sound.",
+    en_br: "In British English this often starts with a sh sound."
+  },
+  tomato: {
+    en_us: "In American English the middle usually sounds more like may.",
+    en_br: "In British English the middle usually sounds more like mah."
+  },
+  garage: {
+    en_us: "In American English this is often said guh-RAHZH.",
+    en_br: "In British English this is often said GA-ridge."
+  },
+  either: {
+    en_us: "In American English this is often said EE-ther.",
+    en_br: "In British English this is often said EYE-ther."
+  },
+  neither: {
+    en_us: "In American English this is often said NEE-ther.",
+    en_br: "In British English this is often said NYE-ther."
+  },
+  vitamin: {
+    en_us: "In American English this usually starts with VY.",
+    en_br: "In British English this usually starts with VIH."
+  },
+  cant: {
+    en_us: "In American English this usually has a short a sound.",
+    en_br: "In British English this often has a longer ah sound."
+  },
+  dance: {
+    en_us: "In American English this usually has a short a sound.",
+    en_br: "In British English this often has a longer ah sound."
+  },
+  chance: {
+    en_us: "In American English this usually has a short a sound.",
+    en_br: "In British English this often has a longer ah sound."
+  },
+  answer: {
+    en_us: "In American English this often keeps a flatter a sound.",
+    en_br: "In British English this often has a broader ah sound."
+  },
+  class: {
+    en_us: "In American English this usually has a short a sound.",
+    en_br: "In British English this often has a longer ah sound."
+  }
+};
+
+function normalizeWordKey(word = "") {
+  return String(word || "")
+    .toLowerCase()
+    .replace(/[^a-z]/g, "");
+}
+
+function getAccentDifferenceNote(word, accent) {
+  const key = normalizeWordKey(word);
+  const note = ACCENT_DIFFERENCE_NOTES[key];
+  if (!note) return "";
+  return accent === "en_br" ? note.en_br : note.en_us;
+}
+
+function pickWeakPracticeWords(words = []) {
+  return [...words]
+    .filter((w) => {
+      const word = String(w?.word || "").trim();
+      const score = Number(w?.accuracyScore ?? 0);
+      return word && Number.isFinite(score) && score > 0 && score < WEAK_WORD_THRESHOLD;
+    })
+    .sort((a, b) => Number(a?.accuracyScore ?? 0) - Number(b?.accuracyScore ?? 0))
+    .slice(0, 2)
+    .map((w) => ({
+      word: String(w.word || "").trim(),
+      accuracyScore: Number(w.accuracyScore ?? 0),
+      phonemes: Array.isArray(w.phonemes) ? w.phonemes : [],
+      accentNote: getAccentDifferenceNote(w.word, selectedAccent),
+    }));
+}
   useEffect(() => {
     mountedRef.current = true;
 
@@ -119,7 +218,9 @@ a.play().catch((err) => {
       } catch {}
     };
   }, []);
-
+useEffect(() => {
+  feedbackBusyRef.current = isAnalyzing || isPreparingFeedbackAudio;
+}, [isAnalyzing, isPreparingFeedbackAudio]);
 
   function extractUserTranscriptFromMessage(msg) {
     const type = String(msg?.type || "");
@@ -155,11 +256,28 @@ a.play().catch((err) => {
 
     return String(directTranscript || "").replace(/\s+/g, " ").trim();
   }
+function buildPracticeFeedback(wordObj, score) {
+  const safeWord = String(wordObj?.word || "").trim();
+  const phonemes = Array.isArray(wordObj?.phonemes) ? wordObj.phonemes : [];
+  const weakestPhoneme = [...phonemes]
+    .filter((p) => Number.isFinite(Number(p?.accuracyScore)))
+    .sort((a, b) => Number(a?.accuracyScore ?? 0) - Number(b?.accuracyScore ?? 0))[0];
 
+  if (score >= WEAK_WORD_THRESHOLD) {
+    return `Much better. "${safeWord}" sounded clear enough now.`;
+  }
+
+  if (weakestPhoneme?.phoneme) {
+    return `Better, but "${safeWord}" still needs work. Focus especially on the ${weakestPhoneme.phoneme} sound.`;
+  }
+
+  return `Better, but "${safeWord}" still needs a cleaner pronunciation.`;
+}
 
 async function analyzeUserTurn(recording) {
   if (!recording?.base64) {
 setIsAnalyzing(false);
+setIsWorkingOnFeedback(false);
 setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
 setIsWaitingToContinue(false);
     return;
@@ -204,7 +322,8 @@ setSpokenFeedbackText("");
 setPendingNextAssistantText("");
 setIsWaitingToContinue(false);
 setIsAnalyzing(false);
-      return;
+setIsWorkingOnFeedback(false);
+return;
     }
 
   const aiController = new AbortController();
@@ -250,27 +369,82 @@ const spokenText = String(aiJson?.spokenFeedbackText || "").trim();
 setSpokenFeedbackText(spokenText);
 setPendingNextAssistantText(aiJson?.nextAssistantText || "");
 
+const weakPracticeWords = pickWeakPracticeWords(Array.isArray(azureJson?.words) ? azureJson.words : []);
+
 if (spokenText) {
+  setIsAnalyzing(false);
+  setIsPreparingFeedbackAudio(true);
   setIsAiSpeaking(true);
+
   await speakText(spokenText);
+
   setIsAiSpeaking(false);
+  setIsPreparingFeedbackAudio(false);
+} else {
+  setIsAnalyzing(false);
+  setIsWorkingOnFeedback(false);
 }
 
-setIsAnalyzing(false);
-setIsWaitingToContinue(true);
+const startedPractice = startPracticeFlowFromWords(weakPracticeWords);
+setIsWaitingToContinue(!startedPractice);
 } catch (err) {
   const msg =
     err?.name === "AbortError"
       ? "Speech analysis timed out."
       : err?.message || "Speech analysis failed.";
 
-  setError(msg);
+setError(msg);
 setFeedbackSummary(msg);
 setSpokenFeedbackText("");
 setPendingNextAssistantText("");
+setIsWorkingOnFeedback(false);
 setIsWaitingToContinue(false);
 } finally {
 }
+}
+async function analyzePracticeWord(recording, practiceWord) {
+  if (!recording?.base64 || !practiceWord?.word) {
+    setPracticeFeedbackText("I didn’t hear anything. Try that word again.");
+    setIsPracticeAnalyzing(false);
+    return;
+  }
+
+  try {
+    const base = getApiBase();
+
+   const azureRes = await fetch(`${base}/api/azure-pronunciation`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    audioBase64: recording.base64,
+    mime: recording.mimeType || "audio/webm",
+    accent: selectedAccent,
+    referenceText: practiceWord.word,
+  }),
+});
+
+    const azureJson = await azureRes.json().catch(() => ({}));
+    if (!azureRes.ok) {
+      throw new Error(azureJson?.error || "Practice pronunciation failed");
+    }
+
+    const matchedWord =
+      (Array.isArray(azureJson?.words) ? azureJson.words : []).find((w) =>
+        normalizeWordKey(w?.word) === normalizeWordKey(practiceWord.word)
+      ) ||
+      (Array.isArray(azureJson?.words) ? azureJson.words[0] : null);
+
+    const score = Number(matchedWord?.accuracyScore ?? 0);
+    setPracticeLastScore(score);
+    setPracticeRecordingResult(matchedWord || null);
+    setPracticeFeedbackText(buildPracticeFeedback(practiceWord, score));
+  } catch (err) {
+    setPracticeFeedbackText(err?.message || "Practice analysis failed.");
+    setPracticeLastScore(null);
+    setPracticeRecordingResult(null);
+  } finally {
+    setIsPracticeAnalyzing(false);
+  }
 }
   async function startNewConversation() {
     try {
@@ -318,17 +492,19 @@ onRemoteAudio: () => {
             setFeedbackSummary("");
           }
 
-          if (type === "response.created") {
-            if (suppressNextAssistantResponseRef.current) {
-              realtimeRef.current?.interruptAssistant?.();
-              setIsAiSpeaking(false);
-              return;
-            }
+       if (type === "response.created") {
+  if (suppressNextAssistantResponseRef.current) {
+    realtimeRef.current?.interruptAssistant?.();
+    setIsAiSpeaking(false);
+    return;
+  }
 
-            setAssistantText("");
-            setIsAiSpeaking(true);
-            setIsAnalyzing(false);
-          }
+  setAssistantText("");
+  setIsAiSpeaking(true);
+ if (!feedbackBusyRef.current) {
+  setIsAnalyzing(false);
+}
+}
 
           const deltaText =
             typeof msg?.delta === "string"
@@ -406,31 +582,37 @@ onRemoteAudio: () => {
   setIsAnalyzing(false);
 }
 
-          if (
-            type === "output_audio_buffer.stopped" ||
-            type === "output_audio_buffer.cleared"
-          ) {
-            setIsAiSpeaking(false);
-            setIsAnalyzing(false);
-          }
+         if (
+  type === "output_audio_buffer.stopped" ||
+  type === "output_audio_buffer.cleared"
+) {
+  setIsAiSpeaking(false);
+ if (!feedbackBusyRef.current) {
+  setIsAnalyzing(false);
+}
+}
 
                 if (type === "error") {
   const serverMsg =
     msg?.error?.message || msg?.error?.code || "Realtime session error.";
 
   if (
-    typeof serverMsg === "string" &&
-    serverMsg.toLowerCase().includes("no active response found")
-  ) {
-    setError("");
-    setIsAiSpeaking(false);
-    setIsAnalyzing(false);
-    return;
-  }
+  typeof serverMsg === "string" &&
+  serverMsg.toLowerCase().includes("no active response found")
+) {
+  setError("");
+  setIsAiSpeaking(false);
+ if (!feedbackBusyRef.current) {
+  setIsAnalyzing(false);
+}
+  return;
+}
 
-            setError(serverMsg);
-            setIsAiSpeaking(false);
-            setIsAnalyzing(false);
+          setError(serverMsg);
+setIsAiSpeaking(false);
+if (!feedbackBusyRef.current) {
+  setIsAnalyzing(false);
+}
           }
         },
         onError: (err) => {
@@ -477,10 +659,11 @@ onRemoteAudio: () => {
       return;
     }
 
-   setIsAiSpeaking(false);
+setIsAiSpeaking(false);
 setIsRecording(true);
 setIsAnalyzing(false);
 setIsPreparingFeedbackAudio(false);
+setIsWorkingOnFeedback(false);
 setIsWaitingToContinue(false);
 setHasConversationStarted(true);
 setError("");
@@ -510,10 +693,11 @@ setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
     }
 
        suppressNextAssistantResponseRef.current = true;
-    setIsWaitingToContinue(true);
-    setIsAnalyzing(true);
-    setIsPreparingFeedbackAudio(false);
-  setFeedbackSummary("Analyzing your pronunciation...");
+  setIsWaitingToContinue(true);
+setIsAnalyzing(true);
+setIsPreparingFeedbackAudio(false);
+setIsWorkingOnFeedback(true);
+setFeedbackSummary("Analyzing your pronunciation...");
 
     await analyzeUserTurn(recording);
   }
@@ -531,17 +715,20 @@ setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
 
       if (!userSpeechStartedRef.current) {
         suppressNextAssistantResponseRef.current = true;
-        setIsAnalyzing(false);
-      setError("");
+       setIsAnalyzing(false);
+setIsAnalyzing(false);
+setIsWorkingOnFeedback(false);
+setError("");
 setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
         return;
       }
 
         suppressNextAssistantResponseRef.current = true;
-      setIsWaitingToContinue(true);
-      setIsAnalyzing(true);
-      setIsPreparingFeedbackAudio(false);
-     setFeedbackSummary("Analyzing your pronunciation...");
+     setIsWaitingToContinue(true);
+setIsAnalyzing(true);
+setIsPreparingFeedbackAudio(false);
+setIsWorkingOnFeedback(true);
+setFeedbackSummary("Analyzing your pronunciation...");
 
       await analyzeUserTurn(recording);
     }
@@ -562,6 +749,93 @@ setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
   const circleShadow = isRecording
     ? "0 0 0 14px rgba(33,150,243,0.16), 0 0 42px rgba(33,150,243,0.52), 0 18px 42px rgba(33,150,243,0.30)"
     : "0 12px 30px rgba(33,150,243,0.22)";
+    function startPracticeFlowFromWords(words = []) {
+  if (!Array.isArray(words) || words.length === 0) return false;
+  setPracticeWords(words);
+  setCurrentPracticeIndex(0);
+  setIsPracticeActive(true);
+  setPracticeFeedbackText("");
+  setPracticeLastScore(null);
+  setPracticeRecordingResult(null);
+  return true;
+}
+
+function handleSkipPractice() {
+  setIsPracticeActive(false);
+  setPracticeWords([]);
+  setCurrentPracticeIndex(0);
+  setPracticeFeedbackText("");
+  setPracticeLastScore(null);
+  setPracticeRecordingResult(null);
+}
+
+function handleContinueFromPracticeWord() {
+  const isLast = currentPracticeIndex >= practiceWords.length - 1;
+
+  if (isLast) {
+    setIsPracticeActive(false);
+    setPracticeWords([]);
+    setCurrentPracticeIndex(0);
+    setPracticeFeedbackText("");
+    setPracticeLastScore(null);
+    setPracticeRecordingResult(null);
+    return;
+  }
+
+  setCurrentPracticeIndex((prev) => prev + 1);
+  setPracticeFeedbackText("");
+  setPracticeLastScore(null);
+  setPracticeRecordingResult(null);
+}
+
+async function handlePlayPracticeWord() {
+  const currentWord = practiceWords[currentPracticeIndex];
+  if (!currentWord?.word) return;
+  try {
+    setIsAiSpeaking(true);
+    await speakText(currentWord.word);
+    setIsAiSpeaking(false);
+  } catch (err) {
+    setIsAiSpeaking(false);
+    setError(err?.message || "Failed to play practice word.");
+  }
+}
+
+function handlePracticeHoldStart(e) {
+  e?.preventDefault?.();
+  if (practiceHoldStartedRef.current) return;
+  practiceHoldStartedRef.current = true;
+
+  const ok = realtimeRef.current?.startUserInput?.();
+  if (!ok) {
+    practiceHoldStartedRef.current = false;
+    setError("Microphone is not ready.");
+    return;
+  }
+
+  setIsPracticeRecording(true);
+  setPracticeFeedbackText("");
+  setPracticeLastScore(null);
+  setPracticeRecordingResult(null);
+}
+
+async function handlePracticeHoldEnd(e) {
+  e?.preventDefault?.();
+  if (!practiceHoldStartedRef.current) return;
+  practiceHoldStartedRef.current = false;
+
+  const recording = await realtimeRef.current?.stopUserInput?.();
+  setIsPracticeRecording(false);
+  setIsPracticeAnalyzing(true);
+
+  await analyzePracticeWord(recording, practiceWords[currentPracticeIndex]);
+}
+
+function handlePracticeTryAgain() {
+  setPracticeFeedbackText("");
+  setPracticeLastScore(null);
+  setPracticeRecordingResult(null);
+}
 async function handleContinueAfterFeedback() {
   try {
     setError("");
@@ -747,11 +1021,237 @@ async function handleContinueAfterFeedback() {
     </div>
   </div>
 ) : null}
+{isPracticeActive && practiceWords[currentPracticeIndex] ? (
+  <div
+    style={{
+      marginTop: 14,
+      borderRadius: 28,
+      background: "#FFFFFF",
+      border: "1px solid rgba(15,23,42,0.08)",
+      boxShadow: "0 16px 42px rgba(15,23,42,0.08)",
+      padding: "20px 18px",
+      transform: "scale(1)",
+      opacity: 1,
+      transition: "transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 260ms ease",
+    }}
+  >
+    <div
+      style={{
+        fontSize: 13,
+        fontWeight: 900,
+        color: "#2563EB",
+        marginBottom: 8,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+      }}
+    >
+      Practice word {currentPracticeIndex + 1} of {practiceWords.length}
+    </div>
 
+    <div
+      style={{
+        fontSize: 28,
+        fontWeight: 900,
+        color: "#0F172A",
+        letterSpacing: -0.3,
+        marginBottom: 8,
+      }}
+    >
+      {practiceWords[currentPracticeIndex].word}
+    </div>
+
+    {practiceWords[currentPracticeIndex].accentNote ? (
+      <div
+        style={{
+          fontSize: 14,
+          lineHeight: 1.45,
+          color: "#475569",
+          fontWeight: 700,
+          marginBottom: 12,
+        }}
+      >
+        {practiceWords[currentPracticeIndex].accentNote}
+      </div>
+    ) : null}
+
+    <div
+      style={{
+        display: "flex",
+        gap: 10,
+        marginBottom: 14,
+      }}
+    >
+      <button
+        type="button"
+        onClick={handlePlayPracticeWord}
+        style={{
+          flex: 1,
+          height: 46,
+          borderRadius: 16,
+          border: "none",
+          background: "#2196F3",
+          color: "#FFFFFF",
+          fontSize: 15,
+          fontWeight: 900,
+          cursor: "pointer",
+          boxShadow: "0 10px 24px rgba(33,150,243,0.22)",
+        }}
+      >
+        Hear word
+      </button>
+
+      <button
+        type="button"
+        onClick={handleSkipPractice}
+        style={{
+          flex: 1,
+          height: 46,
+          borderRadius: 16,
+          border: "1px solid rgba(15,23,42,0.08)",
+          background: "#FFFFFF",
+          color: "#0F172A",
+          fontSize: 15,
+          fontWeight: 900,
+          cursor: "pointer",
+        }}
+      >
+        Skip practice
+      </button>
+    </div>
+
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        marginBottom: 12,
+      }}
+    >
+      <button
+        type="button"
+        onPointerDown={handlePracticeHoldStart}
+        onPointerUp={handlePracticeHoldEnd}
+        onPointerLeave={(e) => {
+          if (isPracticeRecording) handlePracticeHoldEnd(e);
+        }}
+        onPointerCancel={handlePracticeHoldEnd}
+        style={{
+          width: 96,
+          height: 96,
+          borderRadius: "50%",
+          border: "none",
+          background: "radial-gradient(circle at 30% 30%, #55AEFF 0%, #2196F3 48%, #1A73D9 100%)",
+          color: "#FFFFFF",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 12px 30px rgba(33,150,243,0.22)",
+          cursor: "pointer",
+          transform: isPracticeRecording ? "scale(1.05)" : "scale(1)",
+          transition: "transform 120ms ease",
+          touchAction: "none",
+        }}
+      >
+        <Mic size={32} strokeWidth={2.5} />
+      </button>
+    </div>
+
+    <div
+      style={{
+        textAlign: "center",
+        fontSize: 14,
+        fontWeight: 900,
+        color: "#2563EB",
+        marginBottom: 12,
+      }}
+    >
+      {isPracticeRecording
+        ? "Recording word..."
+        : isPracticeAnalyzing
+        ? "Checking word..."
+        : "Hold to say this word"}
+    </div>
+
+    {practiceFeedbackText ? (
+      <div
+        style={{
+          borderRadius: 18,
+          background: "#F8FBFF",
+          border: "1px solid rgba(33,150,243,0.10)",
+          padding: "14px 14px",
+          fontSize: 15,
+          lineHeight: 1.5,
+          color: "#0F172A",
+          fontWeight: 700,
+          marginBottom: 12,
+        }}
+      >
+        {practiceFeedbackText}
+      </div>
+    ) : null}
+
+    {practiceLastScore !== null ? (
+      <div
+        style={{
+          fontSize: 13,
+          fontWeight: 900,
+          color: practiceLastScore >= WEAK_WORD_THRESHOLD ? "#15803D" : "#B45309",
+          marginBottom: 12,
+          textAlign: "center",
+        }}
+      >
+        Score: {practiceLastScore}
+      </div>
+    ) : null}
+
+    <div
+      style={{
+        display: "flex",
+        gap: 10,
+      }}
+    >
+      <button
+        type="button"
+        onClick={handlePracticeTryAgain}
+        style={{
+          flex: 1,
+          height: 46,
+          borderRadius: 16,
+          border: "1px solid rgba(15,23,42,0.08)",
+          background: "#FFFFFF",
+          color: "#0F172A",
+          fontSize: 15,
+          fontWeight: 900,
+          cursor: "pointer",
+        }}
+      >
+        Try again
+      </button>
+
+      <button
+        type="button"
+        onClick={handleContinueFromPracticeWord}
+        style={{
+          flex: 1,
+          height: 46,
+          borderRadius: 16,
+          border: "none",
+          background: "#2196F3",
+          color: "#FFFFFF",
+          fontSize: 15,
+          fontWeight: 900,
+          cursor: "pointer",
+          boxShadow: "0 10px 24px rgba(33,150,243,0.22)",
+        }}
+      >
+        Continue
+      </button>
+    </div>
+  </div>
+) : null}
 
 
 <div style={{ marginTop: 14, minHeight: 64 }}>
-  {isWaitingToContinue && !isAnalyzing && !isPreparingFeedbackAudio ? (
+  {isWaitingToContinue && !isWorkingOnFeedback && !isPracticeActive ? (
     <button
       type="button"
       onClick={handleContinueAfterFeedback}
@@ -799,7 +1299,7 @@ async function handleContinueAfterFeedback() {
                     if (isRecording) handleHoldEnd(e);
                   }}
                   onPointerCancel={handleHoldEnd}
-                  disabled={isBusy}
+                  disabled={isBusy || isPracticeActive}
                   style={{
                     width: 184,
                     height: 184,
@@ -836,9 +1336,11 @@ async function handleContinueAfterFeedback() {
     gap: 8,
   }}
 >
-     {isRecording ? (
+{isPracticeActive ? (
+  "Practice this word"
+) : isRecording ? (
   "Listening..."
-) : isAnalyzing || isPreparingFeedbackAudio ? (
+) : isWorkingOnFeedback ? (
   <>
     <span
       style={{
@@ -851,9 +1353,7 @@ async function handleContinueAfterFeedback() {
         animation: "conversationCoachSpin 0.8s linear infinite",
       }}
     />
-    <span>
-      {isAnalyzing ? "Analyzing..." : "Preparing feedback..."}
-    </span>
+    <span>Working on your feedback...</span>
   </>
 ) : isStartingConversation ? (
   "Starting conversation..."

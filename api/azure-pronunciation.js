@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Missing Azure env vars" });
     }
 
-    const { audioBase64, mime, accent } = req.body || {};
+    const { audioBase64, mime, accent, referenceText } = req.body || {};
 
     if (!audioBase64) {
       return res.status(400).json({ error: "Missing audioBase64" });
@@ -46,14 +46,18 @@ const wavBuffer = fs.readFileSync(outputPath);
 console.log("[azure] wav bytes =", wavBuffer.length);
 const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${encodeURIComponent(language)}&format=detailed`;
 
-const paHeader = Buffer.from(
-  JSON.stringify({
-    GradingSystem: "HundredMark",
-    Granularity: "Phoneme",
-    Dimension: "Comprehensive",
-    EnableMiscue: false
-  })
-).toString("base64");
+const paConfig = {
+  GradingSystem: "HundredMark",
+  Granularity: "Phoneme",
+  Dimension: "Comprehensive",
+  EnableMiscue: false,
+};
+
+if (String(referenceText || "").trim()) {
+  paConfig.ReferenceText = String(referenceText).trim();
+}
+
+const paHeader = Buffer.from(JSON.stringify(paConfig)).toString("base64");
 
 console.log("[azure] mime =", mime);
 console.log("[azure] input bytes =", audioBuffer.length);
