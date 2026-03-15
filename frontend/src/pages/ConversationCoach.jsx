@@ -245,6 +245,7 @@ if (spokenText) {
   setIsAiSpeaking(false);
 }
 
+setIsAnalyzing(false);
 setIsWaitingToContinue(true);
 } catch (err) {
   const msg =
@@ -258,7 +259,6 @@ setSpokenFeedbackText("");
 setPendingNextAssistantText("");
 setIsWaitingToContinue(false);
 } finally {
-  setIsAnalyzing(false);
 }
 }
   async function startNewConversation() {
