@@ -30,6 +30,7 @@ const [feedbackSummary, setFeedbackSummary] = useState("");
   const [hasConversationStarted, setHasConversationStarted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isPreparingFeedbackAudio, setIsPreparingFeedbackAudio] = useState(false);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [error, setError] = useState("");
@@ -48,6 +49,8 @@ const ttsAudioRef = useRef(null);
 async function speakText(text) {
   const t = String(text || "").trim();
   if (!t) return;
+
+  setIsPreparingFeedbackAudio(true);
 
   const base = getApiBase();
 
@@ -81,15 +84,23 @@ console.log("[ConversationCoach] tts status =", res.status);
 const a = ttsAudioRef.current;
 a.src = url;
 a.volume = 1;
+a.onplaying = () => {
+  setIsPreparingFeedbackAudio(false);
+};
 a.onended = () => {
-        URL.revokeObjectURL(url);
-        resolve();
-      };
-      a.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error("Failed to play TTS"));
-      };
-      a.play().catch(reject);
+  setIsPreparingFeedbackAudio(false);
+  URL.revokeObjectURL(url);
+  resolve();
+};
+a.onerror = () => {
+  setIsPreparingFeedbackAudio(false);
+  URL.revokeObjectURL(url);
+  reject(new Error("Failed to play TTS"));
+};
+a.play().catch((err) => {
+  setIsPreparingFeedbackAudio(false);
+  reject(err);
+});
     } catch (err) {
       URL.revokeObjectURL(url);
       reject(err);
@@ -469,6 +480,7 @@ onRemoteAudio: () => {
    setIsAiSpeaking(false);
 setIsRecording(true);
 setIsAnalyzing(false);
+setIsPreparingFeedbackAudio(false);
 setIsWaitingToContinue(false);
 setHasConversationStarted(true);
 setError("");
@@ -500,6 +512,7 @@ setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
        suppressNextAssistantResponseRef.current = true;
     setIsWaitingToContinue(true);
     setIsAnalyzing(true);
+    setIsPreparingFeedbackAudio(false);
   setFeedbackSummary("Analyzing your pronunciation...");
 
     await analyzeUserTurn(recording);
@@ -527,6 +540,7 @@ setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
         suppressNextAssistantResponseRef.current = true;
       setIsWaitingToContinue(true);
       setIsAnalyzing(true);
+      setIsPreparingFeedbackAudio(false);
      setFeedbackSummary("Analyzing your pronunciation...");
 
       await analyzeUserTurn(recording);
@@ -737,7 +751,7 @@ async function handleContinueAfterFeedback() {
 
 
 <div style={{ marginTop: 14, minHeight: 64 }}>
-  {isWaitingToContinue && !isAnalyzing ? (
+  {isWaitingToContinue && !isAnalyzing && !isPreparingFeedbackAudio ? (
     <button
       type="button"
       onClick={handleContinueAfterFeedback}
@@ -822,9 +836,9 @@ async function handleContinueAfterFeedback() {
     gap: 8,
   }}
 >
-              {isRecording ? (
+     {isRecording ? (
   "Listening..."
-) : isAnalyzing ? (
+) : isAnalyzing || isPreparingFeedbackAudio ? (
   <>
     <span
       style={{
@@ -837,7 +851,9 @@ async function handleContinueAfterFeedback() {
         animation: "conversationCoachSpin 0.8s linear infinite",
       }}
     />
-    <span>Analyzing...</span>
+    <span>
+      {isAnalyzing ? "Analyzing..." : "Preparing feedback..."}
+    </span>
   </>
 ) : isStartingConversation ? (
   "Starting conversation..."
