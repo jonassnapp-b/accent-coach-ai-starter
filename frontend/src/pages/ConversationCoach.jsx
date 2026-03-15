@@ -43,6 +43,7 @@ const [spokenFeedbackText, setSpokenFeedbackText] = useState("");
 const [practiceWords, setPracticeWords] = useState([]);
 const [currentPracticeIndex, setCurrentPracticeIndex] = useState(0);
 const [isPracticeActive, setIsPracticeActive] = useState(false);
+const [isPracticeVisible, setIsPracticeVisible] = useState(false);
 const [isPracticeRecording, setIsPracticeRecording] = useState(false);
 const [isPracticeAnalyzing, setIsPracticeAnalyzing] = useState(false);
 const [practiceFeedbackText, setPracticeFeedbackText] = useState("");
@@ -221,7 +222,20 @@ function pickWeakPracticeWords(words = []) {
 useEffect(() => {
   feedbackBusyRef.current = isAnalyzing || isPreparingFeedbackAudio;
 }, [isAnalyzing, isPreparingFeedbackAudio]);
+useEffect(() => {
+  if (!isPracticeActive) {
+    setIsPracticeVisible(false);
+    return;
+  }
 
+  const id = requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      setIsPracticeVisible(true);
+    });
+  });
+
+  return () => cancelAnimationFrame(id);
+}, [isPracticeActive, currentPracticeIndex]);
   function extractUserTranscriptFromMessage(msg) {
     const type = String(msg?.type || "");
 
@@ -369,7 +383,11 @@ const spokenText = String(aiJson?.spokenFeedbackText || "").trim();
 setSpokenFeedbackText(spokenText);
 setPendingNextAssistantText(aiJson?.nextAssistantText || "");
 
-const weakPracticeWords = pickWeakPracticeWords(Array.isArray(azureJson?.words) ? azureJson.words : []);
+const weakPracticeWords = pickWeakPracticeWords(
+  Array.isArray(azureJson?.words) ? azureJson.words : []
+);
+
+const startedPractice = startPracticeFlowFromWords(weakPracticeWords);
 
 if (spokenText) {
   setIsAnalyzing(false);
@@ -385,7 +403,6 @@ if (spokenText) {
   setIsWorkingOnFeedback(false);
 }
 
-const startedPractice = startPracticeFlowFromWords(weakPracticeWords);
 setIsWaitingToContinue(!startedPractice);
 } catch (err) {
   const msg =
@@ -643,8 +660,18 @@ if (!feedbackBusyRef.current) {
     await startNewConversation();
   }
 
-  function handleHoldStart(e) {
-    e?.preventDefault?.();
+function handleHoldStart(e) {
+  e?.preventDefault?.();
+
+  try {
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current.currentTime = 0;
+    }
+  } catch {}
+
+  if (holdStartedRef.current) return;
+  holdStartedRef.current = true;
     if (holdStartedRef.current) return;
     holdStartedRef.current = true;
     userSpeechStartedRef.current = false;
@@ -756,6 +783,7 @@ function startPracticeFlowFromWords(words = []) {
   setPracticeWords(words);
   setCurrentPracticeIndex(0);
   setIsPracticeActive(true);
+  setIsPracticeVisible(false);
   setIsPracticeRecording(false);
   setIsPracticeAnalyzing(false);
   setPracticeFeedbackText("");
@@ -765,31 +793,51 @@ function startPracticeFlowFromWords(words = []) {
 }
 
 function handleSkipPractice() {
-  setIsPracticeActive(false);
-  setPracticeWords([]);
-  setCurrentPracticeIndex(0);
-  setPracticeFeedbackText("");
-  setPracticeLastScore(null);
-  setPracticeRecordingResult(null);
-}
+  setIsPracticeVisible(false);
 
-function handleContinueFromPracticeWord() {
-  const isLast = currentPracticeIndex >= practiceWords.length - 1;
-
-  if (isLast) {
+  setTimeout(() => {
     setIsPracticeActive(false);
     setPracticeWords([]);
     setCurrentPracticeIndex(0);
     setPracticeFeedbackText("");
     setPracticeLastScore(null);
     setPracticeRecordingResult(null);
-    return;
-  }
+  }, 220);
+}
 
+function handleContinueFromPracticeWord() {
+  const isLast = currentPracticeIndex >= practiceWords.length - 1;
+
+  if (!isLast) {
+    setIsPracticeVisible(false);
+
+  setTimeout(() => {
   setCurrentPracticeIndex((prev) => prev + 1);
   setPracticeFeedbackText("");
   setPracticeLastScore(null);
   setPracticeRecordingResult(null);
+}, 220);
+
+    return;
+  }
+
+  setIsPracticeVisible(false);
+
+  setTimeout(() => {
+    setIsPracticeActive(false);
+    setPracticeWords([]);
+    setCurrentPracticeIndex(0);
+    setPracticeFeedbackText("");
+    setPracticeLastScore(null);
+    setPracticeRecordingResult(null);
+
+    if (pendingNextAssistantText) {
+      setAssistantText(pendingNextAssistantText);
+      setPendingNextAssistantText("");
+    }
+
+    setIsWaitingToContinue(false);
+  }, 220);
 }
 
 async function handlePlayPracticeWord() {
@@ -807,6 +855,16 @@ async function handlePlayPracticeWord() {
 
 async function handlePracticeHoldStart(e) {
   e?.preventDefault?.();
+
+  try {
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current.currentTime = 0;
+    }
+  } catch {}
+
+  if (practiceHoldStartedRef.current) return;
+  practiceHoldStartedRef.current = true;
   if (practiceHoldStartedRef.current) return;
   practiceHoldStartedRef.current = true;
 
@@ -1034,9 +1092,10 @@ async function handleContinueAfterFeedback() {
       border: "1px solid rgba(15,23,42,0.08)",
       boxShadow: "0 16px 42px rgba(15,23,42,0.08)",
       padding: "20px 18px",
-      transform: "scale(1)",
-      opacity: 1,
-      transition: "transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 260ms ease",
+      transform: isPracticeVisible ? "translateY(0px) scale(1)" : "translateY(30px) scale(0.94)",
+      opacity: isPracticeVisible ? 1 : 0,
+      transition: "transform 1400ms cubic-bezier(0.22, 1, 0.36, 1), opacity 1400ms ease",
+      pointerEvents: isPracticeVisible ? "auto" : "none",
     }}
   >
     <div

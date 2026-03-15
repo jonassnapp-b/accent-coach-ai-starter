@@ -114,6 +114,8 @@ let practiceRecorderMimeType = "";
 let practiceChunks = [];
 let currentPracticePromise = null;
 let resolveCurrentPractice = null;
+let isUserInputActive = false;
+let isPracticeInputActive = false;
 
   function safeEmitError(err) {
     console.error("[realtimeConversation]", err);
@@ -240,8 +242,13 @@ let resolveCurrentPractice = null;
 
     return pending;
   }
-  async function startPracticeRecording() {
+async function startPracticeRecording() {
   if (practiceRecorder && practiceRecorder.state === "recording") return true;
+  if (isPracticeInputActive) return true;
+
+  isPracticeInputActive = true;
+
+  interruptAssistant();
 
   try {
     practiceStream = await navigator.mediaDevices.getUserMedia({
@@ -288,13 +295,14 @@ let resolveCurrentPractice = null;
           size: 0,
           error: err?.message || "Failed to build practice blob",
         });
-      } finally {
+          } finally {
         try {
           if (practiceStream) {
             practiceStream.getTracks().forEach((t) => t.stop());
           }
         } catch {}
 
+        isPracticeInputActive = false;
         practiceStream = null;
         practiceRecorder = null;
         practiceRecorderMimeType = "";
@@ -306,8 +314,9 @@ let resolveCurrentPractice = null;
 
     practiceRecorder.start();
     return true;
-  } catch (err) {
+    } catch (err) {
     safeEmitError(err);
+    isPracticeInputActive = false;
     currentPracticePromise = null;
     resolveCurrentPractice = null;
 
@@ -326,6 +335,8 @@ let resolveCurrentPractice = null;
 }
 
 function stopPracticeRecording() {
+  isPracticeInputActive = false;
+
   if (!practiceRecorder) {
     return Promise.resolve({
       blob: null,
@@ -531,8 +542,15 @@ sendEvent({
   session: {
     type: "realtime",
     instructions:
-  "You are a friendly English conversation coach for everyday learners. Speak only in English at all times. Keep the conversation simple, natural, and easy to follow. Only talk about normal everyday topics such as daily life, hobbies, food, weekend plans, friends, family, travel, work, movies, music, exercise, weather, shopping, and routines. Do not bring up technology, AI, business, finance, politics, science, world news, or other niche topics unless the user clearly asks for them. Sound like a normal friendly person, not a teacher giving a lecture. Keep responses concise and natural.",
+      "You are a friendly English conversation coach for everyday learners. Speak only in English at all times. Keep the conversation simple, natural, and easy to follow. Only talk about normal everyday topics such as daily life, hobbies, food, weekend plans, friends, family, travel, work, movies, music, exercise, weather, shopping, and routines. Do not bring up technology, AI, business, finance, politics, science, world news, or other niche topics unless the user clearly asks for them. Sound like a normal friendly person, not a teacher giving a lecture. Keep responses concise and natural.",
     audio: {
+      input: {
+        turn_detection: {
+          type: "server_vad",
+          create_response: false,
+          interrupt_response: true,
+        },
+      },
       output: {
         voice: selectedVoice,
       },
@@ -566,33 +584,52 @@ function requestAssistantReply() {
     sendEvent({ type: "output_audio_buffer.clear" });
   }
 
-  function startUserInput() {
-    if (!isConnected || !localAudioTrack) return false;
+function startUserInput() {
+  if (!isConnected || !localAudioTrack) return false;
+  if (isUserInputActive) return true;
 
-    interruptAssistant();
+  isUserInputActive = true;
+
+  interruptAssistant();
+
+  try {
     localAudioTrack.enabled = true;
-    startLocalRecording();
-    return true;
+  } catch {}
+
+  const ok = startLocalRecording();
+  if (!ok) {
+    isUserInputActive = false;
+    try {
+      localAudioTrack.enabled = false;
+    } catch {}
+    return false;
   }
 
-  function stopUserInput() {
-    if (!localAudioTrack) {
-      return Promise.resolve({
-        ok: false,
-        blob: null,
-        mimeType: "",
-        base64: "",
-        size: 0,
-      });
-    }
+  return true;
+}
 
+function stopUserInput() {
+  isUserInputActive = false;
+
+  if (!localAudioTrack) {
+    return Promise.resolve({
+      ok: false,
+      blob: null,
+      mimeType: "",
+      base64: "",
+      size: 0,
+    });
+  }
+
+  try {
     localAudioTrack.enabled = false;
+  } catch {}
 
-    return stopLocalRecording().then((result) => ({
-      ok: true,
-      ...(result || {}),
-    }));
-  }
+  return stopLocalRecording().then((result) => ({
+    ok: true,
+    ...(result || {}),
+  }));
+}
 
   function disconnect() {
     try {
@@ -673,7 +710,8 @@ practiceRecorderMimeType = "";
 practiceChunks = [];
 currentPracticePromise = null;
 resolveCurrentPractice = null;
-
+isUserInputActive = false;
+isPracticeInputActive = false;
 isConnected = false;
   }
 
