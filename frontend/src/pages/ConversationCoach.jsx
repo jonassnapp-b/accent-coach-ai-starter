@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Mic, RotateCcw } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import { createRealtimeConversation } from "../lib/realtimeConversation.js";
+import { useNavigate } from "react-router-dom";
 function isNative() {
   return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
 }
@@ -18,8 +19,105 @@ function getApiBase() {
   }
   return (ls || env || window.location.origin).replace(/\/+$/, "");
 }
+const TALK_DAILY_LIMIT_MS = 90000;
+const TALK_DAILY_STORAGE_KEY = "fluentup_conversation_coach_daily_v1";
+
+function getLocalDayKey() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function readDailyTalkUsage() {
+  try {
+    const raw = localStorage.getItem(TALK_DAILY_STORAGE_KEY);
+    if (!raw) {
+      return { dayKey: getLocalDayKey(), usedMs: 0 };
+    }
+
+    const parsed = JSON.parse(raw);
+    const today = getLocalDayKey();
+
+    if (parsed?.dayKey !== today) {
+      return { dayKey: today, usedMs: 0 };
+    }
+
+    return {
+      dayKey: today,
+      usedMs: Math.max(0, Number(parsed?.usedMs || 0)),
+    };
+  } catch {
+    return { dayKey: getLocalDayKey(), usedMs: 0 };
+  }
+}
+
+function writeDailyTalkUsage(usedMs) {
+  try {
+    localStorage.setItem(
+      TALK_DAILY_STORAGE_KEY,
+      JSON.stringify({
+        dayKey: getLocalDayKey(),
+        usedMs: Math.max(0, Math.floor(Number(usedMs || 0))),
+      })
+    );
+  } catch {}
+}
+
+function getRemainingDailyTalkMs() {
+  const usage = readDailyTalkUsage();
+  return Math.max(0, TALK_DAILY_LIMIT_MS - usage.usedMs);
+}
+
+function addDailyTalkUsage(msToAdd) {
+  const usage = readDailyTalkUsage();
+  const nextUsed = Math.min(TALK_DAILY_LIMIT_MS, usage.usedMs + Math.max(0, Number(msToAdd || 0)));
+  writeDailyTalkUsage(nextUsed);
+  return Math.max(0, TALK_DAILY_LIMIT_MS - nextUsed);
+}
+function AiSpeakingWaveform({ active }) {
+  const bars = [0, 1, 2, 3, 4, 5, 6];
+
+  return (
+    <div
+      aria-hidden="true"
+     style={{
+  display: "flex",
+  alignItems: "flex-end",
+  justifyContent: "center",
+  gap: 6,
+  height: 44,
+  marginTop: 10,
+  opacity: 1,
+  transform: "scale(1)",
+}}
+    >
+      {bars.map((i) => (
+       <span
+  key={i}
+  style={{
+    display: "inline-block",
+    width: 6,
+    height: active ? 14 : 14,
+    borderRadius: 999,
+    background:
+      "linear-gradient(180deg, rgba(85,174,255,1) 0%, rgba(33,150,243,1) 55%, rgba(23,105,199,1) 100%)",
+    transformOrigin: "center bottom",
+    willChange: "transform, opacity",
+    animation: active
+      ? `conversationCoachWave 0.9s ease-in-out ${i * 0.09}s infinite`
+      : "none",
+    boxShadow: active ? "0 4px 14px rgba(33,150,243,0.22)" : "none",
+  }}
+/>
+      ))}
+    </div>
+  );
+}
 
 export default function ConversationCoach() {
+  const nav = useNavigate();
   const { settings } = useSettings?.() || { settings: {} };
   const defaultAccent = settings?.accentDefault === "en_br" ? "en_br" : "en_us";
 const [selectedAccent, setSelectedAccent] = useState(defaultAccent);
@@ -32,8 +130,9 @@ const [feedbackSummary, setFeedbackSummary] = useState("");
 const [isAnalyzing, setIsAnalyzing] = useState(false);
 const [isPreparingFeedbackAudio, setIsPreparingFeedbackAudio] = useState(false);
 const [isWorkingOnFeedback, setIsWorkingOnFeedback] = useState(false);
-  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
-  const [isStartingConversation, setIsStartingConversation] = useState(false);
+const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+const [isTtsWaveformActive, setIsTtsWaveformActive] = useState(false);
+const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [error, setError] = useState("");
   const [holdScale, setHoldScale] = useState(1);
   const [isWaitingToContinue, setIsWaitingToContinue] = useState(false);
@@ -60,25 +159,137 @@ const practiceHoldStartedRef = useRef(false);
   const waitingForUserReleaseRef = useRef(false);
   const lastUserTranscriptRef = useRef("");
   const feedbackBusyRef = useRef(false);
+const activeTtsRef = useRef({ url: "", resolve: null });
+const talkPaywallTimerRef = useRef(null);
+const talkPaywallShownRef = useRef(false);
+const talkSessionStartedAtRef = useRef(0);
+const talkSessionLimitMsRef = useRef(0);
+function clearTalkPaywallTimer() {
+  if (talkPaywallTimerRef.current) {
+    clearTimeout(talkPaywallTimerRef.current);
+    talkPaywallTimerRef.current = null;
+  }
+}
+
+function startTalkPaywallTimer() {
+  clearTalkPaywallTimer();
+
+  const remainingMs = getRemainingDailyTalkMs();
+
+  if (remainingMs <= 0) {
+    talkPaywallShownRef.current = true;
+
+    stopFeedbackTts();
+
+    try {
+      realtimeRef.current?.disconnect?.();
+    } catch {}
+
+    setIsAiSpeaking(false);
+    setIsRecording(false);
+    setIsAnalyzing(false);
+    setIsPreparingFeedbackAudio(false);
+    setIsWorkingOnFeedback(false);
+    setIsWaitingToContinue(false);
+
+    nav("/pro?src=talk_daily_limit&return=/conversation-coach");
+    return;
+  }
+
+  talkSessionStartedAtRef.current = Date.now();
+  talkSessionLimitMsRef.current = remainingMs;
+
+  talkPaywallTimerRef.current = setTimeout(() => {
+    if (talkPaywallShownRef.current) return;
+
+    const startedAt = talkSessionStartedAtRef.current || Date.now();
+    const elapsed = Math.min(talkSessionLimitMsRef.current || 0, Math.max(0, Date.now() - startedAt));
+    addDailyTalkUsage(elapsed);
+
+    talkPaywallShownRef.current = true;
+
+    stopFeedbackTts();
+
+    try {
+      realtimeRef.current?.disconnect?.();
+    } catch {}
+
+    setIsAiSpeaking(false);
+    setIsRecording(false);
+    setIsAnalyzing(false);
+    setIsPreparingFeedbackAudio(false);
+    setIsWorkingOnFeedback(false);
+    setIsWaitingToContinue(false);
+
+    nav("/pro?src=talk_daily_limit&return=/conversation-coach");
+  }, remainingMs);
+}
+function finalizeDailyTalkSession() {
+  if (!talkSessionStartedAtRef.current) return;
+
+  const startedAt = talkSessionStartedAtRef.current;
+  const maxAllowed = talkSessionLimitMsRef.current || 0;
+  const elapsed = Math.min(maxAllowed, Math.max(0, Date.now() - startedAt));
+
+  addDailyTalkUsage(elapsed);
+
+  talkSessionStartedAtRef.current = 0;
+  talkSessionLimitMsRef.current = 0;
+}
+function stopFeedbackTts() {
+  const audio = ttsAudioRef.current;
+  const active = activeTtsRef.current;
+
+  try {
+    if (audio) {
+      audio.onplaying = null;
+      audio.onended = null;
+      audio.onerror = null;
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  } catch {}
+
+  if (active?.url) {
+    try {
+      URL.revokeObjectURL(active.url);
+    } catch {}
+  }
+
+  if (typeof active?.resolve === "function") {
+    const resolve = active.resolve;
+    activeTtsRef.current = { url: "", resolve: null };
+    resolve(false);
+  } else {
+    activeTtsRef.current = { url: "", resolve: null };
+  }
+
+  setIsAiSpeaking(false);
+  setIsTtsWaveformActive(false);
+  setIsPreparingFeedbackAudio(false);
+  setIsWorkingOnFeedback(false);
+}
 async function speakText(text) {
   const t = String(text || "").trim();
-  if (!t) return;
+  if (!t) return false;
 
+  stopFeedbackTts();
   setIsPreparingFeedbackAudio(true);
 
   const base = getApiBase();
 
   const res = await fetch(`${base}/api/tts`, {
-    
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-  text: t,
-  accent: selectedAccent,
-  rate: 1,
-}),
+      text: t,
+      accent: selectedAccent,
+      rate: 1,
+    }),
   });
-console.log("[ConversationCoach] tts status =", res.status);
+
+  console.log("[ConversationCoach] tts status =", res.status);
+
   if (!res.ok) {
     const msg = await res.text().catch(() => "");
     throw new Error(msg || "TTS failed");
@@ -89,35 +300,60 @@ console.log("[ConversationCoach] tts status =", res.status);
   const blob = new Blob([buf], { type: mime });
   const url = URL.createObjectURL(blob);
 
+  setIsTtsWaveformActive(true);
+
   return new Promise((resolve, reject) => {
     try {
       if (!ttsAudioRef.current) {
         ttsAudioRef.current = new Audio();
       }
 
-const a = ttsAudioRef.current;
-a.src = url;
-a.volume = 1;
-a.onplaying = () => {
-  setIsPreparingFeedbackAudio(false);
-  setIsWorkingOnFeedback(false);
-};
-a.onended = () => {
-  setIsPreparingFeedbackAudio(false);
-  URL.revokeObjectURL(url);
-  resolve();
-};
-a.onerror = () => {
-  setIsPreparingFeedbackAudio(false);
-  URL.revokeObjectURL(url);
-  reject(new Error("Failed to play TTS"));
-};
-a.play().catch((err) => {
-  setIsPreparingFeedbackAudio(false);
-  reject(err);
-});
-    } catch (err) {
-      URL.revokeObjectURL(url);
+      activeTtsRef.current = { url, resolve };
+
+      const a = ttsAudioRef.current;
+      a.src = url;
+      a.volume = 1;
+
+        a.onplaying = () => {
+        setIsPreparingFeedbackAudio(false);
+        setIsWorkingOnFeedback(false);
+      };
+
+      a.onended = () => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {}
+        activeTtsRef.current = { url: "", resolve: null };
+        setIsTtsWaveformActive(false);
+        setIsPreparingFeedbackAudio(false);
+        resolve(true);
+      };
+
+      a.onerror = () => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {}
+        activeTtsRef.current = { url: "", resolve: null };
+        setIsTtsWaveformActive(false);
+        setIsPreparingFeedbackAudio(false);
+        reject(new Error("Failed to play TTS"));
+      };
+
+      a.play().catch((err) => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {}
+        activeTtsRef.current = { url: "", resolve: null };
+        setIsTtsWaveformActive(false);
+        setIsPreparingFeedbackAudio(false);
+        reject(err);
+      });
+      } catch (err) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {}
+      activeTtsRef.current = { url: "", resolve: null };
+      setIsTtsWaveformActive(false);
       reject(err);
     }
   });
@@ -213,11 +449,13 @@ function pickWeakPracticeWords(words = []) {
     mountedRef.current = true;
 
     return () => {
-      mountedRef.current = false;
-      try {
-        realtimeRef.current?.disconnect?.();
-      } catch {}
-    };
+  mountedRef.current = false;
+  finalizeDailyTalkSession();
+  clearTalkPaywallTimer();
+  try {
+    realtimeRef.current?.disconnect?.();
+  } catch {}
+};
   }, []);
 useEffect(() => {
   feedbackBusyRef.current = isAnalyzing || isPreparingFeedbackAudio;
@@ -393,17 +631,25 @@ if (spokenText) {
   setIsAnalyzing(false);
   setIsPreparingFeedbackAudio(true);
   setIsAiSpeaking(true);
+  setIsWaitingToContinue(!startedPractice);
 
-  await speakText(spokenText);
-
-  setIsAiSpeaking(false);
-  setIsPreparingFeedbackAudio(false);
+  speakText(spokenText)
+    .then(() => {
+      if (!mountedRef.current) return;
+      setIsAiSpeaking(false);
+      setIsPreparingFeedbackAudio(false);
+    })
+    .catch((err) => {
+      if (!mountedRef.current) return;
+      setIsAiSpeaking(false);
+      setIsPreparingFeedbackAudio(false);
+      setError(err?.message || "TTS failed.");
+    });
 } else {
   setIsAnalyzing(false);
   setIsWorkingOnFeedback(false);
+  setIsWaitingToContinue(!startedPractice);
 }
-
-setIsWaitingToContinue(!startedPractice);
 } catch (err) {
   const msg =
     err?.name === "AbortError"
@@ -463,8 +709,14 @@ async function analyzePracticeWord(recording, practiceWord) {
     setIsPracticeAnalyzing(false);
   }
 }
-  async function startNewConversation() {
-    try {
+async function startNewConversation() {
+  try {
+    finalizeDailyTalkSession();
+    clearTalkPaywallTimer();
+    talkPaywallShownRef.current = false;
+    talkSessionStartedAtRef.current = 0;
+    talkSessionLimitMsRef.current = 0;
+
       try {
         realtimeRef.current?.disconnect?.();
       } catch {}
@@ -509,7 +761,7 @@ onRemoteAudio: () => {
             setFeedbackSummary("");
           }
 
-       if (type === "response.created") {
+if (type === "response.created") {
   if (suppressNextAssistantResponseRef.current) {
     realtimeRef.current?.interruptAssistant?.();
     setIsAiSpeaking(false);
@@ -517,10 +769,9 @@ onRemoteAudio: () => {
   }
 
   setAssistantText("");
-  setIsAiSpeaking(true);
- if (!feedbackBusyRef.current) {
-  setIsAnalyzing(false);
-}
+  if (!feedbackBusyRef.current) {
+    setIsAnalyzing(false);
+  }
 }
 
           const deltaText =
@@ -595,7 +846,6 @@ onRemoteAudio: () => {
     return;
   }
 
-  setIsAiSpeaking(false);
   setIsAnalyzing(false);
 }
 
@@ -639,13 +889,15 @@ if (!feedbackBusyRef.current) {
         },
       });
 
-      realtimeRef.current = rt;
+         realtimeRef.current = rt;
       await rt.connect();
 
       // Trigger the assistant to speak first
       const ok = rt.startAssistantGreeting?.();
       if (!ok) {
         setError("Failed to trigger assistant greeting.");
+      } else {
+        startTalkPaywallTimer();
       }
     } catch (err) {
       console.error(err);
@@ -660,46 +912,40 @@ if (!feedbackBusyRef.current) {
     await startNewConversation();
   }
 
+
 function handleHoldStart(e) {
   e?.preventDefault?.();
 
-  try {
-    if (ttsAudioRef.current) {
-      ttsAudioRef.current.pause();
-      ttsAudioRef.current.currentTime = 0;
-    }
-  } catch {}
+  stopFeedbackTts();
 
   if (holdStartedRef.current) return;
   holdStartedRef.current = true;
-    if (holdStartedRef.current) return;
-    holdStartedRef.current = true;
-    userSpeechStartedRef.current = false;
-    suppressNextAssistantResponseRef.current = false;
-    waitingForUserReleaseRef.current = true;
-    lastUserTranscriptRef.current = "";
 
-    const ok = realtimeRef.current?.startUserInput?.();
-    if (!ok) {
-      setError("Microphone is not ready.");
-      holdStartedRef.current = false;
-      return;
-    }
+  userSpeechStartedRef.current = false;
+  suppressNextAssistantResponseRef.current = false;
+  waitingForUserReleaseRef.current = true;
+  lastUserTranscriptRef.current = "";
 
-setIsAiSpeaking(false);
-setIsRecording(true);
-setIsAnalyzing(false);
-setIsPreparingFeedbackAudio(false);
-setIsWorkingOnFeedback(false);
-setIsWaitingToContinue(false);
-setHasConversationStarted(true);
-setError("");
-setFeedbackSummary("");
-setSpokenFeedbackText("");
-setPendingNextAssistantText("");
-setHoldScale(1.08);
+  const ok = realtimeRef.current?.startUserInput?.();
+  if (!ok) {
+    setError("Microphone is not ready.");
+    holdStartedRef.current = false;
+    return;
   }
 
+  setIsAiSpeaking(false);
+  setIsRecording(true);
+  setIsAnalyzing(false);
+  setIsPreparingFeedbackAudio(false);
+  setIsWorkingOnFeedback(false);
+  setIsWaitingToContinue(false);
+  setHasConversationStarted(true);
+  setError("");
+  setFeedbackSummary("");
+  setSpokenFeedbackText("");
+  setPendingNextAssistantText("");
+  setHoldScale(1.08);
+}
   async function handleHoldEnd(e) {
     e?.preventDefault?.();
     if (!holdStartedRef.current) return;
@@ -856,15 +1102,8 @@ async function handlePlayPracticeWord() {
 async function handlePracticeHoldStart(e) {
   e?.preventDefault?.();
 
-  try {
-    if (ttsAudioRef.current) {
-      ttsAudioRef.current.pause();
-      ttsAudioRef.current.currentTime = 0;
-    }
-  } catch {}
+  stopFeedbackTts();
 
-  if (practiceHoldStartedRef.current) return;
-  practiceHoldStartedRef.current = true;
   if (practiceHoldStartedRef.current) return;
   practiceHoldStartedRef.current = true;
 
@@ -900,6 +1139,7 @@ function handlePracticeTryAgain() {
 }
 async function handleContinueAfterFeedback() {
   try {
+    stopFeedbackTts();
     setError("");
     setIsWaitingToContinue(false);
 
@@ -1425,7 +1665,9 @@ async function handleContinueAfterFeedback() {
   "Hold to talk"
 )}
                 </div>
-
+{!isPracticeActive && isAiSpeaking && (
+  <AiSpeakingWaveform active={true} />
+)}
                 {!!error && (
                   <div
                     style={{
@@ -1447,27 +1689,27 @@ async function handleContinueAfterFeedback() {
               type="button"
               onClick={startNewConversation}
               disabled={isBusy || !hasConversationStarted}
-              style={{
-                width: "100%",
-                height: 54,
-                borderRadius: 18,
-                border: "1px solid rgba(15,23,42,0.08)",
-                background: isBusy || !hasConversationStarted ? "#E5E7EB" : "#FFFFFF",
-                color: isBusy || !hasConversationStarted ? "#94A3B8" : "#0F172A",
-                fontWeight: 900,
-                fontSize: 16,
-                cursor: isBusy || !hasConversationStarted ? "not-allowed" : "pointer",
-                boxShadow:
-                  isBusy || !hasConversationStarted
-                    ? "none"
-                    : "0 10px 28px rgba(15,23,42,0.05)",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                marginTop: 8,
-                opacity: isBusy || !hasConversationStarted ? 0.72 : 1,
-              }}
+            style={{
+  width: "100%",
+  height: 54,
+  borderRadius: 18,
+  border: "1px solid rgba(15,23,42,0.08)",
+  background: isBusy || !hasConversationStarted ? "#E5E7EB" : "#FFFFFF",
+  color: isBusy || !hasConversationStarted ? "#94A3B8" : "#0F172A",
+  fontWeight: 900,
+  fontSize: 16,
+  cursor: isBusy || !hasConversationStarted ? "not-allowed" : "pointer",
+  boxShadow:
+    isBusy || !hasConversationStarted
+      ? "none"
+      : "0 10px 28px rgba(15,23,42,0.05)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 10,
+  marginTop: -8,
+  opacity: isBusy || !hasConversationStarted ? 0.72 : 1,
+}}
             >
               <RotateCcw size={18} />
               New Conversation
@@ -1480,6 +1722,14 @@ async function handleContinueAfterFeedback() {
   @keyframes conversationCoachSpin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+  }
+
+  @keyframes conversationCoachWave {
+    0%   { transform: scaleY(0.45); opacity: 0.55; }
+    25%  { transform: scaleY(1.45); opacity: 1; }
+    50%  { transform: scaleY(0.75); opacity: 0.8; }
+    75%  { transform: scaleY(1.2); opacity: 0.95; }
+    100% { transform: scaleY(0.45); opacity: 0.55; }
   }
 `}</style>
     </div>

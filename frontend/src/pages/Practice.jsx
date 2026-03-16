@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import { ChevronLeft, Mic, Target, Bookmark, StopCircle } from "lucide-react";
+import { ChevronLeft, Mic, Target, Bookmark, StopCircle, AudioWaveform } from "lucide-react";
 import { getBookmarks } from "../lib/bookmarks";
 import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
@@ -305,20 +305,38 @@ const progressDeg = (clampedLen / MAX_LEN) * 360;
         title: "Train your weakest sounds",
         subtitle: "Practice specific sounds",
         Icon: Target,
+        iconBg: "rgba(33,150,243,0.10)",
+        iconBorder: "rgba(33,150,243,0.16)",
+        iconColor: "rgba(33,150,243,0.95)",
         onPress: () => {
-  if (!isPro) return openPaywall("weakest_locked");
-  nav("/weakness");
-},
+          if (!isPro) return openPaywall("weakest_locked");
+          nav("/weakness");
+        },
+      },
+      {
+        key: "coach",
+        title: "Daily Drill",
+        subtitle: "Personalized daily speaking practice",
+        Icon: AudioWaveform,
+        iconBg: "rgba(16,185,129,0.10)",
+        iconBorder: "rgba(16,185,129,0.16)",
+        iconColor: "rgba(16,185,129,0.95)",
+        onPress: () => {
+          nav("/coach");
+        },
       },
       {
         key: "bookmarks",
         title: "Bookmarks",
-      subtitle: `${bookmarkCount} saved`,
+        subtitle: `${bookmarkCount} saved`,
         Icon: Bookmark,
-onPress: () => {
-  if (!isPro) return openPaywall("bookmarks_locked");
-  nav("/bookmarks");
-},
+        iconBg: "rgba(245,158,11,0.10)",
+        iconBorder: "rgba(245,158,11,0.16)",
+        iconColor: "rgba(245,158,11,0.95)",
+        onPress: () => {
+          if (!isPro) return openPaywall("bookmarks_locked");
+          nav("/bookmarks");
+        },
       },
     ];
   }, [nav, bookmarkCount, isPro]);
@@ -905,19 +923,25 @@ flex: 1,
                     }}
                   >
                     <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                      <div
+                                         <div
                         style={{
                           width: 54,
                           height: 54,
                           borderRadius: 999,
                           display: "grid",
                           placeItems: "center",
-                          background: "rgba(33,150,243,0.10)",
-                          border: `1px solid rgba(33,150,243,0.16)`,
+                          background: c.iconBg || "rgba(33,150,243,0.10)",
+                          border: `1px solid ${c.iconBorder || "rgba(33,150,243,0.16)"}`,
                           flex: "0 0 auto",
                         }}
                       >
-                        <c.Icon style={{ width: 22, height: 22, color: "rgba(33,150,243,0.95)" }} />
+                        <c.Icon
+                          style={{
+                            width: 22,
+                            height: 22,
+                            color: c.iconColor || "rgba(33,150,243,0.95)",
+                          }}
+                        />
                       </div>
 
                       <div style={{ flex: 1, minWidth: 0 }}>
