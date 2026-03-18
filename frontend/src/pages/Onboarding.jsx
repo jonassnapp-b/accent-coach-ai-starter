@@ -497,15 +497,16 @@ export default function Onboarding() {
   style={{
     display: "flex",
     justifyContent: "center",
-    marginBottom: 36,
+    marginTop: 10,
+    marginBottom: 26,
   }}
 >
   <img
     src={fluentUpLogo}
     alt="FluentUp logo"
     style={{
-      width: 110,
-      height: 110,
+      width: 107,
+      height: 107,
       objectFit: "contain",
       display: "block",
     }}
