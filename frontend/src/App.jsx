@@ -14,7 +14,8 @@ import { SettingsProvider } from "./lib/settings-store.jsx";
 
 import Record from "./pages/Record.jsx";
 import Feedback from "./pages/Feedback.jsx";
-
+import Onboarding from "./pages/Onboarding.jsx";
+import { isOnboardingDone } from "./lib/onboarding.js";
 
 import { Mic, Settings as SettingsIcon, MessageCircle, PhoneCall } from "lucide-react";
 import SplashSequence from "./components/SplashSequence";
@@ -140,11 +141,7 @@ const TABS = [
 
 
 
-/* ---------------- Small helper to read onboarding flag ---------------- */
-function isOnboardingDone() {
-  try { return localStorage.getItem("onboardingComplete") === "true"; }
-  catch { return false; }
-}
+
 
 /* ---------------- App ---------------- */
 
@@ -175,7 +172,8 @@ useEffect(() => {
   const [scenarioOverlayOpen, setScenarioOverlayOpen] = useState(false);
 const location = useLocation();
 const isPaywall = location.pathname === "/pro";
-const showTabs = !scenarioOverlayOpen && !isPaywall;
+const isOnboardingRoute = location.pathname === "/onboarding";
+const showTabs = !scenarioOverlayOpen && !isPaywall && !isOnboardingRoute;
 
 useEffect(() => {
   const on = (e) => setScenarioOverlayOpen(!!e?.detail?.open);
@@ -183,7 +181,13 @@ useEffect(() => {
   return () => window.removeEventListener("ac:scenarioOverlay", on);
 }, []);
   const done = isOnboardingDone();
+if (!done && location.pathname !== "/onboarding") {
+  return <Navigate to="/onboarding" replace />;
+}
 
+if (done && location.pathname === "/onboarding") {
+  return <Navigate to="/conversation-coach" replace />;
+}
   // Capture referral code (?ref=XYZ) once
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -296,7 +300,7 @@ useEffect(() => {
             <Suspense fallback={<div style={{padding:16, color:"var(--muted)"}}>Loading…</div>}>
               <Routes>
                 <Route path="/" element={<Navigate to="/conversation-coach" replace />} />
-
+<Route path="/onboarding" element={<Onboarding />} />
             {TABS.map((t) => (
   <Route key={t.path} path={t.path} element={t.element} />
 ))}
