@@ -493,32 +493,23 @@ export default function Onboarding() {
   function renderHero(slide) {
     return (
       <>
-   <div style={{ display: "flex", justifyContent: "center", marginBottom: 36 }}>
-  <div
+<div
+  style={{
+    display: "flex",
+    justifyContent: "center",
+    marginBottom: 36,
+  }}
+>
+  <img
+    src={fluentUpLogo}
+    alt="FluentUp logo"
     style={{
-      width: 118,
-      height: 118,
-      borderRadius: 28,
-      background: "#101010",
-      border: `1px solid ${BORDER}`,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
-      overflow: "hidden",
+      width: 110,
+      height: 110,
+      objectFit: "contain",
+      display: "block",
     }}
-  >
-    <img
-      src={fluentUpLogo}
-      alt="FluentUp logo"
-      style={{
-        width: 72,
-        height: 72,
-        objectFit: "contain",
-        display: "block",
-      }}
-    />
-  </div>
+  />
 </div>
 
         <div style={{ textAlign: "center" }}>
