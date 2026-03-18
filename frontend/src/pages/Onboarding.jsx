@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, MessageSquareText, Target, Sparkles, Flag, AudioLines, Gauge, Circle, Mic2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { saveOnboardingAnswers, setOnboardingDone } from "../lib/onboarding.js";
-import fluentUpLogo from "../assets/logo-arrow-hq.png";
+import fluentUpLogo from "../assets/Logo_Arrow.png";
 const BLUE = "#2196F3";
 const ORANGE = "#FF9800";
 const BG = "#0A0A0A";
