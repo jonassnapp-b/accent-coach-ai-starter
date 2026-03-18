@@ -1,9 +1,9 @@
 // src/pages/Onboarding.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, Mic2, MessageSquareText, Target, Briefcase, Plane, Sparkles, Flag, AudioLines, Gauge, Circle } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, MessageSquareText, Target, Sparkles, Flag, AudioLines, Gauge, Circle, Mic2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { saveOnboardingAnswers, setOnboardingDone } from "../lib/onboarding.js";
-
+import fluentUpLogo from "../assets/logo-arrow-hq.png";
 const BLUE = "#2196F3";
 const ORANGE = "#FF9800";
 const BG = "#0A0A0A";
@@ -493,23 +493,33 @@ export default function Onboarding() {
   function renderHero(slide) {
     return (
       <>
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 36 }}>
-          <div
-            style={{
-              width: 118,
-              height: 118,
-              borderRadius: 28,
-              background: "#101010",
-              border: `1px solid ${BORDER}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
-            }}
-          >
-            <Mic2 size={52} color="#fff" />
-          </div>
-        </div>
+   <div style={{ display: "flex", justifyContent: "center", marginBottom: 36 }}>
+  <div
+    style={{
+      width: 118,
+      height: 118,
+      borderRadius: 28,
+      background: "#101010",
+      border: `1px solid ${BORDER}`,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
+      overflow: "hidden",
+    }}
+  >
+    <img
+      src={fluentUpLogo}
+      alt="FluentUp logo"
+      style={{
+        width: 72,
+        height: 72,
+        objectFit: "contain",
+        display: "block",
+      }}
+    />
+  </div>
+</div>
 
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 50, fontWeight: 900, lineHeight: 0.98, color: TEXT }}>{slide.titleTop}</div>
@@ -528,11 +538,22 @@ export default function Onboarding() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gap: 18, marginTop: 40 }}>
-          {slide.bullets.map((b) => (
-            <BulletRow key={b} text={b} />
-          ))}
-        </div>
+    <div
+  style={{
+    display: "grid",
+    gap: 18,
+    marginTop: 40,
+    width: "100%",
+    maxWidth: 360,
+    marginLeft: "auto",
+    marginRight: "auto",
+    paddingLeft: 28,
+  }}
+>
+  {slide.bullets.map((b) => (
+    <BulletRow key={b} text={b} />
+  ))}
+</div>
 
         <div style={{ marginTop: "auto", paddingTop: 34 }}>
           <button onClick={handleNext} style={primaryButtonStyle()}>
