@@ -1,9 +1,10 @@
 // src/pages/Onboarding.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, MessageSquareText, Target, Sparkles, Flag, AudioLines, Gauge, Circle, Mic2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Target, Sparkles, Flag, AudioLines, Circle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { saveOnboardingAnswers, setOnboardingDone } from "../lib/onboarding.js";
 import fluentUpLogo from "../assets/Logo_Arrow.png";
+import appScreenshot1 from "../assets/app_screenshot1.png";
 const BLUE = "#2196F3";
 const ORANGE = "#FF9800";
 const BG = "#0A0A0A";
@@ -27,26 +28,22 @@ const featureSlides = [
     ],
     cta: "Get Started",
   },
-  {
-    type: "feature",
-    title: "AI Conversation Coach",
-    subtitle: "Practice real conversations and get feedback while you speak.",
-    dots: ["Real-time", "Personalized", "Interactive"],
-    cta: "Next Feature",
-    phoneTitle: "Coach",
-    phoneBody: "Speak with AI and get live guidance while you practice.",
-    icon: "conversation",
-  },
-  {
-    type: "feature",
-    title: "Pronunciation Feedback",
-    subtitle: "Record your voice and get instant word-by-word and phoneme-level feedback.",
-    dots: ["Precise", "Instant", "Actionable"],
-    cta: "Next Feature",
-    phoneTitle: "Practice",
-    phoneBody: "See exactly what to fix and improve faster.",
-    icon: "pronunciation",
-  },
+{
+  type: "feature",
+  title: "AI Conversation Coach",
+  subtitle: "Practice real conversations and get feedback while you speak.",
+  dots: ["Real-time", "Personalized", "Interactive"],
+  cta: "Next Feature",
+  screenshot: appScreenshot1,
+},
+{
+  type: "feature",
+  title: "Pronunciation Feedback",
+  subtitle: "Record your voice and get instant word-by-word and phoneme-level feedback.",
+  dots: ["Precise", "Instant", "Actionable"],
+  cta: "Next Feature",
+  screenshot: appScreenshot1,
+},
 ];
 
 const questions = [
@@ -187,90 +184,25 @@ function BulletRow({ text }) {
   );
 }
 
-function PhoneMockup({ title, body, icon }) {
+function PhoneMockup({ screenshot }) {
   return (
     <div
       style={{
         width: 240,
         maxWidth: "72vw",
         margin: "0 auto",
-        borderRadius: 34,
-        padding: 10,
-        background: "#111",
-        border: `1px solid ${BORDER}`,
-        boxShadow: "0 10px 40px rgba(0,0,0,0.45)",
       }}
     >
-      <div
+      <img
+        src={screenshot}
+        alt="App preview"
         style={{
-          borderRadius: 28,
-          background: "#0E0E0E",
-          padding: 16,
-          minHeight: 330,
-          position: "relative",
-          overflow: "hidden",
+          width: "100%",
+          display: "block",
+          borderRadius: 34,
+          boxShadow: "0 10px 40px rgba(0,0,0,0.45)",
         }}
-      >
-        <div
-          style={{
-            width: 84,
-            height: 6,
-            borderRadius: 999,
-            background: "rgba(255,255,255,0.16)",
-            margin: "0 auto 18px",
-          }}
-        />
-        <div
-          style={{
-            borderRadius: 20,
-            padding: 18,
-            background: "linear-gradient(180deg, rgba(33,150,243,0.95) 0%, rgba(33,150,243,0.82) 100%)",
-            color: "#fff",
-            marginBottom: 16,
-          }}
-        >
-          <div style={{ opacity: 0.88, fontSize: 13, marginBottom: 10 }}>FluentUp</div>
-          <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.05 }}>{title}</div>
-          <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.4, opacity: 0.92 }}>{body}</div>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-          <div style={{ background: CARD_2, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 14 }}>
-            <div style={{ color: BLUE, marginBottom: 10 }}>
-              {icon === "conversation" ? <MessageSquareText size={18} /> : <Mic2 size={18} />}
-            </div>
-            <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>
-              {icon === "conversation" ? "Live Coach" : "Instant Analysis"}
-            </div>
-          </div>
-          <div style={{ background: CARD_2, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 14 }}>
-            <div style={{ color: ORANGE, marginBottom: 10 }}>
-              {icon === "conversation" ? <AudioLines size={18} /> : <Gauge size={18} />}
-            </div>
-            <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>
-              {icon === "conversation" ? "Real-time" : "Phoneme Score"}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ background: CARD_2, border: `1px solid ${BORDER}`, borderRadius: 16, padding: 14 }}>
-          <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 13, marginBottom: 8 }}>Your Progress</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-            <div style={{ background: "#101010", borderRadius: 12, padding: 10, textAlign: "center" }}>
-              <div style={{ color: "#fff", fontWeight: 800, fontSize: 18 }}>12</div>
-              <div style={{ color: MUTED_2, fontSize: 11 }}>Sessions</div>
-            </div>
-            <div style={{ background: "#101010", borderRadius: 12, padding: 10, textAlign: "center" }}>
-              <div style={{ color: "#fff", fontWeight: 800, fontSize: 18 }}>84%</div>
-              <div style={{ color: MUTED_2, fontSize: 11 }}>Clarity</div>
-            </div>
-            <div style={{ background: "#101010", borderRadius: 12, padding: 10, textAlign: "center" }}>
-              <div style={{ color: "#fff", fontWeight: 800, fontSize: 18 }}>7d</div>
-              <div style={{ color: MUTED_2, fontSize: 11 }}>Streak</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      />
     </div>
   );
 }
@@ -505,8 +437,8 @@ export default function Onboarding() {
     src={fluentUpLogo}
     alt="FluentUp logo"
     style={{
-      width: 107,
-      height: 107,
+      width: 110,
+      height: 110,
       objectFit: "contain",
       display: "block",
     }}
@@ -561,7 +493,7 @@ export default function Onboarding() {
     return (
       <>
         <div style={{ paddingTop: 10 }}>
-          <PhoneMockup title={slide.phoneTitle} body={slide.phoneBody} icon={slide.icon} />
+          <PhoneMockup screenshot={slide.screenshot} />
         </div>
 
         <div style={{ textAlign: "center", marginTop: 36 }}>
