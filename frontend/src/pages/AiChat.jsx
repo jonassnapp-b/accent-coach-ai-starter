@@ -83,28 +83,57 @@ function openPaywallForLevel() {
 
 
   // selected scenario modal
-  const [activeScenario, setActiveScenario] = useState(null);
+  const [activeScenario, setActiveScenario] = useState(() => {
+  return window.history.state?.usr?.resumeScenario?.scenario || null;
+});
   const levels = useMemo(() => AI_CHAT_LEVELS, []);
+  useEffect(() => {
+  const resume = window.history.state?.usr?.resumeScenario;
+  if (!resume?.scenario) return;
+  setActiveScenario(resume.scenario);
+}, []);
 useEffect(() => {
-  const prevHtml = document.documentElement.style.overflow;
-  const prevBody = document.body.style.overflow;
+  const html = document.documentElement;
+  const body = document.body;
+
+  const prevHtmlOverflow = html.style.overflow;
+  const prevBodyOverflow = body.style.overflow;
+  const prevHtmlOverscroll = html.style.overscrollBehavior;
+  const prevBodyOverscroll = body.style.overscrollBehavior;
+  const prevHtmlBg = html.style.background;
+  const prevBodyBg = body.style.background;
 
   const tabBar = document.querySelector("[data-tabbar]");
   const prevTabbarDisplay = tabBar?.style.display;
 
   if (activeScenario) {
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+    body.style.overscrollBehavior = "none";
+    html.style.background = "#0B1220";
+    body.style.background = "#0B1220";
+
     if (tabBar) tabBar.style.display = "none";
   } else {
-    document.documentElement.style.overflow = prevHtml || "";
-    document.body.style.overflow = prevBody || "";
+    html.style.overflow = prevHtmlOverflow || "";
+    body.style.overflow = prevBodyOverflow || "";
+    html.style.overscrollBehavior = prevHtmlOverscroll || "";
+    body.style.overscrollBehavior = prevBodyOverscroll || "";
+    html.style.background = prevHtmlBg || "";
+    body.style.background = prevBodyBg || "";
+
     if (tabBar) tabBar.style.display = prevTabbarDisplay || "";
   }
 
   return () => {
-    document.documentElement.style.overflow = prevHtml || "";
-    document.body.style.overflow = prevBody || "";
+    html.style.overflow = prevHtmlOverflow || "";
+    body.style.overflow = prevBodyOverflow || "";
+    html.style.overscrollBehavior = prevHtmlOverscroll || "";
+    body.style.overscrollBehavior = prevBodyOverscroll || "";
+    html.style.background = prevHtmlBg || "";
+    body.style.background = prevBodyBg || "";
+
     if (tabBar) tabBar.style.display = prevTabbarDisplay || "";
   };
 }, [activeScenario]);
@@ -210,12 +239,19 @@ const locked = !isPro && Number(lvl.level) > 1;
                             key={s.id}
                             type="button"
                           onClick={() => {
-  // ✅ Free tier: only Level 1
   if (!isPro && Number(lvl.level) > 1) {
     openPaywallForLevel();
     return;
   }
-  setActiveScenario({ ...s, level: lvl.level });
+
+  const resume = window.history.state?.usr?.resumeScenario || null;
+  const nextScenario = { ...s, level: lvl.level };
+
+  if (resume?.scenario?.id !== nextScenario.id) {
+    nav("/ai-chat", { replace: true, state: {} });
+  }
+
+  setActiveScenario(nextScenario);
 }}
 
                             style={{
@@ -285,14 +321,17 @@ height: 72,
           <AnimatePresence>
             {activeScenario ? (
               <ScenarioChatModal
-                key={activeScenario.id}
-                scenario={activeScenario}
-                accentUi={accentUi}
-                onClose={() => setActiveScenario(null)}
-                readProgress={() => readProgress(activeScenario.id)}
-                writeProgress={(n) => writeProgress(activeScenario.id, n)}
-                theme={{ LIGHT_TEXT, LIGHT_MUTED, LIGHT_BORDER, CARD, CARD2 }}
-              />
+  key={activeScenario.id}
+  scenario={activeScenario}
+  accentUi={accentUi}
+  onClose={() => {
+    nav("/ai-chat", { replace: true, state: {} });
+    setActiveScenario(null);
+  }}
+  readProgress={() => readProgress(activeScenario.id)}
+  writeProgress={(n) => writeProgress(activeScenario.id, n)}
+  theme={{ LIGHT_TEXT, LIGHT_MUTED, LIGHT_BORDER, CARD, CARD2 }}
+/>
             ) : null}
           </AnimatePresence>
         </div>
@@ -304,22 +343,27 @@ height: 72,
 
 function ScenarioChatModal({ scenario, accentUi, onClose, readProgress, writeProgress, theme }) {
   const { settings } = useSettings();
-const nav = useNavigate();
+  const nav = useNavigate();
+  const rawResume = window.history.state?.usr?.resumeScenario || null;
+const resume = rawResume?.scenario?.id === scenario?.id ? rawResume : null;
 
-const [messages, setMessages] = useState(() => [
-  {
-    role: "assistant",
-    speaker: scenario.partnerName || "AI Partner",
-    text: scenario.opening || "Hi! Ready to start?",
-  },
-]);
-const [turnIndex, setTurnIndex] = useState(0);
-const [isComplete, setIsComplete] = useState(false);
+const [messages, setMessages] = useState(() => {
+  if (resume?.messages?.length) return resume.messages;
+  return [
+    {
+      role: "assistant",
+      speaker: scenario.partnerName || "AI Partner",
+      text: scenario.opening || "Hi! Ready to start?",
+    },
+  ];
+});
+const [turnIndex, setTurnIndex] = useState(() => Number.isFinite(resume?.turnIndex) ? resume.turnIndex : 0);
+const [isComplete, setIsComplete] = useState(() => !!resume?.isComplete);
 
 const totalTurns = Array.isArray(scenario?.turns) ? scenario.turns.length : 0;
 
 function resetScenario() {
-  try { window?.speechSynthesis?.cancel?.(); } catch {}
+  stopScenarioTts();
   stopAll();
 
   setMessages([
@@ -339,25 +383,153 @@ function resetScenario() {
 
 useEffect(() => {
   window.dispatchEvent(new CustomEvent("ac:scenarioOverlay", { detail: { open: true } }));
+
+  const el = messagesScrollRef.current;
+  if (el) {
+    const onTouchStart = (e) => {
+      const touch = e.touches?.[0];
+      if (!touch) return;
+      touchStartYRef.current = touch.clientY;
+      touchStartScrollTopRef.current = el.scrollTop;
+    };
+
+    const onTouchMove = (e) => {
+      const touch = e.touches?.[0];
+      if (!touch) return;
+
+      const currentY = touch.clientY;
+      const deltaY = currentY - touchStartYRef.current;
+
+      const scrollTop = el.scrollTop;
+      const maxScrollTop = el.scrollHeight - el.clientHeight;
+
+      const pullingDownAtTop = scrollTop <= 0 && deltaY > 0;
+      const pullingUpAtBottom = scrollTop >= maxScrollTop - 1 && deltaY < 0;
+
+      if (pullingDownAtTop || pullingUpAtBottom) {
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+
+    return () => {
+      stopScenarioTts();
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      window.dispatchEvent(new CustomEvent("ac:scenarioOverlay", { detail: { open: false } }));
+    };
+  }
+
   return () => {
+    stopScenarioTts();
     window.dispatchEvent(new CustomEvent("ac:scenarioOverlay", { detail: { open: false } }));
   };
 }, []);
 
   // AI returns an "expected short reply" that you score against
-  const [targetLine, setTargetLine] = useState(() => scenario.firstUserLine || "");
-function speakTarget() {
-  try {
-    const txt = String(targetLine || "").trim();
-    if (!txt) return;
+  const [targetLine, setTargetLine] = useState(() => {
+  if (typeof resume?.targetLine === "string") return resume.targetLine;
+  return scenario.firstUserLine || "";
+});
+useEffect(() => {
+  if (resume?.scenario?.id === scenario?.id) return;
 
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(txt);
-      u.lang = accentUi === "en_br" ? "en-GB" : "en-US";
-      window.speechSynthesis.speak(u);
+  setMessages([
+    {
+      role: "assistant",
+      speaker: scenario.partnerName || "AI Partner",
+      text: scenario.opening || "Hi! Ready to start?",
+    },
+  ]);
+  setTurnIndex(0);
+  setIsComplete(false);
+  setTargetLine(scenario.firstUserLine || "");
+  setAnalyzeStatus("");
+  setIsAnalyzing(false);
+  setIsRecording(false);
+}, [scenario?.id]);
+const ttsAudioRef = useRef(null);
+const activeTtsUrlRef = useRef("");
+
+function stopScenarioTts() {
+  try {
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current.currentTime = 0;
+      ttsAudioRef.current.onended = null;
+      ttsAudioRef.current.onerror = null;
     }
   } catch {}
+
+  if (activeTtsUrlRef.current) {
+    try {
+      URL.revokeObjectURL(activeTtsUrlRef.current);
+    } catch {}
+    activeTtsUrlRef.current = "";
+  }
+}
+
+async function speakTarget() {
+  const txt = String(targetLine || "").trim();
+  if (!txt) return;
+
+  try {
+    stopScenarioTts();
+
+    const base = getApiBase();
+
+    const res = await fetch(`${base}/api/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: txt,
+        accent: accentUi === "en_br" ? "en_br" : "en_us",
+        rate: Number(settings?.ttsRate ?? 1),
+      }),
+    });
+
+    if (!res.ok) {
+      const msg = await res.text().catch(() => "");
+      throw new Error(msg || "TTS failed");
+    }
+
+    const buf = await res.arrayBuffer();
+    const mime = (res.headers.get("content-type") || "audio/mpeg").split(";")[0].trim();
+    const blob = new Blob([buf], { type: mime });
+    const url = URL.createObjectURL(blob);
+
+    if (!ttsAudioRef.current) {
+      ttsAudioRef.current = new Audio();
+    }
+
+    activeTtsUrlRef.current = url;
+    ttsAudioRef.current.src = url;
+    ttsAudioRef.current.volume = Math.max(0, Math.min(1, Number(settings?.volume ?? 0.6)));
+
+    ttsAudioRef.current.onended = () => {
+      if (activeTtsUrlRef.current) {
+        try {
+          URL.revokeObjectURL(activeTtsUrlRef.current);
+        } catch {}
+        activeTtsUrlRef.current = "";
+      }
+    };
+
+    ttsAudioRef.current.onerror = () => {
+      if (activeTtsUrlRef.current) {
+        try {
+          URL.revokeObjectURL(activeTtsUrlRef.current);
+        } catch {}
+        activeTtsUrlRef.current = "";
+      }
+    };
+
+    await ttsAudioRef.current.play();
+  } catch (err) {
+    console.error("[AiChat] scenario TTS failed", err);
+  }
 }
 
 
@@ -499,6 +671,9 @@ function renderScoredLine(text, wordScoreMap) {
   const mediaRecRef = useRef(null);
   const chunksRef = useRef([]);
   const micStreamRef = useRef(null);
+  const messagesScrollRef = useRef(null);
+  const touchStartYRef = useRef(0);
+  const touchStartScrollTopRef = useRef(0);
 
   const [lastScorePct, setLastScorePct] = useState(null);
   const [improveWord, setImproveWord] = useState({ word: "sales", pct: 76 });
@@ -748,33 +923,33 @@ if (turnIndex + 1 >= totalTurns) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 14, scale: 0.98 }}
       transition={{ duration: 0.18 }}
-            style={{
-        position: "fixed",
-        inset: 0,
-    zIndex: 9999999999, // always above tab bar
-
-        // backdrop overlay (so the page behind is visually hidden)
-       background: "#0B1220", // fully opaque backdrop (nothing behind is visible)
-
-
-        paddingTop: "calc(var(--safe-top) + 12px)",
-paddingLeft: 12,
-paddingRight: 12,
-paddingBottom: "calc(6px + var(--safe-bottom))",
-
-      }}
+           style={{
+  position: "fixed",
+  inset: 0,
+  zIndex: 9999999999,
+  background: "#0B1220",
+  paddingTop: "calc(var(--safe-top) + 12px)",
+  paddingLeft: 12,
+  paddingRight: 12,
+  paddingBottom: "calc(6px + var(--safe-bottom))",
+  overflow: "hidden",
+  overscrollBehavior: "none",
+  WebkitOverflowScrolling: "touch",
+  touchAction: "none",
+}}
 
     >
-      <div
-        style={{
-          maxWidth: 760,
-          margin: "0 auto",
-          height: "100%",
-          display: "grid",
-          gridTemplateRows: "auto 1fr auto",
-          gap: 10,
-        }}
-      >
+     <div
+  style={{
+    maxWidth: 760,
+    margin: "0 auto",
+    height: "100%",
+    minHeight: 0,
+    display: "grid",
+    gridTemplateRows: "auto minmax(0, 1fr) auto",
+    gap: 10,
+  }}
+>
         {/* Modal header */}
         <div
           style={{
@@ -809,7 +984,7 @@ paddingBottom: "calc(6px + var(--safe-bottom))",
             <button
               type="button"
             onClick={() => {
-  try { window?.speechSynthesis?.cancel?.(); } catch {}
+  stopScenarioTts();
   stopAll();
   onClose();
 }}
@@ -833,7 +1008,20 @@ paddingBottom: "calc(6px + var(--safe-bottom))",
         </div>
 
         {/* Messages */}
-        <div style={{ overflowY: "auto", padding: "6px 4px" }}>
+        <div
+  ref={messagesScrollRef}
+  style={{
+    minHeight: 0,
+    height: "100%",
+    overflowY: "auto",
+    overflowX: "hidden",
+    padding: "6px 4px",
+    WebkitOverflowScrolling: "touch",
+    overscrollBehavior: "none",
+    touchAction: "pan-y",
+    background: "#0B1220",
+  }}
+>
           <div style={{ display: "grid", gap: 8 }}>
           <AnimatePresence initial={false}>
   {messages.map((m, idx) => {
@@ -902,6 +1090,7 @@ paddingBottom: "calc(6px + var(--safe-bottom))",
               border: "1px solid rgba(255,255,255,0.10)",
               borderRadius: 14,
 padding: "9px 11px",
+paddingRight: 72,
               position: "relative",
               boxShadow: "0 18px 46px rgba(0,0,0,0.32)",
             }}
@@ -912,26 +1101,6 @@ padding: "9px 11px",
 )}
 
             </div>
-
-            {Number.isFinite(m.score) ? (
-              <div
-                style={{
-                  position: "absolute",
-                  right: 8,
-                  top: 8,
-                  background: "rgba(34,197,94,0.95)",
-                  color: "#04110A",
-                  fontWeight: 950,
-                  borderRadius: 9,
-                  padding: "4px 8px",
-                  fontSize: 12,
-                  lineHeight: 1,
-
-                }}
-              >
-                {Math.round(m.score)}%
-              </div>
-            ) : null}
           </div>
 
        {/* Improve bar like screenshot */}
@@ -945,13 +1114,20 @@ padding: "9px 11px",
     stopAll();
     onClose();
 
-    nav("/practice-my-text", {
-      state: {
-        mode: "coach",
-        backRoute: "/ai-chat",
-        result: payload,
-      },
-    });
+   nav("/practice-my-text", {
+  state: {
+    mode: "coach",
+    backRoute: "/ai-chat",
+    result: payload,
+    scenarioResume: {
+      scenario,
+      messages,
+      turnIndex,
+      isComplete,
+      targetLine,
+    },
+  },
+});
   }}
   disabled={!m?.practicePayload}
   style={{
@@ -976,7 +1152,9 @@ padding: "9px 11px",
 
            <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
   <div style={{ fontWeight: 900, fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
-    You can improve
+    {m?.score >= 70
+  ? "Very good, but you can improve"
+  : "You can improve"}
   </div>
 </div>
 
@@ -992,13 +1170,20 @@ padding: "9px 11px",
     stopAll();
     onClose();
 
-    nav("/practice-my-text", {
-      state: {
-        mode: "coach",
-        backRoute: "/ai-chat",
-        result: payload,
-      },
-    });
+   nav("/practice-my-text", {
+  state: {
+    mode: "coach",
+    backRoute: "/ai-chat",
+    result: payload,
+    scenarioResume: {
+      scenario,
+      messages,
+      turnIndex,
+      isComplete,
+      targetLine,
+    },
+  },
+});
   }}
   style={{
     display: "inline-flex",
@@ -1015,7 +1200,7 @@ padding: "9px 11px",
   disabled={!m?.practicePayload}
 >
 <span style={{ color: "rgba(245,158,11,0.95)" }}>
-  {Number.isFinite(m?.improveWord?.pct) ? `${m.improveWord.pct}%` : "—"}
+  {Number.isFinite(m?.score) ? `${m.score}%` : ""}
 </span>
 
   <ChevronRight className="h-3.5 w-3.5" style={{ color: "rgba(255,255,255,0.65)" }} />

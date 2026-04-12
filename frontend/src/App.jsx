@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useEffect, useState, Suspense, lazy } from "react";
+import React, { useEffect, useRef, useState, Suspense, lazy } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -17,7 +17,11 @@ import Feedback from "./pages/Feedback.jsx";
 import Onboarding from "./pages/Onboarding.jsx";
 import { isOnboardingDone } from "./lib/onboarding.js";
 
-import { Mic, Settings as SettingsIcon, MessageCircle, PhoneCall } from "lucide-react";
+import {
+  Mic,
+  AudioLines,
+  Settings as SettingsIcon,
+} from "lucide-react";
 import SplashSequence from "./components/SplashSequence";
 import { usePostHog } from "@posthog/react";
 import Paywall from "./pages/Paywall.jsx";
@@ -44,6 +48,7 @@ import { submitReferralOpen } from "./lib/api.js";
 // 🔔 Push (native only)
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
 
 import "./styles.css";
 /* ---------------- Backend warm-up (Render cold start) ---------------- */
@@ -96,7 +101,18 @@ const routePrefetch = {
 function prefetchRoute(path) {
   try { routePrefetch[path]?.(); } catch {}
 }
+async function triggerTabHaptic() {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      await Haptics.impact({ style: ImpactStyle.Medium });
+      return;
+    }
 
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(20);
+    }
+  } catch {}
+}
 
 /* ✅ Practice Gate (prevents flash by redirecting BEFORE Record renders) */
 const PRACTICE_LAST_ROUTE_KEY = "ac_practice_last_route_v1";
@@ -126,9 +142,9 @@ function PracticeGate() {
 
 /* ---------------- Tabs ---------------- */
 /* ---------------- Tabs ---------------- */
+
 const TABS = [
-  { path: "/conversation-coach", label: "Talk", Icon: PhoneCall, element: <ConversationCoach /> },
-  { path: "/ai-chat", label: "Scenarios", Icon: MessageCircle, element: <AiChat /> },
+  { path: "/conversation-coach", label: "Speak", Icon: AudioLines, element: <ConversationCoach /> },
   { path: "/practice", label: "Practice", Icon: Mic, element: <Practice /> },
   { path: "/settings", label: "Settings", Icon: SettingsIcon, element: <Settings /> },
 ];
@@ -170,24 +186,76 @@ useEffect(() => {
 
     
   const [scenarioOverlayOpen, setScenarioOverlayOpen] = useState(false);
+const [accentOverlayOpen, setAccentOverlayOpen] = useState(false);
 const location = useLocation();
+const navigate = useNavigate();
+const contentRef = useRef(null);
 const isPaywall = location.pathname === "/pro";
 const isOnboardingRoute = location.pathname === "/onboarding";
-const showTabs = !scenarioOverlayOpen && !isPaywall && !isOnboardingRoute;
+const isPracticeMyTextRoute =
+  location.pathname === "/practice-my-text" ||
+  location.pathname === "/coach-my-text";
 
+const [levelOverlayOpen, setLevelOverlayOpen] = useState(false);
+
+const showTabs =
+  !scenarioOverlayOpen &&
+  !accentOverlayOpen &&
+  !levelOverlayOpen &&
+  !isPaywall &&
+  !isOnboardingRoute &&
+  !isPracticeMyTextRoute;
 useEffect(() => {
-  const on = (e) => setScenarioOverlayOpen(!!e?.detail?.open);
-  window.addEventListener("ac:scenarioOverlay", on);
-  return () => window.removeEventListener("ac:scenarioOverlay", on);
-}, []);
-  const done = isOnboardingDone();
-if (!done && location.pathname !== "/onboarding") {
-  return <Navigate to="/onboarding" replace />;
-}
+  const el = contentRef.current;
+  if (!el) return;
+  el.scrollTo({ top: 0, left: 0, behavior: "auto" });
+}, [location.pathname]);
+useEffect(() => {
+  const onScenario = (e) => setScenarioOverlayOpen(!!e?.detail?.open);
+  const onAccent = (e) => setAccentOverlayOpen(!!e?.detail?.open);
+  const onLevel = (e) => setLevelOverlayOpen(!!e?.detail?.open);
 
-if (done && location.pathname === "/onboarding") {
-  return <Navigate to="/conversation-coach" replace />;
-}
+  window.addEventListener("ac:scenarioOverlay", onScenario);
+  window.addEventListener("ac:accentOverlay", onAccent);
+  window.addEventListener("ac:levelOverlay", onLevel);
+
+  return () => {
+    window.removeEventListener("ac:scenarioOverlay", onScenario);
+    window.removeEventListener("ac:accentOverlay", onAccent);
+    window.removeEventListener("ac:levelOverlay", onLevel);
+  };
+}, []);
+useEffect(() => {
+  if (showSplash) return;
+  if (!isOnboardingDone()) return;
+
+  const allowedPaths = [
+    "/conversation-coach",
+    "/practice",
+    "/settings",
+    "/coach",
+    "/ai-chat",
+    "/imitate",
+    "/feedback",
+    "/record",
+    "/practice-my-text",
+    "/coach-my-text",
+    "/weakness",
+    "/bookmarks",
+    "/terms",
+    "/privacy",
+    "/pro",
+  ];
+
+  if (!allowedPaths.includes(location.pathname)) {
+    navigate("/conversation-coach", { replace: true });
+    return;
+  }
+
+  if (location.pathname === "/") {
+    navigate("/conversation-coach", { replace: true });
+  }
+}, [showSplash, location.pathname, navigate]);
   // Capture referral code (?ref=XYZ) once
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -251,8 +319,7 @@ if (done && location.pathname === "/onboarding") {
     let subReg, subErr, subRecv, subAction;
     (async () => {
       try {
-        const perm = await PushNotifications.requestPermissions();
-        if (perm.receive === "granted") await PushNotifications.register();
+       
       } catch (e) {
         console.warn("[Push] Permission/register failed:", e);
       }
@@ -281,9 +348,11 @@ if (done && location.pathname === "/onboarding") {
     };
   }, []);
 
-   return (
-    <>
-      {showSplash && (
+return (
+  <>
+    
+
+    {showSplash && (
         <SplashSequence
   onDone={() => {
     try { sessionStorage.setItem("ac_splash_done_v1", "1"); } catch {}
@@ -296,16 +365,32 @@ if (done && location.pathname === "/onboarding") {
         <div className="app-shell">
           
 
-          <main className="content with-bottom-tabs">
+          <main ref={contentRef} className="content with-bottom-tabs">
             <Suspense fallback={<div style={{padding:16, color:"var(--muted)"}}>Loading…</div>}>
               <Routes>
-                <Route path="/" element={<Navigate to="/conversation-coach" replace />} />
-<Route path="/onboarding" element={<Onboarding />} />
+               <Route
+  path="/"
+  element={
+    isOnboardingDone()
+      ? <Navigate to="/conversation-coach" replace />
+      : <Navigate to="/onboarding" replace />
+  }
+/>
+
+<Route
+  path="/onboarding"
+  element={
+    isOnboardingDone()
+      ? <Navigate to="/conversation-coach" replace />
+      : <Onboarding />
+  }
+/>
             {TABS.map((t) => (
   <Route key={t.path} path={t.path} element={t.element} />
 ))}
 
 <Route path="/coach" element={<Coach />} />
+<Route path="/ai-chat" element={<AiChat />} />
 
                 <Route path="/imitate" element={<ProgressiveSentenceMastery />} />
                 <Route path="/feedback" element={<Feedback />} />
@@ -331,15 +416,23 @@ if (done && location.pathname === "/onboarding") {
   aria-label={t.label}
   onMouseEnter={() => prefetchRoute(t.path)}
   onTouchStart={() => prefetchRoute(t.path)}
-  onClick={() => {
-    if (t.path === "/coach") {
-      sessionStorage.setItem("ac_last_nav_click", String(Date.now()));
-    }
-  }}
+onClick={() => {
+  triggerTabHaptic();
+
+  if (location.pathname === t.path) {
+    window.dispatchEvent(
+      new CustomEvent("ac:tabReselect", { detail: { path: t.path } })
+    );
+  }
+
+  if (t.path === "/coach") {
+    sessionStorage.setItem("ac_last_nav_click", String(Date.now()));
+  }
+}}
   className={({ isActive }) => "tabbtn" + (isActive ? " active" : "")}
 >
-  <t.Icon className="tabicon" />
-  <div className="tablabel">{t.label}</div>
+<t.Icon className="tabicon" size={24} strokeWidth={2.2} />  
+<div className="tablabel">{t.label}</div>
 </NavLink>
 
               ))}

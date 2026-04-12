@@ -24,12 +24,45 @@ function escSSML(s = "") {
 function pickAzureVoice(accent) {
   const a = (accent || "en_us").toLowerCase();
 
-  // Prøv disse først (typisk mindre robot end Ryan/Jenny for mange)
-  if (a === "en_br") return "en-GB-SoniaNeural";   // eller: en-GB-LibbyNeural / en-GB-RyanNeural
-  return "en-US-AriaNeural";                       // eller: en-US-JennyNeural / en-US-GuyNeural
+  const map = {
+    en_us: "en-US-AriaNeural",
+    en_br: "en-GB-LibbyNeural",
+    zh_cn: "zh-CN-XiaoxiaoNeural",
+    ja_jp: "ja-JP-NanamiNeural",
+    ko_kr: "ko-KR-SunHiNeural",
+    es_es: "es-ES-ElviraNeural",
+    de_de: "de-DE-KatjaNeural",
+    fr_fr: "fr-FR-DeniseNeural",
+    ru_ru: "ru-RU-SvetlanaNeural",
+    ar_sa: "ar-SA-ZariyahNeural",
+  };
+
+  return map[a] || "en-US-AriaNeural";
 }
+function pickOpenAiVoice(accent) {
+  const a = (accent || "en_us").toLowerCase();
 
+  if (a === "en_br") return "cedar";
+  return "marin";
+}
+function pickAzureLang(accent) {
+  const a = (accent || "en_us").toLowerCase();
 
+  const map = {
+    en_us: "en-US",
+    en_br: "en-GB",
+    zh_cn: "zh-CN",
+    ja_jp: "ja-JP",
+    ko_kr: "ko-KR",
+    es_es: "es-ES",
+    de_de: "de-DE",
+    fr_fr: "fr-FR",
+    ru_ru: "ru-RU",
+    ar_sa: "ar-SA",
+  };
+
+  return map[a] || "en-US";
+}
 async function fetchAzureMp3({ text, accent, rate, voice: voiceOverride }) {
   const key = process.env.AZURE_SPEECH_KEY || "";
   const region = process.env.AZURE_SPEECH_REGION || "";
@@ -42,7 +75,7 @@ async function fetchAzureMp3({ text, accent, rate, voice: voiceOverride }) {
   const rateStr = `${ratePct >= 0 ? "+" : ""}${ratePct}%`;
 
   // Brug accent til sprog-tag (så UK ikke står som en-US)
-  const lang = (accent || "en_us").toLowerCase() === "en_br" ? "en-GB" : "en-US";
+  const lang = pickAzureLang(accent);
 
   // (valgfrit men ofte mindre robot): "express-as"
   // Hvis du ikke vil have det, så slet <mstts:express-as ...> wrapperen.
@@ -78,24 +111,37 @@ async function fetchAzureMp3({ text, accent, rate, voice: voiceOverride }) {
   return { audioBuffer: buf, mime: "audio/mpeg" };
 }
 
-async function fetchOpenAiMp3({ text, accent, rate }) {
+async function fetchOpenAiMp3({ text, accent, rate, voice }) {
   if (!openai) return null;
 
   const a = (accent || "en_us").toLowerCase();
-
-  if (a === "en_br") {
-    return null;
-  }
-
   const speed = Number(rate ?? 1.0) || 1.0;
+  const chosenVoice = String(voice || "").trim() || pickOpenAiVoice(a);
+
+const instructionMap = {
+  en_us: "Speak natural American English. Warm, human, and conversational. Never sound robotic.",
+  en_br: "Speak natural British English. Warm, human, and conversational. Never sound robotic.",
+  zh_cn: "Speak natural Mandarin Chinese. Warm, human, and conversational. Never sound robotic.",
+  ja_jp: "Speak natural Japanese. Warm, human, and conversational. Never sound robotic.",
+  ko_kr: "Speak natural Korean. Warm, human, and conversational. Never sound robotic.",
+  es_es: "Speak natural Spanish from Spain. Warm, human, and conversational. Never sound robotic.",
+  de_de: "Speak natural German. Warm, human, and conversational. Never sound robotic.",
+  fr_fr: "Speak natural French. Warm, human, and conversational. Never sound robotic.",
+  ru_ru: "Speak natural Russian. Warm, human, and conversational. Never sound robotic.",
+  ar_sa: "Speak natural Arabic. Warm, human, and conversational. Never sound robotic.",
+};
+
+const instructions =
+  instructionMap[a] ||
+  "Speak naturally in the requested language. Warm, human, and conversational. Never sound robotic.";
 
   const speech = await openai.audio.speech.create({
     model: "gpt-4o-mini-tts",
-    voice: "marin",
+    voice: chosenVoice,
     input: text,
     format: "mp3",
     speed,
-    instructions: "Speak natural American English. Warm and human, not robotic.",
+    instructions,
   });
 
   const buf = Buffer.from(await speech.arrayBuffer());
@@ -148,18 +194,35 @@ export async function getTtsAudio({ text, accent = "en_us", rate = 1.0, voice = 
   const a = (accent || "en_us").toLowerCase();
 
   let mp3 = null;
+  const isEnglish = a === "en_us" || a === "en_br";
 
-  try {
-    mp3 = await fetchOpenAiMp3({ text: t, accent: a, rate });
-  } catch (e) {
-    console.error("[tts] OpenAI failed:", e?.message || e);
-  }
+  if (isEnglish) {
+    try {
+      mp3 = await fetchOpenAiMp3({ text: t, accent: a, rate, voice });
+    } catch (e) {
+      console.error("[tts] OpenAI failed:", e?.message || e);
+    }
 
-  if (!mp3) {
+    if (!mp3) {
+      try {
+        mp3 = await fetchAzureMp3({ text: t, accent: a, rate, voice });
+      } catch (e) {
+        console.error("[tts] Azure failed:", e?.message || e);
+      }
+    }
+  } else {
     try {
       mp3 = await fetchAzureMp3({ text: t, accent: a, rate, voice });
     } catch (e) {
       console.error("[tts] Azure failed:", e?.message || e);
+    }
+
+    if (!mp3) {
+      try {
+        mp3 = await fetchOpenAiMp3({ text: t, accent: a, rate, voice });
+      } catch (e) {
+        console.error("[tts] OpenAI failed:", e?.message || e);
+      }
     }
   }
 

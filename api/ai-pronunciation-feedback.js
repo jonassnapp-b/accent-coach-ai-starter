@@ -8,7 +8,9 @@ export default async function handler(req, res) {
   try {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    const { transcript, scores, accent } = req.body || {};
+const { transcript, scores, accent, language } = req.body || {};
+const selectedLanguage = String(language || accent || "en_us").toLowerCase();
+
 const allWords = Array.isArray(scores?.words) ? scores.words : [];
 
 const weakWords = allWords
@@ -34,35 +36,48 @@ const weakPhonemes = allWords
   .filter((p) => p.phoneme && Number.isFinite(p.score) && p.score > 0)
   .sort((a, b) => a.score - b.score)
   .slice(0, 5);
-  const targetAccent =
-  String(accent || "en_us").toLowerCase() === "en_br"
-    ? "British English"
-    : "American English";
+  
+
+const languageMap = {
+  en_us: "American English",
+  en_br: "British English",
+  zh_cn: "Mandarin Chinese",
+  ja_jp: "Japanese",
+  ko_kr: "Korean",
+  es_es: "Spanish",
+  de_de: "German",
+  fr_fr: "French",
+  ru_ru: "Russian",
+  ar_sa: "Arabic",
+};
+
+const targetLanguage = languageMap[selectedLanguage] || "German";
     if (!transcript) {
       return res.status(400).json({ error: "Missing transcript" });
     }
 
 const prompt = `
-You are an English pronunciation coach for a speaking app.
+You are a pronunciation coach for a speaking app.
 
-Create spoken feedback using ONLY the Azure pronunciation data below.
+IMPORTANT:
+- You must write BOTH spokenFeedbackText and nextAssistantText ONLY in ${targetLanguage}.
+- NEVER use English unless ${targetLanguage} is English.
+- This rule is strict and must always be followed.
+
+Create spoken feedback using ONLY the pronunciation data below.
 Speak like a helpful human teacher talking to a normal learner.
-Use simple everyday English.
-Do not sound robotic, technical, or overly formal.
-Do not use IPA or technical phoneme symbols unless absolutely necessary.
-Instead of technical symbols, prefer plain explanations like:
-- "the th sound"
-- "the r sound"
-- "the ending sound"
-- "the middle of the word"
+Keep it simple, natural, and human.
+Do not sound robotic or technical.
+Do not use IPA.
+Do not explain sounds using English-specific examples.
 
 User said:
 "${transcript}"
 
-Target accent:
-${targetAccent}
+Target language:
+${targetLanguage}
 
-Top-level Azure scores:
+Top-level pronunciation scores:
 ${JSON.stringify(
   {
     overallAccuracy: scores?.overallAccuracy,
@@ -88,40 +103,65 @@ Return JSON only in this exact shape:
 }
 
 Rules for spokenFeedbackText:
+- Must be written entirely in ${targetLanguage}.
 - 3 to 5 short sentences only.
-- Make it easy for an average learner to understand.
-- Do not mention score numbers in the spoken feedback.
 - Start with a short natural overall impression.
 - Then mention the weakest word if one exists.
-- If there is a clear weak sound, explain it in simple learner-friendly language.
-- If fluency is weaker, mention that the sentence needs to sound smoother.
-- If the pronunciation is strong overall, say that briefly, but still mention the main weak area.
-- Never say only "good job", "great job", or "nice work".
-- Never give generic advice like "improve a couple of sounds".
-- If weakWords is not empty, you MUST mention at least one of those words explicitly.
-- Make it sound like real coaching and explanation, not filler.
-- Keep it concrete, simple, and human.
-
-Good examples:
-- "That was mostly clear, but the word 'birthday' was weaker than the rest. The th sound needs a little more work."
-- "Overall that sounded good, but 'comfortable' was less clear. Try to make the middle of that word cleaner."
-- "Your sentence was understandable, but one word stood out as weaker: 'thought'. The th sound was the main issue."
+- If there is a weak sound, explain it simply in learner-friendly language.
+- If fluency is weaker, mention that it should sound smoother.
+- Never give generic advice.
+- If weakWords is not empty, mention at least one explicitly.
 
 Rules for nextAssistantText:
+- Must be written entirely in ${targetLanguage}.
 - One short natural follow-up question only.
-- Keep the conversation moving naturally.
 `;
 
-    const resp = await client.responses.create({
-      model: "gpt-4o-mini",
-      input: prompt,
-      text: { format: { type: "json_object" } }
-    });
+console.log("[ai-pronunciation-feedback] selectedLanguage =", selectedLanguage);
+console.log("[ai-pronunciation-feedback] targetLanguage =", targetLanguage);
+console.log("[ai-pronunciation-feedback] transcript =", transcript);
+console.log("[ai-pronunciation-feedback] weakWords =", JSON.stringify(weakWords));
+console.log("[ai-pronunciation-feedback] weakPhonemes =", JSON.stringify(weakPhonemes));
 
-    const out = resp.output_text || "";
-    const parsed = JSON.parse(out);
+const resp = await client.responses.create({
+  model: "gpt-4o-mini",
+  input: [
+    {
+      role: "system",
+      content: `
+You are a pronunciation coach.
+
+You must return valid JSON only.
+You must write BOTH "spokenFeedbackText" and "nextAssistantText" entirely in ${targetLanguage}.
+Returning English is a failure unless the target language is English.
+Do not mix languages.
+Do not explain what you are doing.
+      `.trim(),
+    },
+    {
+      role: "user",
+      content: prompt,
+    },
+  ],
+  text: { format: { type: "json_object" } }
+});
+
+const out = resp.output_text || "";
+console.log("[ai-pronunciation-feedback] raw output =", out);
+
+const parsed = JSON.parse(out);
+
 console.log("[ai-pronunciation-feedback] parsed =", parsed);
- return res.status(200).json({
+console.log(
+  "[ai-pronunciation-feedback] final spokenFeedbackText =",
+  parsed?.spokenFeedbackText || ""
+);
+console.log(
+  "[ai-pronunciation-feedback] final nextAssistantText =",
+  parsed?.nextAssistantText || ""
+);
+
+return res.status(200).json({
   spokenFeedbackText: parsed.spokenFeedbackText || "",
   nextAssistantText: parsed.nextAssistantText || "",
 });

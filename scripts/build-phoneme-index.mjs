@@ -62,6 +62,44 @@ function isSafeWord(w) {
   if (!/^[a-z']+$/.test(w)) return false;
   if (w.includes("''")) return false;
   if (w.startsWith("'") || w.endsWith("'")) return false;
+
+  const lower = String(w).toLowerCase();
+  const upper = lower.toUpperCase();
+
+  const CMU_PHONEME_CODES = new Set([
+    "AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY",
+    "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY",
+    "UH", "UW", "UX", "OH",
+    "B", "CH", "D", "DH", "DX", "EL", "EM", "EN",
+    "F", "G", "HH", "JH", "K", "L", "M", "N", "NG",
+    "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V",
+    "W", "Y", "Z", "ZH"
+  ]);
+
+  if (CMU_PHONEME_CODES.has(upper)) return false;
+
+  if (lower.length >= 2 && /^[bcdfghjklmnpqrstvwxyz]+$/i.test(lower)) return false;
+
+  // reject weird short tokens from CMU dict
+  const COMMON_TWO_LETTER_WORDS = new Set([
+    "am", "an", "as", "at", "be", "by", "do", "go", "he", "hi", "if", "in",
+    "is", "it", "me", "my", "no", "of", "oh", "on", "or", "ox", "so", "to",
+    "up", "us", "we"
+  ]);
+
+  if (lower.length === 2 && !COMMON_TWO_LETTER_WORDS.has(lower)) return false;
+
+  const COMMON_THREE_LETTER_ALLOW = new Set([
+    "and", "are", "but", "can", "day", "for", "get", "had", "has", "her", "him",
+    "his", "how", "its", "let", "lot", "man", "new", "not", "now", "off", "one",
+    "our", "out", "say", "see", "she", "the", "too", "try", "use", "way", "who",
+    "you"
+  ]);
+
+  if (lower.length === 3 && !/[aeiou]/.test(lower) && !COMMON_THREE_LETTER_ALLOW.has(lower)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -154,35 +192,8 @@ out[ph] = arr;
   return out;
 }
 
-function buildWordPoolsFromDict(phonemeList) {
-  // phoneme -> [words]
-  const pools = new Map();
-  for (const ph of phonemeList) pools.set(ph, []);
 
-  // dict keys are uppercase; normalize to lowercase
-  for (const rawKey of Object.keys(dict)) {
-    const w = normalizeWord(rawKey);
-    if (!isSafeWord(w)) continue;
 
-    const phones = dictPhonesForWord(w);
-    if (!phones || !phones.length) continue;
-
-    // Add word to every phoneme it contains (dedup later)
-    for (const ph of phones) {
-      if (!pools.has(ph)) continue;
-      pools.get(ph).push(w);
-    }
-  }
-
-  // de-dup and lightly prefer shorter words (more “everyday”)
-  for (const [ph, arr] of pools.entries()) {
-    const uniq = Array.from(new Set(arr));
-    uniq.sort((a, b) => a.length - b.length || a.localeCompare(b));
-    pools.set(ph, uniq.slice(0, WORD_POOL_PER_PHONEME));
-  }
-
-  return pools;
-}
 
 function sentenceLooksOk(s) {
   if (!s) return false;
@@ -190,140 +201,296 @@ function sentenceLooksOk(s) {
   if (t.length < 8) return false;
   if (/["“”]/.test(t)) return false;
   if (/[A-Z]{4,}/.test(t)) return false;
+
   const wc = t.split(/\s+/).filter(Boolean).length;
   if (wc < 5 || wc > 16) return false;
+
+  const words = t.match(/[A-Za-z']+/g) || [];
+  const CMU_PHONEME_CODES = new Set([
+    "AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY",
+    "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY",
+    "UH", "UW", "UX", "OH",
+    "B", "CH", "D", "DH", "DX", "EL", "EM", "EN",
+    "F", "G", "HH", "JH", "K", "L", "M", "N", "NG",
+    "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V",
+    "W", "Y", "Z", "ZH"
+  ]);
+
+  for (const raw of words) {
+    const w = String(raw).toLowerCase();
+    const upper = w.toUpperCase();
+
+    if (CMU_PHONEME_CODES.has(upper)) return false;
+    if (w.length >= 2 && /^[bcdfghjklmnpqrstvwxyz]+$/i.test(w)) return false;
+  }
+  const COMMON_TWO_LETTER_WORDS = new Set([
+    "am", "an", "as", "at", "be", "by", "do", "go", "he", "hi", "if", "in",
+    "is", "it", "me", "my", "no", "of", "oh", "on", "or", "ox", "so", "to",
+    "up", "us", "we"
+  ]);
+
+  for (const raw of words) {
+    const w = String(raw).toLowerCase();
+    const upper = w.toUpperCase();
+
+    if (CMU_PHONEME_CODES.has(upper)) return false;
+    if (w.length >= 2 && /^[bcdfghjklmnpqrstvwxyz]+$/i.test(w)) return false;
+    if (w.length === 2 && !COMMON_TWO_LETTER_WORDS.has(w)) return false;
+  }
+    const badFragments = [
+    " raj",
+    " bijur",
+    " dijon",
+    " fejes",
+    " fosia",
+    " je ",
+    " ji ",
+    " gm ",
+    " fm ",
+    " hm ",
+    " dj ",
+  ];
+
+  const lowerT = ` ${t.toLowerCase()} `;
+  for (const bad of badFragments) {
+    if (lowerT.includes(bad)) return false;
+  }
   return true;
 }
 
-function generateSentencesForPhoneme(ph, words) {
-  // We want “heavily uses phoneme”: include 2–4 target words that contain ph
-  // Use only lowercase words in text to keep it “no names”
-  const W = (words || []).filter(isSafeWord);
 
-  const templates2 = [
-    (a, b) => `I can say ${a} and ${b} clearly today.`,
-    (a, b) => `Please repeat ${a}, then repeat ${b} again.`,
-    (a, b) => `I will practice ${a} and ${b} at a steady pace.`,
-    (a, b) => `Say ${a} slowly, then say ${b} a bit faster.`,
-    (a, b) => `I keep mixing up ${a} and ${b} when I speak.`,
-    (a, b) => `Try ${a} first, and then try ${b} again.`,
-  ];
 
-  const templates3 = [
-    (a, b, c) => `I can say ${a}, ${b}, and ${c} without rushing.`,
-    (a, b, c) => `Repeat ${a}, then ${b}, then ${c} clearly.`,
-    (a, b, c) => `I will practice ${a}, ${b}, and ${c} every day.`,
-    (a, b, c) => `Say ${a} softly, then ${b}, then ${c} again.`,
-  ];
 
-  const templates4 = [
-    (a, b, c, d) => `I can say ${a}, ${b}, ${c}, and ${d} clearly now.`,
-    (a, b, c, d) => `Repeat ${a}, ${b}, ${c}, and ${d} with good timing.`,
-  ];
-
-  const out = [];
-  const used = new Set();
-
-  function add(s) {
-    const t = String(s || "").trim();
-    if (!sentenceLooksOk(t)) return;
-    if (used.has(t)) return;
-    used.add(t);
-    out.push(t);
-  }
-
-  // If no words exist for this phoneme in dict, we still output “generic” lines
-  if (W.length < 2) {
-    const generic = [
-      `I will focus on the ${ph} sound and stay relaxed.`,
-      `Repeat the ${ph} sound slowly, then a bit faster.`,
-      `I will keep the ${ph} sound clear in every word.`,
-      `Practice the ${ph} sound and keep your pace steady.`,
-      `Say the ${ph} sound cleanly, then repeat the sentence.`,
-    ];
-    for (const s of generic) add(s);
-    return out;
-  }
-
-  // Build lots of combinations
-  const maxI = Math.min(W.length, 200);
-
-  for (let i = 0; i < maxI; i++) {
-    for (let j = i + 1; j < maxI; j++) {
-      const a = W[i], b = W[j];
-
-      // 2-word templates
-      for (const f of templates2) add(f(a, b));
-
-      // 3-word templates when possible
-      if (j + 1 < maxI) {
-        const c = W[j + 1];
-        for (const f of templates3) add(f(a, b, c));
-      }
-
-      // 4-word templates sometimes
-      if (j + 2 < maxI) {
-        const c = W[j + 1];
-        const d = W[j + 2];
-        for (const f of templates4) add(f(a, b, c, d));
-      }
-
-      if (out.length >= MAX_PER_PHONEME) return out;
-    }
-  }
-
-  return out;
-}
-
-function ensureCoverage(index, wordPools, phonemeList) {
-  // index: { PH: [sentences...] }
-  // Guarantee MIN_PER_PHONEME for each CMU_PHONEMES entry
+function ensureCoverage(index, phonemeList) {
   const out = { ...index };
+
+  const SAFE_FALLBACKS = {
+    AA: [
+      "The hot coffee was gone.",
+      "I saw the small ball fall.",
+      "The job was hard at first."
+    ],
+    AE: [
+      "That cat sat on the mat.",
+      "Pack the bag and catch the cab.",
+      "The last answer was bad."
+    ],
+    AH: [
+      "I want to say it clearly.",
+      "We can do it again today.",
+      "The bus was coming up."
+    ],
+    AO: [
+      "I saw the small ball fall.",
+      "The dog was walking slowly.",
+      "Call Paul in the morning."
+    ],
+    AW: [
+      "Now I found out how it works.",
+      "A loud crowd was outside.",
+      "How about going now?"
+    ],
+    AY: [
+      "I like to try again today.",
+      "My time is right now.",
+      "Why did I buy that?"
+    ],
+    B: [
+      "Be back by noon.",
+      "The blue bag is big.",
+      "Bring the book back."
+    ],
+    CH: [
+      "Choose a cheap chair and check it.",
+      "The child chose cheese.",
+      "Check the change again."
+    ],
+    D: [
+      "Do that again today.",
+      "The dog ran down the road.",
+      "I did the job already."
+    ],
+    DH: [
+      "These are the days that matter.",
+      "This is the way they do it.",
+      "That is the thing they wanted."
+    ],
+    EH: [
+      "Get the best level next.",
+      "Let them check again.",
+      "The red pen is ready."
+    ],
+    ER: [
+      "Her first turn was perfect.",
+      "Learn the word first.",
+      "The service was worth it."
+    ],
+    EY: [
+      "Say it again later.",
+      "Take the same train today.",
+      "They came late again."
+    ],
+    F: [
+      "Five friends feel fine.",
+      "The phone fell fast.",
+      "I found the file first."
+    ],
+    G: [
+      "Go get the green bag.",
+      "The game is going well.",
+      "Give the gift back."
+    ],
+    HH: [
+      "He had a hat at home.",
+      "Help her get here.",
+      "His hand was cold."
+    ],
+    IH: [
+      "This is a simple little fix.",
+      "Pick this big fish.",
+      "It will fit in here."
+    ],
+    IY: [
+      "We need to see the key details.",
+      "Please read each piece clearly.",
+      "Keep these three seats free."
+    ],
+    JH: [
+      "John and Jane jumped in.",
+      "The joke was gentle and short.",
+      "The job changed in June."
+    ],
+    K: [
+      "Keep the key close.",
+      "I can come back quickly.",
+      "The cat came inside."
+    ],
+    L: [
+      "Please relax and roll your tongue.",
+      "The little light was low.",
+      "Look at the last line."
+    ],
+    M: [
+      "My mom made a meal.",
+      "Make more time for music.",
+      "The man was smiling."
+    ],
+    N: [
+      "No need to panic now.",
+      "I need a new note.",
+      "The next one is fine."
+    ],
+    NG: [
+      "I am singing and bringing something.",
+      "We were thinking about going long.",
+      "The song was playing softly."
+    ],
+    OW: [
+      "Go home slowly.",
+      "I hope so.",
+      "Show me the road."
+    ],
+    OY: [
+      "The boy enjoyed a noisy toy.",
+      "Try to avoid annoying noise.",
+      "The choice was yours."
+    ],
+    P: [
+      "Please repeat the phrase.",
+      "The paper was on the table.",
+      "Put the cup back."
+    ],
+    R: [
+      "Please relax and roll your tongue.",
+      "Her red car turned right.",
+      "Read the report again."
+    ],
+    S: [
+      "Say the same sound slowly.",
+      "The sun was shining.",
+      "I saw the sign outside."
+    ],
+    SH: [
+      "She should share the shiny shoes.",
+      "The shop was shut.",
+      "Show me the short version."
+    ],
+    T: [
+      "Take your time today.",
+      "Try it two times.",
+      "The train stopped there."
+    ],
+    TH: [
+      "Think about that thing again.",
+      "Three things were there.",
+      "Thank them for this."
+    ],
+    UH: [
+      "Put the book on the table.",
+      "The good cook looked up.",
+      "I took the full book."
+    ],
+    UW: [
+      "We use two new tools.",
+      "The blue room was cool.",
+      "Move the food carefully."
+    ],
+    V: [
+      "Very vivid voices.",
+      "The van moved fast.",
+      "I have five videos."
+    ],
+    W: [
+      "We will wait a while.",
+      "The window was wide open.",
+      "Why were we walking?"
+    ],
+    Y: [
+      "You can use it now.",
+      "Yesterday you were here.",
+      "Yes, you know why."
+    ],
+    Z: [
+      "Zoe was busy today.",
+      "These days are easy.",
+      "The music was loud."
+    ],
+    ZH: [
+      "I usually watch television in the evening.",
+      "That decision was a measure of pleasure.",
+      "The visual version was unusual."
+    ],
+  };
 
   for (const ph of phonemeList) {
     const existing = Array.isArray(out[ph]) ? out[ph] : [];
-    const words = wordPools.get(ph) || [];
-
-    // Generate
-    const generated = generateSentencesForPhoneme(ph, words);
-
-    // Merge + de-dup
-    const merged = [];
     const seen = new Set();
+    const merged = [];
 
-    // Prefer existing heavy sentences first
     for (const s of existing) {
       const t = String(s || "").trim();
       if (!t) continue;
+      if (!sentenceLooksOk(t)) continue;
       if (seen.has(t)) continue;
       seen.add(t);
       merged.push(t);
     }
 
-    for (const s of generated) {
-      if (merged.length >= MAX_PER_PHONEME) break;
-      const t = String(s || "").trim();
-      if (!t) continue;
-      if (seen.has(t)) continue;
-      seen.add(t);
-      merged.push(t);
-    }
+    const safe = SAFE_FALLBACKS[ph] || [
+      "I want to say it clearly.",
+      "Please say it again slowly.",
+      "We can try it once more."
+    ];
 
-    // If still below minimum (rare), pad with simple variations
+    let i = 0;
     while (merged.length < Math.min(MIN_PER_PHONEME, MAX_PER_PHONEME)) {
-      const base = merged[merged.length - 1] || `I will practice the ${ph} sound clearly today.`;
-      const pad = base.replace(/\.$/, "") + " again.";
-      if (!seen.has(pad) && sentenceLooksOk(pad)) {
-        seen.add(pad);
-        merged.push(pad);
-      } else {
-        // last resort
-        const fallback = `I will practice the ${ph} sound slowly right now.`;
-        if (!seen.has(fallback)) {
-          seen.add(fallback);
-          merged.push(fallback);
-        } else break;
+      const s = safe[i % safe.length];
+      if (!seen.has(s) && sentenceLooksOk(s)) {
+        seen.add(s);
+        merged.push(s);
       }
+      i++;
+      if (i > 500) break;
     }
 
     out[ph] = merged.slice(0, MAX_PER_PHONEME);
@@ -341,12 +508,7 @@ async function main() {
 
   // 2) Word pools from CMUdict to guarantee coverage for all phonemes
  const phonemeList = getAllCmuPhonemesFromDict();
-
-// 2) Word pools from CMUdict to guarantee coverage for all phonemes
-const wordPools = buildWordPoolsFromDict(phonemeList);
-
-// 3) Ensure coverage
-const fullIndex = ensureCoverage(baseIndex, wordPools, phonemeList);
+const fullIndex = ensureCoverage(baseIndex, phonemeList);
 
 fs.writeFileSync(OUT_PATH, JSON.stringify(fullIndex, null, 2), "utf8");
 

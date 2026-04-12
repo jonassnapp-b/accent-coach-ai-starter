@@ -25,7 +25,27 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing audioBase64" });
     }
     const accentNorm = String(accent || "en_us").toLowerCase();
-const language = accentNorm === "en_br" ? "en-GB" : "en-US";
+
+const languageMap = {
+  en_us: "en-US",
+  en_br: "en-GB",
+  zh_cn: "zh-CN",
+  ja_jp: "ja-JP",
+  ko_kr: "ko-KR",
+  es_es: "es-ES",
+  de_de: "de-DE",
+  fr_fr: "fr-FR",
+  ru_ru: "ru-RU",
+  ar_sa: "ar-SA",
+};
+
+const language = languageMap[accentNorm] || "en-US";
+const isEnglish = accentNorm === "en_us" || accentNorm === "en_br";
+
+console.log("[azure] accentNorm =", accentNorm);
+console.log("[azure] mapped language =", language);
+console.log("[azure] isEnglish =", isEnglish);
+
 const audioBuffer = Buffer.from(audioBase64, "base64");
 console.log("[azure] entered wav conversion");
 const inputPath = path.join(os.tmpdir(), `input-${Date.now()}.webm`);
@@ -44,18 +64,17 @@ await new Promise((resolve, reject) => {
 
 const wavBuffer = fs.readFileSync(outputPath);
 console.log("[azure] wav bytes =", wavBuffer.length);
-const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${encodeURIComponent(language)}&format=detailed`;
+const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/dictation/cognitiveservices/v1?language=${encodeURIComponent(language)}&format=detailed`;
+console.log("[azure] request url =", url);
 
 const paConfig = {
   GradingSystem: "HundredMark",
-  Granularity: "Phoneme",
+  Granularity: "Word",
   Dimension: "Comprehensive",
   EnableMiscue: false,
 };
-
-if (String(referenceText || "").trim()) {
-  paConfig.ReferenceText = String(referenceText).trim();
-}
+console.log("[azure] paConfig =", JSON.stringify(paConfig));
+paConfig.ReferenceText = String(referenceText || "").trim();
 
 const paHeader = Buffer.from(JSON.stringify(paConfig)).toString("base64");
 

@@ -514,6 +514,7 @@ return (
   <LayoutGroup id="practice-morph">
 <div
   className="page"
+  data-page-scroll="true"
   style={{
   minHeight: "100vh",
   position: "relative",
@@ -524,7 +525,6 @@ return (
   display: "flex",
   flexDirection: "column",
 }}
-
 >
 
 

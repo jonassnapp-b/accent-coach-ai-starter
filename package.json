@@ -9,13 +9,15 @@
     "vercel": "^48.4.0"
   },
   "dependencies": {
-    "@capacitor-community/in-app-review": "^7.1.0",
+    "@capacitor-community/in-app-review": "github:capacitor-community/in-app-review",
     "@capacitor/android": "^8.1.0",
     "@capacitor/core": "^8.1.0",
+    "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.1.0",
     "@capacitor/local-notifications": "^8.0.1",
     "@capacitor/push-notifications": "^7.0.3",
     "@capgo/native-purchases": "^7.17.0",
+    "@phosphor-icons/react": "^2.1.10",
     "@posthog/react": "^1.8.0",
     "@upstash/redis": "^1.35.6",
     "capacitor-voice-recorder": "^7.0.6",

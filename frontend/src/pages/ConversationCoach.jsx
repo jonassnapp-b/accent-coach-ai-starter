@@ -1,10 +1,13 @@
 // src/pages/ConversationCoach.jsx
 
 import React, { useEffect, useRef, useState } from "react";
-import { Mic, RotateCcw } from "lucide-react";
+import { Mic, RotateCcw, ChevronDown, Check } from "lucide-react";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { useSettings } from "../lib/settings-store.jsx";
 import { createRealtimeConversation } from "../lib/realtimeConversation.js";
+import { } from "../lib/onboarding.js";
 import { useNavigate } from "react-router-dom";
+import fluentUpLogo from "../assets/Logo_Arrow.png";
 function isNative() {
   return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
 }
@@ -19,6 +22,20 @@ function getApiBase() {
   }
   return (ls || env || window.location.origin).replace(/\/+$/, "");
 }
+
+async function triggerButtonHaptic() {
+  try {
+    if (isNative()) {
+      await Haptics.impact({ style: ImpactStyle.Medium });
+      return;
+    }
+
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(10);
+    }
+  } catch {}
+}
+
 const TALK_DAILY_LIMIT_MS = 90000;
 const TALK_DAILY_STORAGE_KEY = "fluentup_conversation_coach_daily_v1";
 
@@ -115,13 +132,114 @@ function AiSpeakingWaveform({ active }) {
     </div>
   );
 }
+const ACCENT_SECTIONS = [
+  {
+    title: "English",
+    options: [
+      { value: "en_us", label: "American", flag: "🇺🇸" },
+      { value: "en_br", label: "British", flag: "🇬🇧" },
+    ],
+  },
+  {
+    title: "Mandarin Chinese",
+    options: [
+      { value: "zh_cn", label: "Mandarin Chinese", flag: "🇨🇳" },
+    ],
+  },
+  {
+    title: "Japanese",
+    options: [
+      { value: "ja_jp", label: "Japanese", flag: "🇯🇵" },
+    ],
+  },
+  {
+    title: "Korean",
+    options: [
+      { value: "ko_kr", label: "Korean", flag: "🇰🇷" },
+    ],
+  },
+  {
+    title: "Spanish",
+    options: [
+      { value: "es_es", label: "Spanish", flag: "🇪🇸" },
+    ],
+  },
+  {
+    title: "German",
+    options: [
+      { value: "de_de", label: "German", flag: "🇩🇪" },
+    ],
+  },
+  {
+    title: "French",
+    options: [
+      { value: "fr_fr", label: "French", flag: "🇫🇷" },
+    ],
+  },
+  {
+    title: "Russian",
+    options: [
+      { value: "ru_ru", label: "Russian", flag: "🇷🇺" },
+    ],
+  },
+  {
+    title: "Arabic",
+    options: [
+      { value: "ar_sa", label: "Arabic", flag: "🇸🇦" },
+    ],
+  },
+];
 
+const ACCENT_OPTIONS = ACCENT_SECTIONS.flatMap((section) => section.options);
+
+
+
+function getAccentOption(value) {
+  return ACCENT_OPTIONS.find((item) => item.value === value) || ACCENT_OPTIONS[0];
+}
+const ACCENT_SHEET_OPEN_Y = 32;
+const ACCENT_SHEET_CLOSE_MS = 280;
+const ACCENT_SHEET_OPEN_TRANSITION = "transform 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 520ms ease";
+const ACCENT_SHEET_CLOSE_TRANSITION = "transform 280ms cubic-bezier(0.4, 0, 1, 1), opacity 220ms ease";
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
 export default function ConversationCoach() {
   const nav = useNavigate();
-  const { settings } = useSettings?.() || { settings: {} };
+  const { settings, setSettings } = useSettings?.() || {
+  settings: {},
+  setSettings: () => {},
+};
   const defaultAccent = settings?.accentDefault === "en_br" ? "en_br" : "en_us";
-const [selectedAccent, setSelectedAccent] = useState(defaultAccent);
+  const [selectedAccent, setSelectedAccent] = useState(defaultAccent);
+  
 
+
+const [isAccentMenuOpen, setIsAccentMenuOpen] = useState(false);
+
+const [accentSheetTranslateY, setAccentSheetTranslateY] = useState(window.innerHeight);
+const [isAccentSheetClosing, setIsAccentSheetClosing] = useState(false);
+const accentSheetDragStartYRef = useRef(0);
+const accentSheetDragStartTranslateYRef = useRef(0);
+const accentSheetDraggingRef = useRef(false);
+  useEffect(() => {
+    setSelectedAccent(defaultAccent);
+  }, [defaultAccent]);
+useEffect(() => {
+  function handleKeyDown(event) {
+    if (event.key === "Escape") {
+  setIsAccentMenuOpen(false);
+}
+  }
+
+  document.addEventListener("keydown", handleKeyDown);
+
+  return () => {
+    document.removeEventListener("keydown", handleKeyDown);
+  };
+}, []);
+  
   const [assistantText, setAssistantText] = useState("");
 const [feedbackSummary, setFeedbackSummary] = useState("");
   const [hasEnteredConversation, setHasEnteredConversation] = useState(false);
@@ -150,6 +268,7 @@ const [practiceLastScore, setPracticeLastScore] = useState(null);
 const [practiceRecordingResult, setPracticeRecordingResult] = useState(null);
 
 const ttsAudioRef = useRef(null);
+const accentMenuRef = useRef(null);
 const practiceHoldStartedRef = useRef(false);
   const realtimeRef = useRef(null);
   const mountedRef = useRef(true);
@@ -281,11 +400,12 @@ async function speakText(text) {
   const res = await fetch(`${base}/api/tts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text: t,
-      accent: selectedAccent,
-      rate: 1,
-    }),
+  body: JSON.stringify({
+  text: t,
+  language: selectedAccent,
+  accent: selectedAccent,
+  rate: 1,
+}),
   });
 
   console.log("[ConversationCoach] tts status =", res.status);
@@ -474,7 +594,81 @@ useEffect(() => {
 
   return () => cancelAnimationFrame(id);
 }, [isPracticeActive, currentPracticeIndex]);
-  function extractUserTranscriptFromMessage(msg) {
+useEffect(() => {
+  window.dispatchEvent(
+    new CustomEvent("ac:accentOverlay", { detail: { open: isAccentMenuOpen } })
+  );
+
+  if (!isAccentMenuOpen) return;
+
+  setIsAccentSheetClosing(false);
+  setAccentSheetTranslateY(window.innerHeight);
+
+  const id = requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      setAccentSheetTranslateY(ACCENT_SHEET_OPEN_Y);
+    });
+  });
+
+  return () => cancelAnimationFrame(id);
+}, [isAccentMenuOpen]);
+
+useEffect(() => {
+  function handleTabReselect(e) {
+    if (e?.detail?.path !== "/conversation-coach") return;
+
+    finalizeDailyTalkSession();
+    clearTalkPaywallTimer();
+    talkPaywallShownRef.current = false;
+    talkSessionStartedAtRef.current = 0;
+    talkSessionLimitMsRef.current = 0;
+
+    try {
+      realtimeRef.current?.disconnect?.();
+    } catch {}
+
+    stopFeedbackTts();
+
+    setHasEnteredConversation(false);
+    setHasConversationStarted(false);
+
+    setAssistantText("");
+    setFeedbackSummary("");
+    setSpokenFeedbackText("");
+    setPendingNextAssistantText("");
+
+    setIsRecording(false);
+    setIsAnalyzing(false);
+    setIsPreparingFeedbackAudio(false);
+    setIsWorkingOnFeedback(false);
+    setIsAiSpeaking(false);
+    setIsWaitingToContinue(false);
+    setIsStartingConversation(false);
+    setHoldScale(1);
+
+    setIsPracticeActive(false);
+    setIsPracticeVisible(false);
+    setPracticeWords([]);
+    setCurrentPracticeIndex(0);
+    setIsPracticeRecording(false);
+    setIsPracticeAnalyzing(false);
+    setPracticeFeedbackText("");
+    setPracticeLastScore(null);
+    setPracticeRecordingResult(null);
+
+    setError("");
+    lastUserTranscriptRef.current = "";
+    userSpeechStartedRef.current = false;
+    suppressNextAssistantResponseRef.current = false;
+    waitingForUserReleaseRef.current = false;
+    holdStartedRef.current = false;
+    practiceHoldStartedRef.current = false;
+  }
+
+  window.addEventListener("ac:tabReselect", handleTabReselect);
+  return () => window.removeEventListener("ac:tabReselect", handleTabReselect);
+}, []);  
+function extractUserTranscriptFromMessage(msg) {
     const type = String(msg?.type || "");
 
     const directTranscript =
@@ -548,9 +742,10 @@ console.log("[ConversationCoach] calling", `${base}/api/azure-pronunciation`);
   azureRes = await fetch(`${base}/api/azure-pronunciation`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-   body: JSON.stringify({
+  body: JSON.stringify({
   audioBase64: recording.base64,
   mime: recording.mimeType || "audio/webm",
+  language: selectedAccent,
   accent: selectedAccent,
 }),
     signal: azureController.signal,
@@ -590,6 +785,7 @@ try {
     headers: { "Content-Type": "application/json" },
 body: JSON.stringify({
   transcript: userTranscript,
+  language: selectedAccent,
   accent: selectedAccent,
   scores: {
     overallAccuracy: azureJson?.overallAccuracy,
@@ -618,6 +814,7 @@ console.log("[ConversationCoach] ai json =", aiJson);
 setFeedbackSummary("");
 
 const spokenText = String(aiJson?.spokenFeedbackText || "").trim();
+console.log("[ConversationCoach] spokenFeedbackText final =", spokenText);
 setSpokenFeedbackText(spokenText);
 setPendingNextAssistantText(aiJson?.nextAssistantText || "");
 
@@ -678,12 +875,13 @@ async function analyzePracticeWord(recording, practiceWord) {
    const azureRes = await fetch(`${base}/api/azure-pronunciation`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    audioBase64: recording.base64,
-    mime: recording.mimeType || "audio/webm",
-    accent: selectedAccent,
-    referenceText: practiceWord.word,
-  }),
+body: JSON.stringify({
+  audioBase64: recording.base64,
+  mime: recording.mimeType || "audio/webm",
+  language: selectedAccent,
+  accent: selectedAccent,
+  referenceText: practiceWord.word,
+}),
 });
 
     const azureJson = await azureRes.json().catch(() => ({}));
@@ -735,9 +933,9 @@ setIsStartingConversation(true);
 lastUserTranscriptRef.current = "";
 
 console.log("[ConversationCoach] starting realtime with accent =", selectedAccent);
-   const rt = await createRealtimeConversation({
+const rt = await createRealtimeConversation({
   accent: selectedAccent,
-onRemoteAudio: () => {
+  onRemoteAudio: () => {
   if (!mountedRef.current) return;
   if (selectedAccent === "en_br") return;
   setIsAiSpeaking(true);
@@ -1137,6 +1335,92 @@ function handlePracticeTryAgain() {
   setPracticeLastScore(null);
   setPracticeRecordingResult(null);
 }
+function closeAccentSheet() {
+  setIsAccentSheetClosing(true);
+  setAccentSheetTranslateY(window.innerHeight);
+
+  window.setTimeout(() => {
+    setIsAccentMenuOpen(false);
+    setIsAccentSheetClosing(false);
+    setAccentSheetTranslateY(window.innerHeight);
+  }, ACCENT_SHEET_CLOSE_MS);
+}
+
+function openAccentSheet() {
+  setIsAccentMenuOpen(true);
+  setIsAccentSheetClosing(false);
+  setAccentSheetTranslateY(window.innerHeight);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      setAccentSheetTranslateY(ACCENT_SHEET_OPEN_Y);
+    });
+  });
+}
+
+function handleAccentSheetPointerDown(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  accentSheetDraggingRef.current = true;
+  accentSheetDragStartYRef.current = e.clientY;
+  accentSheetDragStartTranslateYRef.current = accentSheetTranslateY;
+}
+
+function handleAccentSheetPointerMove(e) {
+  if (!accentSheetDraggingRef.current) return;
+
+  const deltaY = e.clientY - accentSheetDragStartYRef.current;
+  const nextY = clamp(
+    accentSheetDragStartTranslateYRef.current + deltaY,
+    ACCENT_SHEET_OPEN_Y,
+    window.innerHeight
+  );
+
+  setAccentSheetTranslateY(nextY);
+}
+
+function handleAccentSheetPointerEnd() {
+  if (!accentSheetDraggingRef.current) return;
+  accentSheetDraggingRef.current = false;
+
+  const shouldClose = accentSheetTranslateY > 180;
+
+  if (shouldClose) {
+    closeAccentSheet();
+    return;
+  }
+
+  setAccentSheetTranslateY(ACCENT_SHEET_OPEN_Y);
+}
+
+function handleAccentSelect(nextAccent) {
+  if (!nextAccent || nextAccent === selectedAccent) {
+    closeAccentSheet();
+    return;
+  }
+
+  const canChangeAccent =
+    !isStartingConversation &&
+    !isRecording &&
+    !isAnalyzing &&
+    !isPreparingFeedbackAudio &&
+    !isWorkingOnFeedback &&
+    !isAiSpeaking &&
+    !isPracticeRecording &&
+    !isPracticeAnalyzing;
+
+  if (!canChangeAccent) {
+    closeAccentSheet();
+    return;
+  }
+
+setSelectedAccent(nextAccent);
+setSettings((prev) => ({
+  ...prev,
+  accentDefault: nextAccent,
+}));
+closeAccentSheet();
+}
 async function handleContinueAfterFeedback() {
   try {
     stopFeedbackTts();
@@ -1152,18 +1436,31 @@ async function handleContinueAfterFeedback() {
     setError(err?.message || "Failed to continue conversation.");
   }
 }
+const selectedAccentOption = getAccentOption(selectedAccent);
+
+const isAccentLocked =
+    isStartingConversation ||
+    isRecording ||
+    isAnalyzing ||
+    isPreparingFeedbackAudio ||
+    isWorkingOnFeedback ||
+    isAiSpeaking ||
+    isPracticeRecording ||
+    isPracticeAnalyzing;
   return (
-    <div
-      style={{
-        minHeight: "100dvh",
-        background: "#F6FAFF",
-        color: "#0F172A",
-        display: "flex",
-        flexDirection: "column",
-        padding: "24px 18px 96px",
-        boxSizing: "border-box",
-      }}
-    >
+  <div
+    className="page"
+    data-page-scroll="true"
+    style={{
+      minHeight: "100dvh",
+      background: "#FFFFFF",
+      color: "#0F172A",
+      display: "flex",
+      flexDirection: "column",
+      padding: "24px 18px 96px",
+      boxSizing: "border-box",
+    }}
+  >
       <div
         style={{
           maxWidth: 760,
@@ -1174,124 +1471,356 @@ async function handleContinueAfterFeedback() {
           flex: 1,
         }}
       >
-        <div style={{ height: 12 }} />
-
         {!hasEnteredConversation ? (
           <div
             style={{
-              flex: 1,
+              height: 72,
               display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              marginBottom: 20,
+              paddingLeft: 12,
+              paddingRight: 12,
             }}
           >
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div
-              style={{
-                width: "100%",
-                maxWidth: 520,
-                background: "#FFFFFF",
-                border: "1px solid rgba(15,23,42,0.08)",
-                boxShadow: "0 16px 42px rgba(15,23,42,0.08)",
-                borderRadius: 28,
-                padding: "28px 22px",
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 30,
-                  fontWeight: 900,
-                  lineHeight: 1.1,
-                  letterSpacing: -0.4,
-                  marginBottom: 10,
-                }}
-              >
-                AI Conversation Coach
-              </div>
-
-              <div
-                style={{
-                  fontSize: 16,
-                  lineHeight: 1.5,
-                  color: "#475569",
-                  fontWeight: 700,
-                  marginBottom: 22,
-                }}
-              >
-                Start a live conversation and get pronunciation feedback while you speak.
-              </div>
-<div
+  ref={accentMenuRef}
   style={{
-    marginBottom: 16,
-    display: "flex",
-    gap: 10,
+    position: "relative",
   }}
 >
   <button
     type="button"
-    onClick={() => setSelectedAccent("en_us")}
-    disabled={isStartingConversation}
+    onClick={() => {
+      if (isAccentLocked) return;
+      setIsAccentMenuOpen((prev) => !prev);
+    }}
+    disabled={isAccentLocked}
     style={{
-      flex: 1,
-      height: 46,
-      borderRadius: 16,
-      border: selectedAccent === "en_us" ? "none" : "1px solid rgba(15,23,42,0.08)",
-      background: selectedAccent === "en_us" ? "#2196F3" : "#FFFFFF",
-      color: selectedAccent === "en_us" ? "#FFFFFF" : "#0F172A",
-      fontSize: 14,
-      fontWeight: 900,
-      cursor: isStartingConversation ? "not-allowed" : "pointer",
-      boxShadow: selectedAccent === "en_us" ? "0 10px 24px rgba(33,150,243,0.22)" : "none",
-      opacity: isStartingConversation ? 0.7 : 1,
+      border: "none",
+      background: "transparent",
+      padding: 0,
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 8,
+      cursor: isAccentLocked ? "not-allowed" : "pointer",
+      opacity: isAccentLocked ? 0.7 : 1,
     }}
   >
-    American
-  </button>
+    <span
+      aria-hidden="true"
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: "50%",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 30,
+        lineHeight: 1,
+        background: "#FFFFFF",
+      }}
+    >
+      {selectedAccentOption.flag}
+    </span>
 
-  <button
-    type="button"
-    onClick={() => setSelectedAccent("en_br")}
-    disabled={isStartingConversation}
-    style={{
-      flex: 1,
-      height: 46,
-      borderRadius: 16,
-      border: selectedAccent === "en_br" ? "none" : "1px solid rgba(15,23,42,0.08)",
-      background: selectedAccent === "en_br" ? "#2196F3" : "#FFFFFF",
-      color: selectedAccent === "en_br" ? "#FFFFFF" : "#0F172A",
-      fontSize: 14,
-      fontWeight: 900,
-      cursor: isStartingConversation ? "not-allowed" : "pointer",
-      boxShadow: selectedAccent === "en_br" ? "0 10px 24px rgba(33,150,243,0.22)" : "none",
-      opacity: isStartingConversation ? 0.7 : 1,
-    }}
-  >
-    British
+    <ChevronDown
+      size={18}
+      strokeWidth={2.8}
+      style={{
+        color: "#0F172A",
+        transform: isAccentMenuOpen ? "rotate(180deg)" : "rotate(0deg)",
+        transition: "transform 180ms ease",
+      }}
+    />
   </button>
 </div>
-              <button
-                type="button"
-                onClick={handleEnterConversation}
-                disabled={isStartingConversation}
+
+             
+            </div>
+
+            {isAccentMenuOpen ? (
+              <div
+                onClick={() => setIsAccentMenuOpen(false)}
                 style={{
-                  width: "100%",
-                  height: 56,
-                  borderRadius: 18,
-                  border: "none",
-                  background:
-                    "linear-gradient(135deg, #3FA3FF 0%, #2196F3 60%, #1769C7 100%)",
-                  color: "#FFFFFF",
-                  fontWeight: 900,
-                  fontSize: 17,
-                  cursor: isStartingConversation ? "not-allowed" : "pointer",
-                  boxShadow: "0 16px 34px rgba(33,150,243,0.30)",
-                  opacity: isStartingConversation ? 0.78 : 1,
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 200,
+                  background: "rgba(0,0,0,0.04)",
+                  display: "flex",
+                  alignItems: "flex-end",
+                  justifyContent: "center",
                 }}
               >
-                {isStartingConversation ? "Starting..." : "Start Conversation"}
-              </button>
-            </div>
+           
+  <div
+  onClick={(e) => e.stopPropagation()}
+  style={{
+    width: "100%",
+    background: "#F3F3F3",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: "22px 18px calc(18px + env(safe-area-inset-bottom))",
+    boxShadow: "0 -10px 30px rgba(15,23,42,0.10)",
+    minHeight: "88vh",
+    maxHeight: "92vh",
+    overflowY: "auto",
+    transform: `translateY(${accentSheetTranslateY}px)`,
+    transition: accentSheetDraggingRef.current
+      ? "none"
+      : isAccentSheetClosing
+      ? ACCENT_SHEET_CLOSE_TRANSITION
+      : ACCENT_SHEET_OPEN_TRANSITION,
+    touchAction: "pan-y",
+    overscrollBehavior: "contain",
+    WebkitOverflowScrolling: "touch",
+  }}
+>
+                <div
+  onPointerDown={handleAccentSheetPointerDown}
+  onPointerMove={handleAccentSheetPointerMove}
+  onPointerUp={handleAccentSheetPointerEnd}
+  onPointerCancel={handleAccentSheetPointerEnd}
+  style={{
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    paddingBottom: 10,
+    marginBottom: 8,
+    touchAction: "none",
+    cursor: "grab",
+    userSelect: "none",
+    WebkitUserSelect: "none",
+  }}
+>
+  <div
+    style={{
+      width: 48,
+      height: 5,
+      borderRadius: 999,
+      background: "rgba(15,23,42,0.14)",
+      margin: "0 auto 18px",
+    }}
+  />
+
+  <div
+    style={{
+      fontSize: 28,
+      fontWeight: 900,
+      color: "#0F172A",
+      textAlign: "center",
+      marginBottom: 0,
+      letterSpacing: -0.5,
+    }}
+  >
+    Accent
+  </div>
+</div>
+
+                  
+                 <div
+  style={{
+    display: "grid",
+    gap: 18,
+  }}
+>
+  {ACCENT_SECTIONS.map((section) => (
+    <div
+      key={section.title}
+      style={{
+        display: "grid",
+        gap: 12,
+      }}
+    >
+      <div
+        style={{
+          paddingLeft: 6,
+         fontSize: 18,
+fontWeight: 900,
+          color: "#0F172A",
+          letterSpacing: 0.2,
+          textTransform: "none",
+        }}
+      >
+        {section.title}
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gap: 14,
+        }}
+      >
+        {section.options.map((option) => {
+          const isSelected = option.value === selectedAccent;
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => handleAccentSelect(option.value)}
+              style={{
+                width: "100%",
+                minHeight: 92,
+                padding: "0 22px",
+                borderRadius: 24,
+                border: "none",
+                background: isSelected ? "#171717" : "#E9E9E9",
+                color: isSelected ? "#FFFFFF" : "#0F172A",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 14,
+                cursor: "pointer",
+              }}
+            >
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  minWidth: 0,
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: "50%",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 31,
+                    background: isSelected ? "#171717" : "#E9E9E9",
+                  }}
+                >
+                  {option.flag}
+                </span>
+
+                <span
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 800,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {option.label}
+                </span>
+              </span>
+
+              {isSelected ? <Check size={22} strokeWidth={3} /> : <span style={{ width: 22 }} />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  ))}
+</div>
+                </div>
+              </div>
+            ) : null}
           </div>
+        ) : null}
+
+        {!hasEnteredConversation ? (
+         <div
+  style={{
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  }}
+>
+  <div
+    style={{
+      width: "100%",
+      maxWidth: 520,
+      textAlign: "center",
+      padding: "0 8px",
+    }}
+  >
+    <img
+      src={fluentUpLogo}
+      alt="FluentUp"
+      style={{
+        width: 150,
+        height: 150,
+        objectFit: "contain",
+        display: "block",
+        margin: "0 auto 18px",
+      }}
+    />
+
+   
+
+<div
+  style={{
+    display: "grid",
+    gap: 12,
+    maxWidth: 320,
+    margin: "0 auto",
+    marginTop: 6,
+  }}
+>
+<button
+  type="button"
+  onClick={async () => {
+    await triggerButtonHaptic();
+    handleEnterConversation();
+  }}
+  disabled={isStartingConversation}
+    style={{
+      width: "100%",
+      height: 62,
+      borderRadius: 999,
+      border: "none",
+      background: "#2F54EB",
+      color: "#F5EEDC",
+      fontSize: 21,
+      fontWeight: 700,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: isStartingConversation ? "not-allowed" : "pointer",
+      boxShadow: "none",
+      letterSpacing: "-0.02em",
+      opacity: isStartingConversation ? 0.78 : 1,
+    }}
+  >
+    {isStartingConversation ? "Starting..." : "Start Conversation"}
+  </button>
+
+<button
+  type="button"
+  onClick={async () => {
+    await triggerButtonHaptic();
+    nav("/ai-chat");
+  }}
+  style={{
+      width: "100%",
+      height: 62,
+      borderRadius: 999,
+      border: "none",
+      background: "#EAEAEA",
+      color: "#111111",
+      fontSize: 21,
+      fontWeight: 700,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      boxShadow: "none",
+      letterSpacing: "-0.02em",
+    }}
+  >
+    Scenarios
+  </button>
+</div>
+  </div>
+</div>
         ) : (
           <>
            {assistantText ? (
@@ -1717,6 +2246,7 @@ async function handleContinueAfterFeedback() {
           </>
         )}
       </div>
+      
       <audio ref={ttsAudioRef} />
 <style>{`
   @keyframes conversationCoachSpin {

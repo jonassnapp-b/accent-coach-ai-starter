@@ -1092,13 +1092,55 @@ background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
             paddingTop: 10,
           }}
         >
-          {/* Title */}
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 34, fontWeight: 1000, letterSpacing: -0.8, color: LIGHT_TEXT }}>
-              Daily Drill
-            </div>
-      
-            <div style={{ marginTop: 14, display: "grid", placeItems: "center" }}>
+{/* Title */}
+<div
+  style={{
+    paddingTop: 6,
+  }}
+>
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "44px 1fr 44px",
+      alignItems: "center",
+    }}
+  >
+    <button
+      type="button"
+      onClick={() => nav("/practice")}
+      aria-label="Back"
+      style={{
+        width: 44,
+        height: 44,
+        border: "none",
+        background: "transparent",
+        display: "grid",
+        placeItems: "center",
+        cursor: "pointer",
+        padding: 0,
+      }}
+    >
+      <ChevronLeft className="h-8 w-8" style={{ color: LIGHT_TEXT }} />
+    </button>
+
+    <div
+      style={{
+        textAlign: "center",
+        fontSize: 34,
+        fontWeight: 1000,
+        letterSpacing: -0.8,
+        color: LIGHT_TEXT,
+        lineHeight: 1,
+        whiteSpace: "nowrap",
+      }}
+    >
+      Daily Drill
+    </div>
+
+    <div />
+  </div>
+
+  <div style={{ marginTop: 14, display: "grid", placeItems: "center" }}>
   <div
     style={{
       display: "inline-flex",

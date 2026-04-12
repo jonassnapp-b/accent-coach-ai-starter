@@ -56,7 +56,7 @@ async function blobToDataURL(blob) {
 }
 
 /* ---------- analyzeAudio (bruger fleksibel base) ---------- */
-export async function analyzeAudio({ blob, accent, refText }) {
+export async function analyzeAudio({ blob, language = "en_us", refText }) {
   const base = getApiBase();
   const API_PATH = `${base}/api/analyze-speech`;
 
@@ -81,7 +81,7 @@ export async function analyzeAudio({ blob, accent, refText }) {
       body: (() => {
         const f = new FormData();
         f.append("audio", file);
-        if (accent)  f.append("accent",  accent);
+        if (language) f.append("language", language);
         if (refText) f.append("refText", refText);
         return f;
       })(),
@@ -110,7 +110,7 @@ export async function analyzeAudio({ blob, accent, refText }) {
         body: JSON.stringify({
           audio: dataURL,
           mime: file.type || "application/octet-stream",
-          accent: accent || "en-US",
+          language: language || "en_us",
           refText: refText || "",
         }),
       });

@@ -1,7 +1,7 @@
 // src/pages/WeaknessLab.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2, Check, ChevronDown } from "lucide-react";
+import { Trash2, Check, ChevronDown, ChevronLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import phonemeSentenceIndex from "../lib/phonemeSentenceIndex.json";
@@ -136,37 +136,7 @@ const PRACTICE_BANK = {
   ],
 };
 
-/* ------------ minimal ring (theme-safe) ------------ */
-function Ring({ value = 0, size = 34, stroke = 6 }) {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const v = clamp(Number(value) || 0, 0, 100);
-  const dash = (v / 100) * c;
 
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-label={`Score ${v}%`}>
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        fill="none"
-        stroke="var(--panel-border)"
-        strokeWidth={stroke}
-      />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        fill="none"
-        stroke="var(--primary)"
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        strokeDasharray={`${dash} ${c - dash}`}
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-      />
-    </svg>
-  );
-}
 
 /* ------------ local “hide” with auto-unhide rules ------------ */
 function hiddenKey() {
@@ -272,21 +242,443 @@ function AccentDropdown({ value, onChange }) {
     </div>
   );
 }
+function ScoreRing({ value = 0, size = 74, stroke = 10 }) {
+  const v = clamp(Number(value) || 0, 0, 100);
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const dash = (v / 100) * c;
 
+  return (
+    <div style={{ position: "relative", width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="#D9D9D9"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="#2196F3"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${c - dash}`}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </svg>
+
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "grid",
+          placeItems: "center",
+          fontSize: 15,
+          fontWeight: 900,
+          color: "#6B7280",
+        }}
+      >
+        {v}
+      </div>
+    </div>
+  );
+}
+
+function SortPill({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+
+  const options = [
+    { value: "lowest", label: "Sort: Lowest score" },
+    { value: "attempts", label: "Sort: Most attempts" },
+    { value: "az", label: "Sort: A–Z" },
+  ];
+
+  const current = options.find((o) => o.value === value) || options[0];
+
+ return (
+  <div style={{ position: "relative" }}>
+    <button
+      type="button"
+      onClick={() => setOpen((v) => !v)}
+      style={{
+        border: "none",
+        background: "transparent",
+        padding: 0,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 10,
+        fontSize: 18,
+        fontWeight: 800,
+        color: "#0F172A",
+        cursor: "pointer",
+        lineHeight: 1.1,
+      }}
+    >
+      <span>{current.label}</span>
+      <ChevronDown className="h-5 w-5" strokeWidth={2.8} style={{ color: "#0F172A" }} />
+    </button>
+
+      {open && (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="Close sort menu"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "transparent",
+              border: "none",
+              cursor: "default",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 8px)",
+              left: 0,
+              zIndex: 30,
+              width: 240,
+              borderRadius: 18,
+              background: "#FFFFFF",
+              border: "1px solid rgba(0,0,0,0.08)",
+              boxShadow: "0 14px 30px rgba(0,0,0,0.14)",
+              padding: 8,
+            }}
+          >
+            {options.map((opt) => {
+              const active = opt.value === value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    minHeight: 48,
+                    borderRadius: 14,
+                    border: "none",
+                    background: active ? "rgba(33,150,243,0.10)" : "transparent",
+                    color: "#0F172A",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "0 12px",
+                    fontSize: 15,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  <span>{opt.label}</span>
+                  {active ? <Check className="h-4 w-4" /> : null}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 export default function WeaknessLab() {
   const { isPro } = useProStatus();
   const location = useLocation();
-
+const navigate = useNavigate();
   if (!isPro) {
-    return (
-      <Navigate
-        to={`/pro?src=weakest_locked&return=${encodeURIComponent(location.pathname)}`}
-        replace
-      />
-    );
+  return (
+  <div
+    style={{
+      minHeight: "100dvh",
+      background: "#F3F3F3",
+      color: "#0F172A",
+      paddingBottom: "calc(120px + env(safe-area-inset-bottom, 0px))",
+    }}
+  >
+    <div
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 20,
+        background: "#F3F3F3",
+        paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 860,
+          margin: "0 auto",
+          padding: "10px 20px 18px",
+          position: "relative",
+          minHeight: 92,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => navigate("/practice")}
+          aria-label="Back"
+          style={{
+            position: "absolute",
+            left: 20,
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: 46,
+            height: 46,
+            borderRadius: 14,
+            border: "none",
+            background: "transparent",
+            color: "#0F172A",
+            display: "grid",
+            placeItems: "center",
+            cursor: "pointer",
+          }}
+        >
+          <ChevronLeft className="h-9 w-9" strokeWidth={2.6} />
+        </button>
+
+        <div
+          style={{
+            fontSize: 38,
+            lineHeight: 1,
+            fontWeight: 950,
+letterSpacing: -1.4,
+            color: "#000000",
+            textAlign: "center",
+          }}
+        >
+          Weakest sounds
+        </div>
+      </div>
+    </div>
+
+    <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 0 0" }}>
+      <div
+        style={{
+          margin: "0 16px",
+          background: "#FFFFFF",
+          border: "1px solid rgba(0,0,0,0.08)",
+          borderRadius: 30,
+          boxShadow: "0 10px 26px rgba(0,0,0,0.08)",
+          padding: "18px 18px 20px",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 16 }}>
+          <SortPill value={sortBy} onChange={setSortBy} />
+
+      <button
+  onClick={resetHidden}
+  disabled={hiddenCount === 0}
+  title={hiddenCount === 0 ? "No hidden phonemes" : "Restore hidden phonemes"}
+  style={{
+    border: "none",
+    background: "transparent",
+    padding: 0,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 10,
+    fontSize: 18,
+    fontWeight: 800,
+    color: hiddenCount === 0 ? "rgba(15,23,42,0.35)" : "#0F172A",
+    cursor: hiddenCount === 0 ? "not-allowed" : "pointer",
+    lineHeight: 1.1,
+    whiteSpace: "nowrap",
+flexShrink: 0,
+  }}
+>
+  <span>Restore hidden{hiddenCount ? ` (${hiddenCount})` : ""}</span>
+  <ChevronDown className="h-5 w-5" strokeWidth={2.8} style={{ color: hiddenCount === 0 ? "rgba(15,23,42,0.35)" : "#0F172A" }} />
+</button>
+        </div>
+      </div>
+
+      {err && (
+        <div
+          style={{
+            margin: "18px 16px 0",
+            borderRadius: 18,
+            border: "1px solid rgba(229,72,77,0.20)",
+            background: "rgba(229,72,77,0.08)",
+            color: "#111827",
+            padding: "14px 16px",
+            fontSize: 14,
+            fontWeight: 700,
+          }}
+        >
+          {err}
+        </div>
+      )}
+
+      {loading && (
+        <div style={{ marginTop: 18, display: "grid", gap: 14, padding: "0 16px" }}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                height: 144,
+                borderRadius: 28,
+                background: "#FFFFFF",
+                border: "1px solid rgba(0,0,0,0.08)",
+                boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {!loading && !err && normalized.length === 0 && (
+        <div
+          style={{
+            margin: "18px 16px 0",
+            borderRadius: 24,
+            background: "#FFFFFF",
+            border: "1px solid rgba(0,0,0,0.08)",
+            boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
+            padding: "24px 18px",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 900,
+              color: "#111827",
+            }}
+          >
+            No data yet
+          </div>
+        </div>
+      )}
+
+      {!loading && !err && normalized.length > 0 && (
+        <div style={{ marginTop: 18, display: "grid", gap: 16, padding: "0 16px" }}>
+          {normalized.map((w) => (
+            <button
+              key={`${w.rawPhoneme}-${w.count}-${w.pct}`}
+              type="button"
+              onClick={() => trainPhoneme(w.rawPhoneme)}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                background: "#FFFFFF",
+                border: "1px solid rgba(0,0,0,0.08)",
+                borderRadius: 28,
+                boxShadow: "0 8px 20px rgba(0,0,0,0.08)",
+                padding: "16px 18px",
+                cursor: "pointer",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 14,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
+                  <ScoreRing value={w.pct} />
+
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 28,
+                        lineHeight: 1,
+                        fontWeight: 950,
+                        letterSpacing: -0.8,
+                        color: phonemeColor(w.pct),
+                        marginBottom: 8,
+                      }}
+                    >
+                      {w.phoneme}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: 16,
+                        lineHeight: 1.2,
+                        color: "#6B7280",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Attempts: {w.count}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.96 }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      hidePhoneme(w.rawPhoneme, w.count, w.pct);
+                    }}
+                    title="Hide"
+                    style={{
+                      width: 58,
+                      height: 58,
+                      borderRadius: 18,
+                      border: "1px solid rgba(0,0,0,0.08)",
+                      background: "#FFFFFF",
+                      color: "#111827",
+                      display: "grid",
+                      placeItems: "center",
+                      boxShadow: "0 6px 14px rgba(0,0,0,0.08)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Trash2 className="h-6 w-6" />
+                  </motion.button>
+
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.98 }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      trainPhoneme(w.rawPhoneme);
+                    }}
+                    title="Practice"
+                    style={{
+                      minWidth: 190,
+                      height: 78,
+                      borderRadius: 24,
+                      border: "none",
+                      background: "#2196F3",
+                      color: "#FFFFFF",
+                      fontSize: 18,
+                      fontWeight: 900,
+                      boxShadow: "0 8px 18px rgba(33,150,243,0.22)",
+                      cursor: "pointer",
+                      padding: "0 26px",
+                    }}
+                  >
+                    Practice
+                  </motion.button>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+);
   }
 
-  const navigate = useNavigate();
+  
   const { settings } = useSettings();
 
   const defaultAccent = (settings?.accentDefault || "en_us").toLowerCase();
@@ -297,6 +689,7 @@ export default function WeaknessLab() {
   const [err, setErr] = useState("");
 
   const [sortBy, setSortBy] = useState("lowest"); // lowest | attempts | az
+const [sortMenuOpen, setSortMenuOpen] = useState(false);
 const [hiddenMap, setHiddenMap] = useState(() => loadHiddenMap());
 
 
@@ -552,8 +945,8 @@ function trainPhoneme(rawPhoneme) {
 
   return (
     <div className="page">
-  <div className="mx-auto w-full max-w-[820px]">
-  {/* Fixed header (always visible while scrolling) */}
+  <div className="mx-auto w-full max-w-[720px]">
+{/* Fixed header (match Settings Sheet design) */}
 <div
   style={{
     position: "fixed",
@@ -561,102 +954,209 @@ function trainPhoneme(rawPhoneme) {
     left: 0,
     right: 0,
     zIndex: 9999,
-    background: "#2196F3",
-    borderBottom: "1px solid rgba(0,0,0,0.06)",
-    paddingTop: "var(--safe-top)",      // ✅ ryk header-indhold ned + blå op i notch
-    paddingBottom: 10,                  // ✅ gør det blå felt højere
+    background: "#FFFFFF",
+    paddingTop: "var(--safe-top)",
   }}
 >
-  <div className="mx-auto w-full max-w-[820px]" style={{ padding: "14px 16px 22px" }}>
-
-    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-  <div>
-    <button
-      type="button"
-      onClick={() => navigate("/practice")}
-      className="btn btn-ghost btn-sm"
-     style={{
-  borderRadius: 14,
-  padding: "10px 14px",
-  fontWeight: 900,
-  color: "white",
-  background: "rgba(255,255,255,0.18)",
-  border: "1px solid rgba(255,255,255,0.28)",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
-  boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
-}}
-    >
-      Back
-    </button>
-  </div>
-
   <div
     style={{
-      position: "absolute",
-      left: "50%",
-      transform: "translateX(calc(-50% + 8px))",
-      textAlign: "center",
-      fontWeight: 900,
-      fontSize: 18,
-      color: "#FFFFFF",
-      pointerEvents: "none",
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      maxWidth: "70%",
+      maxWidth: 720,
+      margin: "0 auto",
+      padding: "0 16px 24px",
     }}
   >
-    Weakest sounds
-  </div>
+    <div
+      style={{
+        position: "sticky",
+        top: 0,
+        background: "#FFFFFF",
+        zIndex: 2,
+        paddingTop: 12,
+        paddingBottom: 18,
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "44px 1fr 44px",
+          alignItems: "center",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => navigate("/practice")}
+          style={{
+            width: 44,
+            height: 44,
+            border: "none",
+            background: "transparent",
+            display: "grid",
+            placeItems: "center",
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          <ChevronLeft className="h-8 w-8" style={{ color: "#111827" }} />
+        </button>
+
+       <div
+  style={{
+    textAlign: "center",
+    fontSize: 34,
+    lineHeight: 1.05,
+    fontWeight: 900,
+    color: "#000",
+    whiteSpace: "nowrap",
+  }}
+>
+  Weakest sounds
 </div>
 
-
+        <div />
+      </div>
+    </div>
   </div>
 </div>
 
 {/* Spacer so content doesn't go under fixed header */}
-<div style={{ height: "calc(var(--safe-top) + 38px)" }} />
+<div style={{ height: "calc(var(--safe-top) + 28px)" }} />
 
 
 
 
 
-
-        {/* Controls */}
-        <div className="panel">
-          <div className="flex flex-wrap items-center gap-2">
-            
-            <select
-  value={sortBy}
-  onChange={(e) => setSortBy(e.target.value)}
-  className="select-pill"
-  title="Sort"
-  style={{ background: "#2196F3", color: "white", fontWeight: 800 }}
->
-              <option value="lowest">Sort: Lowest score</option>
-              <option value="attempts">Sort: Most attempts</option>
-              <option value="az">Sort: A–Z</option>
-            </select>
-
-            <div className="flex-1" />
-
-           <button
-  onClick={resetHidden}
-  disabled={hiddenCount === 0}
-  className="btn btn-ghost btn-sm"
-  title={hiddenCount === 0 ? "No hidden phonemes" : "Restore hidden phonemes"}
+{/* Controls */}
+<div
   style={{
-    background: "#2196F3",
-    color: "white",
-    opacity: hiddenCount === 0 ? 0.5 : 1,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 24,
+    padding: "0 4px",
+    flexWrap: "nowrap",
   }}
 >
+  <div style={{ position: "relative", flex: "0 1 auto" }}>
+    <button
+      type="button"
+      onClick={() => setSortMenuOpen((v) => !v)}
+      title="Sort"
+      style={{
+        border: "none",
+        background: "transparent",
+        padding: 0,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 10,
+        fontSize: 18,
+        fontWeight: 800,
+        color: "#0F172A",
+        cursor: "pointer",
+        lineHeight: 1.1,
+        boxShadow: "none",
+      }}
+    >
+      <span>
+        {sortBy === "lowest"
+          ? "Sort: Lowest score"
+          : sortBy === "attempts"
+          ? "Sort: Most attempts"
+          : "Sort: A–Z"}
+      </span>
+      <ChevronDown className="h-5 w-5" strokeWidth={2.8} style={{ color: "#0F172A" }} />
+    </button>
 
-              Restore hidden{hiddenCount ? ` (${hiddenCount})` : ""}
-            </button>
-          </div>
+    {sortMenuOpen && (
+      <>
+        <button
+          type="button"
+          onClick={() => setSortMenuOpen(false)}
+          aria-label="Close sort menu"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "transparent",
+            border: "none",
+            cursor: "default",
+          }}
+        />
+
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            left: 0,
+            zIndex: 30,
+            width: 240,
+            borderRadius: 18,
+            background: "#FFFFFF",
+            border: "1px solid rgba(0,0,0,0.08)",
+            boxShadow: "0 14px 30px rgba(0,0,0,0.14)",
+            padding: 8,
+          }}
+        >
+          {[
+            { value: "lowest", label: "Sort: Lowest score" },
+            { value: "attempts", label: "Sort: Most attempts" },
+            { value: "az", label: "Sort: A–Z" },
+          ].map((opt) => {
+            const active = opt.value === sortBy;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setSortBy(opt.value);
+                  setSortMenuOpen(false);
+                }}
+                style={{
+                  width: "100%",
+                  minHeight: 48,
+                  borderRadius: 14,
+                  border: "none",
+                  background: active ? "rgba(33,150,243,0.10)" : "transparent",
+                  color: "#0F172A",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "0 12px",
+                  fontSize: 15,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                <span>{opt.label}</span>
+                {active ? <Check className="h-4 w-4" /> : null}
+              </button>
+            );
+          })}
         </div>
+      </>
+    )}
+  </div>
+
+  <button
+  onClick={resetHidden}
+  disabled={hiddenCount === 0}
+  title={hiddenCount === 0 ? "No hidden phonemes" : "Restore hidden phonemes"}
+  style={{
+    border: "none",
+    background: "transparent",
+    padding: 0,
+    display: "inline-flex",
+    alignItems: "center",
+    fontSize: 18,
+    fontWeight: 800,
+    color: hiddenCount === 0 ? "rgba(15,23,42,0.35)" : "#0F172A",
+    cursor: hiddenCount === 0 ? "not-allowed" : "pointer",
+    lineHeight: 1.1,
+    boxShadow: "none",
+  }}
+>
+  <span>Restore hidden{hiddenCount ? ` (${hiddenCount})` : ""}</span>
+</button>
+</div>
 
         {/* Divider */}
         <div className="mt-6 h-px w-full" style={{ background: "var(--panel-border)" }} />
@@ -712,7 +1212,7 @@ function trainPhoneme(rawPhoneme) {
           {/* Left */}
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Ring value={w.pct} />
+              <ScoreRing value={w.pct} />
               <div
                 className="absolute inset-0 grid place-items-center text-[11px] font-extrabold"
                 style={{ color: "var(--muted)" }}

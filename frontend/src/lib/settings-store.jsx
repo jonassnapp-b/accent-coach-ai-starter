@@ -11,6 +11,10 @@ export const defaultSettings = {
   // Goals
   dailyGoal: 5,
 
+  // Notifications
+  dailyPracticeReminders: false,
+  dailyReminderTime: "17:00",
+
   // Accent / IPA / TTS
   accentDefault: "en_us", // "en_us" | "en_br"
   showIPA: true,
@@ -56,6 +60,21 @@ function coerceSettings(maybe) {
   s.largeText = !!s.largeText;
 
   s.dailyGoal = Number.isFinite(Number(s.dailyGoal)) ? Math.max(1, Math.min(20, Number(s.dailyGoal))) : defaultSettings.dailyGoal;
+
+  s.dailyPracticeReminders = !!s.dailyPracticeReminders;
+
+  {
+    const rawTime = String(s.dailyReminderTime ?? defaultSettings.dailyReminderTime).trim();
+    const match = rawTime.match(/^(\d{1,2}):(\d{2})$/);
+
+    if (match) {
+      const hh = Math.max(0, Math.min(23, Number(match[1])));
+      const mm = Math.max(0, Math.min(59, Number(match[2])));
+      s.dailyReminderTime = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+    } else {
+      s.dailyReminderTime = defaultSettings.dailyReminderTime;
+    }
+  }
 
   s.accentDefault = s.accentDefault === "en_br" ? "en_br" : "en_us";
   s.showIPA = !!s.showIPA;

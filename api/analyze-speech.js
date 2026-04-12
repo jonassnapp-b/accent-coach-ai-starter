@@ -139,7 +139,7 @@ function parseSlack(raw) {
 // ---------- SpeechSuper helpers ----------
 const sha1 = (s) => createHash("sha1").update(s).digest("hex");
 
-function makeConnectStart({ appKey, secretKey, userId, coreType, refText, dictDialect, slack }) {
+function makeConnectStart({ appKey, secretKey, userId, coreType, refText, dictDialect, slack, language }) {
   const ts = Date.now().toString();
   const tokenId = randomUUID().replace(/-/g, "").toUpperCase();
 
@@ -173,9 +173,9 @@ function makeConnectStart({ appKey, secretKey, userId, coreType, refText, dictDi
       request: {
         coreType,
         refText,
-        language: "en_us",
-        dict_dialect: dictDialect, // en_us or en_br
-        dict_type: "CMU",
+  language,
+dict_dialect: language.startsWith("en") ? dictDialect : null,
+dict_type: language.startsWith("en") ? "CMU" : null,
         phoneme_output: 1,
         model: "non_native",
         scale: 100,
@@ -414,7 +414,7 @@ router.post("/", upload.single("audio"), async (req, res) => {
     }
 
     const body = req.body || {};
-
+const language = String(body.language || "en_us").toLowerCase();
     const slack = parseSlack(body.slack);
 
 
@@ -426,10 +426,14 @@ let refText = String(
 );
 
 // 🔑 KRITISK: normalisér refText før SpeechSuper
-refText = refText
-  .replace(/[.?!,:;]+/g, "")   // fjern tegn man ikke "udtaler"
-  .replace(/\s+/g, " ")        // fix dobbelte spaces
-  .trim();
+if (language.startsWith("en")) {
+  refText = refText
+    .replace(/[.?!,:;]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+} else {
+  refText = refText.trim();
+}
 
 console.log(
   "[analyze-speech] refText:",
@@ -467,7 +471,29 @@ if (!refText) {
     console.log("[analyze-speech] received audio mime:", mimeHint);
 
     const wavBytes = await toWavPcm16Mono16k(rawBuf, mimeHint);
-const coreType = /\s/.test(refText) ? "sent.eval.promax" : "word.eval.promax";
+const baseCore = /\s/.test(refText)
+  ? "sent.eval.promax"
+  : "word.eval.promax";
+
+const langMap = {
+  en_us: "en",
+  en_br: "en",
+
+  zh_cn: "cn",
+  ja_jp: "jp",
+  ko_kr: "kr",
+
+  es_es: "sp",
+  de_de: "de",
+  fr_fr: "fr",
+
+  ru_ru: "ru",
+  ar_sa: "ar",
+};
+
+const suffix = langMap[language] || "en";
+
+const coreType = `${baseCore}.${suffix}`;
 
 const userId =
   String(body.userId || "").trim() ||
@@ -487,6 +513,7 @@ ss = await postSpeechSuperExact({
   wavBytes,
   dictDialect,
   slack,
+  language,
 });
 
 
@@ -512,7 +539,7 @@ try {
       });
     }
 
-    const uiAccent = dictDialect === "en_br" ? "en-GB" : "en-US";
+    const uiAccent = language;
     const ui = mapSpeechsuperToUi(ss, refText, uiAccent);
     console.log("MAPPED_UI_RESULT", JSON.stringify(ui, null, 2));
 // -------- WeaknessLab save (ONLY ONCE per request) --------
@@ -526,7 +553,9 @@ try {
       if (!label) continue;
       if (!Number.isFinite(score)) continue;
 
-      phonemes.push({ label: label.toUpperCase(), score });
+      if (language.startsWith("en")) {
+  phonemes.push({ label: label.toUpperCase(), score });
+}
     }
   }
 

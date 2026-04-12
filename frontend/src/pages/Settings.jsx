@@ -1,22 +1,114 @@
 // src/pages/Settings.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Trash2, Send } from "lucide-react";
+import {
+  Trash2,
+  Send,
+  Sparkles,
+  ChevronRight,
+  ChevronLeft,
+  Bell,
+  Info,
+  Mail,
+} from "lucide-react";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import { useSettings } from "../lib/settings-store.jsx";
-
+import { useProStatus } from "../providers/PurchasesProvider.jsx";
 const FEEDBACK_EMAIL = "admin@fluentup.app";
-const APP_URL = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
+const DAILY_REMINDER_NOTIFICATION_ID = 7001;
+
+function isNative() {
+  return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
+}
+
+function formatReminderTimeLabel(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "17.00";
+
+  const [h = "17", m = "00"] = raw.split(":");
+  return `${String(h).padStart(2, "0")}.${String(m).padStart(2, "0")}`;
+}
+
+function parseReminderTime(value) {
+  const raw = String(value || "17:00").trim();
+  const [hRaw = "17", mRaw = "00"] = raw.split(":");
+
+  const hour = Math.max(0, Math.min(23, Number(hRaw)));
+  const minute = Math.max(0, Math.min(59, Number(mRaw)));
+
+  return {
+    hour: Number.isFinite(hour) ? hour : 17,
+    minute: Number.isFinite(minute) ? minute : 0,
+  };
+}
+
+async function ensureNotificationPermission() {
+  const perm = await LocalNotifications.checkPermissions();
+  if (perm.display === "granted") return true;
+
+  const req = await LocalNotifications.requestPermissions();
+  return req.display === "granted";
+}
+
+async function cancelDailyPracticeReminder() {
+  try {
+    await LocalNotifications.cancel({
+      notifications: [{ id: DAILY_REMINDER_NOTIFICATION_ID }],
+    });
+  } catch {}
+}
+
+async function scheduleDailyPracticeReminder(timeValue) {
+  const { hour, minute } = parseReminderTime(timeValue);
+
+  await cancelDailyPracticeReminder();
+
+  await LocalNotifications.schedule({
+    notifications: [
+      {
+        id: DAILY_REMINDER_NOTIFICATION_ID,
+        title: "Time to practice",
+        body: "Spend a few minutes improving your Pronunciation in FluentUp.",
+        schedule: {
+          repeats: true,
+          every: "day",
+          on: {
+            hour,
+            minute,
+          },
+        },
+      },
+    ],
+  });
+}
 
 /* ---------- UI helpers ---------- */
 /* ---------- UI helpers ---------- */
 function Group({ children }) {
   const items = React.Children.toArray(children).filter(Boolean);
+
   return (
-    <div className="ios-group">
+    <div
+      style={{
+        background: "#F3F3F3",
+        borderRadius: 28,
+        overflow: "hidden",
+      }}
+    >
       {items.map((child, i) => (
         <React.Fragment key={i}>
           {child}
-          {i !== items.length - 1 ? <div className="ios-divider" /> : null}
+          {i !== items.length - 1 ? (
+            <div
+              style={{
+                height: 1,
+                background: "rgba(0,0,0,0.08)",
+                marginLeft: 24,
+                marginRight: 24,
+              }}
+            />
+          ) : null}
         </React.Fragment>
       ))}
     </div>
@@ -25,53 +117,209 @@ function Group({ children }) {
 
 function Row({ label, children, hint }) {
   return (
-    <div className="ios-row">
-      <div className="ios-row-left">
-        <div className="ios-row-label">{label}</div>
-        {hint ? <div className="ios-row-hint">{hint}</div> : null}
+    <div
+      style={{
+        minHeight: 92,
+        padding: "22px 24px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 16,
+      }}
+    >
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div
+          style={{
+            fontSize: 22,
+            lineHeight: 1.15,
+            fontWeight: 800,
+            color: "#111827",
+          }}
+        >
+          {label}
+        </div>
+
+        {hint ? (
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: 15,
+              lineHeight: 1.35,
+              color: "rgba(17,24,39,0.55)",
+              fontWeight: 500,
+            }}
+          >
+            {hint}
+          </div>
+        ) : null}
       </div>
 
-      <div className="ios-row-right">{children}</div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          flexShrink: 0,
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }
 function ActionRow({ children }) {
   return (
-    <div className="ios-row" style={{ justifyContent: "center" }}>
+    <div
+      style={{
+        padding: "18px 24px",
+      }}
+    >
       <div style={{ width: "100%" }}>{children}</div>
     </div>
   );
 }
 
-
-function Section({ title, children, noPanel = false, first = false }) {
+function MenuRow({ icon: Icon, label, value, onClick, danger = false, noDivider = false }) {
   return (
-    <div
-      className="grid"
-      style={{
-        marginTop: first ? 7 : 18,
-        rowGap: 10,
-      }}
-    >
-      {/* heading OUTSIDE the group */}
-      <div
+    <>
+      <button
+        type="button"
+        onClick={onClick}
         style={{
-          letterSpacing: "0.14em",
-          textTransform: "uppercase",
-          fontWeight: 900,
-          fontSize: 13,
-          color: "var(--muted)",
-          paddingLeft: 6,
-          marginTop: 2,
+          width: "100%",
+          minHeight: 92,
+          padding: "22px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          textAlign: "left",
         }}
       >
-        {title}
-      </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
+          <Icon
+            className="h-7 w-7"
+            style={{
+              color: danger ? "#111827" : "#111827",
+              flexShrink: 0,
+            }}
+          />
+          <div
+            style={{
+              fontSize: 22,
+              lineHeight: 1.15,
+              fontWeight: 700,
+              color: danger ? "#111827" : "#111827",
+            }}
+          >
+            {label}
+          </div>
+        </div>
 
-      {noPanel ? children : <Group>{children}</Group>}
+        {value ? (
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 600,
+              color: "rgba(17,24,39,0.38)",
+              marginLeft: 12,
+              flexShrink: 0,
+            }}
+          >
+            {value}
+          </div>
+        ) : (
+          <ChevronRight className="h-5 w-5" style={{ color: "rgba(17,24,39,0.35)", flexShrink: 0 }} />
+        )}
+      </button>
+
+      {!noDivider ? (
+        <div
+          style={{
+            height: 1,
+            background: "rgba(0,0,0,0.08)",
+            marginLeft: 24,
+            marginRight: 24,
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function Sheet({ title, onBack, children }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        background: "#FFFFFF",
+        paddingTop: "var(--safe-top)",
+        paddingBottom: "var(--safe-bottom)",
+        overflowY: "auto",
+      }}
+    >
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 16px 24px" }}>
+        <div
+          style={{
+            position: "sticky",
+            top: 0,
+            background: "#FFFFFF",
+            zIndex: 2,
+            paddingTop: 12,
+            paddingBottom: 18,
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "44px 1fr 44px",
+              alignItems: "center",
+            }}
+          >
+            <button
+              type="button"
+              onClick={onBack}
+              style={{
+                width: 44,
+                height: 44,
+                border: "none",
+                background: "transparent",
+                display: "grid",
+                placeItems: "center",
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              <ChevronLeft className="h-8 w-8" style={{ color: "#111827" }} />
+            </button>
+
+            <div
+              style={{
+                textAlign: "center",
+                fontSize: 34,
+                lineHeight: 1.05,
+                fontWeight: 900,
+                color: "#000",
+              }}
+            >
+              {title}
+            </div>
+
+            <div />
+          </div>
+        </div>
+
+        {children}
+      </div>
     </div>
   );
 }
+
 
 
 
@@ -88,16 +336,22 @@ function ControlSelect(props) {
         "focus:ring-2 focus:ring-[rgba(33,150,243,.35)]",
         props.className || "",
       ].join(" ")}
-    style={{
-  background: "#2196F3",
-  color: "white",
-  border: "none",
+ style={{
+  height: 50,
+  minWidth: 240,
+  paddingLeft: 16,
+  paddingRight: 40,
+  borderRadius: 999,
+  background: "#FFFFFF",
+  color: "#111827",
+  border: "1px solid rgba(0,0,0,0.08)",
   appearance: "none",
   WebkitAppearance: "none",
   MozAppearance: "none",
-  fontWeight: 800,     // ✅ match btn
-  fontSize: 16,        // ✅ samme “feel” som knappen
+  fontWeight: 700,
+  fontSize: 16,
   lineHeight: 1.2,
+  boxShadow: "none",
 }}
 
 
@@ -116,11 +370,14 @@ function ControlInput(props) {
         "focus:ring-2 focus:ring-[rgba(33,150,243,.35)]",
         props.className || "",
       ].join(" ")}
-      style={{
-        background: "var(--panel-bg)",
-        color: "var(--panel-text)",
-        borderColor: "var(--panel-border)",
-      }}
+     style={{
+  height: 50,
+  borderRadius: 18,
+  background: "#FFFFFF",
+  color: "#111827",
+  border: "1px solid rgba(0,0,0,0.08)",
+  boxShadow: "none",
+}}
     />
   );
 }
@@ -138,16 +395,79 @@ function slackLabel(v) {
 
 /* ---------- Main ---------- */
 export default function Settings() {
-  const { settings: s, setSettings: setS } = useSettings();
-
+const { settings: s, setSettings: setS } = useSettings();
+const { isPro } = useProStatus();
+const nav = useNavigate();
+const [activeSheet, setActiveSheet] = useState(null);
+const [notificationsBusy, setNotificationsBusy] = useState(false);
+const [notificationsError, setNotificationsError] = useState("");
   // local feedback state
-  const [fb, setFb] = useState("");
-  const [fbSending, setFbSending] = useState(false);
-  const [fbMsg, setFbMsg] = useState("");
 
+function openPaywall(src) {
+  nav(`/pro?src=${encodeURIComponent(src)}&return=/settings`);
+}
 
+function openSupportEmail() {
+  window.location.href = `mailto:${FEEDBACK_EMAIL}`;
+}
+async function handleDailyReminderToggle(nextChecked) {
+  if (!isNative()) {
+    setNotificationsError("Notifications only work in the iPhone app.");
+    return;
+  }
 
+  setNotificationsBusy(true);
+  setNotificationsError("");
 
+  try {
+    if (nextChecked) {
+      const ok = await ensureNotificationPermission();
+      if (!ok) {
+        setNotificationsError("Notification permission was not granted.");
+        return;
+      }
+
+      await scheduleDailyPracticeReminder(s.dailyReminderTime || "17:00");
+    } else {
+      await cancelDailyPracticeReminder();
+    }
+
+    setS({
+      ...s,
+      dailyPracticeReminders: nextChecked,
+    });
+  } catch (err) {
+    setNotificationsError(err?.message || "Failed to update notifications.");
+  } finally {
+    setNotificationsBusy(false);
+  }
+}
+
+async function handleDailyReminderTimeChange(nextTime) {
+  setNotificationsBusy(true);
+  setNotificationsError("");
+
+  try {
+    setS({
+      ...s,
+      dailyReminderTime: nextTime,
+    });
+
+    if (s.dailyPracticeReminders && isNative()) {
+      const ok = await ensureNotificationPermission();
+      if (!ok) {
+        setNotificationsError("Notification permission was not granted.");
+        return;
+      }
+
+      await scheduleDailyPracticeReminder(nextTime);
+    }
+  } catch (err) {
+    setNotificationsError(err?.message || "Failed to update reminder time.");
+  } finally {
+    setNotificationsBusy(false);
+  }
+}
 
   const clearLocalData = () => {
     if (!confirm("This will reset your settings and locally cached clips (if any). Continue?")) return;
@@ -159,36 +479,6 @@ export default function Settings() {
     }
   };
 
-  async function sendFeedback() {
-    const text = fb.trim();
-    if (!text) return;
-
-    setFbSending(true);
-    setFbMsg("");
-
-    try {
-      const base = (import.meta.env.VITE_API_BASE || localStorage.getItem("apiBase") || window.location.origin).replace(
-        /\/+$/,
-        ""
-      );
-      const r = await fetch(`${base}/api/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, userAgent: navigator.userAgent, ts: Date.now() }),
-      });
-      if (!r.ok) throw new Error(await r.text());
-
-      setFb("");
-      setFbMsg("Thanks — sent!");
-    } catch {
-      const subject = encodeURIComponent("Accent Coach AI — Problem report");
-      const body = encodeURIComponent(text + "\n\n—\nUA: " + navigator.userAgent);
-      window.location.href = `mailto:${FEEDBACK_EMAIL}?subject=${subject}&body=${body}`;
-    } finally {
-      setFbSending(false);
-    }
-  }
-
   const volumeVal = useMemo(() => {
     const v = Number(s.volume);
     return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1;
@@ -198,7 +488,8 @@ export default function Settings() {
   return (
    <div
   className="page"
- style={{
+  data-page-scroll="true"
+  style={{
   position: "relative",
   minHeight: "100vh",
   background: "#FFFFFF",
@@ -207,8 +498,6 @@ export default function Settings() {
   display: "flex",
   flexDirection: "column",
 }}
-
-
 >
   <style>{`
   /* Blue filled + visible unfilled track */
@@ -293,281 +582,357 @@ export default function Settings() {
 {/* White sheet under blue header */}
 <div
   style={{
-  flex: 1,
-  width: "100%",
-  maxWidth: 720,
-  margin: "0 auto",
-  background: "transparent",
-  borderRadius: 0,
-  boxShadow: "none",
-  padding: "0 16px",
-  paddingTop: 12,
-  paddingBottom: "calc(16px + var(--safe-bottom))",
-}}
-
+    flex: 1,
+    width: "100%",
+    maxWidth: 720,
+    margin: "0 auto",
+    background: "transparent",
+    borderRadius: 0,
+    boxShadow: "none",
+    padding: "0 16px",
+    paddingTop: 18,
+    paddingBottom: "calc(24px + var(--safe-bottom))",
+  }}
 >
-
+<div
+  style={{
+    textAlign: "center",
+    fontSize: 34,
+    lineHeight: 1.05,
+    fontWeight: 900,
+    color: "#000",
+    marginTop: 6,
+    marginBottom: 18,
+  }}
+>
+  Settings
+</div>
 
     <div className="grid gap-4">
-
-         
-
-       {/* Speaking */}
-<Section title="SPEAKING" first>
- <div className="ios-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 12 }}>
-  <div>
-    <div className="ios-row-label">Default accent</div>
-    <div className="ios-row-hint">Used for IPA, target, and native TTS language.</div>
-  </div>
-
-  <div style={{ width: "100%" }}>
-    <ControlSelect
-      value={s.accentDefault}
-      onChange={(e) => setS({ ...s, accentDefault: e.target.value })}
-      style={{ width: "100%", maxWidth: 520 }}
-    >
-      <option value="en_us">🇺🇸 American English (US)</option>
-      <option value="en_br">🇬🇧 British English (UK)</option>
-    </ControlSelect>
-  </div>
-</div>
-{(() => {
-  const slackVal = clamp(Number(s.slack ?? 1), -1, 1);
-
-  return (
-    <div className="ios-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 12 }}>
-      <div>
-        <div className="ios-row-label">Difficulty</div>
-        <div className="ios-row-hint">Controls scoring strictness. Easier = more forgiving. Stricter = harder.</div>
-      </div>
-
-      <div style={{ display: "grid", gap: 10 }}>
-        <div style={{ color: "var(--muted)", fontWeight: 800 }}>
-          {slackLabel(slackVal)} ({slackVal.toFixed(2)})
-        </div>
-
-        <input
-          type="range"
-          min="-1"
-          max="1"
-          step="0.05"
-          value={slackVal}
-          onChange={(e) => setS({ ...s, slack: Number(e.target.value) })}
-          className="range-blue-white"
-          style={{
-            "--pct": `${Math.round(((slackVal + 1) / 2) * 100)}%`,
-            width: "100%",
-            minWidth: 0,
-          }}
-        />
-      </div>
-    </div>
-  );
-})()}
-
-
-</Section>
-
-
-
-          {/* Audio */}
-          <Section title="AUDIO">
-         <div className="ios-row">
-  <div className="ios-row-left">
-    <div className="ios-row-label">Volume</div>
-  </div>
-
-  <div className="ios-row-right" style={{ flex: 1 }}>
-    <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
-      <input
-        type="range"
-        min="0"
-        max="1"
-        step="0.01"
-        value={volumeVal}
-        onChange={(e) => setS({ ...s, volume: Number(e.target.value) })}
-        className="range-blue-white"
-        style={{
-          "--pct": `${Math.round(volumeVal * 100)}%`,
-          width: "100%",
-          minWidth: 0,
-        }}
-      />
-
-      <span style={{ width: 44, textAlign: "right", color: "var(--muted)", fontWeight: 800 }}>
-        {Math.round(volumeVal * 100)}%
-      </span>
-    </div>
-  </div>
-</div>
-          </Section>
-
-          {/* Privacy & data (unchanged) */}
-          <Section title="PRIVACY & DATA">
-        
-            <Row
-              label="Send audio to server"
-              hint="Needed for cloud scoring. Turn off to keep audio on this device (some features will be disabled)."
-            >
-              <input
-                type="checkbox"
-                checked={!!s.sendAudioToServer}
-                onChange={(e) => setS({ ...s, sendAudioToServer: e.target.checked })}
-              />
-            </Row>
-
-         <div className="ios-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 12 }}>
-  <div>
-    <div className="ios-row-label">Keep recordings locally</div>
-    <div className="ios-row-hint">Store clips in this browser so you can replay them. Nothing is uploaded.</div>
-  </div>
-
-  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
-    <input
-      type="checkbox"
-      checked={!!s.keepRecordings}
-      onChange={(e) => setS({ ...s, keepRecordings: e.target.checked })}
-    />
-
-    <span className="text-sm" style={{ color: "var(--muted)" }}>
-      Retention
-    </span>
-
-    <ControlInput
-      type="number"
-      min="1"
-      max="30"
-      value={s.retentionDays ?? 7}
-      onChange={(e) => setS({ ...s, retentionDays: Number(e.target.value) })}
-      className="w-20"
-    />
-
-    <span className="text-sm" style={{ color: "var(--muted)" }}>
-      days
-    </span>
-  </div>
-</div>
-
-         <ActionRow>
+{!isPro && (
   <button
-    onClick={clearLocalData}
     type="button"
+    onClick={() => openPaywall("settings_upgrade")}
     style={{
       width: "100%",
-      height: 48,
-      borderRadius: 14,
+      height: 72,
       border: "none",
-      background: "#2196F3",
-      color: "white",
+      borderRadius: 999,
+      background: "#2952F3",
+      color: "#FFFFFF",
+      fontSize: 21,
       fontWeight: 900,
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      gap: 10,
+      gap: 12,
+      boxShadow: "none",
       cursor: "pointer",
     }}
   >
-    <Trash2 className="h-4 w-4" />
-    Clear cached data
+    <Sparkles className="h-5 w-5" />
+    Upgrade to FluentUp Pro
   </button>
-</ActionRow>
+)}
+        <Group>
+  <MenuRow
+    icon={Bell}
+    label="Notifications"
+    onClick={() => setActiveSheet("notifications")}
+  />
 
-          </Section>
-{/* Feedback & Support */}
-<Section title="FEEDBACK AND SUPPORT" noPanel>
-  <div
-    style={{
-      borderRadius: 28,
-      padding: 22,
-      background: "#FFFFFF",
-      border: "1px solid rgba(0,0,0,0.10)",
-      boxShadow: "0 18px 40px rgba(0,0,0,0.10)",
-    }}
-  >
-    <div
-      style={{
-        fontSize: 44,
-        lineHeight: 1.02,
-        fontWeight: 950,
-        letterSpacing: -0.8,
-        color: "var(--text)",
-        textAlign: "center",
-        marginTop: 6,
-      }}
-    >
-      We’d love to hear
-      <br />
-      from you
+  <MenuRow
+    icon={Info}
+    label="About"
+    onClick={() => setActiveSheet("about")}
+  />
+
+  <MenuRow
+    icon={Sparkles}
+    label="Preferences"
+    onClick={() => setActiveSheet("preferences")}
+  />
+
+  <MenuRow
+    icon={Sparkles}
+    label="Privacy & Data"
+    onClick={() => setActiveSheet("privacy")}
+  />
+
+  <MenuRow
+    icon={Mail}
+    label="Contact Support"
+    onClick={openSupportEmail}
+    noDivider
+  />
+</Group>
+
+{activeSheet === "preferences" && (
+  <Sheet title="Preferences" onBack={() => setActiveSheet(null)}>
+    <div style={{ display: "grid", gap: 18 }}>
+      <Group>
+        <div className="ios-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 12 }}>
+          <div>
+            <div className="ios-row-label">Default accent</div>
+            <div className="ios-row-hint">Used for IPA, target, and native TTS language.</div>
+          </div>
+
+          <div style={{ width: "100%" }}>
+            <ControlSelect
+              value={s.accentDefault}
+              onChange={(e) => setS({ ...s, accentDefault: e.target.value })}
+              style={{ width: "100%", maxWidth: 520 }}
+            >
+              <option value="en_us">🇺🇸 American English (US)</option>
+              <option value="en_br">🇬🇧 British English (UK)</option>
+            </ControlSelect>
+          </div>
+        </div>
+
+        {(() => {
+          const slackVal = clamp(Number(s.slack ?? 1), -1, 1);
+
+          return (
+            <div className="ios-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 12 }}>
+              <div>
+                <div className="ios-row-label">Difficulty</div>
+                <div className="ios-row-hint">Controls scoring strictness. Easier = more forgiving. Stricter = harder.</div>
+              </div>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ color: "var(--muted)", fontWeight: 800 }}>
+                  {slackLabel(slackVal)} ({slackVal.toFixed(2)})
+                </div>
+
+                <input
+                  type="range"
+                  min="-1"
+                  max="1"
+                  step="0.05"
+                  value={slackVal}
+                  onChange={(e) => setS({ ...s, slack: Number(e.target.value) })}
+                  className="range-blue-white"
+                  style={{
+                    "--pct": `${Math.round(((slackVal + 1) / 2) * 100)}%`,
+                    width: "100%",
+                    minWidth: 0,
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })()}
+      </Group>
+
+      <Group>
+        <div className="ios-row">
+          <div className="ios-row-left">
+            <div className="ios-row-label">Volume</div>
+          </div>
+
+          <div className="ios-row-right" style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volumeVal}
+                onChange={(e) => setS({ ...s, volume: Number(e.target.value) })}
+                className="range-blue-white"
+                style={{
+                  "--pct": `${Math.round(volumeVal * 100)}%`,
+                  width: "100%",
+                  minWidth: 0,
+                }}
+              />
+
+              <span style={{ width: 44, textAlign: "right", color: "var(--muted)", fontWeight: 800 }}>
+                {Math.round(volumeVal * 100)}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </Group>
     </div>
+  </Sheet>
+)}
+{activeSheet === "privacy" && (
+  <Sheet title="Privacy & Data" onBack={() => setActiveSheet(null)}>
+    <Group>
+      <Row
+        label="Send audio to server"
+        hint="Needed for cloud scoring. Turn off to keep audio on this device (some features will be disabled)."
+      >
+        <input
+          type="checkbox"
+          checked={!!s.sendAudioToServer}
+          onChange={(e) => setS({ ...s, sendAudioToServer: e.target.checked })}
+        />
+      </Row>
 
-    <div
-      style={{
-        marginTop: 18,
-        color: "var(--muted)",
-        fontWeight: 650,
-        fontSize: 16,
-        lineHeight: 1.55,
-      }}
-    >
-      We’re the team behind FluentUp. Like many of our users, we’re non-native English speakers, so we care deeply about making pronunciation practice feel simple, honest, and actually useful.
-      <br />
-      <br />
-      If something feels confusing, broken, or you have an idea that would make the app better, write it here. we read every message.
-    </div>
+      <div className="ios-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 12 }}>
+        <div>
+          <div className="ios-row-label">Keep recordings locally</div>
+          <div className="ios-row-hint">Store clips in this browser so you can replay them. Nothing is uploaded.</div>
+        </div>
 
-    <div style={{ marginTop: 18 }}>
-      <textarea
-        value={fb}
-        onChange={(e) => setFb(e.target.value)}
-        rows={4}
-        placeholder="Describe the issue…"
-        className="w-full outline-none"
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
+          <input
+            type="checkbox"
+            checked={!!s.keepRecordings}
+            onChange={(e) => setS({ ...s, keepRecordings: e.target.checked })}
+          />
+
+          <span className="text-sm" style={{ color: "var(--muted)" }}>
+            Retention
+          </span>
+
+          <ControlInput
+            type="number"
+            min="1"
+            max="30"
+            value={s.retentionDays ?? 7}
+            onChange={(e) => setS({ ...s, retentionDays: Number(e.target.value) })}
+            className="w-20"
+          />
+
+          <span className="text-sm" style={{ color: "var(--muted)" }}>
+            days
+          </span>
+        </div>
+      </div>
+
+      <ActionRow>
+        <button
+          onClick={clearLocalData}
+          type="button"
+          style={{
+            width: "100%",
+            height: 58,
+            borderRadius: 18,
+            border: "none",
+            background: "#FFFFFF",
+            color: "#111827",
+            fontWeight: 800,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            cursor: "pointer",
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+          Clear cached data
+        </button>
+      </ActionRow>
+    </Group>
+  </Sheet>
+)}
+
+
+
+
+{activeSheet === "notifications" && (
+  <Sheet title="Notifications" onBack={() => setActiveSheet(null)}>
+    <Group>
+      <Row label="Daily practice reminders">
+        <label
+          style={{
+            position: "relative",
+            display: "inline-flex",
+            width: 78,
+            height: 44,
+            cursor: notificationsBusy ? "not-allowed" : "pointer",
+            opacity: notificationsBusy ? 0.6 : 1,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={!!s.dailyPracticeReminders}
+            disabled={notificationsBusy}
+            onChange={(e) => handleDailyReminderToggle(e.target.checked)}
+            style={{
+              position: "absolute",
+              opacity: 0,
+              width: 0,
+              height: 0,
+            }}
+          />
+          <span
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: 999,
+              background: s.dailyPracticeReminders ? "#8EA2FF" : "#D9D9D9",
+              transition: "background 160ms ease",
+            }}
+          />
+          <span
+            style={{
+              position: "absolute",
+              top: 3,
+              left: s.dailyPracticeReminders ? 37 : 3,
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              background: "#FFFFFF",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+              transition: "left 160ms ease",
+            }}
+          />
+        </label>
+      </Row>
+
+      <Row label="Reminder time">
+        <input
+          type="time"
+          value={s.dailyReminderTime || "17:00"}
+          disabled={!s.dailyPracticeReminders || notificationsBusy}
+          onChange={(e) => handleDailyReminderTimeChange(e.target.value)}
+          style={{
+            width: 148,
+            height: 50,
+            borderRadius: 16,
+            border: "none",
+            background: "#ECECEC",
+            color: "rgba(17,24,39,0.55)",
+            fontSize: 18,
+            fontWeight: 700,
+            textAlign: "center",
+            padding: "0 14px",
+            opacity: !s.dailyPracticeReminders ? 0.55 : 1,
+          }}
+        />
+      </Row>
+    </Group>
+
+    {notificationsError ? (
+      <div
         style={{
-          borderRadius: 18,
-          padding: 14,
-          background: "#FFFFFF",
-          border: "1px solid rgba(0,0,0,0.10)",
-          color: "var(--text)",
-          resize: "vertical",
-        }}
-      />
-    </div>
-
-    <div style={{ marginTop: 14, display: "grid", gap: 10, justifyItems: "center" }}>
-      <button
-        type="button"
-        onClick={sendFeedback}
-        disabled={!fb.trim() || fbSending}
-        style={{
-          width: "100%",
-          maxWidth: 520,
-          height: 64,
-          borderRadius: 999,
-          border: "none",
-          background: "#2196F3",
-          color: "white",
-          fontWeight: 950,
-          fontSize: 20,
-          cursor: !fb.trim() || fbSending ? "not-allowed" : "pointer",
-          opacity: !fb.trim() || fbSending ? 0.55 : 1,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 10,
+          marginTop: 14,
+          padding: "0 6px",
+          fontSize: 14,
+          lineHeight: 1.4,
+          color: "#DC2626",
+          fontWeight: 600,
         }}
       >
-        <Send className="h-5 w-5" />
-        {fbSending ? "Sending…" : "Contact Us"}
-      </button>
+        {notificationsError}
+      </div>
+    ) : null}
+  </Sheet>
+)}
 
-      {fbMsg ? (
-        <div style={{ color: "rgba(17,24,39,0.60)", fontWeight: 800, fontSize: 13 }}>{fbMsg}</div>
-      ) : null}
-    </div>
-  </div>
-</Section>
-
-
+{activeSheet === "about" && (
+  <Sheet title="About" onBack={() => setActiveSheet(null)}>
+    <Group>
+      <Row label="App Version" hint="FluentUp">
+        <div style={{ color: "rgba(17,24,39,0.45)", fontWeight: 700 }}>1.1.0</div>
+      </Row>
+    </Group>
+  </Sheet>
+)}
                </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 // frontend/src/pages/Bookmarks.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bookmark, Trash2 } from "lucide-react";
+import { Bookmark, Trash2, ChevronLeft } from "lucide-react";
 import { getBookmarks, setBookmarks } from "../lib/bookmarks";
 import { Navigate, useLocation } from "react-router-dom";
 import { useProStatus } from "../providers/PurchasesProvider.jsx";
@@ -52,7 +52,7 @@ export default function Bookmarks() {
   return (
     <div className="page">
       <div className="mx-auto w-full max-w-[720px] px-4">
-      {/* Fixed header (always visible while scrolling) */}
+{/* Fixed header (match WeaknessLab / Settings design) */}
 <div
   style={{
     position: "fixed",
@@ -60,54 +60,75 @@ export default function Bookmarks() {
     left: 0,
     right: 0,
     zIndex: 9999,
-    background: "#2196F3",
-    borderBottom: "1px solid rgba(0,0,0,0.06)",
+    background: "#FFFFFF",
     paddingTop: "var(--safe-top)",
-  paddingBottom: 10,
   }}
 >
-  <div className="mx-auto w-full max-w-[720px] px-4" style={{ padding: "14px 16px 22px" }}>
-    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center" }}>
-    <div>
-  <button
-    type="button"
-    onClick={() => navigate(-1)}
-    className="btn btn-ghost btn-sm"
+  <div
     style={{
-      borderRadius: 14,
-      padding: "10px 14px",
-      fontWeight: 900,
-      color: "white",
-      background: "rgba(255,255,255,0.18)",
-      border: "1px solid rgba(255,255,255,0.28)",
-      backdropFilter: "blur(10px)",
-      WebkitBackdropFilter: "blur(10px)",
-      boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
+      maxWidth: 720,
+      margin: "0 auto",
+      padding: "0 16px 24px",
     }}
-    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.26)")}
-    onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.18)")}
   >
-    Back
-  </button>
-</div>
+    <div
+      style={{
+        position: "sticky",
+        top: 0,
+        background: "#FFFFFF",
+        zIndex: 2,
+        paddingTop: 12,
+        paddingBottom: 18,
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "44px 1fr 44px",
+          alignItems: "center",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          style={{
+            width: 44,
+            height: 44,
+            border: "none",
+            background: "transparent",
+            display: "grid",
+            placeItems: "center",
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          <ChevronLeft className="h-8 w-8" style={{ color: "#111827" }} />
+        </button>
 
+        <div
+          style={{
+            textAlign: "center",
+            fontSize: 34,
+            lineHeight: 1.05,
+            fontWeight: 900,
+            color: "#000",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Bookmarks
+        </div>
 
-      <div style={{ textAlign: "center", fontWeight: 900, fontSize: 18, color: "#FFFFFF" }}>
-        Bookmarks
+        <div />
       </div>
-
-      <div />
     </div>
   </div>
 </div>
 
 {/* Spacer so content doesn't go under fixed header */}
-<div style={{ height: "calc(var(--safe-top) + 38px)" }} />
+<div style={{ height: "calc(var(--safe-top) + 28px)" }} />
 
-<div className="h-2" />
-
-        {/* Panel */}x
-        <div className="panel">
+     {/* Panel */}
+<div className="panel">
           {items.length === 0 ? (
             <div style={cMuted}>
               No bookmarks yet. Add some from the feedback card on Imitate or Speak Along.

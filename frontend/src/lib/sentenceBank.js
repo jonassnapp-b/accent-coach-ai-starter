@@ -366,7 +366,32 @@ function ensureState(state) {
 function normalizeLevelId(levelId) {
   return LEVELS.some((l) => l.id === levelId) ? levelId : LEVELS[0].id;
 }
+const CMU_PHONEME_CODES = new Set([
+  "AA", "AE", "AH", "AO", "AW", "AX", "AXR", "AY",
+  "EH", "ER", "EY", "IH", "IX", "IY", "OW", "OY",
+  "UH", "UW", "UX", "OH",
+  "B", "CH", "D", "DH", "DX", "EL", "EM", "EN",
+  "F", "G", "HH", "JH", "K", "L", "M", "N", "NG",
+  "NX", "P", "Q", "R", "S", "SH", "T", "TH", "V",
+  "W", "Y", "Z", "ZH"
+]);
 
+function hasInvalidGeneratedWord(s) {
+  const words = String(s || "").match(/[A-Za-z']+/g) || [];
+
+  for (const raw of words) {
+    const w = String(raw).toLowerCase();
+    const upper = w.toUpperCase();
+
+    // leaked raw phoneme codes like "gm", "dj", "th", "jh", etc.
+    if (CMU_PHONEME_CODES.has(upper)) return true;
+
+    // consonant-only fake chunks like "gm", "dj", "ths"
+    if (w.length >= 2 && /^[bcdfghjklmnpqrstvwxyz]+$/i.test(w)) return true;
+  }
+
+  return false;
+}
 function isGoodSentence(s) {
   const t = String(s || "").trim();
   if (t.length < 12 || t.length > 160) return false;
@@ -374,6 +399,8 @@ function isGoodSentence(s) {
   const words = t.split(/\s+/).filter(Boolean);
   if (words.length < 4) return false;
   if (!/[A-Za-z]/.test(t)) return false;
+
+  if (hasInvalidGeneratedWord(t)) return false;
 
   // reject immediate repeated words: "to to", "the the", etc.
   for (let i = 1; i < words.length; i++) {

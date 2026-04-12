@@ -1,14 +1,15 @@
 // src/pages/PracticeMyText.jsx
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, ChevronDown, Volume2, Play, Pause, X, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Volume2, Play, Pause, X, RotateCcw, Bookmark } from "lucide-react";
 import { useSettings } from "../lib/settings-store.jsx";
 import * as sfx from "../lib/sfx.js";
 import PhonemeFeedback, { pfColorForPct } from "../components/PhonemeFeedback.jsx";
 import { bumpSessionsCount, shouldAskForRating, markAskedForRating, triggerNativeRatingPrompt } from "../lib/ratingGate.js";
 import { usePostHog } from "@posthog/react";
 import { useProStatus } from "../providers/PurchasesProvider.jsx";
-
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
+import { isBookmarked, toggleBookmark } from "../lib/bookmarks.js";
 
 
 const IS_PROD = !!import.meta?.env?.PROD;
@@ -59,7 +60,18 @@ function getApiBase() {
   }
   return (ls || env || window.location.origin).replace(/\/+$/, "");
 }
+async function triggerCountHaptic() {
+  try {
+    if (isNative()) {
+      await Haptics.impact({ style: ImpactStyle.Light });
+      return;
+    }
 
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(10);
+    }
+  } catch {}
+}
 function clamp01(v) {
   const n = Number(v);
   if (!isFinite(n)) return null;
@@ -137,7 +149,10 @@ function sanitizeTextForSubmit(raw) {
 function sanitizeTextForPaste(raw) {
   return String(raw || "").replace(/\s+/g, " ");
 }
-
+function isSingleWordText(raw) {
+  const parts = String(raw || "").trim().split(/\s+/).filter(Boolean);
+  return parts.length === 1;
+}
 function pickFeedback(json) {
   const overall = Number(json?.overall ?? json?.pronunciation ?? json?.overallAccuracy ?? 0);
   if (overall >= 95)
@@ -1567,10 +1582,11 @@ const lastAudioUrlRef = useRef(null);
 const [canRetryAnalyze, setCanRetryAnalyze] = useState(false);
 
 
-  const [result, setResult] = useState(null);
-  const [overallPctLocked, setOverallPctLocked] = useState(0);
-  const deckPctRef = useRef(null);
+const [result, setResult] = useState(null);
+const [overallPctLocked, setOverallPctLocked] = useState(0);
+const deckPctRef = useRef(null);
 const [deckPctLocked, setDeckPctLocked] = useState(0);
+const [bookmarkTick, setBookmarkTick] = useState(0);
 const deckScore = Number.isFinite(deckPctLocked) ? deckPctLocked : 0;
 
 
@@ -1628,6 +1644,16 @@ setOverallPctLocked(Math.max(0, Math.min(100, pct)));
 const [slideIdx, setSlideIdx] = useState(0);
 const [introPhase, setIntroPhase] = useState(-1);
 
+const bookmarkWord = useMemo(() => String(result?.refText || "").trim(), [result]);
+
+const showWordBookmark = useMemo(() => {
+  return slideIdx === 0 && introPhase >= 4 && isSingleWordText(bookmarkWord);
+}, [slideIdx, introPhase, bookmarkWord]);
+
+const isCurrentWordBookmarked = useMemo(() => {
+  if (!bookmarkWord) return false;
+  return isBookmarked(bookmarkWord);
+}, [bookmarkWord, bookmarkTick]);
 const NAV_H = 64; // lavere nav-højde
 const NAV_SAFE_H = `calc(${NAV_H}px + ${SAFE_BOTTOM})`; // ✅ nav height incl. safe-area
 const showNav = true; // global: vis på alle slides
@@ -1842,11 +1868,11 @@ useEffect(() => {
 
   clearIntroTimers();
 
-  introTimersRef.current.push(setTimeout(() => setIntroPhase(0), 50));
-  introTimersRef.current.push(setTimeout(() => setIntroPhase(1), 650));
-  introTimersRef.current.push(setTimeout(() => setIntroPhase(2), 2100));
-  introTimersRef.current.push(setTimeout(() => setIntroPhase(3), 2100 + 1500));
-  introTimersRef.current.push(setTimeout(() => setIntroPhase(4), 2100 + 1500 + 520));
+ introTimersRef.current.push(setTimeout(() => setIntroPhase(0), 50));
+introTimersRef.current.push(setTimeout(() => setIntroPhase(1), 520));
+introTimersRef.current.push(setTimeout(() => setIntroPhase(2), 1320));
+introTimersRef.current.push(setTimeout(() => setIntroPhase(3), 2520));
+introTimersRef.current.push(setTimeout(() => setIntroPhase(4), 3420));
 
   return () => clearIntroTimers();
 }, [result, overlayReady]);
@@ -1865,15 +1891,11 @@ useEffect(() => {
         setIntroPct(0);
     setIntroPhase(-1);
 
-const t0 = setTimeout(() => setIntroPhase(0), 50);
-const t1 = setTimeout(() => setIntroPhase(1), 650);
-const t2 = setTimeout(() => setIntroPhase(2), 2100);
-
-// hold teksten ~3s
-const t3 = setTimeout(() => setIntroPhase(3), 2100 + 1500);
-
-// vent på fade (du bruger 520ms i CSS)
-const t4 = setTimeout(() => setIntroPhase(4), 2100 + 1500 + 520);
+introTimersRef.current.push(setTimeout(() => setIntroPhase(0), 50));
+introTimersRef.current.push(setTimeout(() => setIntroPhase(1), 520));
+introTimersRef.current.push(setTimeout(() => setIntroPhase(2), 1320));
+introTimersRef.current.push(setTimeout(() => setIntroPhase(3), 2520));
+introTimersRef.current.push(setTimeout(() => setIntroPhase(4), 3420));
 
 
 return () => clearIntroTimers();
@@ -1885,16 +1907,21 @@ return () => clearIntroTimers();
   }
 }, [slideIdx, deckScore, result]);
 
-// Count-up when introPhase hits 1
+// Count-up when introPhase hits 2
 useEffect(() => {
   if (slideIdx !== 0) return;
-  if (introPhase !== 1) return;
+  if (introPhase !== 2) return;
+
+  setIntroPct(0);
 
   const target = deckScore;
 
+  if (target <= 0) return;
+
   let raf = 0;
+  let hapticTimer = null;
   const start = performance.now();
-  const dur = 1100;
+  const dur = 900;
 
   const tick = (now) => {
     const p = Math.min(1, (now - start) / dur);
@@ -1903,7 +1930,15 @@ useEffect(() => {
   };
 
   raf = requestAnimationFrame(tick);
-  return () => cancelAnimationFrame(raf);
+
+  hapticTimer = setInterval(() => {
+    triggerCountHaptic();
+  }, 90);
+
+  return () => {
+    cancelAnimationFrame(raf);
+    if (hapticTimer) clearInterval(hapticTimer);
+  };
 }, [slideIdx, introPhase, deckScore]);
 
 // Slide 2: animate the DOT up to the (same) introPct value
@@ -2470,6 +2505,18 @@ useEffect(() => {
   triggerTrophyCelebration();
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [result, overlayReady, slideIdx]);
+function toggleWordBookmark() {
+  const text = String(bookmarkWord || "").trim();
+  if (!text) return;
+
+  toggleBookmark({
+    type: "word",
+    text,
+    score: Number.isFinite(deckPctLocked) ? deckPctLocked : undefined,
+  });
+
+  setBookmarkTick((v) => v + 1);
+}
 const CloseSlidesX = ({ top = `calc(${SAFE_TOP} + 24px)`, right = "12px" }) => (
   <button
     type="button"
@@ -2492,9 +2539,14 @@ const CloseSlidesX = ({ top = `calc(${SAFE_TOP} + 24px)`, right = "12px" }) => (
   setResult(null);
 
   // ✅ navigate after overlay is hidden
-  requestAnimationFrame(() => {
-    nav(backRoute, { replace: true });
+ requestAnimationFrame(() => {
+  nav(backRoute, {
+    replace: true,
+    state: {
+      resumeScenario: location.state?.scenarioResume || null,
+    },
   });
+});
 }}
 
     aria-label="Close"
@@ -2540,7 +2592,7 @@ const CloseSlidesX = ({ top = `calc(${SAFE_TOP} + 24px)`, right = "12px" }) => (
       maxWidth: "100%",
           margin: 0,
           padding: "0 16px",
-          paddingBottom: `calc(${TABBAR_OFFSET}px + 24px + ${SAFE_BOTTOM})`,
+          paddingBottom: `calc(24px + ${SAFE_BOTTOM})`,
         }}
       >
       {/* iOS-style header row */}
@@ -2813,7 +2865,39 @@ paddingLeft: 0,
 />
       </div>
     )}
-
+{showWordBookmark && (
+  <button
+    type="button"
+    onClick={toggleWordBookmark}
+    aria-label={isCurrentWordBookmarked ? "Remove bookmark" : "Bookmark word"}
+    style={{
+      position: "absolute",
+      top: `calc(${SAFE_TOP} + 18px)`,
+      left: 12,
+      width: 44,
+      height: 44,
+      borderRadius: 16,
+      border: "1px solid rgba(255,255,255,0.18)",
+      background: "rgba(255,255,255,0.10)",
+      color: isCurrentWordBookmarked ? "#FACC15" : "#ffffff",
+      display: "grid",
+      placeItems: "center",
+      cursor: "pointer",
+      zIndex: 10002,
+      backdropFilter: "blur(10px)",
+      WebkitBackdropFilter: "blur(10px)",
+      boxShadow: isCurrentWordBookmarked
+        ? "0 10px 28px rgba(250,204,21,0.28)"
+        : "0 10px 24px rgba(0,0,0,0.14)",
+    }}
+  >
+    <Bookmark
+      className="h-5 w-5"
+      fill={isCurrentWordBookmarked ? "#FACC15" : "transparent"}
+      strokeWidth={2.2}
+    />
+  </button>
+)}
     {/* Centered width like other pages */}
     <div
 
@@ -2996,7 +3080,7 @@ paddingRight: 0,
   style={{
     textAlign: "center",
     fontWeight: 1000,
-    fontSize: computeHeroFontSize(heroText, 72, 24),
+    fontSize: computeHeroFontSize(heroText, introPhase >= 4 ? 60 : 72, introPhase >= 4 ? 20 : 24),
     lineHeight: 0.96,
     letterSpacing: -0.8,
     WebkitTextStroke: "1px rgba(0,0,0,0.20)",
@@ -3017,24 +3101,26 @@ paddingRight: 0,
 </div>
 
   {/* keep your line exactly as you have it */}
-  <div
-    style={{
-      position: "absolute",
-      left: "50%",
-      top: "50%",
-  transform: `translate(-50%, -50%) translateY(${introPhase === 2 ? 92 : 90}px)`,
-        opacity: introPhase === 2 ? 1 : 0,
-      transition: "opacity 520ms ease, transform 520ms ease",
-      zIndex: 2,
-      pointerEvents: "none",
-      display: "flex",
-      justifyContent: "center",
-      width: "100%",
-      paddingLeft: 16,
-      paddingRight: 16,
-      boxSizing: "border-box",
-    }}
-  >
+<div
+  style={{
+    position: "absolute",
+    left: "50%",
+    top: "50%",
+    transform: `translate(-50%, -50%) translateY(${introPhase >= 3 ? 122 : 120}px)`,
+    opacity: introPhase === 3 ? 1 : 0,
+    transition: introPhase === 3
+      ? "opacity 520ms ease, transform 520ms ease"
+      : "opacity 180ms ease, transform 180ms ease",
+    zIndex: 2,
+    pointerEvents: "none",
+    display: "flex",
+    justifyContent: "center",
+    width: "100%",
+    paddingLeft: 16,
+    paddingRight: 16,
+    boxSizing: "border-box",
+  }}
+>
     <div
       style={{
         ...heroBadgeStyleForPct(deckPctLocked),
@@ -3060,17 +3146,18 @@ paddingRight: 0,
 </div>
 
 {/* ONE PERCENT: appears exactly where the word used to be (center slot) */}
+{/* ONE PERCENT: appears only after the sentence has moved down */}
 <div
   style={{
     position: "absolute",
     left: "50%",
     top: "50%",
-transform: `translate(-50%, -50%) translateY(${introPhase >= 4 ? (-10 + PHASE4_DOWN_PX) : -10}px)`,
-    opacity: introPhase >= 1 ? 1 : 0,
+    transform: `translate(-50%, -50%) translateY(${introPhase >= 4 ? (-18 + PHASE4_DOWN_PX) : -34}px)`,
+    opacity: introPhase >= 2 ? 1 : 0,
     transition: "opacity 900ms ease",
-    transitionDelay: introPhase >= 1 ? "220ms" : "0ms",
+    transitionDelay: introPhase >= 2 ? "0ms" : "0ms",
     fontWeight: 1000,
-    fontSize: computePctFontSize(heroText, 112, 68),
+    fontSize: computePctFontSize(heroText, introPhase >= 4 ? 92 : 112, introPhase >= 4 ? 56 : 68),
     lineHeight: 1,
     letterSpacing: -1.1,
     color: pfColorForPct(deckPctLocked),
@@ -3956,31 +4043,36 @@ posthog?.capture("practice_my_text_retry", {
 
         <button
           type="button"
-        onClick={async () => {
+    onClick={() => {
   stopAllAudio();
 
-  // ✅ Coach-mode: returnér til /coach og bed den åbne live mic view (billede 2)
-  if (mode === "coach") {
-    nav("/coach", {
-      replace: true,
-      state: {
-        ...(location.state || {}),
-        autoStart: true,
-      },
-    });
-    return;
-  }
+ if (mode === "coach") {
+  nav("/ai-chat", {
+    replace: true,
+    state: {
+      resumeScenario: location.state?.scenarioResume || null,
+    },
+  });
+  return;
+}
 
-  // Practice-mode: bliv her og optag igen
+  try { sessionStorage.removeItem(RESULT_KEY); } catch {}
+
+  setIsClosingSlides(true);
+  setDeepDiveOpen(false);
+  setDeepDivePhoneme(null);
   setResult(null);
   setTrophyCelebration(false);
   setErr("");
+  setCanRetryAnalyze(false);
   setSlideIdx(0);
   setIntroPhase(0);
   setIntroPct(0);
-  try {
-    await startPronunciationRecord();
-  } catch {}
+  setLevelPctAnim(0);
+
+  requestAnimationFrame(() => {
+    nav("/practice", { replace: true });
+  });
 }}
 
           style={{

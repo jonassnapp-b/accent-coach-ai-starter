@@ -27,8 +27,7 @@ export default async function handler(req, res) {
     const text = String(textRaw || "").trim();
     if (!text) return res.status(400).json({ error: "Missing text" });
 
-    const accentNorm = String(accentRaw || "en_us").toLowerCase();
-    const accent = accentNorm === "en_br" ? "en_br" : "en_us";
+   const accent = String(accentRaw || "en_us").toLowerCase();
 
     const rate = Number(rateRaw ?? 1.0) || 1.0;
 const voice = voiceRaw ? String(voiceRaw).trim() : "";

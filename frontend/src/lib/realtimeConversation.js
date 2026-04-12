@@ -87,10 +87,40 @@ export async function createRealtimeConversation({
   onMessage,
   onError,
 }) {
-  const selectedVoice = accent === "en_br" ? "cedar" : "marin";
-const useAzurePlayback = accent === "en_br";
+  const language = String(accent || "en_us").toLowerCase();
+
+  const languageMap = {
+    en_us: "English",
+    en_br: "English",
+    zh_cn: "Mandarin Chinese",
+    ja_jp: "Japanese",
+    ko_kr: "Korean",
+    es_es: "Spanish",
+    de_de: "German",
+    fr_fr: "French",
+    ru_ru: "Russian",
+    ar_sa: "Arabic",
+  };
+
+  const selectedLanguageLabel = languageMap[language] || "English";
+
+  const selectedVoice =
+    language === "en_br" ? "cedar" :
+    language === "zh_cn" ? "alloy" :
+    language === "ja_jp" ? "alloy" :
+    language === "ko_kr" ? "alloy" :
+    language === "es_es" ? "alloy" :
+    language === "de_de" ? "alloy" :
+    language === "fr_fr" ? "alloy" :
+    language === "ru_ru" ? "alloy" :
+    language === "ar_sa" ? "alloy" :
+    "marin";
+
+  const useAzurePlayback = language === "en_br";
+
   console.log("[realtimeConversation] accent =", accent);
-console.log("[realtimeConversation] selectedVoice =", selectedVoice);
+  console.log("[realtimeConversation] language =", language);
+  console.log("[realtimeConversation] selectedVoice =", selectedVoice);
   let pc = null;
   let dc = null;
   let localStream = null;
@@ -388,7 +418,7 @@ console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realti
   const tokenRes = await fetch(`${base}/api/realtime-session`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accent }),
+      body: JSON.stringify({ accent, language }),
     });
 
     const tokenData = await tokenRes.json().catch(() => ({}));
@@ -542,7 +572,7 @@ sendEvent({
   session: {
     type: "realtime",
     instructions:
-      "You are a friendly English conversation coach for everyday learners. Speak only in English at all times. Keep the conversation simple, natural, and easy to follow. Only talk about normal everyday topics such as daily life, hobbies, food, weekend plans, friends, family, travel, work, movies, music, exercise, weather, shopping, and routines. Do not bring up technology, AI, business, finance, politics, science, world news, or other niche topics unless the user clearly asks for them. Sound like a normal friendly person, not a teacher giving a lecture. Keep responses concise and natural.",
+      `You are a friendly ${selectedLanguageLabel} conversation coach for everyday learners. Speak only in ${selectedLanguageLabel} at all times. Keep the conversation simple, natural, and easy to follow. Only talk about normal everyday topics such as daily life, hobbies, food, weekend plans, friends, family, travel, work, movies, music, exercise, weather, shopping, and routines. Do not switch to English unless the user explicitly asks for English. Sound like a normal friendly person, not a teacher giving a lecture. Keep responses concise and natural.`,
     audio: {
       input: {
         turn_detection: {
@@ -566,7 +596,7 @@ function startAssistantGreeting() {
     type: "response.create",
     response: {
       instructions:
-     "Speak only in English. Start with a short, natural greeting. Then ask what the user wants to talk about today and briefly suggest only normal everyday topics like weekend plans, hobbies, food, travel, work, movies, music, daily routines, friends, family, weather, or exercise. Do not suggest technology, AI, business, finance, politics, science, or news. Keep it simple, natural, and not too long.",
+        `Speak only in ${selectedLanguageLabel}. Start with a short, natural greeting. Then ask what the user wants to talk about today and briefly suggest only normal everyday topics like weekend plans, hobbies, food, travel, work, movies, music, daily routines, friends, family, weather, or exercise. Do not switch to English unless the user explicitly asks for English. Keep it simple, natural, and not too long.`,
     },
   });
 }
@@ -575,7 +605,7 @@ function requestAssistantReply() {
     type: "response.create",
     response: {
       instructions:
-        "Speak only in English. Continue the conversation naturally based on what the user just said. Keep it concise. Ask only one short follow-up question.",
+        `Speak only in ${selectedLanguageLabel}. Continue the conversation naturally based on what the user just said. Keep it concise. Ask only one short follow-up question. Do not switch to English unless the user explicitly asks for English.`,
     },
   });
 }
