@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Mic, RotateCcw, ChevronDown, ChevronRight, Check, X, ReceiptText } from "lucide-react";
+import { Mic, RotateCcw, ChevronDown, ChevronRight, Check, X, ReceiptText, Volume2, Repeat } from "lucide-react";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { useSettings } from "../lib/settings-store.jsx";
 import { createRealtimeConversation } from "../lib/realtimeConversation.js";
@@ -10,6 +10,7 @@ import { } from "../lib/onboarding.js";
 import { useNavigate } from "react-router-dom";
 import { useProStatus } from "../providers/PurchasesProvider.jsx";
 import fluentUpLogo from "../assets/Logo_Arrow.png";
+import PhonemeFeedback, { pfColorForPct } from "../components/PhonemeFeedback.jsx";
 function isNative() {
   return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
 }
@@ -220,86 +221,236 @@ function getMetricBarColor(key) {
   switch (key) {
     case "overall":
       return "#111111";
-    case "pronunciation":
-      return "#4F6BFF";
     case "fluency":
       return "#C94BFF";
     case "prosody":
       return "#F5A623";
-    case "completeness":
-      return "#FF6B6B";
+    case "phonemes":
+      return "#4F6BFF";
+    case "timing":
+      return "#14B8A6";
     default:
       return "#111111";
   }
 }
 
 function buildConversationFeedbackMetrics(azureJson = {}) {
-  const overall =
-    azureJson?.overallAccuracy ??
-    azureJson?.overall ??
-    azureJson?.pronunciation ??
-    azureJson?.accuracyScore ??
-    azureJson?.accuracy_score ??
-    azureJson?.scores?.overallAccuracy ??
-    azureJson?.scores?.overall ??
-    azureJson?.scores?.pronunciation;
+  const rawTop =
+    azureJson?.raw?.NBest?.[0] ||
+    azureJson?.raw?.nBest?.[0] ||
+    azureJson?.raw?.topNBest?.[0] ||
+    {};
 
-  const pronunciation =
-    azureJson?.pronunciation ??
-    azureJson?.accuracyScore ??
-    azureJson?.accuracy_score ??
-    azureJson?.scores?.pronunciation ??
-    azureJson?.scores?.accuracyScore ??
-    azureJson?.scores?.accuracy_score ??
-    overall;
+  const words = Array.isArray(azureJson?.words) ? azureJson.words : [];
+
+  const phonemeScores = words
+    .flatMap((word) => (Array.isArray(word?.phonemes) ? word.phonemes : []))
+    .map((p) => Number(p?.accuracyScore))
+    .filter(Number.isFinite);
+
+  const phonemeAverage =
+    phonemeScores.length > 0
+      ? phonemeScores.reduce((sum, value) => sum + value, 0) / phonemeScores.length
+      : null;
+
+  const timingSignals = words.map((word) => {
+    const breakData = word?.raw?.Feedback?.Prosody?.Break || word?.Feedback?.Prosody?.Break || {};
+    const unexpectedBreakConfidence = Number(breakData?.UnexpectedBreak?.Confidence ?? 0);
+    const missingBreakConfidence = Number(breakData?.MissingBreak?.Confidence ?? 0);
+    const breakLength = Number(breakData?.BreakLength ?? 0);
+
+    let penalty = 0;
+    penalty += unexpectedBreakConfidence * 35;
+    penalty += missingBreakConfidence * 35;
+
+    if (breakLength > 0) {
+      penalty += Math.min(20, breakLength / 100000);
+    }
+
+    return Math.max(0, 100 - penalty);
+  }).filter(Number.isFinite);
+
+  const timingAverage =
+    timingSignals.length > 0
+      ? timingSignals.reduce((sum, value) => sum + value, 0) / timingSignals.length
+      : null;
 
   const fluency =
+    rawTop?.FluencyScore ??
     azureJson?.fluency ??
     azureJson?.fluencyScore ??
     azureJson?.scores?.fluency ??
     azureJson?.scores?.fluencyScore;
 
   const prosody =
+    rawTop?.ProsodyScore ??
     azureJson?.prosody ??
     azureJson?.prosodyScore ??
     azureJson?.scores?.prosody ??
     azureJson?.scores?.prosodyScore;
 
-  const completeness =
-    azureJson?.completeness ??
-    azureJson?.completenessScore ??
-    azureJson?.scores?.completeness ??
-    azureJson?.scores?.completenessScore;
+  const fluencyScore = toScore(fluency);
+  const prosodyScore = toScore(prosody);
+  const phonemeScore = toScore(phonemeAverage);
+  const timingScore = toScore(timingAverage);
+
+  const overallInputs = [
+    { value: fluencyScore, weight: 0.35 },
+    { value: prosodyScore, weight: 0.25 },
+    { value: phonemeScore, weight: 0.25 },
+    { value: timingScore, weight: 0.15 },
+  ].filter((item) => item.value !== null);
+
+  const overall =
+    overallInputs.length > 0
+      ? toScore(
+          overallInputs.reduce((sum, item) => sum + item.value * item.weight, 0) /
+            overallInputs.reduce((sum, item) => sum + item.weight, 0)
+        )
+      : null;
 
   const metrics = [
     {
       key: "overall",
       label: "Overall",
-      value: toScore(overall),
-    },
-    {
-      key: "pronunciation",
-      label: "Pronunciation",
-      value: toScore(pronunciation),
+      value: overall,
     },
     {
       key: "fluency",
       label: "Fluency",
-      value: toScore(fluency),
+      value: fluencyScore,
     },
     {
       key: "prosody",
-      label: "Prosody",
-      value: toScore(prosody),
+      label: "Rhythm",
+      value: prosodyScore,
     },
     {
-      key: "completeness",
-      label: "Completeness",
-      value: toScore(completeness),
+      key: "phonemes",
+      label: "Pronunciation",
+      value: phonemeScore,
+    },
+    {
+      key: "timing",
+      label: "Pacing",
+      value: timingScore,
     },
   ];
 
   return metrics.filter((item) => item.value !== null);
+}
+
+
+function computeTipsSentenceFontSize(text, maxPx = 60, minPx = 24) {
+  const t = String(text || "").trim();
+  if (!t) return maxPx;
+
+  const parts = t.split(/\s+/g).filter(Boolean);
+  const words = parts.length;
+  const chars = t.length;
+  const longest = parts.reduce((m, w) => Math.max(m, w.length), 0);
+
+  let size = maxPx;
+
+  size -= Math.max(0, chars - 10) * 2.6;
+  size -= Math.max(0, words - 2) * 5.5;
+  size -= Math.max(0, longest - 6) * 3.5;
+
+  return Math.max(minPx, Math.min(maxPx, Math.round(size)));
+}
+
+function getOverallFeedbackScore(metrics = []) {
+  const overallMetric = Array.isArray(metrics)
+    ? metrics.find((item) => item?.key === "overall")
+    : null;
+
+  const value = Number(overallMetric?.value);
+  return Number.isFinite(value) ? value : null;
+}
+function getMetricMeaningText(key) {
+  switch (key) {
+    case "overall":
+      return "Overall is your combined pronunciation result across all the main speaking areas below.";
+    case "fluency":
+      return "Fluency measures how smoothly you speak, including pauses, hesitation, and flow between words.";
+    case "prosody":
+      return "Rhythm measures how natural your timing, stress, and speech melody sound.";
+    case "phonemes":
+      return "Pronunciation measures how accurately your individual sounds and words were pronounced.";
+    case "timing":
+      return "Pacing measures whether your pauses and speaking speed feel well-timed and natural.";
+    default:
+      return "";
+  }
+}
+
+function getMetricScoreMeaningText(key, value) {
+  const score = Number(value);
+  if (!Number.isFinite(score)) return "";
+
+  if (key === "overall") {
+    if (score >= 95) return `A score of ${score} means your overall speaking was excellent and sounded very strong across the board.`;
+    if (score >= 85) return `A score of ${score} means your overall speaking was strong, with only a few smaller things to improve.`;
+    if (score >= 75) return `A score of ${score} means your overall speaking was solid, but there are still noticeable areas to clean up.`;
+    if (score >= 60) return `A score of ${score} means your overall speaking is understandable, but several areas still need work.`;
+    return `A score of ${score} means your overall speaking needs more improvement across multiple areas.`;
+  }
+
+  if (key === "fluency") {
+    if (score >= 95) return `A score of ${score} means you sounded very smooth and natural, with little to no hesitation.`;
+    if (score >= 85) return `A score of ${score} means you were mostly fluent, with only a small amount of hesitation or uneven flow.`;
+    if (score >= 75) return `A score of ${score} means your fluency is decent, but some pauses or hesitations are still noticeable.`;
+    if (score >= 60) return `A score of ${score} means your speech flow breaks at times, so fluency still needs work.`;
+    return `A score of ${score} means your fluency is still quite interrupted and needs more practice.`;
+  }
+
+  if (key === "prosody") {
+    if (score >= 95) return `A score of ${score} means your rhythm and speech melody sounded very natural.`;
+    if (score >= 85) return `A score of ${score} means your rhythm is good, with only a few places that sound slightly off.`;
+    if (score >= 75) return `A score of ${score} means your rhythm is fairly solid, but stress or melody still needs improvement.`;
+    if (score >= 60) return `A score of ${score} means your rhythm sounds uneven in multiple places.`;
+    return `A score of ${score} means your rhythm and speech melody need much more work to sound natural.`;
+  }
+
+  if (key === "phonemes") {
+    if (score >= 95) return `A score of ${score} means your pronunciation of individual sounds was very accurate.`;
+    if (score >= 85) return `A score of ${score} means your pronunciation is strong, with only a few sounds needing cleanup.`;
+    if (score >= 75) return `A score of ${score} means your pronunciation is understandable, but some sounds are still off.`;
+    if (score >= 60) return `A score of ${score} means several sounds were unclear or inaccurate.`;
+    return `A score of ${score} means your pronunciation still has major sound-level issues that need practice.`;
+  }
+
+  if (key === "timing") {
+    if (score >= 95) return `A score of ${score} means your pacing was excellent and felt very natural.`;
+    if (score >= 85) return `A score of ${score} means your pacing was strong, with only minor timing issues.`;
+    if (score >= 75) return `A score of ${score} means your pacing is decent, but some pauses or speed changes feel a bit off.`;
+    if (score >= 60) return `A score of ${score} means your pacing is uneven and needs more control.`;
+    return `A score of ${score} means your pacing needs a lot more work to sound natural and well-timed.`;
+  }
+
+  return "";
+}
+
+function getMetricImprovementText(key, value) {
+  const score = Number(value);
+  if (!Number.isFinite(score) || score >= 95) {
+    return "You are doing very well here. Keep this level consistent.";
+  }
+
+  switch (key) {
+    case "overall":
+      return "Focus on the weakest area below first. Improving even one weaker category will lift your overall score.";
+    case "fluency":
+      return "Try speaking in slightly longer chunks without stopping, and avoid restarting words.";
+    case "prosody":
+      return "Try to copy the natural stress and melody of native speech, not just the words themselves.";
+    case "phonemes":
+      return "Focus on cleaner consonants and vowels, especially the sounds that feel hardest for you.";
+    case "timing":
+      return "Try to keep a steadier speaking speed and use more natural pauses between ideas.";
+    default:
+      return "";
+  }
 }
 export default function ConversationCoach() {
 const nav = useNavigate();
@@ -349,6 +500,7 @@ const [isAnalyzing, setIsAnalyzing] = useState(false);
 const [isPreparingFeedbackAudio, setIsPreparingFeedbackAudio] = useState(false);
 const [isWorkingOnFeedback, setIsWorkingOnFeedback] = useState(false);
 const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+const [isConversationReplyPlaying, setIsConversationReplyPlaying] = useState(false);
 const [isPendingAssistantPlayback, setIsPendingAssistantPlayback] = useState(false);
 const [isTtsWaveformActive, setIsTtsWaveformActive] = useState(false);
 const [isStartingConversation, setIsStartingConversation] = useState(false);
@@ -359,6 +511,20 @@ const [error, setError] = useState("");
   const [pendingNextAssistantText, setPendingNextAssistantText] = useState("");
 const [spokenFeedbackText, setSpokenFeedbackText] = useState("");
 const [feedbackMetrics, setFeedbackMetrics] = useState([]);
+const [selectedMetricDetail, setSelectedMetricDetail] = useState(null);
+const [tipsSpeechSuperResult, setTipsSpeechSuperResult] = useState(null);
+const [isTipsOverlayOpen, setIsTipsOverlayOpen] = useState(false);
+const [tipsSentenceScaleIn, setTipsSentenceScaleIn] = useState(false);
+const [showTipsAudioButtons, setShowTipsAudioButtons] = useState(false);
+const [tipsSentencePulse, setTipsSentencePulse] = useState(false);
+const [tipsBackdropBlurOn, setTipsBackdropBlurOn] = useState(false);
+const [tipsAudioButtonsPulse, setTipsAudioButtonsPulse] = useState(false);
+const [tipsAudioButtonsIn, setTipsAudioButtonsIn] = useState(false);
+const [showTipsSentence, setShowTipsSentence] = useState(false);
+const [showTipsRecordAgain, setShowTipsRecordAgain] = useState(false);
+const [isTipsCorrectPlaying, setIsTipsCorrectPlaying] = useState(false);
+const [isTipsUserPlaying, setIsTipsUserPlaying] = useState(false);
+const [lastUserRecording, setLastUserRecording] = useState(null);
 const [practiceWords, setPracticeWords] = useState([]);
 const [currentPracticeIndex, setCurrentPracticeIndex] = useState(0);
 const [isPracticeActive, setIsPracticeActive] = useState(false);
@@ -528,6 +694,7 @@ function stopFeedbackTts() {
   }
 
 setIsAiSpeaking(false);
+setIsConversationReplyPlaying(false);
 setIsPendingAssistantPlayback(false);
 setIsTtsWaveformActive(false);
 setIsPreparingFeedbackAudio(false);
@@ -786,6 +953,7 @@ useEffect(() => {
   return () => {
     console.log("[ConversationCoach] unmounted");
     mountedRef.current = false;
+    stopFeedbackTts();
     finalizeDailyTalkSession();
     clearTalkPaywallTimer();
     try {
@@ -874,14 +1042,30 @@ setMessages([]);
 setFeedbackSummary("");
 setSpokenFeedbackText("");
 setFeedbackMetrics([]);
+setSelectedMetricDetail(null);
+setTipsSpeechSuperResult(null);
+setIsTipsOverlayOpen(false);
+setTipsSentenceScaleIn(false);
+setTipsSentencePulse(false);
+setShowTipsAudioButtons(false);
+setTipsAudioButtonsPulse(false);
+setShowTipsSentence(false);
+setShowTipsRecordAgain(false);
+setTipsBackdropBlurOn(false);
+setTipsAudioButtonsIn(false);
+setTipsAudioButtonsIn(false);
+setIsTipsCorrectPlaying(false);
+setIsTipsUserPlaying(false);
+setLastUserRecording(null);
 setPendingNextAssistantText("");
 setHasIntroGreetingFinished(false);
 introGreetingPlayingRef.current = false;
     setIsRecording(false);
-    setIsAnalyzing(false);
-    setIsPreparingFeedbackAudio(false);
-    setIsWorkingOnFeedback(false);
+setIsAnalyzing(false);
+setIsPreparingFeedbackAudio(false);
+setIsWorkingOnFeedback(false);
 setIsAiSpeaking(false);
+setIsConversationReplyPlaying(false);
 setIsPendingAssistantPlayback(false);
 setIsWaitingToContinue(false);
     setIsStartingConversation(false);
@@ -969,7 +1153,7 @@ setFeedbackSummary("I didn’t hear anything. Hold the button and try again.");
 setIsWaitingToContinue(false);
     return;
   }
-
+setLastUserRecording(recording);
   try {
     const base = getApiBase();
 
@@ -1019,7 +1203,20 @@ setIsAnalyzing(false);
 setIsWorkingOnFeedback(false);
 return;
     }
+try {
+  const speechSuperJson = await analyzeTipsSentenceWithSpeechSuper(recording, userTranscript);
 
+  console.log("[ConversationCoach] FULL speechSuperJson =", speechSuperJson);
+  console.log("[ConversationCoach] speechSuperJson.words =", speechSuperJson?.words);
+  console.log("[ConversationCoach] speechSuperJson.words[0] =", speechSuperJson?.words?.[0]);
+  console.log("[ConversationCoach] speechSuperJson.words[0].phonemes =", speechSuperJson?.words?.[0]?.phonemes);
+  console.log("[ConversationCoach] speechSuperJson.words[0].phonics =", speechSuperJson?.words?.[0]?.phonics);
+
+  setTipsSpeechSuperResult(speechSuperJson || null);
+} catch (err) {
+  console.log("[ConversationCoach] tips SpeechSuper failed =", err?.message || err);
+  setTipsSpeechSuperResult(null);
+}
   const aiController = new AbortController();
 const aiTimeout = setTimeout(() => aiController.abort(), 15000);
 
@@ -1063,14 +1260,20 @@ setFeedbackSummary("");
 const spokenText = String(aiJson?.spokenFeedbackText || "").trim();
 console.log("[ConversationCoach] spokenFeedbackText final =", spokenText);
 setSpokenFeedbackText(spokenText);
-setFeedbackMetrics(buildConversationFeedbackMetrics(azureJson));
+
+const nextMetrics = buildConversationFeedbackMetrics(azureJson);
+console.log("[ConversationCoach] frontend azureJson for metrics =", azureJson);
+console.log("[ConversationCoach] frontend nextMetrics =", nextMetrics);
+setFeedbackMetrics(nextMetrics);
+
 setPendingNextAssistantText(aiJson?.nextAssistantText || "");
 
 const weakPracticeWords = pickWeakPracticeWords(
   Array.isArray(azureJson?.words) ? azureJson.words : []
 );
 
-const startedPractice = startPracticeFlowFromWords(weakPracticeWords);
+setPracticeWords(weakPracticeWords);
+const startedPractice = false;
 
 if (spokenText) {
   setIsAnalyzing(false);
@@ -1157,6 +1360,40 @@ body: JSON.stringify({
     setIsPracticeAnalyzing(false);
   }
 }
+async function analyzeTipsSentenceWithSpeechSuper(recording, referenceText) {
+  if (!recording?.base64 || !referenceText) return null;
+
+  const base = getApiBase();
+
+  const byteCharacters = atob(recording.base64);
+  const byteNumbers = new Array(byteCharacters.length);
+
+  for (let i = 0; i < byteCharacters.length; i += 1) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], { type: recording.mimeType || "audio/webm" });
+
+  const fd = new FormData();
+  fd.append("audio", blob, "clip.webm");
+  fd.append("refText", String(referenceText || "").trim());
+  fd.append("accent", selectedAccent === "en_br" ? "en_br" : "en_us");
+  fd.append("slack", String(settings?.slack ?? 0));
+
+  const res = await fetch(`${base}/api/analyze-speech`, {
+    method: "POST",
+    body: fd,
+  });
+
+  const json = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(json?.error || "SpeechSuper analyze failed");
+  }
+
+  return json;
+}
 async function startNewConversation() {
   try {
     finalizeDailyTalkSession();
@@ -1176,10 +1413,13 @@ setIsTranscriptOpen(false);
 setMessages([]);
 setFeedbackSummary("");
 setFeedbackMetrics([]);
+setSelectedMetricDetail(null);
+setTipsSpeechSuperResult(null);
 setHasConversationStarted(false);
 setHasIntroGreetingFinished(false);
 setHoldScale(1);
 setIsAiSpeaking(false);
+setIsConversationReplyPlaying(false);
 setIsPendingAssistantPlayback(false);
 setIsRecording(false);
 setIsWaitingToContinue(false);
@@ -1317,25 +1557,23 @@ if (finalText) {
     setAssistantText(finalText);
     setVisibleAssistantText(finalText);
     setHasConversationStarted(true);
-    setIsTranscriptOpen(true);
+    setIsTranscriptOpen(!hasIntroGreetingFinished);
     setIsPendingAssistantPlayback(true);
   });
-}
-if (finalText) {
+
   setMessages((prev) => [
     ...prev,
     { role: "ai", text: finalText }
   ]);
-}
-if (finalText) {
-  console.log("[ConversationCoach] response.done intro transcript only", {
+
+  console.log("[ConversationCoach] response.done", {
     finalText,
     selectedAccent,
     introGreetingPlaying: introGreetingPlayingRef.current,
+    hasIntroGreetingFinished,
   });
 
   setIsAnalyzing(false);
-  setIsTranscriptOpen(true);
   setIsAiSpeaking(true);
   setIsPendingAssistantPlayback(true);
 
@@ -1351,12 +1589,13 @@ if (type === "output_audio_buffer.started") {
 
   setHasConversationStarted(true);
   setIsAiSpeaking(true);
+  setIsConversationReplyPlaying(true);
   setIsPendingAssistantPlayback(true);
-  setIsTranscriptOpen(true);
+  setIsTranscriptOpen(!hasIntroGreetingFinished);
 
-if (!visibleAssistantText && assistantText) {
-  setVisibleAssistantText(assistantText);
-}
+  if (!visibleAssistantText && assistantText) {
+    setVisibleAssistantText(assistantText);
+  }
 }
 if (
   type === "output_audio_buffer.stopped" ||
@@ -1367,6 +1606,7 @@ if (
   });
 
   setIsAiSpeaking(false);
+  setIsConversationReplyPlaying(false);
   setIsPendingAssistantPlayback(false);
   setIsPreparingFeedbackAudio(false);
 
@@ -1393,8 +1633,9 @@ if (
   typeof serverMsg === "string" &&
   serverMsg.toLowerCase().includes("no active response found")
 ) {
-  setError("");
-  setIsAiSpeaking(false);
+setError("");
+setIsAiSpeaking(false);
+setIsConversationReplyPlaying(false);
  if (!feedbackBusyRef.current) {
   setIsAnalyzing(false);
 }
@@ -1403,6 +1644,7 @@ if (
 
           setError(serverMsg);
 setIsAiSpeaking(false);
+setIsConversationReplyPlaying(false);
 if (!feedbackBusyRef.current) {
   setIsAnalyzing(false);
 }
@@ -1412,6 +1654,7 @@ if (!feedbackBusyRef.current) {
   console.error("[realtime error]", err);
   setError(err?.message || "Realtime connection failed.");
   setIsAiSpeaking(false);
+  setIsConversationReplyPlaying(false);
 
   if (!hasConversationStarted) {
     setShowConnectionFailedScreen(true);
@@ -1453,6 +1696,8 @@ if (!ok) {
   }
 function handleExitConnectingFlow() {
     exitRequestedRef.current = true;
+      stopFeedbackTts();
+
   console.log("[ConversationCoach][EXIT_TAPPED]", {
   currentScreen,
   hasEnteredConversation,
@@ -1486,14 +1731,28 @@ setMessages([]);
 setFeedbackSummary("");
 setSpokenFeedbackText("");
 setFeedbackMetrics([]);
+setSelectedMetricDetail(null);
+setTipsSpeechSuperResult(null);
+setIsTipsOverlayOpen(false);
+setTipsSentenceScaleIn(false);
+setTipsSentencePulse(false);
+setShowTipsAudioButtons(false);
+setTipsAudioButtonsPulse(false);
+setShowTipsSentence(false);
+setShowTipsRecordAgain(false);
+setTipsBackdropBlurOn(false);
+setIsTipsCorrectPlaying(false);
+setIsTipsUserPlaying(false);
+setLastUserRecording(null);
 setPendingNextAssistantText("");
 setHasIntroGreetingFinished(false);
 introGreetingPlayingRef.current = false;
-  setIsRecording(false);
-  setIsAnalyzing(false);
-  setIsPreparingFeedbackAudio(false);
-  setIsWorkingOnFeedback(false);
+setIsRecording(false);
+setIsAnalyzing(false);
+setIsPreparingFeedbackAudio(false);
+setIsWorkingOnFeedback(false);
 setIsAiSpeaking(false);
+setIsConversationReplyPlaying(false);
 setIsPendingAssistantPlayback(false);
 setIsWaitingToContinue(false);
   setIsStartingConversation(false);
@@ -1541,6 +1800,7 @@ pendingBritishTtsRef.current = "";
     return;
   }
 setIsAiSpeaking(false);
+setIsConversationReplyPlaying(false);
 setIsPendingAssistantPlayback(false);
 setIsRecording(true);
 setIsAnalyzing(false);
@@ -1852,21 +2112,208 @@ function handleInterruptIntroPlayback() {
 
   introGreetingPlayingRef.current = false;
 }
+async function playTipsCorrectTts() {
+  const text = String(
+    messages.length > 0
+      ? [...messages].reverse().find((msg) => msg?.role === "user")?.text || ""
+      : ""
+  ).trim();
+
+  if (!text) return;
+
+  try {
+    setIsTipsCorrectPlaying(true);
+    setIsTipsUserPlaying(false);
+    await speakText(text);
+  } catch (err) {
+    setError(err?.message || "Failed to play correct pronunciation.");
+  } finally {
+    if (mountedRef.current) {
+      setIsTipsCorrectPlaying(false);
+    }
+  }
+}
+
+async function playTipsUserAudio() {
+  const recording = lastUserRecording;
+  if (!recording?.base64) return;
+
+  try {
+    stopFeedbackTts();
+    setIsTipsUserPlaying(true);
+    setIsTipsCorrectPlaying(false);
+
+    const mime = recording.mimeType || "audio/webm";
+    const byteCharacters = atob(recording.base64);
+    const byteNumbers = new Array(byteCharacters.length);
+
+    for (let i = 0; i < byteCharacters.length; i += 1) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: mime });
+    const url = URL.createObjectURL(blob);
+
+    if (!ttsAudioRef.current) {
+      ttsAudioRef.current = new Audio();
+    }
+
+    const a = ttsAudioRef.current;
+
+    await new Promise((resolve, reject) => {
+      a.onended = () => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {}
+        resolve(true);
+      };
+
+      a.onerror = () => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {}
+        reject(new Error("Failed to play your recording."));
+      };
+
+      a.src = url;
+      a.currentTime = 0;
+      a.play().catch(reject);
+    });
+  } catch (err) {
+    setError(err?.message || "Failed to play your recording.");
+  } finally {
+    if (mountedRef.current) {
+      setIsTipsUserPlaying(false);
+    }
+  }
+}
+
+function openTipsOverlay() {
+  setIsTipsOverlayOpen(true);
+  setTipsBackdropBlurOn(false);
+
+  setShowTipsAudioButtons(false);
+  setTipsAudioButtonsIn(false);
+  setTipsAudioButtonsPulse(false);
+
+  setShowTipsSentence(false);
+  setTipsSentenceScaleIn(false);
+  setTipsSentencePulse(false);
+
+  setShowTipsRecordAgain(false);
+
+  requestAnimationFrame(() => {
+  if (!mountedRef.current) return;
+  setShowTipsAudioButtons(true);
+  setTipsAudioButtonsIn(false);
+  setTipsAudioButtonsPulse(false);
+
+  window.setTimeout(() => {
+    if (!mountedRef.current) return;
+    setTipsAudioButtonsIn(true);
+  }, 30);
+
+  window.setTimeout(() => {
+    if (!mountedRef.current) return;
+    setTipsAudioButtonsPulse(true);
+  }, 220);
+});
+
+  window.setTimeout(() => {
+    if (!mountedRef.current) return;
+    setTipsAudioButtonsPulse(false);
+  }, 650);
+
+window.setTimeout(() => {
+  if (!mountedRef.current) return;
+  setShowTipsRecordAgain(true);
+}, 900);
+}
+
+function closeTipsOverlay() {
+setIsTipsOverlayOpen(false);
+setTipsSentenceScaleIn(false);
+setTipsSentencePulse(false);
+setShowTipsAudioButtons(false);
+setTipsAudioButtonsPulse(false);
+setShowTipsSentence(false);
+setShowTipsRecordAgain(false);
+setTipsBackdropBlurOn(false);
+setSelectedMetricDetail(null);
+  setIsTipsCorrectPlaying(false);
+  setIsTipsUserPlaying(false);
+  stopFeedbackTts();
+}
+function handlePracticeRecordAgain() {
+  closeTipsOverlay();
+  setPracticeWords([]);
+  setCurrentPracticeIndex(0);
+  setIsPracticeActive(false);
+  setIsPracticeVisible(false);
+  setPracticeFeedbackText("");
+  setPracticeLastScore(null);
+  setPracticeRecordingResult(null);
+}
 async function handleContinueAfterFeedback() {
   try {
     stopFeedbackTts();
     setError("");
-    setIsWaitingToContinue(false);
 
-    if (pendingNextAssistantText) {
-      setAssistantText(pendingNextAssistantText);
-      setPendingNextAssistantText("");
+    setIsWaitingToContinue(false);
+    setIsWorkingOnFeedback(false);
+    setIsPreparingFeedbackAudio(false);
+    setSpokenFeedbackText("");
+    setFeedbackMetrics([]);
+    setSelectedMetricDetail(null);
+
+    // Bliv på optag-siden
+    setIsTranscriptOpen(false);
+
+    // Smid forudgenereret næste tekst væk
+    setPendingNextAssistantText("");
+
+    // Nulstil visning af gammel AI-tekst, så kun ny realtime-reply bruges
+    setAssistantText("");
+    setVisibleAssistantText("");
+
+    // Sørg for at UI ikke stadig tror feedback-lyden spiller
+    setIsAiSpeaking(false);
+    setIsConversationReplyPlaying(false);
+    setIsPendingAssistantPlayback(false);
+
+    // Vent ét tick så audio-stop og state når at slå igennem
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const ok = realtimeRef.current?.requestAssistantReply?.();
+
+    if (!ok) {
+      setError("Failed to continue conversation.");
+      return;
     }
+
+    // Vigtigt: transcript skal ikke auto-åbne her
+    setIsAiSpeaking(true);
+    setIsConversationReplyPlaying(true);
+    setIsPendingAssistantPlayback(true);
   } catch (err) {
     setIsAiSpeaking(false);
+    setIsConversationReplyPlaying(false);
+    setIsPendingAssistantPlayback(false);
     setError(err?.message || "Failed to continue conversation.");
   }
 }
+const latestUserSentence = String(
+  [...messages].reverse().find((msg) => msg?.role === "user")?.text || ""
+).trim();
+console.log("[ConversationCoach] tips overlay state", {
+  isTipsOverlayOpen,
+  hasTipsSpeechSuperResult: !!tipsSpeechSuperResult,
+  tipsSpeechSuperWordsLength: Array.isArray(tipsSpeechSuperResult?.words) ? tipsSpeechSuperResult.words.length : 0,
+  latestUserSentence,
+});
+
+const tipsOverlaySentenceFontSize = computeTipsSentenceFontSize(latestUserSentence, 60, 24);
 const selectedAccentOption = getAccentOption(selectedAccent);
 
 const isAccentLocked =
@@ -1878,13 +2325,10 @@ const isAccentLocked =
     isAiSpeaking ||
     isPracticeRecording ||
     isPracticeAnalyzing;
-    const showTranscriptButton =
-  !showConnectionFailedScreen &&
-  !isStartingConversation &&
-  hasIntroGreetingFinished && // 👈 vigtig
-  (isAiSpeaking || isPreparingFeedbackAudio || isTranscriptOpen);
+    
 
 const hasVisibleIntroTranscript = !!String(visibleAssistantText || assistantText || "").trim();
+
 const shouldShowConversationFeedbackScreen =
   hasIntroGreetingFinished &&
   !isRecording &&
@@ -1895,6 +2339,16 @@ const shouldShowConversationFeedbackScreen =
     isWorkingOnFeedback ||
     !!spokenFeedbackText ||
     isWaitingToContinue
+  );
+  const showTranscriptButton =
+  !showConnectionFailedScreen &&
+  !isStartingConversation &&
+  hasIntroGreetingFinished &&
+  (
+    isAiSpeaking ||
+    isPreparingFeedbackAudio ||
+    isTranscriptOpen ||
+    shouldShowConversationFeedbackScreen
   );
 const shouldShowIntroTranscriptScreen =
   !hasIntroGreetingFinished &&
@@ -2354,67 +2808,99 @@ fontWeight: 900,
     display: "flex",
     flexDirection: "column",
     background: "#F3F3F3",
-    padding: "24px 16px max(20px, env(safe-area-inset-bottom))",
+padding: "max(8px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom))",
     boxSizing: "border-box",
-    overflowX: "hidden",
+    overflow: "hidden",
   }}
 >
           <div
   style={{
-  position: "relative",
-  zIndex: 20,
+  position: "sticky",
+  top: 0,
+  zIndex: 50,
   display: "flex",
-  alignItems: "center",
+  alignItems: "flex-start",
   justifyContent: "space-between",
-  paddingTop: 30,
-  paddingLeft: 4,
-  paddingRight: 4,
+  paddingTop: 4,
+  paddingBottom: 8,
+  background: "#F3F3F3",
   pointerEvents: "auto",
+  flexShrink: 0,
 }}
 >
-  <button
-    type="button"
-    onClick={handleExitConnectingFlow}
-    style={{
-  position: "relative",
-  zIndex: 21,
-  border: "none",
-  background: "transparent",
-  padding: 8,
-  width: 44,
-  height: 44,
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  cursor: "pointer",
-  color: "#111111",
-  pointerEvents: "auto",
-}}
-  >
-    <X size={36} strokeWidth={2.6} />
-  </button>
+<button
+  type="button"
+  onClick={shouldShowConversationFeedbackScreen ? handleContinueAfterFeedback : handleExitConnectingFlow}
+  style={{
+    border: "none",
+    background: "transparent",
+    padding: 8,
+    width: 44,
+    height: 44,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    color: "#111111",
+    flexShrink: 0,
+  }}
+>
+  <X size={36} strokeWidth={2.6} />
+</button>
 
 {showTranscriptButton ? (
-  <button
-    type="button"
-    onClick={() => setIsTranscriptOpen((prev) => !prev)}
-    style={{
-      border: "none",
-      background: "transparent",
-      padding: 8,
-      width: 44,
-      height: 44,
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      cursor: "pointer",
-      color: "#111111",
-    }}
-  >
-    <ReceiptText size={34} strokeWidth={2.2} />
-  </button>
+  <div
+  style={{
+    width: 44,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  }}
+>
+    <button
+      type="button"
+      onClick={() => setIsTranscriptOpen((prev) => !prev)}
+      style={{
+        border: "none",
+        background: "transparent",
+        padding: 8,
+        width: 44,
+        height: 44,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        color: "#111111",
+      }}
+    >
+      <ReceiptText size={34} strokeWidth={2.2} />
+    </button>
+
+    <button
+      type="button"
+      onClick={openTipsOverlay}
+      disabled={!latestUserSentence}
+      style={{
+        border: "none",
+        background: "transparent",
+        padding: 8,
+        width: 44,
+        height: 44,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: !latestUserSentence ? "not-allowed" : "pointer",
+        color: "#111111",
+        opacity: !latestUserSentence ? 0.35 : 1,
+      }}
+    >
+      <Repeat size={30} strokeWidth={2.2} />
+    </button>
+  </div>
 ) : (
-  <div style={{ width: 44, height: 44 }} />
+  <div style={{ width: 44, height: 96 }} />
 )}
 </div>
 
@@ -2644,9 +3130,13 @@ fontWeight: 900,
    <div
   style={{
     flex: 1,
+    minHeight: 0,
     overflowY: "auto",
     overflowX: "hidden",
-    paddingTop: 4,
+    WebkitOverflowScrolling: "touch",
+    overscrollBehavior: "contain",
+    touchAction: "pan-y",
+    paddingTop: 8,
     paddingBottom: 18,
   }}
 >
@@ -2696,70 +3186,87 @@ fontWeight: 900,
     width: "100%",
   }}
 >
-          {feedbackMetrics.map((metric) => (
-            <div key={metric.key}>
-            <div
-  style={{
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    marginBottom: 6,
-    minWidth: 0,
-  }}
->
-              <div
-  style={{
-    fontSize: 18,
-    lineHeight: 1.1,
-    fontWeight: 700,
-    letterSpacing: "-0.01em",
-    color: "#111111",
-    minWidth: 0,
-  }}
->
-                  {metric.label}
-                </div>
+            {console.log("[ConversationCoach] rendering feedbackMetrics =", feedbackMetrics)}
 
-              <ChevronRight
+   {feedbackMetrics.map((metric) => (
+  <button
+    key={metric.key}
+    type="button"
+    onClick={() => setSelectedMetricDetail(metric)}
+    style={{
+      border: "none",
+      background: "transparent",
+      padding: 0,
+      margin: 0,
+      textAlign: "left",
+      cursor: "pointer",
+      width: "100%",
+      display: "block",
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+        marginBottom: 6,
+        minWidth: 0,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 18,
+          lineHeight: 1.1,
+          fontWeight: 700,
+          letterSpacing: "-0.01em",
+          color: "#111111",
+          minWidth: 0,
+        }}
+      >
+        {metric.label}
+      </div>
+
+    <ChevronRight
   size={18}
   strokeWidth={2.6}
   style={{ color: "#111111", flexShrink: 0 }}
 />
-              </div>
+    </div>
 
-             <div
-  style={{
-    fontSize: 48,
-    lineHeight: 0.95,
-    fontWeight: 800,
-    letterSpacing: "-0.04em",
-    color: "#111111",
-    marginBottom: 12,
-  }}
->
-                {metric.value}
-              </div>
-<div
-  style={{
-    width: "100%",
-    height: 12,
-    borderRadius: 999,
-    background: "#D9D9D9",
-    overflow: "hidden",
-  }}
->
-                <div
-                  style={{
-                    width: `${metric.value}%`,
-                    height: "100%",
-                    borderRadius: 999,
-                    background: getMetricBarColor(metric.key),
-                  }}
-                />
-              </div>
-            </div>
-          ))}
+    <div
+      style={{
+        fontSize: 48,
+        lineHeight: 0.95,
+        fontWeight: 800,
+        letterSpacing: "-0.04em",
+        color: "#111111",
+        marginBottom: 12,
+      }}
+    >
+      {metric.value}
+    </div>
+
+    <div
+      style={{
+        width: "100%",
+        height: 12,
+        borderRadius: 999,
+        background: "#D9D9D9",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          width: `${metric.value}%`,
+          height: "100%",
+          borderRadius: 999,
+          background: getMetricBarColor(metric.key),
+        }}
+      />
+    </div>
+  </button>
+))}
         </div>
 
         {spokenFeedbackText ? (
@@ -2789,7 +3296,7 @@ fontWeight: 900,
         ) : null}
       </div>
     </div>
-
+    
     {isWaitingToContinue ? (
       <div
         style={{
@@ -2932,7 +3439,7 @@ fontWeight: 900,
           </div>
         ) : null}
       </div>
-            {isTranscriptOpen && hasIntroGreetingFinished && !shouldShowConversationFeedbackScreen ? (
+            {isTranscriptOpen && hasIntroGreetingFinished ? (
         <div
           style={{
             position: "fixed",
@@ -3025,7 +3532,7 @@ fontWeight: 900,
               );
             })}
 
-            {isAiSpeaking ? (
+            {isConversationReplyPlaying ? (
               <div
                 style={{
                   alignSelf: "flex-start",
@@ -3051,6 +3558,380 @@ fontWeight: 900,
           </div>
         </div>
       ) : null}
+            {isTipsOverlayOpen ? (
+        <div
+          style={{
+  position: "fixed",
+  inset: 0,
+  zIndex: 10020,
+  background: tipsBackdropBlurOn ? "rgba(243,243,243,0.58)" : "#F3F3F3",
+  backdropFilter: tipsBackdropBlurOn ? "blur(18px)" : "blur(0px)",
+  WebkitBackdropFilter: tipsBackdropBlurOn ? "blur(18px)" : "blur(0px)",
+  transition: "background 420ms ease, backdrop-filter 520ms ease, -webkit-backdrop-filter 520ms ease",
+  display: "flex",
+  flexDirection: "column",
+  padding: "24px 16px max(20px, env(safe-area-inset-bottom))",
+  boxSizing: "border-box",
+}}
+        >
+        <div
+  style={{
+    position: "sticky",
+    top: "max(8px, env(safe-area-inset-top))",
+    zIndex: 50,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 12,
+    paddingBottom: 8,
+    background: "#F3F3F3",
+    flexShrink: 0,
+  }}
+>
+            <div style={{ width: 44, height: 44 }} />
+
+       <div
+  style={{
+    fontSize: 32,
+    lineHeight: 1,
+    fontWeight: 800,
+    letterSpacing: -0.8,
+    color: "#111111",
+  }}
+>
+  Practice
+</div>
+
+          <button
+  type="button"
+  onClick={closeTipsOverlay}
+  style={{
+    border: "none",
+    background: "transparent",
+    padding: 8,
+    width: 44,
+    height: 44,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    color: "#111111",
+    flexShrink: 0,
+  }}
+>
+              <X size={36} strokeWidth={2.6} />
+            </button>
+          </div>
+
+        <div
+  style={{
+    flex: 1,
+    minHeight: 0,
+    overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
+    overscrollBehavior: "contain",
+    touchAction: "pan-y",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-start",
+padding: "42px 10px 16px",
+    textAlign: "center",
+  }}
+>
+            <div
+  style={{
+    width: "100%",
+    maxWidth: 560,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 18,
+  }}
+>
+  {showTipsAudioButtons ? (
+    <div
+      style={{
+  width: "100%",
+  maxWidth: 360,
+  display: "grid",
+  gap: 12,
+  marginTop: 8,
+  opacity: tipsAudioButtonsIn ? 1 : 0,
+ transform: !tipsAudioButtonsIn
+  ? "scale(0.12)"
+  : tipsAudioButtonsPulse
+  ? "scale(1.03)"
+  : "scale(1)",
+  transition: "transform 700ms cubic-bezier(0.22, 1, 0.36, 1), opacity 240ms ease",
+  transformOrigin: "center center",
+}}
+    >
+      <button
+        type="button"
+        onClick={playTipsCorrectTts}
+        style={{
+          width: "100%",
+          minHeight: 58,
+          borderRadius: 20,
+          border: "none",
+          background: "#FFFFFF",
+          color: "#111111",
+          fontSize: 17,
+          fontWeight: 800,
+          letterSpacing: "-0.02em",
+          cursor: "pointer",
+          boxShadow: "0 8px 24px rgba(15,23,42,0.05)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+        }}
+      >
+        <Volume2 size={18} strokeWidth={2.6} />
+        {isTipsCorrectPlaying ? "Playing correct pronunciation..." : "Correct pronunciation"}
+      </button>
+
+      <button
+        type="button"
+        onClick={playTipsUserAudio}
+        disabled={!lastUserRecording?.base64}
+        style={{
+          width: "100%",
+          minHeight: 58,
+          borderRadius: 20,
+          border: "none",
+          background: "#FFFFFF",
+          color: "#111111",
+          fontSize: 17,
+          fontWeight: 800,
+          letterSpacing: "-0.02em",
+          cursor: !lastUserRecording?.base64 ? "not-allowed" : "pointer",
+          opacity: !lastUserRecording?.base64 ? 0.55 : 1,
+          boxShadow: "0 8px 24px rgba(15,23,42,0.05)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+        }}
+      >
+        <Volume2 size={18} strokeWidth={2.6} />
+        {isTipsUserPlaying ? "Playing your pronunciation..." : "Your pronunciation"}
+      </button>
+    </div>
+  ) : null}
+
+
+{showTipsRecordAgain ? (
+  <button
+    type="button"
+    onClick={handlePracticeRecordAgain}
+    style={{
+      width: "100%",
+      maxWidth: 360,
+      minHeight: 58,
+      borderRadius: 20,
+      border: "none",
+      background: "#2B4EFF",
+      color: "#FFFFFF",
+      fontSize: 17,
+      fontWeight: 800,
+      letterSpacing: "-0.02em",
+      cursor: "pointer",
+      boxShadow: "0 8px 24px rgba(15,23,42,0.10)",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+    }}
+  >
+    <Mic size={18} strokeWidth={2.6} />
+    Record again
+  </button>
+) : null}
+</div>
+           
+
+          </div>
+        </div>
+      ) : null}
+      {selectedMetricDetail ? (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      zIndex: 10030,
+      background: "rgba(17,17,17,0.28)",
+      display: "flex",
+      alignItems: "flex-end",
+      justifyContent: "center",
+      padding: "16px 16px max(20px, env(safe-area-inset-bottom))",
+      boxSizing: "border-box",
+    }}
+    onClick={() => setSelectedMetricDetail(null)}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        width: "100%",
+        maxWidth: 560,
+        background: "#FFFFFF",
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        borderBottomLeftRadius: 28,
+        borderBottomRightRadius: 28,
+        padding: "22px 20px 20px",
+        boxShadow: "0 18px 48px rgba(15,23,42,0.18)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 18,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 28,
+              lineHeight: 1,
+              fontWeight: 800,
+              letterSpacing: "-0.03em",
+              color: "#111111",
+              marginBottom: 8,
+            }}
+          >
+            {selectedMetricDetail.label}
+          </div>
+
+          <div
+            style={{
+              fontSize: 52,
+              lineHeight: 0.95,
+              fontWeight: 800,
+              letterSpacing: "-0.05em",
+              color: "#111111",
+            }}
+          >
+            {selectedMetricDetail.value}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setSelectedMetricDetail(null)}
+          style={{
+            border: "none",
+            background: "transparent",
+            padding: 0,
+            width: 36,
+            height: 36,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "#111111",
+            flexShrink: 0,
+          }}
+        >
+          <X size={28} strokeWidth={2.6} />
+        </button>
+      </div>
+
+      <div
+        style={{
+          width: "100%",
+          height: 12,
+          borderRadius: 999,
+          background: "#D9D9D9",
+          overflow: "hidden",
+          marginBottom: 20,
+        }}
+      >
+        <div
+          style={{
+            width: `${selectedMetricDetail.value}%`,
+            height: "100%",
+            borderRadius: 999,
+            background: getMetricBarColor(selectedMetricDetail.key),
+          }}
+        />
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gap: 14,
+        }}
+      >
+        <div
+          style={{
+            background: "#F7F7F7",
+            borderRadius: 20,
+            padding: "16px 16px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 800,
+              color: "rgba(17,17,17,0.54)",
+              marginBottom: 6,
+              letterSpacing: "0.01em",
+            }}
+          >
+            What it means
+          </div>
+          <div
+            style={{
+              fontSize: 17,
+              lineHeight: 1.5,
+              fontWeight: 600,
+              color: "#111111",
+            }}
+          >
+            {getMetricMeaningText(selectedMetricDetail.key)}
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: "#F7F7F7",
+            borderRadius: 20,
+            padding: "16px 16px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 800,
+              color: "rgba(17,17,17,0.54)",
+              marginBottom: 6,
+              letterSpacing: "0.01em",
+            }}
+          >
+            What your score means
+          </div>
+          <div
+            style={{
+              fontSize: 17,
+              lineHeight: 1.5,
+              fontWeight: 600,
+              color: "#111111",
+            }}
+          >
+            {getMetricScoreMeaningText(selectedMetricDetail.key, selectedMetricDetail.value)}
+          </div>
+        </div>
+
+       
+      </div>
+    </div>
+  </div>
+) : null}
       <audio ref={ttsAudioRef} />
 <style>{`
   @keyframes conversationCoachSpin {

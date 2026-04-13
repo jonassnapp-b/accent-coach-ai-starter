@@ -605,7 +605,7 @@ function requestAssistantReply() {
     type: "response.create",
     response: {
       instructions:
-        `Speak only in ${selectedLanguageLabel}. Continue the conversation naturally based on what the user just said. Keep it concise. Ask only one short follow-up question. Do not switch to English unless the user explicitly asks for English.`,
+        `Speak only in ${selectedLanguageLabel}. Respond naturally to the user's most recent message in the ongoing conversation. Follow up on what the user actually said most recently. Do not switch into pronunciation practice mode. Do not ask what word they want to practice. Do not mention pronunciation unless the user asks about it. Keep it concise and natural, and ask only one short follow-up question.`,
     },
   });
 }
