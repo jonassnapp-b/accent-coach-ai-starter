@@ -73,8 +73,11 @@ const paConfig = {
   Dimension: "Comprehensive",
   EnableMiscue: false,
 };
-console.log("[azure] paConfig =", JSON.stringify(paConfig));
+
 paConfig.ReferenceText = String(referenceText || "").trim();
+
+console.log("[azure] referenceText =", paConfig.ReferenceText || "(empty)");
+console.log("[azure] paConfig final =", JSON.stringify(paConfig));
 
 const paHeader = Buffer.from(JSON.stringify(paConfig)).toString("base64");
 
@@ -115,13 +118,19 @@ console.log("[azure] raw =", raw);
   });
 }
 
-    const nbest = Array.isArray(data?.NBest) ? data.NBest[0] : null;
-    const displayText =
-      nbest?.Display ||
-      data?.DisplayText ||
-      "";
+const nbest = Array.isArray(data?.NBest) ? data.NBest[0] : null;
 
-    const pa = nbest || {};
+console.log("[azure] nbest =", JSON.stringify(nbest, null, 2));
+console.log("[azure] nbest.PronunciationAssessment =", JSON.stringify(nbest?.PronunciationAssessment || null, null, 2));
+console.log("[azure] firstWord =", JSON.stringify(nbest?.Words?.[0] || null, null, 2));
+console.log("[azure] firstWord.PronunciationAssessment =", JSON.stringify(nbest?.Words?.[0]?.PronunciationAssessment || null, null, 2));
+
+const displayText =
+  nbest?.Display ||
+  data?.DisplayText ||
+  "";
+
+const pa = nbest?.PronunciationAssessment || {};
 
  const words = Array.isArray(nbest?.Words)
   ? nbest.Words.map((w) => ({

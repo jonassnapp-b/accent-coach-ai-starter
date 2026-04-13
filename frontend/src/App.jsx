@@ -185,8 +185,10 @@ useEffect(() => {
 }, [showSplash]);
 
     
-  const [scenarioOverlayOpen, setScenarioOverlayOpen] = useState(false);
+  
+const [scenarioOverlayOpen, setScenarioOverlayOpen] = useState(false);
 const [accentOverlayOpen, setAccentOverlayOpen] = useState(false);
+const [conversationCoachFullscreenOpen, setConversationCoachFullscreenOpen] = useState(false);
 const location = useLocation();
 const navigate = useNavigate();
 const contentRef = useRef(null);
@@ -198,10 +200,13 @@ const isPracticeMyTextRoute =
 
 const [levelOverlayOpen, setLevelOverlayOpen] = useState(false);
 
+
+
 const showTabs =
   !scenarioOverlayOpen &&
   !accentOverlayOpen &&
   !levelOverlayOpen &&
+  !conversationCoachFullscreenOpen &&
   !isPaywall &&
   !isOnboardingRoute &&
   !isPracticeMyTextRoute;
@@ -214,15 +219,19 @@ useEffect(() => {
   const onScenario = (e) => setScenarioOverlayOpen(!!e?.detail?.open);
   const onAccent = (e) => setAccentOverlayOpen(!!e?.detail?.open);
   const onLevel = (e) => setLevelOverlayOpen(!!e?.detail?.open);
+  const onConversationCoachFullscreen = (e) =>
+    setConversationCoachFullscreenOpen(!!e?.detail?.open);
 
   window.addEventListener("ac:scenarioOverlay", onScenario);
   window.addEventListener("ac:accentOverlay", onAccent);
   window.addEventListener("ac:levelOverlay", onLevel);
+  window.addEventListener("ac:conversationCoachFullscreen", onConversationCoachFullscreen);
 
   return () => {
     window.removeEventListener("ac:scenarioOverlay", onScenario);
     window.removeEventListener("ac:accentOverlay", onAccent);
     window.removeEventListener("ac:levelOverlay", onLevel);
+    window.removeEventListener("ac:conversationCoachFullscreen", onConversationCoachFullscreen);
   };
 }, []);
 useEffect(() => {
