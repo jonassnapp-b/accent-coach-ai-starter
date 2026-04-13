@@ -64,19 +64,24 @@ await new Promise((resolve, reject) => {
 
 const wavBuffer = fs.readFileSync(outputPath);
 console.log("[azure] wav bytes =", wavBuffer.length);
-const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/dictation/cognitiveservices/v1?language=${encodeURIComponent(language)}&format=detailed`;
+const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${encodeURIComponent(language)}&format=detailed`;
 console.log("[azure] request url =", url);
+
+const cleanReferenceText = String(referenceText || "").trim();
 
 const paConfig = {
   GradingSystem: "HundredMark",
-  Granularity: "Word",
+  Granularity: "Phoneme",
   Dimension: "Comprehensive",
   EnableMiscue: false,
+  EnableProsodyAssessment: true,
 };
 
-paConfig.ReferenceText = String(referenceText || "").trim();
+if (cleanReferenceText) {
+  paConfig.ReferenceText = cleanReferenceText;
+}
 
-console.log("[azure] referenceText =", paConfig.ReferenceText || "(empty)");
+console.log("[azure] referenceText =", cleanReferenceText || "(empty)");
 console.log("[azure] paConfig final =", JSON.stringify(paConfig));
 
 const paHeader = Buffer.from(JSON.stringify(paConfig)).toString("base64");
