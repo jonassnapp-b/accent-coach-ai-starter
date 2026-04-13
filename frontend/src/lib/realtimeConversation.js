@@ -116,7 +116,7 @@ export async function createRealtimeConversation({
     language === "ar_sa" ? "alloy" :
     "marin";
 
-  const useAzurePlayback = language === "en_br";
+  
 
   console.log("[realtimeConversation] accent =", accent);
   console.log("[realtimeConversation] language =", language);
@@ -488,10 +488,7 @@ console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realti
 
        remoteSourceNode.connect(remoteCompressorNode);
 remoteCompressorNode.connect(remoteGainNode);
-
-if (!useAzurePlayback) {
-  remoteGainNode.connect(remoteAudioContext.destination);
-}
+remoteGainNode.connect(remoteAudioContext.destination);
 
         if (typeof onRemoteAudio === "function") onRemoteAudio(null, stream);
       } catch (err) {

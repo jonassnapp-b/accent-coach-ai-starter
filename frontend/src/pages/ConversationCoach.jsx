@@ -1489,17 +1489,19 @@ console.log("[ConversationCoach][MSG_TRACE]", {
 
 if (type === "response.created") {
   if (suppressNextAssistantResponseRef.current) {
+    suppressNextAssistantResponseRef.current = false;
     realtimeRef.current?.interruptAssistant?.();
     setIsAiSpeaking(false);
     return;
   }
 
-flushSync(() => {
-  setAssistantText("");
-});
-if (!feedbackBusyRef.current) {
-  setIsAnalyzing(false);
-}
+  flushSync(() => {
+    setAssistantText("");
+  });
+
+  if (!feedbackBusyRef.current) {
+    setIsAnalyzing(false);
+  }
 }
 
           const deltaText =
@@ -2267,22 +2269,21 @@ async function handleContinueAfterFeedback() {
     setFeedbackMetrics([]);
     setSelectedMetricDetail(null);
 
-    // Bliv på optag-siden
     setIsTranscriptOpen(false);
-
-    // Smid forudgenereret næste tekst væk
     setPendingNextAssistantText("");
 
-    // Nulstil visning af gammel AI-tekst, så kun ny realtime-reply bruges
     setAssistantText("");
     setVisibleAssistantText("");
 
-    // Sørg for at UI ikke stadig tror feedback-lyden spiller
     setIsAiSpeaking(false);
     setIsConversationReplyPlaying(false);
     setIsPendingAssistantPlayback(false);
 
-    // Vent ét tick så audio-stop og state når at slå igennem
+    // VIGTIGT:
+    // denne var stadig true fra brugerens optagelse,
+    // så response.created blev annulleret med det samme
+    suppressNextAssistantResponseRef.current = false;
+
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const ok = realtimeRef.current?.requestAssistantReply?.();
@@ -2292,7 +2293,6 @@ async function handleContinueAfterFeedback() {
       return;
     }
 
-    // Vigtigt: transcript skal ikke auto-åbne her
     setIsAiSpeaking(true);
     setIsConversationReplyPlaying(true);
     setIsPendingAssistantPlayback(true);
