@@ -243,56 +243,82 @@ function buildConversationFeedbackMetrics(azureJson = {}) {
 
   const words = Array.isArray(azureJson?.words) ? azureJson.words : [];
 
+  const hasFluency =
+    Number.isFinite(Number(rawTop?.FluencyScore)) ||
+    Number.isFinite(Number(azureJson?.fluency)) ||
+    Number.isFinite(Number(azureJson?.fluencyScore)) ||
+    Number.isFinite(Number(azureJson?.scores?.fluency)) ||
+    Number.isFinite(Number(azureJson?.scores?.fluencyScore));
+
+  const hasProsody =
+    Number.isFinite(Number(rawTop?.ProsodyScore)) ||
+    Number.isFinite(Number(azureJson?.prosody)) ||
+    Number.isFinite(Number(azureJson?.prosodyScore)) ||
+    Number.isFinite(Number(azureJson?.scores?.prosody)) ||
+    Number.isFinite(Number(azureJson?.scores?.prosodyScore));
+
   const phonemeScores = words
     .flatMap((word) => (Array.isArray(word?.phonemes) ? word.phonemes : []))
     .map((p) => Number(p?.accuracyScore))
     .filter(Number.isFinite);
 
-  const phonemeAverage =
-    phonemeScores.length > 0
-      ? phonemeScores.reduce((sum, value) => sum + value, 0) / phonemeScores.length
-      : null;
+  const hasPhonemeMetric = phonemeScores.length > 0;
 
-  const timingSignals = words.map((word) => {
-    const breakData = word?.raw?.Feedback?.Prosody?.Break || word?.Feedback?.Prosody?.Break || {};
-    const unexpectedBreakConfidence = Number(breakData?.UnexpectedBreak?.Confidence ?? 0);
-    const missingBreakConfidence = Number(breakData?.MissingBreak?.Confidence ?? 0);
-    const breakLength = Number(breakData?.BreakLength ?? 0);
+  const phonemeAverage = hasPhonemeMetric
+    ? phonemeScores.reduce((sum, value) => sum + value, 0) / phonemeScores.length
+    : null;
 
-    let penalty = 0;
-    penalty += unexpectedBreakConfidence * 35;
-    penalty += missingBreakConfidence * 35;
+  const timingSignals = words
+    .map((word) => {
+      const breakData =
+        word?.raw?.Feedback?.Prosody?.Break ||
+        word?.Feedback?.Prosody?.Break ||
+        null;
 
-    if (breakLength > 0) {
-      penalty += Math.min(20, breakLength / 100000);
-    }
+      if (!breakData) return null;
 
-    return Math.max(0, 100 - penalty);
-  }).filter(Number.isFinite);
+      const unexpectedBreakConfidence = Number(breakData?.UnexpectedBreak?.Confidence ?? 0);
+      const missingBreakConfidence = Number(breakData?.MissingBreak?.Confidence ?? 0);
+      const breakLength = Number(breakData?.BreakLength ?? 0);
 
-  const timingAverage =
-    timingSignals.length > 0
-      ? timingSignals.reduce((sum, value) => sum + value, 0) / timingSignals.length
-      : null;
+      let penalty = 0;
+      penalty += unexpectedBreakConfidence * 35;
+      penalty += missingBreakConfidence * 35;
 
-  const fluency =
-    rawTop?.FluencyScore ??
-    azureJson?.fluency ??
-    azureJson?.fluencyScore ??
-    azureJson?.scores?.fluency ??
-    azureJson?.scores?.fluencyScore;
+      if (breakLength > 0) {
+        penalty += Math.min(20, breakLength / 100000);
+      }
 
-  const prosody =
-    rawTop?.ProsodyScore ??
-    azureJson?.prosody ??
-    azureJson?.prosodyScore ??
-    azureJson?.scores?.prosody ??
-    azureJson?.scores?.prosodyScore;
+      return Math.max(0, 100 - penalty);
+    })
+    .filter(Number.isFinite);
 
-  const fluencyScore = toScore(fluency);
-  const prosodyScore = toScore(prosody);
-  const phonemeScore = toScore(phonemeAverage);
-  const timingScore = toScore(timingAverage);
+  const hasTimingMetric = timingSignals.length > 0;
+
+  const timingAverage = hasTimingMetric
+    ? timingSignals.reduce((sum, value) => sum + value, 0) / timingSignals.length
+    : null;
+
+  const fluency = hasFluency
+    ? rawTop?.FluencyScore ??
+      azureJson?.fluency ??
+      azureJson?.fluencyScore ??
+      azureJson?.scores?.fluency ??
+      azureJson?.scores?.fluencyScore
+    : null;
+
+  const prosody = hasProsody
+    ? rawTop?.ProsodyScore ??
+      azureJson?.prosody ??
+      azureJson?.prosodyScore ??
+      azureJson?.scores?.prosody ??
+      azureJson?.scores?.prosodyScore
+    : null;
+
+  const fluencyScore = hasFluency ? toScore(fluency) : null;
+  const prosodyScore = hasProsody ? toScore(prosody) : null;
+  const phonemeScore = hasPhonemeMetric ? toScore(phonemeAverage) : null;
+  const timingScore = hasTimingMetric ? toScore(timingAverage) : null;
 
   const overallInputs = [
     { value: fluencyScore, weight: 0.35 },
@@ -309,35 +335,49 @@ function buildConversationFeedbackMetrics(azureJson = {}) {
         )
       : null;
 
-  const metrics = [
-    {
+  const metrics = [];
+
+  if (overall !== null) {
+    metrics.push({
       key: "overall",
       label: "Overall",
       value: overall,
-    },
-    {
+    });
+  }
+
+  if (fluencyScore !== null) {
+    metrics.push({
       key: "fluency",
       label: "Fluency",
       value: fluencyScore,
-    },
-    {
+    });
+  }
+
+  if (prosodyScore !== null) {
+    metrics.push({
       key: "prosody",
       label: "Rhythm",
       value: prosodyScore,
-    },
-    {
+    });
+  }
+
+  if (phonemeScore !== null) {
+    metrics.push({
       key: "phonemes",
       label: "Pronunciation",
       value: phonemeScore,
-    },
-    {
+    });
+  }
+
+  if (timingScore !== null) {
+    metrics.push({
       key: "timing",
       label: "Pacing",
       value: timingScore,
-    },
-  ];
+    });
+  }
 
-  return metrics.filter((item) => item.value !== null);
+  return metrics;
 }
 
 
@@ -3361,7 +3401,7 @@ padding: "max(8px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-
        <div
   style={{
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
     gap: 16,
     alignItems: "start",
     width: "100%",
