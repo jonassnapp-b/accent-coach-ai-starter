@@ -564,16 +564,15 @@ sendEvent({
     type: "realtime",
     instructions:
       `You are a friendly ${selectedLanguageLabel} conversation coach for everyday learners. Speak only in ${selectedLanguageLabel} at all times. Keep the conversation simple, natural, and easy to follow. Only talk about normal everyday topics such as daily life, hobbies, food, weekend plans, friends, family, travel, work, movies, music, exercise, weather, shopping, and routines. Do not switch to English unless the user explicitly asks for English. Sound like a normal friendly person, not a teacher giving a lecture. Keep responses concise and natural.`,
-    audio: {
-      input: {
-        turn_detection: {
-          type: "server_vad",
-          create_response: false,
-          interrupt_response: true,
-        },
-      },
-    output: {},
+   audio: {
+  input: {
+    turn_detection: {
+      type: "server_vad",
+      create_response: false,
+      interrupt_response: true,
     },
+  },
+},
   },
 });
 
@@ -584,6 +583,7 @@ function startAssistantGreeting() {
   return sendEvent({
     type: "response.create",
     response: {
+      modalities: ["text"],
       instructions:
         `Speak only in ${selectedLanguageLabel}. Start with a short, natural greeting. Then ask what the user wants to talk about today and briefly suggest only normal everyday topics like weekend plans, hobbies, food, travel, work, movies, music, daily routines, friends, family, weather, or exercise. Do not switch to English unless the user explicitly asks for English. Keep it simple, natural, and not too long.`,
     },
@@ -593,6 +593,7 @@ function requestAssistantReply() {
   return sendEvent({
     type: "response.create",
     response: {
+      modalities: ["text"],
       instructions:
         `Speak only in ${selectedLanguageLabel}. Respond naturally to the user's most recent message in the ongoing conversation. Follow up on what the user actually said most recently. Do not switch into pronunciation practice mode. Do not ask what word they want to practice. Do not mention pronunciation unless the user asks about it. Keep it concise and natural, and ask only one short follow-up question.`,
     },
