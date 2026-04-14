@@ -842,8 +842,17 @@ if (ttsRequestIdRef.current !== requestId) {
       a.volume = 1;
 
      a.onplaying = () => {
-  console.log("[ConversationCoach] audio onplaying");
+  console.log("[ConversationCoach] audio onplaying", {
+    selectedAccent,
+    introGreetingPlaying: introGreetingPlayingRef.current,
+  });
+
   setHasConversationStarted(true);
+
+  if (introGreetingPlayingRef.current) {
+    setIsTranscriptOpen(true);
+  }
+
   setIsPendingAssistantPlayback(false);
   setIsPreparingFeedbackAudio(false);
   setIsWorkingOnFeedback(false);
@@ -1703,17 +1712,25 @@ if (!feedbackBusyRef.current) {
   });
 
   if (finalText) {
-    const isIntroReply = !hasIntroGreetingFinishedRef.current;
+const isIntroReply = !hasIntroGreetingFinishedRef.current;
+const shouldHoldConnectingUntilTtsStarts =
+  isIntroReply && selectedAccent === "en_br";
 
-    flushSync(() => {
-      setAssistantText(finalText);
-      setVisibleAssistantText(finalText);
-      setHasConversationStarted(true);
-      setIsTranscriptOpen(isIntroReply);
-      setIsPendingAssistantPlayback(true);
-      setIsAiSpeaking(true);
-      setIsConversationReplyPlaying(true);
-    });
+flushSync(() => {
+  setAssistantText(finalText);
+  setVisibleAssistantText(finalText);
+
+  if (!shouldHoldConnectingUntilTtsStarts) {
+    setHasConversationStarted(true);
+    setIsTranscriptOpen(isIntroReply);
+  } else {
+    setIsTranscriptOpen(false);
+  }
+
+  setIsPendingAssistantPlayback(true);
+  setIsAiSpeaking(true);
+  setIsConversationReplyPlaying(true);
+});
 
     setMessages((prev) => [
       ...prev,
