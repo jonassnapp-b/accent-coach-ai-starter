@@ -407,14 +407,26 @@ function stopPracticeRecording() {
 }
 async function connect() {
   const base = getApiBase();
-console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realtime-session`);
-  const tokenRes = await fetch(`${base}/api/realtime-session`, {
+  console.log("[realtimeConversation][connect] START", {
+  accent,
+  language,
+  useAzurePlayback,
+});
+
+console.log("[realtimeConversation][connect] requesting realtime token from", `${base}/api/realtime-session`);
+
+const tokenRes = await fetch(`${base}/api/realtime-session`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ accent, language }),
     });
 
     const tokenData = await tokenRes.json().catch(() => ({}));
+    console.log("[realtimeConversation][connect] token response", {
+  ok: tokenRes.ok,
+  status: tokenRes.status,
+  tokenData,
+});
     if (!tokenRes.ok) {
       throw new Error(
         tokenData?.error ||
@@ -431,16 +443,19 @@ console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realti
     if (!ephemeralKey) {
       throw new Error("Missing realtime client secret");
     }
-
+console.log("[realtimeConversation][connect] ephemeral key received");
     pc = new RTCPeerConnection();
-
+console.log("[realtimeConversation][connect] RTCPeerConnection created");
     remoteAudioEl = document.createElement("audio");
     remoteAudioEl.autoplay = true;
     remoteAudioEl.playsInline = true;
     remoteAudioEl.volume = 1;
 
 pc.ontrack = async (event) => {
-  const stream = event.streams?.[0];
+  console.log("[realtimeConversation][pc] ontrack fired", {
+    streamCount: event?.streams?.length || 0,
+    useAzurePlayback,
+  });  const stream = event.streams?.[0];
   if (!stream) return;
 
   if (typeof onRemoteAudio === "function") {
@@ -496,20 +511,31 @@ pc.ontrack = async (event) => {
   }
 };
     dc = pc.createDataChannel("oai-events");
+console.log("[realtimeConversation][connect] data channel created");
+dc.onopen = () => {
+  console.log("[realtimeConversation][dc] OPEN");
+};
 
-    dc.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (typeof onMessage === "function") onMessage(msg);
-      } catch (err) {
-        safeEmitError(new Error("Bad realtime data channel message"));
-      }
-    };
+dc.onclose = () => {
+  console.log("[realtimeConversation][dc] CLOSE");
+};
 
-    dc.onerror = (err) => {
-      safeEmitError(err || new Error("Realtime data channel error"));
-    };
+dc.onmessage = (event) => {
+  try {
+    const msg = JSON.parse(event.data);
+    console.log("[realtimeConversation][dc] MESSAGE", msg?.type || msg);
+    if (typeof onMessage === "function") onMessage(msg);
+  } catch (err) {
+    console.error("[realtimeConversation][dc] BAD MESSAGE", event?.data);
+    safeEmitError(new Error("Bad realtime data channel message"));
+  }
+};
 
+dc.onerror = (err) => {
+  console.error("[realtimeConversation][dc] ERROR", err);
+  safeEmitError(err || new Error("Realtime data channel error"));
+};
+console.log("[realtimeConversation][connect] requesting mic");
     localStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: true,
@@ -519,6 +545,9 @@ pc.ontrack = async (event) => {
     });
 
     localAudioTrack = localStream.getAudioTracks?.()[0] || null;
+    console.log("[realtimeConversation][connect] mic stream ready", {
+  hasLocalAudioTrack: !!localAudioTrack,
+});
     if (!localAudioTrack) {
       throw new Error("No microphone track found");
     }
@@ -527,10 +556,10 @@ pc.ontrack = async (event) => {
     localAudioTrack.enabled = false;
 
     pc.addTrack(localAudioTrack, localStream);
-
+console.log("[realtimeConversation][connect] creating offer");
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-
+console.log("[realtimeConversation][connect] local description set");
    const formData = new FormData();
 formData.append("sdp", offer.sdp);
 formData.append(
@@ -540,7 +569,7 @@ formData.append(
     model: REALTIME_MODEL
   })
 );
-
+console.log("[realtimeConversation][connect] sending SDP to OpenAI realtime");
 const sdpRes = await fetch("https://api.openai.com/v1/realtime/calls", {
   method: "POST",
   headers: {
@@ -550,7 +579,11 @@ const sdpRes = await fetch("https://api.openai.com/v1/realtime/calls", {
 });
 
     const answerSdp = await sdpRes.text();
-
+console.log("[realtimeConversation][connect] SDP response", {
+  ok: sdpRes.ok,
+  status: sdpRes.status,
+  answerPreview: String(answerSdp || "").slice(0, 300),
+});
     if (!sdpRes.ok) {
       throw new Error(answerSdp || `Realtime SDP failed (${sdpRes.status})`);
     }
@@ -559,11 +592,12 @@ const sdpRes = await fetch("https://api.openai.com/v1/realtime/calls", {
       type: "answer",
       sdp: answerSdp,
     });
-
+console.log("[realtimeConversation][connect] remote description set");
+console.log("[realtimeConversation][connect] waiting for data channel open");
 await waitForDataChannelOpen(dc);
-
+console.log("[realtimeConversation][connect] data channel is open");
 console.log("[realtimeConversation] sending session.update voice =", selectedVoice);
-sendEvent({
+const sessionUpdateOk = sendEvent({
   type: "session.update",
   session: {
     type: "realtime",
@@ -581,11 +615,12 @@ sendEvent({
     },
   },
 });
-
+console.log("[realtimeConversation][connect] session.update sent =", sessionUpdateOk);
 isConnected = true;
   }
   
 function startAssistantGreeting() {
+  console.log("[realtimeConversation] startAssistantGreeting called");
   return sendEvent({
     type: "response.create",
     response: {
@@ -596,6 +631,7 @@ function startAssistantGreeting() {
   });
 }
 function requestAssistantReply() {
+  console.log("[realtimeConversation] requestAssistantReply called");
   return sendEvent({
     type: "response.create",
     response: {
