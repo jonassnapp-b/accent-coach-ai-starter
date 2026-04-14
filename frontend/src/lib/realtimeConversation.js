@@ -439,57 +439,62 @@ console.log("[realtimeConversation] realtime-session URL =", `${base}/api/realti
     remoteAudioEl.playsInline = true;
     remoteAudioEl.volume = 1;
 
-    pc.ontrack = async (event) => {
-      const stream = event.streams?.[0];
-      if (!stream) return;
+pc.ontrack = async (event) => {
+  const stream = event.streams?.[0];
+  if (!stream) return;
 
-      try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) {
-          throw new Error("Web Audio API not available");
-        }
+  if (typeof onRemoteAudio === "function") {
+    onRemoteAudio(null, stream);
+  }
 
-        if (!remoteAudioContext) {
-          remoteAudioContext = new AudioCtx();
-        }
+  if (useAzurePlayback) {
+    return;
+  }
 
-        if (remoteAudioContext.state === "suspended") {
-          await remoteAudioContext.resume();
-        }
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) {
+      throw new Error("Web Audio API not available");
+    }
 
-         if (remoteSourceNode) {
-          try { remoteSourceNode.disconnect(); } catch {}
-        }
-        if (remoteCompressorNode) {
-          try { remoteCompressorNode.disconnect(); } catch {}
-        }
-        if (remoteGainNode) {
-          try { remoteGainNode.disconnect(); } catch {}
-        }
+    if (!remoteAudioContext) {
+      remoteAudioContext = new AudioCtx();
+    }
 
-        remoteSourceNode = remoteAudioContext.createMediaStreamSource(stream);
+    if (remoteAudioContext.state === "suspended") {
+      await remoteAudioContext.resume();
+    }
 
-        remoteCompressorNode = remoteAudioContext.createDynamicsCompressor();
-        remoteCompressorNode.threshold.value = -24;
-        remoteCompressorNode.knee.value = 18;
-        remoteCompressorNode.ratio.value = 10;
-        remoteCompressorNode.attack.value = 0.003;
-        remoteCompressorNode.release.value = 0.2;
+    if (remoteSourceNode) {
+      try { remoteSourceNode.disconnect(); } catch {}
+    }
+    if (remoteCompressorNode) {
+      try { remoteCompressorNode.disconnect(); } catch {}
+    }
+    if (remoteGainNode) {
+      try { remoteGainNode.disconnect(); } catch {}
+    }
 
-        remoteGainNode = remoteAudioContext.createGain();
-        remoteGainNode.gain.value = 1.35;
+    remoteSourceNode = remoteAudioContext.createMediaStreamSource(stream);
 
-       remoteSourceNode.connect(remoteCompressorNode);
-remoteCompressorNode.connect(remoteGainNode);
+    remoteCompressorNode = remoteAudioContext.createDynamicsCompressor();
+    remoteCompressorNode.threshold.value = -24;
+    remoteCompressorNode.knee.value = 18;
+    remoteCompressorNode.ratio.value = 10;
+    remoteCompressorNode.attack.value = 0.003;
+    remoteCompressorNode.release.value = 0.2;
 
-remoteGainNode.connect(remoteAudioContext.destination);
+    remoteGainNode = remoteAudioContext.createGain();
+    remoteGainNode.gain.value = 1.35;
 
-        if (typeof onRemoteAudio === "function") onRemoteAudio(null, stream);
-      } catch (err) {
-        console.error("[realtimeConversation] remote gain setup failed", err);
-        safeEmitError(err);
-      }
-    };
+    remoteSourceNode.connect(remoteCompressorNode);
+    remoteCompressorNode.connect(remoteGainNode);
+    remoteGainNode.connect(remoteAudioContext.destination);
+  } catch (err) {
+    console.error("[realtimeConversation] remote gain setup failed", err);
+    safeEmitError(err);
+  }
+};
     dc = pc.createDataChannel("oai-events");
 
     dc.onmessage = (event) => {
@@ -564,15 +569,16 @@ sendEvent({
     type: "realtime",
     instructions:
       `You are a friendly ${selectedLanguageLabel} conversation coach for everyday learners. Speak only in ${selectedLanguageLabel} at all times. Keep the conversation simple, natural, and easy to follow. Only talk about normal everyday topics such as daily life, hobbies, food, weekend plans, friends, family, travel, work, movies, music, exercise, weather, shopping, and routines. Do not switch to English unless the user explicitly asks for English. Sound like a normal friendly person, not a teacher giving a lecture. Keep responses concise and natural.`,
-   audio: {
-  input: {
-    turn_detection: {
-      type: "server_vad",
-      create_response: false,
-      interrupt_response: true,
+    audio: {
+      input: {
+        turn_detection: {
+          type: "server_vad",
+          create_response: false,
+          interrupt_response: true,
+        },
+      },
+    output: {},
     },
-  },
-},
   },
 });
 
