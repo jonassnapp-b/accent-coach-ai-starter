@@ -620,22 +620,18 @@ isConnected = true;
   }
   
 function startAssistantGreeting() {
-  console.log("[realtimeConversation] startAssistantGreeting called");
   return sendEvent({
     type: "response.create",
     response: {
-      modalities: ["text"],
       instructions:
         `Speak only in ${selectedLanguageLabel}. Start with a short, natural greeting. Then ask what the user wants to talk about today and briefly suggest only normal everyday topics like weekend plans, hobbies, food, travel, work, movies, music, daily routines, friends, family, weather, or exercise. Do not switch to English unless the user explicitly asks for English. Keep it simple, natural, and not too long.`,
     },
   });
 }
 function requestAssistantReply() {
-  console.log("[realtimeConversation] requestAssistantReply called");
   return sendEvent({
     type: "response.create",
     response: {
-      modalities: ["text"],
       instructions:
         `Speak only in ${selectedLanguageLabel}. Respond naturally to the user's most recent message in the ongoing conversation. Follow up on what the user actually said most recently. Do not switch into pronunciation practice mode. Do not ask what word they want to practice. Do not mention pronunciation unless the user asks about it. Keep it concise and natural, and ask only one short follow-up question.`,
     },
