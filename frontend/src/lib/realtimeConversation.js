@@ -104,17 +104,10 @@ export async function createRealtimeConversation({
 
   const selectedLanguageLabel = languageMap[language] || "English";
 
-  const selectedVoice =
-    language === "en_br" ? "cedar" :
-    language === "zh_cn" ? "alloy" :
-    language === "ja_jp" ? "alloy" :
-    language === "ko_kr" ? "alloy" :
-    language === "es_es" ? "alloy" :
-    language === "de_de" ? "alloy" :
-    language === "fr_fr" ? "alloy" :
-    language === "ru_ru" ? "alloy" :
-    language === "ar_sa" ? "alloy" :
-    "marin";
+const selectedVoice =
+  language === "en_br" ? "cedar" :
+  language === "en_us" ? "marin" :
+  "alloy";
 
   const useAzurePlayback = false;
 

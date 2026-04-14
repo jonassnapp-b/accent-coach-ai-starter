@@ -3390,7 +3390,7 @@ padding: "max(8px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-
        <div
   style={{
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gridTemplateColumns: "1fr 1fr",
     gap: 16,
     alignItems: "start",
     width: "100%",
@@ -3404,17 +3404,15 @@ padding: "max(8px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-
     type="button"
     onClick={() => setSelectedMetricDetail(metric)}
     style={{
-      border: "none",
-      background: "#FFFFFF",
-      padding: "18px 16px",
-      margin: 0,
-      textAlign: "left",
-      cursor: "pointer",
-      width: "100%",
-      display: "block",
-      borderRadius: 22,
-      boxShadow: "0 8px 24px rgba(15,23,42,0.05)",
-    }}
+  border: "none",
+  background: "transparent",
+  padding: 0,
+  margin: 0,
+  textAlign: "left",
+  cursor: "pointer",
+  width: "100%",
+  display: "block",
+}}
   >
     <div
       style={{
