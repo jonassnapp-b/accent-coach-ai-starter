@@ -140,6 +140,8 @@ function parseSlack(raw) {
 const sha1 = (s) => createHash("sha1").update(s).digest("hex");
 
 function makeConnectStart({ appKey, secretKey, userId, coreType, refText, dictDialect, slack, language }) {
+  console.log("[DEBUG makeConnectStart] language =", language, "type =", typeof language);
+  console.log("[DEBUG makeConnectStart] dictDialect =", dictDialect);
   const ts = Date.now().toString();
   const tokenId = randomUUID().replace(/-/g, "").toUpperCase();
 
@@ -174,8 +176,8 @@ function makeConnectStart({ appKey, secretKey, userId, coreType, refText, dictDi
         coreType,
         refText,
   language,
-dict_dialect: language.startsWith("en") ? dictDialect : null,
-dict_type: language.startsWith("en") ? "CMU" : null,
+dict_dialect: String(language || "").startsWith("en") ? dictDialect : null,
+dict_type: String(language || "").startsWith("en") ? "CMU" : null,
         phoneme_output: 1,
         model: "non_native",
         scale: 100,
@@ -198,6 +200,7 @@ async function postSpeechSuperExact({
   wavBytes,
   dictDialect,
   slack,
+  language,
 }) {
 
   const url = `${host.replace(/\/$/, "")}/${coreType}`;
@@ -211,6 +214,7 @@ const { connect, start } = makeConnectStart({
   refText,
   dictDialect,
   slack,
+  language,
 });
 
 

@@ -525,6 +525,11 @@ const [showTipsRecordAgain, setShowTipsRecordAgain] = useState(false);
 const [isTipsCorrectPlaying, setIsTipsCorrectPlaying] = useState(false);
 const [isTipsUserPlaying, setIsTipsUserPlaying] = useState(false);
 const [lastUserRecording, setLastUserRecording] = useState(null);
+const [isTipsPracticeMode, setIsTipsPracticeMode] = useState(false);
+const [isTipsPracticeRecording, setIsTipsPracticeRecording] = useState(false);
+const [isTipsPracticeAnalyzing, setIsTipsPracticeAnalyzing] = useState(false);
+const [tipsPracticeResult, setTipsPracticeResult] = useState(null);
+const [tipsPracticeError, setTipsPracticeError] = useState("");
 const [practiceWords, setPracticeWords] = useState([]);
 const [currentPracticeIndex, setCurrentPracticeIndex] = useState(0);
 const [isPracticeActive, setIsPracticeActive] = useState(false);
@@ -556,6 +561,8 @@ const pendingBritishTtsRef = useRef("");
 const pendingPreparedTtsRef = useRef(null);
 const introGreetingPlayingRef = useRef(false);
 const exitRequestedRef = useRef(false);
+const ttsRequestIdRef = useRef(0);
+const hasIntroGreetingFinishedRef = useRef(false);
 function clearTalkPaywallTimer() {
   if (talkPaywallTimerRef.current) {
     clearTimeout(talkPaywallTimerRef.current);
@@ -665,7 +672,11 @@ function finalizeDailyTalkSession() {
   talkSessionStartedAtRef.current = 0;
   talkSessionLimitMsRef.current = 0;
 }
-function stopFeedbackTts() {
+function stopFeedbackTts(cancelRequest = true) {
+  if (cancelRequest) {
+    ttsRequestIdRef.current += 1;
+  }
+
   const audio = ttsAudioRef.current;
   const active = activeTtsRef.current;
 
@@ -748,7 +759,8 @@ async function prepareTtsAudio(text) {
 async function speakText(text) {
   const t = String(text || "").trim();
   if (!t) return false;
-
+const requestId = ttsRequestIdRef.current + 1;
+ttsRequestIdRef.current = requestId;
   console.log("[ConversationCoach] speakText start", {
     text: t,
     selectedAccent,
@@ -768,8 +780,17 @@ async function speakText(text) {
   if (!prepared?.url) {
     throw new Error("TTS audio missing");
   }
-
-stopFeedbackTts();
+if (ttsRequestIdRef.current !== requestId) {
+  try {
+    if (prepared?.url) URL.revokeObjectURL(prepared.url);
+  } catch {}
+  console.log("[ConversationCoach] speakText aborted before play because request is stale", {
+    requestId,
+    currentRequestId: ttsRequestIdRef.current,
+  });
+  return false;
+}
+stopFeedbackTts(false);
 setIsPreparingFeedbackAudio(true);
 setIsTtsWaveformActive(true);
 
@@ -781,7 +802,13 @@ setIsTtsWaveformActive(true);
 
       const a = ttsAudioRef.current;
       activeTtsRef.current = { url: prepared.url, resolve };
-
+if (ttsRequestIdRef.current !== requestId) {
+  try {
+    URL.revokeObjectURL(prepared.url);
+  } catch {}
+  resolve(false);
+  return;
+}
       a.src = prepared.url;
       a.volume = 1;
 
@@ -981,6 +1008,13 @@ useEffect(() => {
 useEffect(() => {
   setVisibleAssistantText(String(assistantText || "").trim());
 }, [assistantText]);
+useEffect(() => {
+  hasIntroGreetingFinishedRef.current = hasIntroGreetingFinished;
+  console.log("[ConversationCoach][INTRO_FINISHED_SYNC]", {
+    state: hasIntroGreetingFinished,
+    ref: hasIntroGreetingFinishedRef.current,
+  });
+}, [hasIntroGreetingFinished]);
 
 useEffect(() => {
   if (!isPracticeActive) {
@@ -1261,6 +1295,27 @@ const spokenText = String(aiJson?.spokenFeedbackText || "").trim();
 console.log("[ConversationCoach] spokenFeedbackText final =", spokenText);
 setSpokenFeedbackText(spokenText);
 
+if (spokenText) {
+  prepareTtsAudio(spokenText)
+    .then((prepared) => {
+      if (!mountedRef.current) return;
+      if (!prepared?.url) return;
+
+      if (pendingPreparedTtsRef.current?.url) {
+        try {
+          URL.revokeObjectURL(pendingPreparedTtsRef.current.url);
+        } catch {}
+      }
+
+      pendingPreparedTtsRef.current = prepared;
+
+      console.log("[ConversationCoach] feedback TTS preloaded");
+    })
+    .catch((err) => {
+      console.log("[ConversationCoach] feedback TTS preload failed =", err?.message || err);
+    });
+}
+
 const nextMetrics = buildConversationFeedbackMetrics(azureJson);
 console.log("[ConversationCoach] frontend azureJson for metrics =", azureJson);
 console.log("[ConversationCoach] frontend nextMetrics =", nextMetrics);
@@ -1281,7 +1336,7 @@ if (spokenText) {
   setIsAiSpeaking(true);
   setIsWaitingToContinue(!startedPractice);
   setIsWaitingToContinue(!startedPractice);
-
+suppressNextAssistantResponseRef.current = true;
   speakText(spokenText)
     .then(() => {
       if (!mountedRef.current) return;
@@ -1393,6 +1448,65 @@ async function analyzeTipsSentenceWithSpeechSuper(recording, referenceText) {
   }
 
   return json;
+}
+function normalizeTipsPracticeWords(result) {
+  const words = Array.isArray(result?.words) ? result.words : [];
+
+  return words
+    .map((word, wordIndex) => {
+      const phonemes = Array.isArray(word?.phonemes)
+        ? word.phonemes
+            .map((p, phonemeIndex) => {
+              const score = Number(p?.accuracyScore);
+              const label = String(
+                p?.phoneme ??
+                p?.phonemeLabel ??
+                p?.phone ??
+                ""
+              ).trim();
+
+              if (!label || !Number.isFinite(score)) return null;
+
+              return {
+                id: `${wordIndex}-${phonemeIndex}-${label}`,
+                label,
+                score,
+                color: pfColorForPct(score),
+              };
+            })
+            .filter(Boolean)
+        : [];
+
+      return {
+        id: `${wordIndex}-${String(word?.word || "").trim()}`,
+        word: String(word?.word || "").trim(),
+        score: Number(word?.accuracyScore ?? 0),
+        phonemes,
+      };
+    })
+    .filter((w) => w.word);
+}
+async function analyzeTipsPracticeRecording(recording, referenceText) {
+  if (!recording?.base64) {
+    setTipsPracticeError("I didn’t hear anything. Try again.");
+    setIsTipsPracticeAnalyzing(false);
+    return;
+  }
+
+  try {
+    const speechSuperJson = await analyzeTipsSentenceWithSpeechSuper(recording, referenceText);
+
+    console.log("[ConversationCoach] tips practice speechSuperJson =", speechSuperJson);
+
+    setTipsPracticeResult(speechSuperJson || null);
+    setTipsPracticeError("");
+  } catch (err) {
+    console.log("[ConversationCoach] tips practice failed =", err?.message || err);
+    setTipsPracticeResult(null);
+    setTipsPracticeError(err?.message || "Practice analysis failed.");
+  } finally {
+    setIsTipsPracticeAnalyzing(false);
+  }
 }
 async function startNewConversation() {
   try {
@@ -1551,15 +1665,20 @@ if (!feedbackBusyRef.current) {
       : typeof msg?.response?.output?.[0]?.content?.[0]?.text === "string"
       ? msg.response.output[0].content[0].text
       : "";
-
+console.log("[ConversationCoach][response.done][BEFORE_SET]", {
+  hasIntroGreetingFinished_state: hasIntroGreetingFinished,
+  hasIntroGreetingFinished_ref: hasIntroGreetingFinishedRef.current,
+  willSetTranscriptOpen: !hasIntroGreetingFinishedRef.current,
+  finalText,
+});
 if (finalText) {
-  flushSync(() => {
-    setAssistantText(finalText);
-    setVisibleAssistantText(finalText);
-    setHasConversationStarted(true);
-    setIsTranscriptOpen(!hasIntroGreetingFinished);
-    setIsPendingAssistantPlayback(true);
-  });
+ flushSync(() => {
+  setAssistantText(finalText);
+  setVisibleAssistantText(finalText);
+  setHasConversationStarted(true);
+  setIsTranscriptOpen(!hasIntroGreetingFinishedRef.current);
+  setIsPendingAssistantPlayback(true);
+});
 
   setMessages((prev) => [
     ...prev,
@@ -1583,15 +1702,20 @@ if (finalText) {
 setIsAnalyzing(false);
 }
 if (type === "output_audio_buffer.started") {
+  console.log("[ConversationCoach][output_audio_buffer.started][BEFORE_SET]", {
+  hasIntroGreetingFinished_state: hasIntroGreetingFinished,
+  hasIntroGreetingFinished_ref: hasIntroGreetingFinishedRef.current,
+  willSetTranscriptOpen: !hasIntroGreetingFinishedRef.current,
+});
   console.log("[ConversationCoach] output audio started", {
     introGreetingPlaying: introGreetingPlayingRef.current,
   });
 
-  setHasConversationStarted(true);
-  setIsAiSpeaking(true);
-  setIsConversationReplyPlaying(true);
-  setIsPendingAssistantPlayback(true);
-  setIsTranscriptOpen(!hasIntroGreetingFinished);
+ setHasConversationStarted(true);
+setIsAiSpeaking(true);
+setIsConversationReplyPlaying(true);
+setIsPendingAssistantPlayback(true);
+setIsTranscriptOpen(!hasIntroGreetingFinishedRef.current);
 
   if (!visibleAssistantText && assistantText) {
     setVisibleAssistantText(assistantText);
@@ -1614,15 +1738,23 @@ if (
     setIsAnalyzing(false);
   }
 
-  if (introGreetingPlayingRef.current) {
-    console.log("[ConversationCoach] MARKING INTRO FINISHED FROM REALTIME AUDIO STOP");
+if (introGreetingPlayingRef.current) {
+  console.log("[ConversationCoach][INTRO_MARK_DONE_BEFORE]", {
+    hasIntroGreetingFinished_state: hasIntroGreetingFinished,
+    hasIntroGreetingFinished_ref: hasIntroGreetingFinishedRef.current,
+  });
 
-    setIsTranscriptOpen(false);
-    setAssistantText("");
-    setVisibleAssistantText("");
-    setHasIntroGreetingFinished(true);
-    introGreetingPlayingRef.current = false;
-  }
+  setIsTranscriptOpen(false);
+  setAssistantText("");
+  setVisibleAssistantText("");
+  setHasIntroGreetingFinished(true);
+  introGreetingPlayingRef.current = false;
+
+  console.log("[ConversationCoach][INTRO_MARK_DONE_AFTER_SETTER]", {
+    hasIntroGreetingFinished_state: hasIntroGreetingFinished,
+    hasIntroGreetingFinished_ref: hasIntroGreetingFinishedRef.current,
+  });
+}
 }
 
                 if (type === "error") {
@@ -2006,6 +2138,39 @@ function handlePracticeTryAgain() {
   setPracticeLastScore(null);
   setPracticeRecordingResult(null);
 }
+async function handleTipsPracticeHoldStart(e) {
+  e?.preventDefault?.();
+
+  stopFeedbackTts();
+
+  if (practiceHoldStartedRef.current) return;
+  practiceHoldStartedRef.current = true;
+
+  const ok = await realtimeRef.current?.startPracticeRecording?.();
+  if (!ok) {
+    practiceHoldStartedRef.current = false;
+    setTipsPracticeError("Microphone is not ready.");
+    return;
+  }
+
+  setIsTipsPracticeRecording(true);
+  setIsTipsPracticeAnalyzing(false);
+  setTipsPracticeResult(null);
+  setTipsPracticeError("");
+}
+
+async function handleTipsPracticeHoldEnd(e) {
+  e?.preventDefault?.();
+  if (!practiceHoldStartedRef.current) return;
+  practiceHoldStartedRef.current = false;
+
+  const recording = await realtimeRef.current?.stopPracticeRecording?.();
+
+  setIsTipsPracticeRecording(false);
+  setIsTipsPracticeAnalyzing(true);
+
+  await analyzeTipsPracticeRecording(recording, latestUserSentence);
+}
 function closeAccentSheet() {
   setIsAccentSheetClosing(true);
   setAccentSheetTranslateY(window.innerHeight);
@@ -2190,8 +2355,14 @@ async function playTipsUserAudio() {
 }
 
 function openTipsOverlay() {
+  stopFeedbackTts();
   setIsTipsOverlayOpen(true);
   setTipsBackdropBlurOn(false);
+  setIsTipsPracticeMode(false);
+  setIsTipsPracticeRecording(false);
+  setIsTipsPracticeAnalyzing(false);
+  setTipsPracticeResult(null);
+  setTipsPracticeError("");
 
   setShowTipsAudioButtons(false);
   setTipsAudioButtonsIn(false);
@@ -2232,28 +2403,33 @@ window.setTimeout(() => {
 }
 
 function closeTipsOverlay() {
-setIsTipsOverlayOpen(false);
-setTipsSentenceScaleIn(false);
-setTipsSentencePulse(false);
-setShowTipsAudioButtons(false);
-setTipsAudioButtonsPulse(false);
-setShowTipsSentence(false);
-setShowTipsRecordAgain(false);
-setTipsBackdropBlurOn(false);
-setSelectedMetricDetail(null);
+  setIsTipsOverlayOpen(false);
+  setTipsSentenceScaleIn(false);
+  setTipsSentencePulse(false);
+  setShowTipsAudioButtons(false);
+  setTipsAudioButtonsPulse(false);
+  setShowTipsSentence(false);
+  setShowTipsRecordAgain(false);
+  setTipsBackdropBlurOn(false);
+  setSelectedMetricDetail(null);
   setIsTipsCorrectPlaying(false);
   setIsTipsUserPlaying(false);
+
+  setIsTipsPracticeMode(false);
+  setIsTipsPracticeRecording(false);
+  setIsTipsPracticeAnalyzing(false);
+  setTipsPracticeResult(null);
+  setTipsPracticeError("");
+
   stopFeedbackTts();
 }
 function handlePracticeRecordAgain() {
-  closeTipsOverlay();
-  setPracticeWords([]);
-  setCurrentPracticeIndex(0);
-  setIsPracticeActive(false);
-  setIsPracticeVisible(false);
-  setPracticeFeedbackText("");
-  setPracticeLastScore(null);
-  setPracticeRecordingResult(null);
+  stopFeedbackTts();
+  setIsTipsPracticeMode(true);
+  setIsTipsPracticeRecording(false);
+  setIsTipsPracticeAnalyzing(false);
+  setTipsPracticeResult(null);
+  setTipsPracticeError("");
 }
 async function handleContinueAfterFeedback() {
   try {
@@ -2281,10 +2457,15 @@ async function handleContinueAfterFeedback() {
     setIsAiSpeaking(false);
     setIsConversationReplyPlaying(false);
     setIsPendingAssistantPlayback(false);
+    console.log("[ConversationCoach][CONTINUE_CLICK]", {
+  hasIntroGreetingFinished_state: hasIntroGreetingFinished,
+  hasIntroGreetingFinished_ref: hasIntroGreetingFinishedRef.current,
+  isTranscriptOpen_before_request: isTranscriptOpen,
+});
 
     // Vent ét tick så audio-stop og state når at slå igennem
     await new Promise((resolve) => setTimeout(resolve, 0));
-
+suppressNextAssistantResponseRef.current = false;
     const ok = realtimeRef.current?.requestAssistantReply?.();
 
     if (!ok) {
@@ -2315,7 +2496,7 @@ console.log("[ConversationCoach] tips overlay state", {
 
 const tipsOverlaySentenceFontSize = computeTipsSentenceFontSize(latestUserSentence, 60, 24);
 const selectedAccentOption = getAccentOption(selectedAccent);
-
+const tipsPracticeWords = normalizeTipsPracticeWords(tipsPracticeResult);
 const isAccentLocked =
     isStartingConversation ||
     isRecording ||
@@ -3722,7 +3903,7 @@ padding: "42px 10px 16px",
   ) : null}
 
 
-{showTipsRecordAgain ? (
+{showTipsRecordAgain && !isTipsPracticeMode ? (
   <button
     type="button"
     onClick={handlePracticeRecordAgain}
@@ -3748,6 +3929,156 @@ padding: "42px 10px 16px",
     <Mic size={18} strokeWidth={2.6} />
     Record again
   </button>
+) : null}
+
+{isTipsPracticeMode ? (
+  <div
+    style={{
+      width: "100%",
+      maxWidth: 420,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: 16,
+      marginTop: 8,
+    }}
+  >
+    <div
+      style={{
+        fontSize: 18,
+        lineHeight: 1.35,
+        fontWeight: 700,
+        color: "#111111",
+        textAlign: "center",
+      }}
+    >
+      {latestUserSentence || "Say it again"}
+    </div>
+
+    <button
+      type="button"
+      onPointerDown={handleTipsPracticeHoldStart}
+      onPointerUp={handleTipsPracticeHoldEnd}
+      onPointerLeave={(e) => {
+        if (isTipsPracticeRecording) handleTipsPracticeHoldEnd(e);
+      }}
+      onPointerCancel={handleTipsPracticeHoldEnd}
+      disabled={isTipsPracticeAnalyzing}
+      style={{
+        width: 148,
+        height: 148,
+        borderRadius: "50%",
+        border: "none",
+        background: "linear-gradient(180deg, #2B4EFF 0%, #2242F3 100%)",
+        color: "#FFFFFF",
+        cursor: isTipsPracticeAnalyzing ? "not-allowed" : "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        opacity: isTipsPracticeAnalyzing ? 0.7 : 1,
+        touchAction: "none",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+      }}
+    >
+      <Mic size={46} strokeWidth={2.5} />
+    </button>
+
+    <div
+      style={{
+        fontSize: 15,
+        lineHeight: 1.35,
+        fontWeight: 600,
+        color: "rgba(17,17,17,0.62)",
+        textAlign: "center",
+      }}
+    >
+      {isTipsPracticeRecording
+        ? "Listening..."
+        : isTipsPracticeAnalyzing
+        ? "Analyzing..."
+        : "Hold to speak"}
+    </div>
+
+    {tipsPracticeError ? (
+      <div
+        style={{
+          fontSize: 14,
+          lineHeight: 1.4,
+          fontWeight: 700,
+          color: "#B91C1C",
+          textAlign: "center",
+        }}
+      >
+        {tipsPracticeError}
+      </div>
+    ) : null}
+
+    {tipsPracticeWords.length > 0 ? (
+      <div
+        style={{
+          width: "100%",
+          display: "grid",
+          gap: 14,
+          marginTop: 8,
+        }}
+      >
+        {tipsPracticeWords.map((word) => (
+          <div
+            key={word.id}
+            style={{
+              background: "#FFFFFF",
+              borderRadius: 20,
+              padding: "14px 14px",
+              boxShadow: "0 8px 24px rgba(15,23,42,0.05)",
+              textAlign: "left",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 18,
+                lineHeight: 1.2,
+                fontWeight: 800,
+                color: "#111111",
+                marginBottom: 10,
+              }}
+            >
+              {word.word}
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 8,
+              }}
+            >
+              {word.phonemes.map((phoneme) => (
+                <span
+                  key={phoneme.id}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: 36,
+                    padding: "8px 12px",
+                    borderRadius: 999,
+                    background: phoneme.color,
+                    color: "#FFFFFF",
+                    fontSize: 15,
+                    fontWeight: 800,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {phoneme.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : null}
+  </div>
 ) : null}
 </div>
            
