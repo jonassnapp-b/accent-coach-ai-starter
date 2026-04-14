@@ -2496,7 +2496,7 @@ console.log("[ConversationCoach] tips overlay state", {
 
 const tipsOverlaySentenceFontSize = computeTipsSentenceFontSize(latestUserSentence, 60, 24);
 const selectedAccentOption = getAccentOption(selectedAccent);
-const tipsPracticeWords = normalizeTipsPracticeWords(tipsPracticeResult);
+
 const isAccentLocked =
     isStartingConversation ||
     isRecording ||
@@ -4014,70 +4014,44 @@ padding: "42px 10px 16px",
       </div>
     ) : null}
 
-    {tipsPracticeWords.length > 0 ? (
-      <div
-        style={{
-          width: "100%",
-          display: "grid",
-          gap: 14,
-          marginTop: 8,
-        }}
-      >
-        {tipsPracticeWords.map((word) => (
-          <div
-            key={word.id}
-            style={{
-              background: "#FFFFFF",
-              borderRadius: 20,
-              padding: "14px 14px",
-              boxShadow: "0 8px 24px rgba(15,23,42,0.05)",
-              textAlign: "left",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 18,
-                lineHeight: 1.2,
-                fontWeight: 800,
-                color: "#111111",
-                marginBottom: 10,
-              }}
-            >
-              {word.word}
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 8,
-              }}
-            >
-              {word.phonemes.map((phoneme) => (
-                <span
-                  key={phoneme.id}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minHeight: 36,
-                    padding: "8px 12px",
-                    borderRadius: 999,
-                    background: phoneme.color,
-                    color: "#FFFFFF",
-                    fontSize: 15,
-                    fontWeight: 800,
-                    letterSpacing: "-0.01em",
-                  }}
-                >
-                  {phoneme.label}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    ) : null}
+  {tipsPracticeResult ? (
+  <div
+    style={{
+      width: "100%",
+      maxWidth: 560,
+      marginTop: 8,
+      background: "#FFFFFF",
+      borderRadius: 24,
+      padding: "18px 16px",
+      boxShadow: "0 8px 24px rgba(15,23,42,0.05)",
+      textAlign: "center",
+    }}
+  >
+    <div
+      style={{
+        textAlign: "center",
+        fontWeight: 1000,
+        fontSize: computeTipsSentenceFontSize(
+          String(tipsPracticeResult?.transcript || latestUserSentence || "").trim(),
+          60,
+          24
+        ),
+        lineHeight: 0.96,
+        letterSpacing: -0.8,
+        WebkitTextStroke: "1px rgba(0,0,0,0.20)",
+        paintOrder: "stroke fill",
+        display: "block",
+        whiteSpace: "normal",
+        wordBreak: "break-word",
+        overflowWrap: "anywhere",
+        width: "100%",
+        margin: "0 auto",
+      }}
+    >
+      <PhonemeFeedback result={tipsPracticeResult} mode="textOnly" />
+    </div>
+  </div>
+) : null}
   </div>
 ) : null}
 </div>
