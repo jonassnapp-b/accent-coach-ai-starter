@@ -4051,42 +4051,45 @@ padding: "42px 10px 16px",
       <PhonemeFeedback result={tipsPracticeResult} mode="textOnly" />
     </div>
 
-    <div
-      style={{
-        marginTop: 14,
-        fontSize: 34,
-        lineHeight: 1,
-        fontWeight: 900,
-        letterSpacing: "-0.04em",
-        color: pfColorForPct(
-        (() => {
-  const raw = Number(
-    tipsPracticeResult?.overallAccuracy ??
-      tipsPracticeResult?.overall ??
-      tipsPracticeResult?.pronunciation ??
-      0
-  );
-  return Number.isFinite(raw) ? (raw <= 1 ? Math.round(raw * 100) : Math.round(raw)) : 0;
-})()
-        ),
-      }}
-    >
-      {Math.round(
+<div
+  style={{
+    marginTop: 14,
+    fontSize: 34,
+    lineHeight: 1,
+    fontWeight: 900,
+    letterSpacing: "-0.04em",
+    color: pfColorForPct(
       (() => {
-(() => {
-  const raw = Number(
-    tipsPracticeResult?.overallAccuracy ??
-      tipsPracticeResult?.overall ??
-      tipsPracticeResult?.pronunciation ??
-      0
-  );
-  return Number.isFinite(raw) ? (raw <= 1 ? Math.round(raw * 100) : Math.round(raw)) : 0;
-})()
-  return Number.isFinite(raw) ? (raw <= 1 ? Math.round(raw * 100) : Math.round(raw)) : 0;
-})()
-      )}
-      %
-    </div>
+        const raw = Number(
+          tipsPracticeResult?.overallAccuracy ??
+            tipsPracticeResult?.overall ??
+            tipsPracticeResult?.pronunciation ??
+            0
+        );
+        return Number.isFinite(raw)
+          ? raw <= 1
+            ? Math.round(raw * 100)
+            : Math.round(raw)
+          : 0;
+      })()
+    ),
+  }}
+>
+  {(() => {
+    const raw = Number(
+      tipsPracticeResult?.overallAccuracy ??
+        tipsPracticeResult?.overall ??
+        tipsPracticeResult?.pronunciation ??
+        0
+    );
+    return Number.isFinite(raw)
+      ? raw <= 1
+        ? Math.round(raw * 100)
+        : Math.round(raw)
+      : 0;
+  })()}
+  %
+</div>
 
     <div
       style={{

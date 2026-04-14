@@ -21,7 +21,7 @@ const weakWords = allWords
   }))
   .filter((w) => w.word && Number.isFinite(w.score) && w.score > 0)
   .sort((a, b) => a.score - b.score)
-  .slice(0, 3);
+  .slice(0, 1);
 
 const weakPhonemes = allWords
   .flatMap((w) =>
@@ -35,7 +35,7 @@ const weakPhonemes = allWords
   )
   .filter((p) => p.phoneme && Number.isFinite(p.score) && p.score > 0)
   .sort((a, b) => a.score - b.score)
-  .slice(0, 5);
+  .slice(0, 2);
   
 
 const languageMap = {
@@ -103,18 +103,35 @@ Return JSON only in this exact shape:
 }
 
 Rules for spokenFeedbackText:
-- Must be written entirely in ${targetLanguage}.
-- 3 to 5 short sentences only.
-- Start with a short natural overall impression.
-- Then mention the weakest word if one exists.
-- If there is a weak sound, explain it simply in learner-friendly language.
-- If fluency is weaker, mention that it should sound smoother.
-- Never give generic advice.
-- If weakWords is not empty, mention at least one explicitly.
+Must be written entirely in ${targetLanguage}.
+Use 3 or 4 short sentences only.
+Do not mention enthusiasm, confidence, or personality.
+Do not give general praise.
+Do not say things like "good job", "keep practicing", or "needs attention".
+Mention the single weakest word explicitly if it exists.
+Mention 1 or 2 weak sounds if they exist.
+Explain exactly what to change in a practical way.
+Focus on clarity, mouth movement, stress, or sound precision.
+Give one clear instruction the user can try immediately.
+Be direct and specific, not general or vague.
+
+Bad feedback examples:
+"Good enthusiasm"
+"This word needs some attention"
+"Try to improve the sounds"
+"Keep practicing"
+
+Good feedback style:
+Name the exact word.
+Name the exact weak sound if available.
+Explain what to change.
+Tell the user exactly what to try next.
 
 Rules for nextAssistantText:
-- Must be written entirely in ${targetLanguage}.
-- One short natural follow-up question only.
+Must be written entirely in ${targetLanguage}.
+One short follow-up question only.
+Ask the user to try the same word or sentence again.
+The question must match the correction that was just given.
 `;
 
 console.log("[ai-pronunciation-feedback] selectedLanguage =", selectedLanguage);
