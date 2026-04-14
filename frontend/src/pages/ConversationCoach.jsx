@@ -4050,6 +4050,81 @@ padding: "42px 10px 16px",
     >
       <PhonemeFeedback result={tipsPracticeResult} mode="textOnly" />
     </div>
+
+    <div
+      style={{
+        marginTop: 14,
+        fontSize: 34,
+        lineHeight: 1,
+        fontWeight: 900,
+        letterSpacing: "-0.04em",
+        color: pfColorForPct(
+        (() => {
+  const raw = Number(
+    tipsPracticeResult?.overallAccuracy ??
+      tipsPracticeResult?.overall ??
+      tipsPracticeResult?.pronunciation ??
+      0
+  );
+  return Number.isFinite(raw) ? (raw <= 1 ? Math.round(raw * 100) : Math.round(raw)) : 0;
+})()
+        ),
+      }}
+    >
+      {Math.round(
+      (() => {
+(() => {
+  const raw = Number(
+    tipsPracticeResult?.overallAccuracy ??
+      tipsPracticeResult?.overall ??
+      tipsPracticeResult?.pronunciation ??
+      0
+  );
+  return Number.isFinite(raw) ? (raw <= 1 ? Math.round(raw * 100) : Math.round(raw)) : 0;
+})()
+  return Number.isFinite(raw) ? (raw <= 1 ? Math.round(raw * 100) : Math.round(raw)) : 0;
+})()
+      )}
+      %
+    </div>
+
+    <div
+      style={{
+        marginTop: 10,
+        fontSize: 15,
+        lineHeight: 1.45,
+        fontWeight: 600,
+        color: "rgba(17,17,17,0.68)",
+        textAlign: "center",
+      }}
+    >
+      {(() => {
+        const score = Number(
+          tipsPracticeResult?.overallAccuracy ??
+            tipsPracticeResult?.overall ??
+            tipsPracticeResult?.pronunciation ??
+            0
+        );
+
+        if (score >= 95) {
+          return "Very strong pronunciation. Keep the same clarity and rhythm.";
+        }
+
+        if (score >= 85) {
+          return "Good pronunciation overall. Try to make the weaker sounds a little cleaner.";
+        }
+
+        if (score >= 75) {
+          return "Pretty solid. Focus on the red and yellow parts to sound more natural.";
+        }
+
+        if (score >= 60) {
+          return "You are understandable, but some sounds still need more control and clarity.";
+        }
+
+        return "Needs more work. Slow down a little and focus on the weakest sounds first.";
+      })()}
+    </div>
   </div>
 ) : null}
   </div>
