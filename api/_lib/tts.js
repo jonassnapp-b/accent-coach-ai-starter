@@ -194,9 +194,8 @@ export async function getTtsAudio({ text, accent = "en_us", rate = 1.0, voice = 
   const a = (accent || "en_us").toLowerCase();
 
   let mp3 = null;
-  const isEnglish = a === "en_us" || a === "en_br";
 
-  if (isEnglish) {
+  if (a === "en_us") {
     try {
       mp3 = await fetchOpenAiMp3({ text: t, accent: a, rate, voice });
     } catch (e) {

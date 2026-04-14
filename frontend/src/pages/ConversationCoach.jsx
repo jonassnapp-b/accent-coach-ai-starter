@@ -243,19 +243,24 @@ function buildConversationFeedbackMetrics(azureJson = {}) {
 
   const words = Array.isArray(azureJson?.words) ? azureJson.words : [];
 
-  const hasFluency =
-    Number.isFinite(Number(rawTop?.FluencyScore)) ||
-    Number.isFinite(Number(azureJson?.fluency)) ||
-    Number.isFinite(Number(azureJson?.fluencyScore)) ||
-    Number.isFinite(Number(azureJson?.scores?.fluency)) ||
-    Number.isFinite(Number(azureJson?.scores?.fluencyScore));
+  const fluency = toScore(
+    rawTop?.FluencyScore ??
+    azureJson?.fluency ??
+    azureJson?.fluencyScore ??
+    azureJson?.scores?.fluency ??
+    azureJson?.scores?.fluencyScore
+  );
 
-  const hasProsody =
-    Number.isFinite(Number(rawTop?.ProsodyScore)) ||
-    Number.isFinite(Number(azureJson?.prosody)) ||
-    Number.isFinite(Number(azureJson?.prosodyScore)) ||
-    Number.isFinite(Number(azureJson?.scores?.prosody)) ||
-    Number.isFinite(Number(azureJson?.scores?.prosodyScore));
+  const prosody = toScore(
+    rawTop?.ProsodyScore ??
+    azureJson?.prosody ??
+    azureJson?.prosodyScore ??
+    azureJson?.scores?.prosody ??
+    azureJson?.scores?.prosodyScore
+  );
+
+  const hasFluency = fluency !== null && fluency > 0;
+  const hasProsody = prosody !== null && prosody > 0;
 
   const phonemeScores = words
     .flatMap((word) => (Array.isArray(word?.phonemes) ? word.phonemes : []))
@@ -299,24 +304,8 @@ function buildConversationFeedbackMetrics(azureJson = {}) {
     ? timingSignals.reduce((sum, value) => sum + value, 0) / timingSignals.length
     : null;
 
-  const fluency = hasFluency
-    ? rawTop?.FluencyScore ??
-      azureJson?.fluency ??
-      azureJson?.fluencyScore ??
-      azureJson?.scores?.fluency ??
-      azureJson?.scores?.fluencyScore
-    : null;
-
-  const prosody = hasProsody
-    ? rawTop?.ProsodyScore ??
-      azureJson?.prosody ??
-      azureJson?.prosodyScore ??
-      azureJson?.scores?.prosody ??
-      azureJson?.scores?.prosodyScore
-    : null;
-
-  const fluencyScore = hasFluency ? toScore(fluency) : null;
-  const prosodyScore = hasProsody ? toScore(prosody) : null;
+  const fluencyScore = hasFluency ? fluency : null;
+  const prosodyScore = hasProsody ? prosody : null;
   const phonemeScore = hasPhonemeMetric ? toScore(phonemeAverage) : null;
   const timingScore = hasTimingMetric ? toScore(timingAverage) : null;
 
@@ -3409,20 +3398,22 @@ padding: "max(8px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-
 >
             {console.log("[ConversationCoach] rendering feedbackMetrics =", feedbackMetrics)}
 
-   {feedbackMetrics.map((metric) => (
+{feedbackMetrics.map((metric) => (
   <button
     key={metric.key}
     type="button"
     onClick={() => setSelectedMetricDetail(metric)}
     style={{
       border: "none",
-      background: "transparent",
-      padding: 0,
+      background: "#FFFFFF",
+      padding: "18px 16px",
       margin: 0,
       textAlign: "left",
       cursor: "pointer",
       width: "100%",
       display: "block",
+      borderRadius: 22,
+      boxShadow: "0 8px 24px rgba(15,23,42,0.05)",
     }}
   >
     <div
@@ -3448,11 +3439,11 @@ padding: "max(8px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-
         {metric.label}
       </div>
 
-    <ChevronRight
-  size={18}
-  strokeWidth={2.6}
-  style={{ color: "#111111", flexShrink: 0 }}
-/>
+      <ChevronRight
+        size={18}
+        strokeWidth={2.6}
+        style={{ color: "#111111", flexShrink: 0 }}
+      />
     </div>
 
     <div
