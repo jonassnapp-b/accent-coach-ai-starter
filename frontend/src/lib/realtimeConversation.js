@@ -109,7 +109,7 @@ const selectedVoice =
   language === "en_us" ? "marin" :
   "alloy";
 
-  const useAzurePlayback = false;
+  const useAzurePlayback = true;
 
   console.log("[realtimeConversation] accent =", accent);
   console.log("[realtimeConversation] language =", language);
@@ -572,9 +572,7 @@ sendEvent({
           interrupt_response: true,
         },
       },
-      output: {
-        voice: selectedVoice,
-      },
+    output: {},
     },
   },
 });
