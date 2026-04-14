@@ -135,7 +135,58 @@ function parseSlack(raw) {
   return Math.max(-1, Math.min(1, n));
 }
 
+function getSpeechSuperCoreType(language, refText) {
+  const isSentence = /\s/.test(String(refText || "").trim());
 
+  const langKey = (() => {
+    const l = String(language || "").toLowerCase();
+
+    if (l.startsWith("en")) return "en";
+    if (l.startsWith("zh")) return "zh";
+    if (l.startsWith("de")) return "de";
+    if (l.startsWith("fr")) return "fr";
+    if (l.startsWith("ko")) return "ko";
+    if (l.startsWith("ja")) return "ja";
+    if (l.startsWith("ru")) return "ru";
+    if (l.startsWith("es")) return "es";
+
+    return "en";
+  })();
+
+  if (langKey === "en") {
+    return isSentence ? "sent.eval.promax" : "word.eval.promax";
+  }
+
+  if (langKey === "zh") {
+    return isSentence ? "sent.eval.cn" : "word.eval.promax.cn";
+  }
+
+  if (langKey === "de") {
+    return isSentence ? "sent.eval.de" : "word.eval.de";
+  }
+
+  if (langKey === "fr") {
+    return isSentence ? "sent.eval.fr" : "word.eval.fr";
+  }
+
+  if (langKey === "ko") {
+    return isSentence ? "sent.eval.kr" : "word.eval.kr";
+  }
+
+  if (langKey === "ja") {
+    return isSentence ? "sent.eval.jp" : "word.eval.jp";
+  }
+
+  if (langKey === "ru") {
+    return isSentence ? "sent.eval.ru" : "word.eval.ru";
+  }
+
+  if (langKey === "es") {
+    return isSentence ? "sent.eval.sp" : "word.eval.sp";
+  }
+
+  return isSentence ? "sent.eval.promax" : "word.eval.promax";
+}
 // ---------- SpeechSuper helpers ----------
 const sha1 = (s) => createHash("sha1").update(s).digest("hex");
 
@@ -475,29 +526,11 @@ if (!refText) {
     console.log("[analyze-speech] received audio mime:", mimeHint);
 
     const wavBytes = await toWavPcm16Mono16k(rawBuf, mimeHint);
-const baseCore = /\s/.test(refText)
-  ? "sent.eval.promax"
-  : "word.eval.promax";
 
-const langMap = {
-  en_us: "en",
-  en_br: "en",
+const coreType = getSpeechSuperCoreType(language, refText);
 
-  zh_cn: "cn",
-  ja_jp: "jp",
-  ko_kr: "kr",
-
-  es_es: "sp",
-  de_de: "de",
-  fr_fr: "fr",
-
-  ru_ru: "ru",
-  ar_sa: "ar",
-};
-
-const suffix = langMap[language] || "en";
-
-const coreType = `${baseCore}.${suffix}`;
+console.log("[analyze-speech] language =", language);
+console.log("[analyze-speech] coreType =", coreType);
 
 const userId =
   String(body.userId || "").trim() ||
