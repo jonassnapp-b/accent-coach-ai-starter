@@ -104,11 +104,16 @@ export async function createRealtimeConversation({
 
   const selectedLanguageLabel = languageMap[language] || "English";
 
-const useAzurePlayback = true;
+const selectedVoice =
+  language === "en_br" ? "cedar" :
+  language === "en_us" ? "marin" :
+  "alloy";
+
+  const useAzurePlayback = true;
 
   console.log("[realtimeConversation] accent =", accent);
   console.log("[realtimeConversation] language =", language);
-  
+  console.log("[realtimeConversation] selectedVoice =", selectedVoice);
   let pc = null;
   let dc = null;
   let localStream = null;

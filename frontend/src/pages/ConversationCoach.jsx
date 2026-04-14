@@ -1694,41 +1694,78 @@ if (!feedbackBusyRef.current) {
       : typeof msg?.response?.output?.[0]?.content?.[0]?.text === "string"
       ? msg.response.output[0].content[0].text
       : "";
-console.log("[ConversationCoach][response.done][BEFORE_SET]", {
-  hasIntroGreetingFinished_state: hasIntroGreetingFinished,
-  hasIntroGreetingFinished_ref: hasIntroGreetingFinishedRef.current,
-  willSetTranscriptOpen: !hasIntroGreetingFinishedRef.current,
-  finalText,
-});
-if (finalText) {
- flushSync(() => {
-  setAssistantText(finalText);
-  setVisibleAssistantText(finalText);
-  setHasConversationStarted(true);
-  setIsTranscriptOpen(!hasIntroGreetingFinishedRef.current);
-  setIsPendingAssistantPlayback(true);
-});
 
-  setMessages((prev) => [
-    ...prev,
-    { role: "ai", text: finalText }
-  ]);
-
-  console.log("[ConversationCoach] response.done", {
+  console.log("[ConversationCoach][response.done][BEFORE_SET]", {
+    hasIntroGreetingFinished_state: hasIntroGreetingFinished,
+    hasIntroGreetingFinished_ref: hasIntroGreetingFinishedRef.current,
+    willSetTranscriptOpen: !hasIntroGreetingFinishedRef.current,
     finalText,
-    selectedAccent,
-    introGreetingPlaying: introGreetingPlayingRef.current,
-    hasIntroGreetingFinished,
   });
 
+  if (finalText) {
+    const isIntroReply = !hasIntroGreetingFinishedRef.current;
+
+    flushSync(() => {
+      setAssistantText(finalText);
+      setVisibleAssistantText(finalText);
+      setHasConversationStarted(true);
+      setIsTranscriptOpen(isIntroReply);
+      setIsPendingAssistantPlayback(true);
+      setIsAiSpeaking(true);
+      setIsConversationReplyPlaying(true);
+    });
+
+    setMessages((prev) => [
+      ...prev,
+      { role: "ai", text: finalText }
+    ]);
+
+    console.log("[ConversationCoach] response.done", {
+      finalText,
+      selectedAccent,
+      introGreetingPlaying: introGreetingPlayingRef.current,
+      hasIntroGreetingFinished,
+      isIntroReply,
+    });
+
+    setIsAnalyzing(false);
+
+    speakText(finalText)
+      .then(() => {
+        if (!mountedRef.current) return;
+
+        setIsAiSpeaking(false);
+        setIsConversationReplyPlaying(false);
+        setIsPendingAssistantPlayback(false);
+        setIsPreparingFeedbackAudio(false);
+
+        if (isIntroReply) {
+          setIsTranscriptOpen(false);
+          setAssistantText("");
+          setVisibleAssistantText("");
+          setHasIntroGreetingFinished(true);
+          introGreetingPlayingRef.current = false;
+        }
+      })
+      .catch((err) => {
+        if (!mountedRef.current) return;
+
+        setIsAiSpeaking(false);
+        setIsConversationReplyPlaying(false);
+        setIsPendingAssistantPlayback(false);
+        setIsPreparingFeedbackAudio(false);
+        setError(err?.message || "TTS failed.");
+
+        if (isIntroReply) {
+          setHasIntroGreetingFinished(true);
+          introGreetingPlayingRef.current = false;
+        }
+      });
+
+    return;
+  }
+
   setIsAnalyzing(false);
-  setIsAiSpeaking(true);
-  setIsPendingAssistantPlayback(true);
-
-  return;
-}
-
-setIsAnalyzing(false);
 }
 if (type === "output_audio_buffer.started") {
   console.log("[ConversationCoach][output_audio_buffer.started][BEFORE_SET]", {
