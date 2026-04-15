@@ -313,18 +313,18 @@ const progressDeg = (clampedLen / MAX_LEN) * 360;
           nav("/weakness");
         },
       },
-      {
-        key: "coach",
-        title: "Daily Drill",
-        subtitle: "Personalized daily speaking practice",
-        Icon: AudioWaveform,
-        iconBg: "rgba(16,185,129,0.10)",
-        iconBorder: "rgba(16,185,129,0.16)",
-        iconColor: "rgba(16,185,129,0.95)",
-        onPress: () => {
-          nav("/coach");
-        },
-      },
+  {
+  key: "coach",
+  title: "Speaking Game",
+  subtitle: "Play pronunciation challenges",
+  Icon: AudioWaveform,
+  iconBg: "rgba(16,185,129,0.10)",
+  iconBorder: "rgba(16,185,129,0.16)",
+  iconColor: "rgba(16,185,129,0.95)",
+  onPress: () => {
+    nav("/coach");
+  },
+},
       {
         key: "bookmarks",
         title: "Bookmarks",

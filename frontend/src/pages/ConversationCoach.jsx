@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Mic, RotateCcw, ChevronDown, ChevronRight, Check, X, ReceiptText, Volume2, Repeat } from "lucide-react";
+import { Mic, RotateCcw, ChevronDown, ChevronRight, Check, X, ReceiptText, Volume2, Target } from "lucide-react";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { useSettings } from "../lib/settings-store.jsx";
 import { createRealtimeConversation } from "../lib/realtimeConversation.js";
@@ -39,7 +39,7 @@ async function triggerButtonHaptic() {
   } catch {}
 }
 
-const TALK_DAILY_LIMIT_MS = 90000;
+const TALK_DAILY_LIMIT_MS = 120000;
 const TALK_DAILY_STORAGE_KEY = "fluentup_conversation_coach_daily_v1";
 
 function getLocalDayKey() {
@@ -141,54 +141,6 @@ const ACCENT_SECTIONS = [
     options: [
       { value: "en_us", label: "American", flag: "🇺🇸" },
       { value: "en_br", label: "British", flag: "🇬🇧" },
-    ],
-  },
-  {
-    title: "Mandarin Chinese",
-    options: [
-      { value: "zh_cn", label: "Mandarin Chinese", flag: "🇨🇳" },
-    ],
-  },
-  {
-    title: "Japanese",
-    options: [
-      { value: "ja_jp", label: "Japanese", flag: "🇯🇵" },
-    ],
-  },
-  {
-    title: "Korean",
-    options: [
-      { value: "ko_kr", label: "Korean", flag: "🇰🇷" },
-    ],
-  },
-  {
-    title: "Spanish",
-    options: [
-      { value: "es_es", label: "Spanish", flag: "🇪🇸" },
-    ],
-  },
-  {
-    title: "German",
-    options: [
-      { value: "de_de", label: "German", flag: "🇩🇪" },
-    ],
-  },
-  {
-    title: "French",
-    options: [
-      { value: "fr_fr", label: "French", flag: "🇫🇷" },
-    ],
-  },
-  {
-    title: "Russian",
-    options: [
-      { value: "ru_ru", label: "Russian", flag: "🇷🇺" },
-    ],
-  },
-  {
-    title: "Arabic",
-    options: [
-      { value: "ar_sa", label: "Arabic", flag: "🇸🇦" },
     ],
   },
 ];
@@ -1812,32 +1764,16 @@ if (
     introGreetingPlaying: introGreetingPlayingRef.current,
   });
 
-  setIsAiSpeaking(false);
-  setIsConversationReplyPlaying(false);
-  setIsPendingAssistantPlayback(false);
-  setIsPreparingFeedbackAudio(false);
+  if (!introGreetingPlayingRef.current) {
+    setIsAiSpeaking(false);
+    setIsConversationReplyPlaying(false);
+    setIsPendingAssistantPlayback(false);
+    setIsPreparingFeedbackAudio(false);
 
-  if (!feedbackBusyRef.current) {
-    setIsAnalyzing(false);
+    if (!feedbackBusyRef.current) {
+      setIsAnalyzing(false);
+    }
   }
-
-if (introGreetingPlayingRef.current) {
-  console.log("[ConversationCoach][INTRO_MARK_DONE_BEFORE]", {
-    hasIntroGreetingFinished_state: hasIntroGreetingFinished,
-    hasIntroGreetingFinished_ref: hasIntroGreetingFinishedRef.current,
-  });
-
-  setIsTranscriptOpen(false);
-  setAssistantText("");
-  setVisibleAssistantText("");
-  setHasIntroGreetingFinished(true);
-  introGreetingPlayingRef.current = false;
-
-  console.log("[ConversationCoach][INTRO_MARK_DONE_AFTER_SETTER]", {
-    hasIntroGreetingFinished_state: hasIntroGreetingFinished,
-    hasIntroGreetingFinished_ref: hasIntroGreetingFinishedRef.current,
-  });
-}
 }
 
                 if (type === "error") {
@@ -2616,31 +2552,38 @@ const shouldShowConversationFeedbackScreen =
   );
 const shouldShowIntroTranscriptScreen =
   !hasIntroGreetingFinished &&
+  isTranscriptOpen &&
+  hasVisibleIntroTranscript;
+
+const shouldForceConnectingScreenForBritishIntro =
+  selectedAccent === "en_br" &&
+  !hasIntroGreetingFinished &&
+  !isTranscriptOpen &&
   (
     isPendingAssistantPlayback ||
     isAiSpeaking ||
     isPreparingFeedbackAudio ||
-    isTranscriptOpen ||
     introGreetingPlayingRef.current
-  ) &&
-  hasVisibleIntroTranscript;
+  );
 
 const shouldShowConnectingScreen =
   !showConnectionFailedScreen &&
   (
     isStartingConversation ||
+    shouldForceConnectingScreenForBritishIntro ||
     (
       !hasIntroGreetingFinished &&
       !hasVisibleIntroTranscript
     )
   );
-  const currentScreen =
+
+const currentScreen =
   showConnectionFailedScreen
     ? "connection-failed"
-    : shouldShowIntroTranscriptScreen
-    ? "intro-transcript"
     : shouldShowConnectingScreen
     ? "connecting"
+    : shouldShowIntroTranscriptScreen
+    ? "intro-transcript"
     : "hold-to-speak";
 
 useEffect(() => {
@@ -2986,17 +2929,19 @@ fontWeight: 900,
                 padding: "0 8px",
               }}
             >
-              <img
-                src={fluentUpLogo}
-                alt="FluentUp"
-                style={{
-                  width: 150,
-                  height: 150,
-                  objectFit: "contain",
-                  display: "block",
-                  margin: "0 auto 18px",
-                }}
-              />
+           <img
+  src={fluentUpLogo}
+  alt="FluentUp"
+  style={{
+    width: 150,
+    height: 150,
+    objectFit: "contain",
+    display: "block",
+    margin: "0 auto 18px",
+    animation: "conversationCoachLogoFloat 3.8s ease-in-out infinite",
+    willChange: "transform",
+  }}
+/>
 
               <div
                 style={{
@@ -3160,8 +3105,8 @@ padding: "max(8px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-
         opacity: !latestUserSentence ? 0.35 : 1,
       }}
     >
-      <Repeat size={30} strokeWidth={2.2} />
-    </button>
+    <Target size={30} strokeWidth={2.2} />
+        </button>
   </div>
 ) : (
   <div style={{ width: 44, height: 96 }} />
@@ -4418,7 +4363,11 @@ padding: "42px 10px 16px",
     50%  { transform: scale(1.08); opacity: 1; }
     100% { transform: scale(0.88); opacity: 0.72; }
   }
-
+  @keyframes conversationCoachLogoFloat {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
   .cc-dot {
     width: 6px;
     height: 6px;

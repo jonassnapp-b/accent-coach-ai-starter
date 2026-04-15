@@ -1,7 +1,6 @@
-// src/pages/Coach.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Mic, StopCircle, X } from "lucide-react";
-import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
+import { ChevronLeft, Mic, StopCircle, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from "../lib/settings-store.jsx";
 import { ingestLocalPhonemeScores } from "../lib/localPhonemeStats.js";
 import wordsImg from "../assets/words.png";
@@ -10,11 +9,10 @@ import accentImg from "../assets/accent.png";
 import { useNavigate } from "react-router-dom";
 import { useProStatus } from "../providers/PurchasesProvider.jsx";
 
-
-/* ------------ API base (web + native) ------------ */
 function isNative() {
   return !!(window?.Capacitor && window.Capacitor.isNativePlatform);
 }
+
 function getApiBase() {
   const ls = (typeof localStorage !== "undefined" && localStorage.getItem("apiBase")) || "";
   const env = (import.meta?.env && import.meta.env.VITE_API_BASE) || "";
@@ -26,7 +24,6 @@ function getApiBase() {
   return (ls || env || window.location.origin).replace(/\/+$/, "");
 }
 
-/* ---------------- simple pools ---------------- */
 const WORDS = {
   easy: ["water", "coffee", "music", "people", "world", "future", "camera", "really", "better", "today", "little", "maybe"],
   medium: ["comfortable", "sentence", "accent", "problem", "thirty", "through", "thought", "focus", "balance", "practice"],
@@ -48,30 +45,13 @@ const SENTENCES = {
   ],
 };
 
-function pickRandom(arr) {
-  if (!arr?.length) return "";
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function buildTargets({ mode, difficulty, total = 10 }) {
-  const pool = mode === "sentences" ? (SENTENCES[difficulty] || []) : (WORDS[difficulty] || []);
-
-  // Unique only (no duplicates within a session)
-  const uniq = Array.from(new Set(pool)).filter(Boolean);
-
-  // If pool is smaller than requested total, session becomes shorter (still no duplicates)
-  const n = Math.min(total, uniq.length);
-
-  // Fisher–Yates shuffle, then take first n
-  const a = uniq.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-
-  return a.slice(0, n);
-}
-
+const GAME_PASS_THRESHOLD = 90;
+const SCORE_PER_SECOND = 18;
+const FALL_SPEED_PX_PER_SEC = 132;
+const OBSTACLE_START_Y = 128;
+const ROCKET_CENTER_Y = 520;
+const COLLISION_BUFFER = 74;
+const FIRE_FLASH_MS = 720;
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -91,20 +71,168 @@ function getOverallFromResult(json) {
 
   let n = Number(raw);
   if (!Number.isFinite(n)) n = 0;
-  if (n > 0 && n <= 1) n = n * 100;
+  if (n > 0 && n <= 1) n *= 100;
   return clamp(Math.round(n), 0, 100);
 }
 
-function labelForScore(n) {
-  if (n >= 85) return "Great";
-  if (n >= 70) return "OK";
-  return "Needs work";
+function buildTargets({ mode, difficulty, total = 999 }) {
+  const pool = mode === "sentences" ? (SENTENCES[difficulty] || []) : (WORDS[difficulty] || []);
+  const uniq = Array.from(new Set(pool)).filter(Boolean);
+  if (!uniq.length) return [];
+
+  const out = [];
+  while (out.length < total) {
+    const shuffled = uniq.slice();
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    out.push(...shuffled);
+  }
+  return out.slice(0, total);
 }
 
-function cycleValue(options, current, dir) {
-  const i = Math.max(0, options.indexOf(current));
-  const next = (i + dir + options.length) % options.length;
-  return options[next];
+function feedbackForLowScore(target, overall, json) {
+  const words = Array.isArray(json?.words) ? json.words : [];
+  const weakestWord = words
+    .map((w) => ({
+      word: String(w?.word || "").trim(),
+      score: Number(w?.accuracyScore ?? w?.overallAccuracy ?? w?.accuracy ?? 0),
+      phonemes: Array.isArray(w?.phonemes) ? w.phonemes : [],
+    }))
+    .filter((w) => w.word)
+    .sort((a, b) => a.score - b.score)[0];
+
+  if (weakestWord?.phonemes?.length) {
+    const weakestPhoneme = weakestWord.phonemes
+      .map((p) => ({
+        phoneme: String(p?.phoneme || p?.ipa || p?.symbol || "").trim(),
+        score: Number(p?.accuracyScore ?? p?.accuracy ?? p?.score ?? 0),
+      }))
+      .filter((p) => p.phoneme)
+      .sort((a, b) => a.score - b.score)[0];
+
+    if (weakestPhoneme?.phoneme) {
+      return `You were close, but the ${weakestPhoneme.phoneme} sound in “${weakestWord.word}” was still off. Score: ${overall}%.`;
+    }
+  }
+
+  if (weakestWord?.word) {
+    return `You were close, but “${weakestWord.word}” was not clear enough yet. Score: ${overall}%.`;
+  }
+
+  return `“${target}” was below the ${GAME_PASS_THRESHOLD}% target. You scored ${overall}%.`;
+}
+
+function rocketStyle() {
+  return {
+    position: "absolute",
+    left: "50%",
+    bottom: 78,
+    transform: "translateX(-50%)",
+    width: 74,
+    height: 118,
+    pointerEvents: "none",
+    zIndex: 4,
+  };
+}
+
+function Rocket({ boosting = false }) {
+  return (
+    <div style={rocketStyle()}>
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            width: 14,
+            height: 14,
+            borderRadius: 999,
+            background: "#D95F44",
+            marginBottom: -2,
+            zIndex: 2,
+          }}
+        />
+        <div
+          style={{
+            width: 44,
+            height: 56,
+            borderRadius: "24px 24px 16px 16px",
+            background: "linear-gradient(180deg, #FFF9ED 0%, #F6E5CD 100%)",
+            border: "2px solid rgba(0,0,0,0.12)",
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
+          <div
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: 999,
+              background: "radial-gradient(circle at 35% 35%, #AEE8FF 0%, #4C9FCC 55%, #24506E 100%)",
+              border: "2px solid rgba(0,0,0,0.18)",
+              position: "absolute",
+              left: "50%",
+              top: 16,
+              transform: "translateX(-50%)",
+            }}
+          />
+        </div>
+        <div
+          style={{
+            width: 14,
+            height: 18,
+            background: "#4A4A4A",
+            borderRadius: "0 0 8px 8px",
+            marginTop: -2,
+            zIndex: 1,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: 4,
+            top: 50,
+            width: 12,
+            height: 28,
+            background: "#D95F44",
+            borderRadius: "10px 0 10px 10px",
+            transform: "rotate(12deg)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            right: 4,
+            top: 50,
+            width: 12,
+            height: 28,
+            background: "#D95F44",
+            borderRadius: "0 10px 10px 10px",
+            transform: "rotate(-12deg)",
+          }}
+        />
+        <div
+          style={{
+            marginTop: -2,
+            width: 22,
+            height: boosting ? 34 : 24,
+            borderRadius: "50% 50% 80% 80%",
+            background: boosting
+              ? "linear-gradient(180deg, #FFF2A6 0%, #FFB23F 45%, #FF6B1A 100%)"
+              : "linear-gradient(180deg, #FFD87A 0%, #FF9A2E 50%, #F06519 100%)",
+            filter: boosting ? "drop-shadow(0 10px 18px rgba(255,120,24,0.42))" : "drop-shadow(0 8px 14px rgba(255,120,24,0.34))",
+          }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export default function Coach() {
@@ -116,213 +244,83 @@ export default function Coach() {
     nav(`/pro?src=${encodeURIComponent(src)}&return=/coach`);
   }
 
-  /* ---------------- UI tokens ---------------- */
   const LIGHT_TEXT = "rgba(17,24,39,0.92)";
   const LIGHT_MUTED = "rgba(17,24,39,0.55)";
-  const LIGHT_BORDER = "rgba(0,0,0,0.10)";
-  const LIGHT_SURFACE = "#FFFFFF";
-  const BTN_BLUE = "#2196F3";
-
   const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)";
-  const SAFE_TOP = "env(safe-area-inset-top, 0px)";
   const TABBAR_OFFSET = 64;
 
-  /* ---------------- Setup selections ---------------- */
-  const MODE_OPTIONS = ["words", "sentences"];
-  const MODE_LABEL = { words: "Words", sentences: "Sentences" };
+  const [mode, setMode] = useState("words");
+  const [difficulty, setDifficulty] = useState("easy");
+  const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
+  const [setupStep, setSetupStep] = useState(0);
+  const [phase, setPhase] = useState("setup");
 
-  const DIFF_OPTIONS = ["easy", "medium", "hard"];
-  const DIFF_LABEL = { easy: "Easy", medium: "Medium", hard: "Hard" };
+  const [targets, setTargets] = useState([]);
+  const [targetIndex, setTargetIndex] = useState(0);
+  const [currentWord, setCurrentWord] = useState("");
+  const [obstacleY, setObstacleY] = useState(OBSTACLE_START_Y);
+  const [score, setScore] = useState(0);
+  const [displayScore, setDisplayScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [showStreakFlash, setShowStreakFlash] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [deadWord, setDeadWord] = useState("");
+  const [deathFeedback, setDeathFeedback] = useState("");
+  const [deathScore, setDeathScore] = useState(0);
+  const [animatedDeathScore, setAnimatedDeathScore] = useState(0);
+  const [lastOverall, setLastOverall] = useState(null);
+  const [lastHeardText, setLastHeardText] = useState("");
 
-  const ACCENT_OPTIONS = ["en_us", "en_br"];
-  const ACCENT_LABEL = { en_us: "American 🇺🇸", en_br: "British 🇬🇧" };
-
-const [mode, setMode] = useState("words");
-const [difficulty, setDifficulty] = useState("easy");
-const [accentUi, setAccentUi] = useState(settings?.accentDefault || "en_us");
-const [setupStep, setSetupStep] = useState(0); // 0=mode, 1=difficulty, 2=accent
-
-// ---------- Challenge mode (optional) ----------
-const [challengeOn, setChallengeOn] = useState(false);
-useEffect(() => {
-  if (!isPro && challengeOn) {
-    setChallengeOn(false);
-  }
-}, [isPro, challengeOn]);
-
-
-// “Green” definition + feel-good fairness: must hit green once within the timer.
-const CHALLENGE_GREEN = 85;
-const isGreen = (overall) => Number(overall) >= CHALLENGE_GREEN;
-
-const ruleBadge = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 10,
-  padding: "10px 14px",
-  borderRadius: 16,
-
-  // subtle green tint (premium + integrated)
-  border: "1px solid rgba(34,197,94,0.22)",
-  background: "rgba(34,197,94,0.10)",
-  color: "rgba(17,24,39,0.88)",
-
-  fontFamily:
-    'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-  fontSize: 14,
-  fontWeight: 800,
-  letterSpacing: -0.1,
-  boxShadow: "0 18px 50px rgba(17,24,39,0.10)",
-};
-
-
-const greenDot = {
-  width: 14,
-  height: 14,
-  borderRadius: 999,
-  background: "rgba(34,197,94,0.95)",
-  boxShadow: "0 0 0 4px rgba(34,197,94,0.18)",
-};
-
-// Time limit per difficulty (tuned to be “TikTok-challenge-hard” but still winnable)
-const CHALLENGE_SECONDS = {
-  easy: 20,
-  medium: 20,
-  hard: 20,
-};
-
-
-function challengeSecondsFor(difficulty) {
-  return CHALLENGE_SECONDS[difficulty] ?? 10;
-}
-
-
-
-const [wordDeadlineMs, setWordDeadlineMs] = useState(null); // absolute timestamp
-const [timeLeftMs, setTimeLeftMs] = useState(0);
-
-
-
-
-
+  const micStreamRef = useRef(null);
+  const mediaRecRef = useRef(null);
+  const chunksRef = useRef([]);
+  const animationFrameRef = useRef(0);
+  const lastFrameAtRef = useRef(0);
+  const currentWordRef = useRef("");
+  const obstacleYRef = useRef(OBSTACLE_START_Y);
+  const isAliveRef = useRef(false);
+  const isProcessingRef = useRef(false);
+  const scoreRef = useRef(0);
 
   useEffect(() => {
     setAccentUi(settings?.accentDefault || "en_us");
   }, [settings?.accentDefault]);
 
+  useEffect(() => {
+    setDisplayScore(Math.floor(score));
+  }, [score]);
 
-  /* ---------------- Daily Drill state machine ---------------- */
+  useEffect(() => {
+    if (phase !== "gameover") return;
 
+    setAnimatedDeathScore(0);
+    const target = Math.max(0, Math.floor(deathScore));
+    const startedAt = performance.now();
+    const duration = 900;
+    let raf = 0;
 
-  const [phase, setPhase] = useState("setup"); // setup | prompt | recording | analyzing | result | summary
-useEffect(() => {
-  if (!challengeOn) return;
-  if (!wordDeadlineMs) return;
-  if (phase === "setup" || phase === "summary") return;
+    const tick = (t) => {
+      const p = Math.min(1, (t - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setAnimatedDeathScore(Math.round(target * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
 
-  const id = setInterval(() => {
-    const left = Math.max(0, wordDeadlineMs - Date.now());
-    setTimeLeftMs(left);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [phase, deathScore]);
 
-if (left <= 0) {
-  clearInterval(id);
-  abortRunRef.current = true;
-  goBackToSetup();
-}
-
-
-  }, 100);
-
-  return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [challengeOn, wordDeadlineMs, phase]);
-  const [lockedAccent, setLockedAccent] = useState("en_us");
-
-  const [targets, setTargets] = useState([]); // 10 items
-  const [idx, setIdx] = useState(0);
-  const [attempts, setAttempts] = useState([]); // { i, text, overall, label, createdAt }
-  const lastAttempt = attempts[attempts.length - 1] || null;
-  const [greenFlash, setGreenFlash] = useState(false);
-
-useEffect(() => {
-  if (!challengeOn) return;
-  if (phase !== "result") return;
-  if (!lastAttempt) return;
-  if (lastAttempt.i !== idx) return;
-  if (!isGreen(lastAttempt.overall)) return;
-
-  setGreenFlash(true);
-  const t = window.setTimeout(() => setGreenFlash(false), 220);
-  return () => window.clearTimeout(t);
-}, [challengeOn, phase, lastAttempt, idx]);
-
-  const summary = useMemo(() => {
-  if (!attempts.length) return { avg: 0, great: 0, ok: 0, needs: 0 };
-  const sum = attempts.reduce((a, x) => a + (Number.isFinite(x.overall) ? x.overall : 0), 0);
-  const avg = Math.round(sum / attempts.length);
-  const great = attempts.filter((x) => x.label === "Great").length;
-  const ok = attempts.filter((x) => x.label === "OK").length;
-  const needs = attempts.filter((x) => x.label === "Needs work").length;
-  return { avg, great, ok, needs };
-}, [attempts]);
-
-const [summaryCount, setSummaryCount] = useState(0);
-
-  const currentText = targets[idx] || "";
-
-  /* ---------------- Recording plumbing ---------------- */
-  const micStreamRef = useRef(null);
-  const mediaRecRef = useRef(null);
-  const chunksRef = useRef([]);
-  const userUrlRef = useRef(null);
-const abortRunRef = useRef(false);
-
-  function cleanupUserUrl() {
-    try {
-      if (userUrlRef.current) URL.revokeObjectURL(userUrlRef.current);
-    } catch {}
-    userUrlRef.current = null;
-  }
-
-  function disposeRecorder() {
-    try {
-      micStreamRef.current?.getTracks?.()?.forEach((t) => t.stop());
-    } catch {}
-    micStreamRef.current = null;
-    mediaRecRef.current = null;
-  }
-
-  function resetChallengeWordTimer() {
-  setWordDeadlineMs(null);
-  setTimeLeftMs(0);
-}
-function goBackToSetup() {
-  // stop recording if running
-  try {
-    if (mediaRecRef.current && mediaRecRef.current.state !== "inactive") mediaRecRef.current.stop();
-  } catch {}
-
-  cleanupUserUrl();
-  resetChallengeWordTimer();
-  setTargets([]);
-  setIdx(0);
-  setAttempts([]);
-  setSetupStep(0);
-  setPhase("setup");
-}
-
-function resetRunToStart() {
-  // stop any active recording cleanly
-  try {
-    if (mediaRecRef.current && mediaRecRef.current.state !== "inactive") mediaRecRef.current.stop();
-  } catch {}
-
-  cleanupUserUrl();
-  resetChallengeWordTimer();
-  setIdx(0);
-  setAttempts([]);
-  setPhase("prompt");
-}
+  useEffect(() => {
+    return () => {
+      try {
+        cancelAnimationFrame(animationFrameRef.current);
+      } catch {}
+      try {
+        micStreamRef.current?.getTracks?.().forEach((t) => t.stop());
+      } catch {}
+    };
+  }, []);
 
   async function ensureMic() {
     if (!navigator?.mediaDevices?.getUserMedia) throw new Error("Microphone not supported on this device.");
@@ -347,81 +345,163 @@ function resetRunToStart() {
     rec.ondataavailable = (e) => {
       if (e?.data && e.data.size > 0) chunksRef.current.push(e.data);
     };
-    rec.onstop = () => handleStop(rec);
+    rec.onstop = () => handleRecordingStopped(rec);
     mediaRecRef.current = rec;
   }
 
-function startRecording() {
-  if (!currentText.trim()) return;
-  if (!mediaRecRef.current) return;
-
-  // Start challenge timer when the user first records for this word
-  if (challengeOn && !wordDeadlineMs) {
-    const secs = CHALLENGE_SECONDS[difficulty] ?? 10;
-    const deadline = Date.now() + secs * 1000;
-    setWordDeadlineMs(deadline);
-    setTimeLeftMs(secs * 1000);
-  }
-
-  chunksRef.current = [];
-  mediaRecRef.current.start();
-  setPhase("recording");
-}
-
-
-  function stopRecording() {
+  function stopRecordingIfActive() {
     try {
-      if (mediaRecRef.current && mediaRecRef.current.state !== "inactive") mediaRecRef.current.stop();
+      if (mediaRecRef.current && mediaRecRef.current.state !== "inactive") {
+        mediaRecRef.current.stop();
+      }
     } catch {}
   }
 
-  async function toggleRecord() {
-    if (phase === "recording") stopRecording();
-    else if (phase === "prompt") {
-      await ensureMic();
-      startRecording();
-    }
+  function stopGameLoop() {
+    try {
+      cancelAnimationFrame(animationFrameRef.current);
+    } catch {}
+    animationFrameRef.current = 0;
+    lastFrameAtRef.current = 0;
   }
 
-  function handleStop(rec) {
-    if (abortRunRef.current) {
-  chunksRef.current = [];
-  cleanupUserUrl();
-  resetChallengeWordTimer();
-  setTargets([]);
-  setIdx(0);
-  setAttempts([]);
-  setSetupStep(0);
-  setPhase("setup");
-  return;
-}
+  function spawnNextWord() {
+    const next = targets[targetIndex] || "";
+    setCurrentWord(next);
+    currentWordRef.current = next;
+    setObstacleY(OBSTACLE_START_Y);
+    obstacleYRef.current = OBSTACLE_START_Y;
+    setLastOverall(null);
+    setLastHeardText("");
+  }
+
+  function endRunWithCrash(word, feedback) {
+    if (!isAliveRef.current) return;
+
+    isAliveRef.current = false;
+    stopGameLoop();
+    stopRecordingIfActive();
+    setIsRecording(false);
+    setIsAnalyzing(false);
+    setDeadWord(word || currentWordRef.current || "");
+    setDeathFeedback(feedback || `You needed at least ${GAME_PASS_THRESHOLD}% to clear this word.`);
+    setDeathScore(Math.floor(scoreRef.current));
+    setPhase("gameover");
+  }
+
+  function startGameLoop() {
+    stopGameLoop();
+    isAliveRef.current = true;
+    lastFrameAtRef.current = performance.now();
+
+    const tick = (now) => {
+      if (!isAliveRef.current) return;
+
+      const dt = Math.min(0.05, (now - lastFrameAtRef.current) / 1000);
+      lastFrameAtRef.current = now;
+
+      const nextScore = scoreRef.current + SCORE_PER_SECOND * dt;
+      scoreRef.current = nextScore;
+      setScore(nextScore);
+
+      const nextY = obstacleYRef.current + FALL_SPEED_PX_PER_SEC * dt;
+      obstacleYRef.current = nextY;
+      setObstacleY(nextY);
+
+      if (nextY >= ROCKET_CENTER_Y - COLLISION_BUFFER) {
+        endRunWithCrash(currentWordRef.current, `You needed at least ${GAME_PASS_THRESHOLD}% to clear “${currentWordRef.current}”.`);
+        return;
+      }
+
+      animationFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(tick);
+  }
+
+  async function onStartGame() {
+    if (!isPro) {
+      openPaywall("coach_game_locked");
+      return;
+    }
+
+    const built = buildTargets({ mode, difficulty, total: 999 });
+    if (!built.length) return;
+
+    await ensureMic();
+
+    const accent = accentUi === "en_br" ? "en_br" : "en_us";
+    setTargets(built);
+    setTargetIndex(0);
+    setCurrentWord(built[0]);
+    currentWordRef.current = built[0];
+    setObstacleY(OBSTACLE_START_Y);
+    obstacleYRef.current = OBSTACLE_START_Y;
+    setScore(0);
+    scoreRef.current = 0;
+    setDisplayScore(0);
+    setStreak(0);
+    setShowStreakFlash(false);
+    setDeadWord("");
+    setDeathFeedback("");
+    setDeathScore(0);
+    setAnimatedDeathScore(0);
+    setLastOverall(null);
+    setLastHeardText("");
+    setPhase("playing");
+    startGameLoop();
+  }
+
+  async function startRecording() {
+    if (!mediaRecRef.current || isProcessingRef.current || !isAliveRef.current) return;
+    chunksRef.current = [];
+    mediaRecRef.current.start();
+    setIsRecording(true);
+  }
+
+  function stopRecording() {
+    stopRecordingIfActive();
+  }
+
+  async function toggleRecord() {
+    if (phase !== "playing") return;
+    if (isAnalyzing) return;
+    if (isRecording) stopRecording();
+    else await startRecording();
+  }
+
+  function handleRecordingStopped(rec) {
+    setIsRecording(false);
+
+    if (!isAliveRef.current) return;
 
     const chunks = chunksRef.current.slice();
     chunksRef.current = [];
-
-    cleanupUserUrl();
-
     const type = chunks[0]?.type || rec?.mimeType || "audio/webm";
     const blob = new Blob(chunks, { type });
-    const localUrl = URL.createObjectURL(blob);
-    userUrlRef.current = localUrl;
 
-    setPhase("analyzing");
-    sendToServer(blob, localUrl);
+    if (!blob.size) return;
+    sendToServer(blob);
   }
 
-  async function sendToServer(audioBlob, localUrl) {
+  async function sendToServer(audioBlob) {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    setIsAnalyzing(true);
+
     try {
       const base = getApiBase();
+      const target = currentWordRef.current;
+      const accent = accentUi === "en_br" ? "en_br" : "en_us";
 
       const fd = new FormData();
       fd.append("audio", audioBlob, "clip.webm");
-      fd.append("refText", currentText);
-      fd.append("accent", lockedAccent === "en_br" ? "en_br" : "en_us");
+      fd.append("refText", target);
+      fd.append("accent", accent);
       fd.append("slack", String(settings?.slack ?? 0));
 
-      const timeoutMs = 15000;
       const controller = new AbortController();
+      const timeoutMs = 15000;
       const t = setTimeout(() => controller.abort(), timeoutMs);
 
       let r;
@@ -431,9 +511,6 @@ function startRecording() {
           body: fd,
           signal: controller.signal,
         });
-      } catch (e) {
-        if (e?.name === "AbortError") throw new Error(`Analysis timed out after ${Math.round(timeoutMs / 1000)}s`);
-        throw e;
       } finally {
         clearTimeout(t);
       }
@@ -441,9 +518,12 @@ function startRecording() {
       const json = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(json?.error || r.statusText || "Analyze failed");
 
-      // Save phoneme attempts locally (so your WeaknessLab can use it)
+      const overall = getOverallFromResult(json);
+      setLastOverall(overall);
+      setLastHeardText(String(json?.transcript || "").trim());
+
       try {
-        const accentKey = lockedAccent === "en_br" ? "en_br" : "en_us";
+        const accentKey = accent;
         const phonemePairs = [];
         const wordsArr = Array.isArray(json?.words) ? json.words : [];
         for (const w of wordsArr) {
@@ -451,7 +531,6 @@ function startRecording() {
           for (const p of ps) {
             const code = String(p?.phoneme || p?.ipa || p?.symbol || "").trim().toUpperCase();
             if (!code) continue;
-
             const raw =
               p?.accuracyScore ??
               p?.overallAccuracy ??
@@ -460,7 +539,6 @@ function startRecording() {
               p?.score ??
               p?.overall ??
               p?.pronunciationAccuracy;
-
             const n = Number(raw);
             if (!Number.isFinite(n)) continue;
             const pct = n <= 1 ? Math.round(n * 100) : Math.round(n);
@@ -470,1305 +548,492 @@ function startRecording() {
         if (phonemePairs.length) ingestLocalPhonemeScores(accentKey, phonemePairs);
       } catch {}
 
-      const overall = getOverallFromResult(json);
-      const label = labelForScore(overall);
+      if (!isAliveRef.current) return;
 
-      setAttempts((prev) => [
-        ...prev,
-        { i: idx, text: currentText, overall, label, createdAt: Date.now(), userAudioUrl: localUrl },
-      ]);
+      if (overall >= GAME_PASS_THRESHOLD) {
+        const nextIndex = targetIndex + 1;
+        setStreak((prev) => prev + 1);
+        setShowStreakFlash(true);
+        window.setTimeout(() => setShowStreakFlash(false), FIRE_FLASH_MS);
 
-      setPhase("result");
-    } catch (e) {
-      // If it fails, go back to prompt and let user retry same target
-      setPhase("prompt");
-    }
-  }
+        const bonus = 120;
+        scoreRef.current += bonus;
+        setScore(scoreRef.current);
 
-// Auto-next after result
-useEffect(() => {
-  if (phase !== "result") return;
-
-  const total = targets.length || 0;
-  const last = attempts[attempts.length - 1] || null;
-
-  const t = setTimeout(() => {
-    // NORMAL MODE: keep your current behavior
-    if (!challengeOn) {
-      setIdx((i) => {
-        const next = i + 1;
-
-        if (total > 0 && next >= total) {
-          setPhase("summary");
-          return i;
-        }
-
-        setPhase("prompt");
-        cleanupUserUrl();
-        return next;
-      });
-      return;
-    }
-
-    // CHALLENGE MODE:
-    // - must get green (>=85) before timer ends
-    const passed = !!last && last.i === idx && Number(last.overall) >= CHALLENGE_GREEN;
-    const timedOut = wordDeadlineMs ? Date.now() > wordDeadlineMs : false;
-
-    if (timedOut) {
-  goBackToSetup();
-  return;
-}
-
-
-    if (!passed) {
-      // retry same word (timer keeps running)
-      cleanupUserUrl();
-      setPhase("prompt");
-      return;
-    }
-
-    // passed => advance and reset timer for the next word
-    resetChallengeWordTimer();
-
-    setIdx((i) => {
-      const next = i + 1;
-
-      if (total > 0 && next >= total) {
-        setPhase("summary");
-        return i;
+        setTargetIndex(nextIndex);
+        const nextWord = targets[nextIndex] || targets[nextIndex % targets.length] || target;
+        setCurrentWord(nextWord);
+        currentWordRef.current = nextWord;
+        setObstacleY(OBSTACLE_START_Y);
+        obstacleYRef.current = OBSTACLE_START_Y;
       }
-
-      setPhase("prompt");
-      cleanupUserUrl();
-      return next;
-    });
-  }, 900); // slightly snappier for “challenge feel”
-
-  return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [phase, targets.length, attempts, challengeOn, idx, wordDeadlineMs]);
-
-
-// Count-up when summary shows
-useEffect(() => {
-  if (phase !== "summary") return;
-
-  const target = Math.max(0, Math.min(100, summary.avg || 0));
-  setSummaryCount(0);
-
-  const start = performance.now();
-  const dur = 650;
-
-  let raf = 0;
-  const tick = (t) => {
-    const p = Math.min(1, (t - start) / dur);
-    const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
-    setSummaryCount(Math.round(target * eased));
-    if (p < 1) raf = requestAnimationFrame(tick);
-  };
-
-  raf = requestAnimationFrame(tick);
-  return () => cancelAnimationFrame(raf);
-}, [phase, summary.avg]);
-
-  function onStartDrill() {
-    const acc = accentUi === "en_br" ? "en_br" : "en_us";
-    setLockedAccent(acc);
-
-    const t = buildTargets({ mode, difficulty, total: 10 });
-    setTargets(t);
-    setIdx(0);
-    setAttempts([]);
-    cleanupUserUrl();
-    resetChallengeWordTimer();
-abortRunRef.current = false;
-
- setPhase("prompt");
-// timer starts on first recording (startRecording), not here
-
-
+    } catch (e) {
+      // keep playing, do not kill the run here
+    } finally {
+      isProcessingRef.current = false;
+      setIsAnalyzing(false);
+    }
   }
 
   function onExit() {
-    cleanupUserUrl();
-    disposeRecorder();
+    isAliveRef.current = false;
+    stopGameLoop();
+    stopRecordingIfActive();
+    setIsRecording(false);
+    setIsAnalyzing(false);
     setTargets([]);
-    setIdx(0);
-    setAttempts([]);
+    setTargetIndex(0);
+    setCurrentWord("");
+    setObstacleY(OBSTACLE_START_Y);
+    setScore(0);
+    scoreRef.current = 0;
+    setDisplayScore(0);
+    setStreak(0);
+    setShowStreakFlash(false);
+    setDeadWord("");
+    setDeathFeedback("");
+    setDeathScore(0);
+    setAnimatedDeathScore(0);
+    setLastOverall(null);
+    setLastHeardText("");
     setSetupStep(0);
-resetChallengeWordTimer();
-setChallengeOn(false);
-
     setPhase("setup");
   }
 
-  function onRepeatSameDrill() {
-    cleanupUserUrl();
-    setIdx(0);
-    setAttempts([]);
-    resetChallengeWordTimer();
+  const question =
+    setupStep === 0
+      ? "What do you want to practice?"
+      : setupStep === 1
+      ? "Choose a difficulty level"
+      : "Which accent do you want?";
 
-    setPhase("prompt");
+  const options =
+    setupStep === 0
+      ? [
+          { key: "words", label: "Words" },
+          { key: "sentences", label: "Sentences" },
+        ]
+      : setupStep === 1
+      ? [
+          { key: "easy", label: "Easy" },
+          { key: "medium", label: "Medium" },
+          { key: "hard", label: "Hard" },
+        ]
+      : [
+          { key: "en_us", label: "American 🇺🇸" },
+          { key: "en_br", label: "British 🇬🇧" },
+        ];
+
+  const value = setupStep === 0 ? mode : setupStep === 1 ? difficulty : accentUi;
+
+  function setValue(next) {
+    if (setupStep === 0) setMode(next);
+    else if (setupStep === 1) setDifficulty(next);
+    else setAccentUi(next);
   }
 
-
-
-  /* ---------------- UI helpers ---------------- */
-  const pickerRow = {
-    display: "grid",
-    gridTemplateColumns: "56px 1fr 56px",
-    alignItems: "center",
-    gap: 12,
-  };
-
-  // iOS-ish controls: subtle border + tiny shadow + slight surface fill
-  const pickerBtn = {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    border: `1px solid rgba(0,0,0,0.08)`,
-    background: "rgba(255,255,255,0.72)",
-    boxShadow: "0 1px 0 rgba(255,255,255,0.9) inset, 0 8px 18px rgba(0,0,0,0.06)",
-    display: "grid",
-    placeItems: "center",
-    cursor: "pointer",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
-  };
-
-const pickerCenter = {
-  textAlign: "center",
-  fontWeight: 950,
-  fontSize: 26,
-  color: LIGHT_TEXT,
-  lineHeight: 1.02,
-  letterSpacing: -0.35,
-};
-
-  const setupCard = {
-   background: "rgba(255,255,255,0.96)",
-border: "1px solid rgba(17,24,39,0.08)",
-    borderRadius: 28,
-    padding: 18,
-boxShadow: "0 22px 60px rgba(17,24,39,0.10), 0 1px 0 rgba(255,255,255,0.8) inset",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
-  };
-
-const hairlineDivider = {
-  height: 1,
-  margin: "12px 10px",
-  background:
-    "linear-gradient(90deg, rgba(17,24,39,0.00), rgba(17,24,39,0.10), rgba(17,24,39,0.00))",
-};
-
-
-  // Real iOS primary button: taller, full-ish width, depth
-  const primaryBtn = {
-    height: 58,
-    width: "min(520px, 100%)",
-    borderRadius: 999,
-    border: "none",
-background: "linear-gradient(180deg, #2FA8FF 0%, #1E88E5 100%)",
-    color: "white",
-    fontWeight: 850,
-    fontSize: 18,
-    letterSpacing: -0.2,
-    cursor: "pointer",
-boxShadow:
-  "0 22px 60px rgba(33,150,243,0.28), 0 1px 0 rgba(255,255,255,0.42) inset, 0 -1px 0 rgba(0,0,0,0.10) inset",
-  };
-
-
-  const ghostBtn = {
-    height: 40,
-    padding: "0 12px",
-    borderRadius: 14,
-    border: `1px solid ${LIGHT_BORDER}`,
-    background: LIGHT_SURFACE,
-    fontWeight: 900,
-    color: LIGHT_TEXT,
-    cursor: "pointer",
-  };
-
-  const chip = (bg) => ({
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "6px 10px",
-    borderRadius: 999,
-    border: `1px solid ${LIGHT_BORDER}`,
-    background: bg,
-    fontWeight: 900,
-    fontSize: 12,
-    color: LIGHT_TEXT,
-  });
-
-    const totalCount = targets?.length || 10;
-  const stepNow = Math.min(idx + 1, totalCount);
-  const progressPct = totalCount ? Math.round((stepNow / totalCount) * 100) : 0;
-  const metaText = `Word ${stepNow} of ${totalCount}`;
-
-  const flowHeaderWrap = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 10,
-  };
-
-  const flowTitle = {
-    fontSize: 22,
-    fontWeight: 1000,
-    letterSpacing: -0.6,
-    color: LIGHT_TEXT,
-    lineHeight: 1.05,
-  };
-
-  const flowMeta = {
-    marginTop: 6,
-    fontSize: 13,
-    fontWeight: 800,
-    letterSpacing: -0.15,
-    color: LIGHT_MUTED,
-    display: "flex",
-    gap: 10,
-    alignItems: "center",
-    flexWrap: "wrap",
-  };
-
-  const progressTrack = {
-    height: 3,
-    borderRadius: 999,
-    background: "rgba(17,24,39,0.10)",
-    overflow: "hidden",
-  };
-
-  const progressFill = {
-    height: "100%",
-    width: `${progressPct}%`,
-    borderRadius: 999,
-    background: "rgba(33,150,243,0.80)",
-  };
-
-  const closeBtn = {
-    width: 38,
-    height: 38,
-    borderRadius: 999,
-    border: "1px solid rgba(17,24,39,0.10)",
-    background: "rgba(255,255,255,0.70)",
-    boxShadow: "0 10px 22px rgba(17,24,39,0.10), 0 1px 0 rgba(255,255,255,0.9) inset",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
-    display: "grid",
-    placeItems: "center",
-    cursor: "pointer",
-  };
-
-  const flowCard = {
-    background: "rgba(255,255,255,0.96)",
-    border: "1px solid rgba(17,24,39,0.08)",
-    borderRadius: 24,
-    padding: 22,
-    boxShadow: "0 22px 60px rgba(17,24,39,0.10), 0 1px 0 rgba(255,255,255,0.8) inset",
-  };
-
-  const heroWord = {
-    fontSize: 32,
-    fontWeight: 1000,
-    letterSpacing: -0.8,
-    color: LIGHT_TEXT,
-    textAlign: "center",
-    lineHeight: 1.05,
-  };
-
-  const hintText = {
-    marginTop: 10,
-    fontSize: 13,
-    fontWeight: 850,
-    letterSpacing: -0.15,
-    color: LIGHT_MUTED,
-    textAlign: "center",
-  };
-
-  const micBtn = (isRecording, isDisabled) => ({
-    width: 80,
-    height: 80,
-    borderRadius: 26,
-    border: "1px solid rgba(17,24,39,0.08)",
-    background: isRecording
-      ? "linear-gradient(180deg, rgba(17,24,39,0.92) 0%, rgba(17,24,39,0.82) 100%)"
-      : "linear-gradient(180deg, #2FA8FF 0%, #1E88E5 100%)",
-    boxShadow: isRecording
-      ? "0 18px 50px rgba(17,24,39,0.18), 0 1px 0 rgba(255,255,255,0.20) inset"
-      : "0 22px 60px rgba(33,150,243,0.28), 0 1px 0 rgba(255,255,255,0.42) inset, 0 -1px 0 rgba(0,0,0,0.10) inset",
-    display: "grid",
-    placeItems: "center",
-    cursor: isDisabled ? "not-allowed" : "pointer",
-    opacity: isDisabled ? 0.6 : 1,
-    position: "relative",
-  });
-
-  const micGlow = {
-    position: "absolute",
-    inset: -18,
-    borderRadius: 34,
-    background: "radial-gradient(circle, rgba(33,150,243,0.22) 0%, rgba(33,150,243,0.00) 70%)",
-    pointerEvents: "none",
-  };
-const summaryCard = {
-  background: "rgba(255,255,255,0.96)",
-  border: "1px solid rgba(17,24,39,0.08)",
-  borderRadius: 24,
-  padding: 22,
-  boxShadow: "0 22px 60px rgba(17,24,39,0.10), 0 1px 0 rgba(255,255,255,0.8) inset",
-  display: "grid",
-  gap: 16,
-};
-
-const summaryTitle = {
-  fontSize: 18,
-  fontWeight: 1000,
-  letterSpacing: -0.45,
-  color: LIGHT_TEXT,
-};
-
-const summaryHeroWrap = {
-  display: "grid",
-  placeItems: "center",
-  paddingTop: 6,
-  paddingBottom: 2,
-};
-
-const ringWrap = { position: "relative", width: 120, height: 120, display: "grid", placeItems: "center" };
-
-const ringInner = {
-  position: "absolute",
-  inset: 8,
-  borderRadius: 999,
-  background: "rgba(255,255,255,0.92)",
-  border: "1px solid rgba(17,24,39,0.08)",
-};
-
-const ringLabel = {
-  marginTop: 10,
-  fontSize: 12,
-  fontWeight: 850,
-  letterSpacing: -0.1,
-  color: LIGHT_MUTED,
-};
-
-const badgesRow = {
-  display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
-  gap: 10,
-  marginTop: 6,
-};
-
-const statBadge = (tintBg) => ({
-  borderRadius: 18,
-  border: "1px solid rgba(17,24,39,0.08)",
-  background: tintBg,
-  padding: "10px 12px",
-  display: "grid",
-  gap: 2,
-});
-
-const badgeLabel = { fontSize: 12, fontWeight: 900, color: LIGHT_MUTED, letterSpacing: -0.1 };
-const badgeValue = { fontSize: 18, fontWeight: 1100, color: LIGHT_TEXT, letterSpacing: -0.4 };
-
-const summaryCtas = {
-  display: "grid",
-  gap: 10,
-  marginTop: 8,
-};
-  const WHEEL_ITEM_H = 44;
-
   function WheelPicker({ options, value, onChange }) {
-    const ref = useRef(null);
-    const snapT = useRef(0);
-
-    const idx = Math.max(
-      0,
-      options.findIndex((o) => o.key === value)
-    );
-
-    // Scroll to selected on mount / value change
-    useEffect(() => {
-      const el = ref.current;
-      if (!el) return;
-      el.scrollTop = idx * WHEEL_ITEM_H;
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [value]);
-
-
-
-    function commitNearest() {
-      const el = ref.current;
-      if (!el) return;
-      const i = Math.round(el.scrollTop / WHEEL_ITEM_H);
-      const clamped = Math.max(0, Math.min(options.length - 1, i));
-      const next = options[clamped]?.key;
-      if (next && next !== value) onChange(next);
-      el.scrollTo({ top: clamped * WHEEL_ITEM_H, behavior: "smooth" });
-    }
-
-    function onScroll() {
-      clearTimeout(snapT.current);
-      snapT.current = window.setTimeout(() => {
-        commitNearest();
-      }, 90);
-    }
-
-   return (
-  <div
-    style={{
-      position: "relative",
-      background: "transparent",
-      height: WHEEL_ITEM_H * 3,
-      overflow: "hidden",
-    }}
-  >
-
-        {/* center highlight */}
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: WHEEL_ITEM_H,
-            height: WHEEL_ITEM_H,
-            background: "rgba(33,150,243,0.06)",
-            pointerEvents: "none",
-          }}
-        />
-
-        <div
-          ref={ref}
-          onScroll={onScroll}
-          style={{
-            height: "100%",
-            overflowY: "auto",
-            scrollbarWidth: "none",
-            msOverflowStyle: "none",
-            scrollSnapType: "y mandatory",
-            WebkitOverflowScrolling: "touch",
-          }}
-        >
-          {/* padding so first/last can align in center */}
-          <div style={{ height: WHEEL_ITEM_H }} />
-          {options.map((o) => {
-            const active = o.key === value;
-            return (
-              <div
-                key={o.key}
-                onClick={() => onChange(o.key)}
-                style={{
-                  height: WHEEL_ITEM_H,
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: 20,
-                  fontWeight: 600, // NOT bold question; picker can be semi-bold like iOS
-                  letterSpacing: -0.2,
-                  color: active ? "rgba(17,24,39,0.92)" : "rgba(17,24,39,0.55)",
-                  scrollSnapAlign: "center",
-                  userSelect: "none",
-                  cursor: "pointer",
-                }}
-              >
-                {o.label}
-              </div>
-            );
-          })}
-          <div style={{ height: WHEEL_ITEM_H }} />
-        </div>
-
-        {/* hide scrollbar in webkit */}
-        <style>{`
-          [data-wheel]::-webkit-scrollbar { display: none; }
-        `}</style>
+    return (
+      <div style={{ display: "grid", gap: 12 }}>
+        {options.map((option) => {
+          const active = option.key === value;
+          return (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => onChange(option.key)}
+              style={{
+                height: 54,
+                borderRadius: 18,
+                border: active ? "1px solid rgba(33,150,243,0.95)" : "1px solid rgba(17,24,39,0.08)",
+                background: active ? "rgba(33,150,243,0.10)" : "rgba(255,255,255,0.92)",
+                fontSize: 19,
+                fontWeight: 900,
+                color: LIGHT_TEXT,
+                cursor: "pointer",
+              }}
+            >
+              {option.label}
+            </button>
+          );
+        })}
       </div>
     );
   }
 
   return (
     <div
-  className="page"
-  style={{
-    position: "relative",
-    minHeight: "100vh",
-background: "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)",
-
-    paddingBottom: 0,
-    paddingTop: "var(--safe-top)",
-    display: "flex",
-    flexDirection: "column",
-    color: LIGHT_TEXT,
-  }}
->
-
-      <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
-     
-
-
-
-     <div
-  style={{
-    flex: 1,
-    width: "100%",
-    maxWidth: 720,
-    margin: "0 auto",
-
-    background: "transparent",
-    borderRadius: 0,
-    boxShadow: "none",
-    padding: "0 16px",
-    paddingTop: 12,
-    paddingBottom: `calc(${TABBAR_OFFSET}px + 16px + ${SAFE_BOTTOM})`,
-  }}
->
-
-
-          <div className="mx-auto w-full" style={{ maxWidth: 720 }}>
-            <LayoutGroup>
-              <AnimatePresence mode="wait">
-                {phase === "setup" ? (
-  <motion.div
-    key="setup"
-    initial={{ opacity: 0, y: 10, scale: 0.98 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    exit={{ opacity: 0, y: -8, scale: 0.98 }}
-    transition={{ duration: 0.18 }}
-    style={{
-      display: "grid",
-      gap: 16,
-      minHeight: `calc(100vh - var(--safe-top) - ${TABBAR_OFFSET}px - ${SAFE_BOTTOM} - 24px)`,
-      alignContent: "center",
-      paddingTop: 10,
-      transform: "translateY(-14px)",
-    }}
-  >
-    {(() => {
-      const question =
-        setupStep === 0
-          ? "What do you want to practice?"
-          : setupStep === 1
-          ? "Choose a difficulty level"
-          : "Which accent do you want?";
-
-      const options =
-        setupStep === 0
-          ? [
-              { key: "words", label: "Words" },
-              { key: "sentences", label: "Sentences" },
-            ]
-          : setupStep === 1
-          ? [
-              { key: "easy", label: "Easy" },
-              { key: "medium", label: "Medium" },
-              { key: "hard", label: "Hard" },
-            ]
-          : [
-              { key: "en_us", label: "American 🇺🇸" },
-              { key: "en_br", label: "British 🇬🇧" },
-            ];
-
-      const value = setupStep === 0 ? mode : setupStep === 1 ? difficulty : accentUi;
-      const setValue = (k) => {
-        if (setupStep === 0) setMode(k);
-        else if (setupStep === 1) setDifficulty(k);
-        else setAccentUi(k);
-      };
-
-      return (
+      className="page"
+      style={{
+        position: "relative",
+        minHeight: "100vh",
+        background: phase === "setup" ? "linear-gradient(180deg, rgba(33,150,243,0.08) 0%, #FFFFFF 58%)" : "linear-gradient(180deg, #8EDBF8 0%, #CFEFFD 100%)",
+        paddingBottom: 0,
+        paddingTop: "var(--safe-top)",
+        display: "flex",
+        flexDirection: "column",
+        color: LIGHT_TEXT,
+        overflow: "hidden",
+      }}
+    >
+      {phase === "setup" ? (
         <div
           style={{
+            flex: 1,
+            width: "100%",
+            maxWidth: 720,
+            margin: "0 auto",
+            padding: `12px 16px calc(${TABBAR_OFFSET}px + 16px + ${SAFE_BOTTOM})`,
             display: "grid",
-            gridTemplateRows: "auto auto auto auto auto",
-            gap: 14,
-            minHeight: `calc(100vh - var(--safe-top) - ${TABBAR_OFFSET}px - ${SAFE_BOTTOM} - 24px)`,
-            alignContent: "start",
-            paddingTop: 10,
+            alignContent: "center",
+            gap: 18,
           }}
         >
-{/* Title */}
-<div
-  style={{
-    paddingTop: 6,
-  }}
->
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "44px 1fr 44px",
-      alignItems: "center",
-    }}
-  >
-    <button
-      type="button"
-      onClick={() => nav("/practice")}
-      aria-label="Back"
-      style={{
-        width: 44,
-        height: 44,
-        border: "none",
-        background: "transparent",
-        display: "grid",
-        placeItems: "center",
-        cursor: "pointer",
-        padding: 0,
-      }}
-    >
-      <ChevronLeft className="h-8 w-8" style={{ color: LIGHT_TEXT }} />
-    </button>
-
-    <div
-      style={{
-        textAlign: "center",
-        fontSize: 34,
-        fontWeight: 1000,
-        letterSpacing: -0.8,
-        color: LIGHT_TEXT,
-        lineHeight: 1,
-        whiteSpace: "nowrap",
-      }}
-    >
-      Daily Drill
-    </div>
-
-    <div />
-  </div>
-
-  <div style={{ marginTop: 14, display: "grid", placeItems: "center" }}>
-  <div
-    style={{
-      display: "inline-flex",
-      gap: 6,
-      padding: 6,
-      borderRadius: 999,
-      border: "1px solid rgba(17,24,39,0.10)",
-      background: "rgba(255,255,255,0.70)",
-      boxShadow: "0 10px 22px rgba(17,24,39,0.08)",
-      backdropFilter: "blur(10px)",
-      WebkitBackdropFilter: "blur(10px)",
-    }}
-  >
-    <button
-      type="button"
-      onClick={() => {
-  setChallengeOn(false);
-  setSetupStep(0);
-}}
-      style={{
-        height: 36,
-        padding: "0 14px",
-        borderRadius: 999,
-        border: "none",
-        cursor: "pointer",
-        fontWeight: 950,
-        letterSpacing: -0.15,
-        background: !challengeOn ? "rgba(33,150,243,0.95)" : "transparent",
-        color: !challengeOn ? "white" : "rgba(17,24,39,0.72)",
-      }}
-    >
-      Normal
-    </button>
-
-    <button
-      type="button"
-    onClick={() => {
-  if (!isPro) {
-    openPaywall("challenge_locked");
-    return;
-  }
-  setChallengeOn(true);
-  setSetupStep(0);
-}}
-
-      style={{
-        height: 36,
-        padding: "0 14px",
-        borderRadius: 999,
-        border: "none",
-        cursor: "pointer",
-        fontWeight: 950,
-        letterSpacing: -0.15,
-        background: challengeOn ? "rgba(33,150,243,0.95)" : "transparent",
-        color: challengeOn ? "white" : "rgba(17,24,39,0.72)",
-        opacity: !isPro ? 0.75 : 1,
-        filter: !isPro ? "saturate(0.9)" : "none",
-
-      }}
-    >
-  Challenge {!isPro ? "• Pro" : ""}
-    </button>
-  </div>
-
-{isPro && challengeOn ? (
-    <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
-      <div style={ruleBadge}>
-        <span style={greenDot} />
-        <span>
-          <span style={{ color: "rgba(17,24,39,0.92)" }}>{CHALLENGE_GREEN}%+</span> to advance
-        </span>
-      </div>
-    </div>
-  ) : null}
-
-
-</div>
-
+          <div style={{ display: "grid", gridTemplateColumns: "44px 1fr 44px", alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => nav("/practice")}
+              style={{ width: 44, height: 44, border: "none", background: "transparent", display: "grid", placeItems: "center", cursor: "pointer" }}
+            >
+              <ChevronLeft className="h-8 w-8" style={{ color: LIGHT_TEXT }} />
+            </button>
+            <div style={{ textAlign: "center", fontSize: 34, fontWeight: 1000, letterSpacing: -0.8 }}>Speaking Game</div>
+            <div />
           </div>
 
-          {/* Progress bars */}
-          <div style={{ padding: "0 22px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  style={{
-                    height: 6,
-                    borderRadius: 999,
-                    background: i === setupStep ? "rgba(33,150,243,0.95)" : "rgba(33,150,243,0.22)",
-                  }}
-                />
-              ))}
-            </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                style={{
+                  height: 6,
+                  borderRadius: 999,
+                  background: i === setupStep ? "rgba(33,150,243,0.95)" : "rgba(33,150,243,0.22)",
+                }}
+              />
+            ))}
           </div>
 
-         <div
-  style={{
-    display: "grid",
-    placeItems: "center",
-    margin: "0 22px",
-    paddingTop: 8,
-    paddingBottom: 8,
-  }}
->
-  <img
-    src={
-      setupStep === 0
-        ? wordsImg
-        : setupStep === 1
-        ? difficultyImg
-        : accentImg
-    }
-    alt=""
-style={{
-  width: 140,
-  height: 140,
-  objectFit: "contain",
-  pointerEvents: "none",
-  userSelect: "none",
-}}
-
-  />
-</div>
-
-
-          {/* Question (NOT bold) */}
-          <div
-            style={{
-              textAlign: "center",
-              fontWeight: 500,
-              fontSize: 22,
-              letterSpacing: -0.45,
-              color: LIGHT_TEXT,
-              padding: "0 22px",
-            }}
-          >
-            {question}
+          <div style={{ display: "grid", placeItems: "center" }}>
+            <img
+              src={setupStep === 0 ? wordsImg : setupStep === 1 ? difficultyImg : accentImg}
+              alt=""
+              style={{ width: 140, height: 140, objectFit: "contain", pointerEvents: "none", userSelect: "none" }}
+            />
           </div>
 
-          {/* Wheel picker */}
-          <div style={{ marginTop: 2, padding: "0 22px" }}>
-            <WheelPicker options={options} value={value} onChange={setValue} />
-          </div>
+          <div style={{ textAlign: "center", fontWeight: 500, fontSize: 22, letterSpacing: -0.45 }}>{question}</div>
 
-          {/* Bottom buttons */}
-          <div
-  style={{
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-    padding: "0 22px",
-    marginTop: 10,
-  }}
->
+          <WheelPicker options={options} value={value} onChange={setValue} />
 
-
+          <div style={{ display: "flex", justifyContent: "center", gap: 12 }}>
             {setupStep > 0 ? (
               <button
                 type="button"
                 onClick={() => setSetupStep((s) => Math.max(0, s - 1))}
-               style={{
-  height: 52,
-  padding: "0 18px",
-  borderRadius: 14,
-  border: "1px solid rgba(17,24,39,0.14)",
-  background: "rgba(255,255,255,0.45)",
-  color: "rgba(17,24,39,0.72)",
-  fontWeight: 850,
-  cursor: "pointer",
-  backdropFilter: "blur(10px)",
-  WebkitBackdropFilter: "blur(10px)",
-  minWidth: 120,
-}}
-
+                style={{
+                  height: 52,
+                  padding: "0 18px",
+                  borderRadius: 14,
+                  border: "1px solid rgba(17,24,39,0.14)",
+                  background: "rgba(255,255,255,0.45)",
+                  color: "rgba(17,24,39,0.72)",
+                  fontWeight: 850,
+                  cursor: "pointer",
+                  minWidth: 120,
+                }}
               >
                 Back
               </button>
             ) : null}
 
-            <motion.button
+            <button
               type="button"
               onClick={() => {
                 if (setupStep < 2) setSetupStep((s) => s + 1);
-                else onStartDrill();
+                else onStartGame();
               }}
-         style={{
-  ...primaryBtn,
-  height: 52,
-  flex: 1,
-  borderRadius: 14,
-  maxWidth: 420,
-}}
-
-
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 700, damping: 40 }}
+              style={{
+                height: 52,
+                flex: 1,
+                maxWidth: 420,
+                borderRadius: 14,
+                border: "none",
+                background: "linear-gradient(180deg, #2FA8FF 0%, #1E88E5 100%)",
+                color: "white",
+                fontWeight: 900,
+                fontSize: 18,
+                cursor: "pointer",
+                boxShadow: "0 22px 60px rgba(33,150,243,0.28)",
+              }}
             >
               {setupStep < 2 ? "Next" : "Start"}
-            </motion.button>
+            </button>
           </div>
         </div>
-      );
-    })()}
-  </motion.div>
-) : null}
-
-{phase !== "setup" ? (
-  <motion.div
-    key="flow"
-    initial={{ opacity: 0, y: 10, scale: 0.98 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    exit={{ opacity: 0, y: -8, scale: 0.98 }}
-    transition={{ duration: 0.18 }}
-    style={{
-      minHeight: `calc(100vh - var(--safe-top) - ${TABBAR_OFFSET}px - ${SAFE_BOTTOM})`,
-      borderRadius: 28,
-      padding: 18,
-      background:
-        "linear-gradient(180deg, rgba(33,150,243,0.98) 0%, rgba(33,150,243,0.92) 60%, rgba(33,150,243,0.86) 100%)",
-      position: "relative",
-      display: "grid",
-      gridTemplateRows: "auto 1fr",
-      gap: 14,
-      boxShadow: "0 22px 60px rgba(17,24,39,0.18)",
-    }}
-  >
-    {/* Header */}
-    <div style={{ position: "relative", paddingTop: 6, paddingBottom: 6 }}>
-      <div style={{ textAlign: "center" }}>
-        <div
-          style={{
-            fontSize: 34,
-            fontWeight: 1100,
-            letterSpacing: -0.8,
-            color: "rgba(255,255,255,0.98)",
-            lineHeight: 1.05,
-          }}
-        >
-          Daily Drill
-        </div>
-{challengeOn && wordDeadlineMs && (phase === "prompt" || phase === "recording" || phase === "analyzing") ? (
-  <div style={{ marginTop: 8, display: "grid", placeItems: "center" }}>
-    <div
-      style={{
-        fontSize: 56,
-        fontWeight: 1100,
-        letterSpacing: -1.2,
-        color: "rgba(255,255,255,0.98)",
-        lineHeight: 1,
-        fontVariantNumeric: "tabular-nums",
-        textShadow: "0 18px 40px rgba(0,0,0,0.18)",
-      }}
-    >
-      {(Math.max(0, timeLeftMs || 0) / 1000).toFixed(1)}
-    </div>
-    <div style={{ marginTop: 2, fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.78)" }}>
-      seconds left
-    </div>
-  </div>
-) : null}
-
-        <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
-    <div
-  style={{
-    marginTop: 10,
-    textAlign: "center",
-    color: "rgba(255,255,255,0.92)",
-    fontSize: 14,
-    fontWeight: 850,
-    letterSpacing: -0.15,
-  }}
->
-  {metaText}
-
-{isPro && challengeOn ? (
-  <div style={{ marginTop: 10, display: "grid", placeItems: "center" }}>
-   <div style={ruleBadge}>
-  <span style={greenDot} />
-  <span>
-    <span style={{ color: "rgba(17,24,39,0.92)" }}>{CHALLENGE_GREEN}%+</span> to advance
-  </span>
-</div>
-
-  </div>
-) : null}
-
-</div>
-
-        </div>
-      </div>
-
-      <motion.button
-        type="button"
-        onClick={onExit}
-        whileTap={{ scale: 0.96 }}
-        transition={{ type: "spring", stiffness: 700, damping: 40 }}
-        disabled={phase === "analyzing"}
-        aria-label="Close"
-        title="Close"
-        style={{
-          position: "absolute",
-          right: 8,
-          top: 8,
-          width: 38,
-          height: 38,
-          borderRadius: 999,
-          border: "1px solid rgba(255,255,255,0.28)",
-          background: "rgba(255,255,255,0.18)",
-          color: "white",
-          display: "grid",
-          placeItems: "center",
-          cursor: "pointer",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          boxShadow: "0 10px 22px rgba(17,24,39,0.16)",
-        }}
-      >
-        <X className="h-5 w-5" />
-      </motion.button>
-
-      <div
-        style={{
-          marginTop: 14,
-          height: 2,
-          borderRadius: 999,
-          background: "rgba(255,255,255,0.24)",
-        }}
-      />
-    </div>
-
-    {/* Content */}
-    <div
-      style={{
-        display: "grid",
-        alignContent: "start",
-        justifyItems: "center",
-        gap: 18,
-        paddingTop: 10,
-        paddingBottom: `calc(${TABBAR_OFFSET}px + 22px + ${SAFE_BOTTOM})`,
-      }}
-    >
-      {(phase === "prompt" || phase === "recording" || phase === "analyzing") ? (
-        <>
-          {/* Card: ONLY text */}
-          <div
-            style={{
-              width: "min(640px, 100%)",
-              background: "rgba(255,255,255,0.98)",
-              borderRadius: 28,
-              padding: "28px 26px",
-              border: "1px solid rgba(17,24,39,0.08)",
-              boxShadow: "0 26px 70px rgba(17,24,39,0.18)",
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                fontSize: mode === "sentences" ? 30 : 34,
-                fontWeight: 1100,
-                letterSpacing: -0.9,
-                color: "rgba(17,24,39,0.92)",
-                lineHeight: 1.08,
-                wordBreak: "break-word",
-              }}
-            >
-              {currentText || "—"}
-            </div>
-          </div>
-
-          {/* Record button UNDER card */}
-          <div style={{ width: "min(640px, 100%)", display: "grid", placeItems: "center", marginTop: 6 }}>
-            <motion.button
-              type="button"
-              onClick={toggleRecord}
-              disabled={phase === "analyzing" || !currentText}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 700, damping: 40 }}
-              title={phase === "recording" ? "Stop" : "Record"}
-              style={{
-                width: 92,
-                height: 92,
-                borderRadius: 999,
-                border: "1px solid rgba(255,255,255,0.28)",
-                background: phase === "recording" ? "rgba(17,24,39,0.92)" : "rgba(255,255,255,0.92)",
-                display: "grid",
-                placeItems: "center",
-                cursor: phase === "analyzing" || !currentText ? "not-allowed" : "pointer",
-                opacity: phase === "analyzing" || !currentText ? 0.7 : 1,
-                boxShadow:
-                  phase === "recording"
-                    ? "0 24px 70px rgba(17,24,39,0.26)"
-                    : "0 24px 70px rgba(17,24,39,0.18), 0 0 0 14px rgba(255,255,255,0.10)",
-                backdropFilter: "blur(10px)",
-                WebkitBackdropFilter: "blur(10px)",
-              }}
-            >
-              {phase === "recording" ? (
-                <StopCircle className="h-8 w-8" style={{ color: "white" }} />
-              ) : (
-                <Mic className="h-8 w-8" style={{ color: BTN_BLUE }} />
-              )}
-            </motion.button>
-          </div>
-        </>
       ) : null}
 
-      {/* RESULT (keep your existing one if you want; this is identical to what you had) */}
-      {phase === "result" && lastAttempt ? (
-        <motion.div
-          key={`result-${lastAttempt.createdAt}`}
-          initial={{ opacity: 0, y: 10, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -8, scale: 0.98 }}
-          transition={{ type: "spring", stiffness: 700, damping: 45 }}
-          style={{
-            width: "min(640px, 100%)",
-            background: "rgba(255,255,255,0.96)",
-            border: "1px solid rgba(17,24,39,0.08)",
-            borderRadius: 24,
-            padding: 22,
-            display: "grid",
-            gap: 12,
-            placeItems: "center",
-            textAlign: "center",
-            boxShadow: "0 22px 60px rgba(17,24,39,0.18), 0 1px 0 rgba(255,255,255,0.8) inset",
-          }}
-        >
-          <AnimatePresence>
-  {challengeOn && greenFlash ? (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.12 }}
-      style={{
-        position: "absolute",
-        inset: 0,
-        borderRadius: 24,
-        background: "rgba(34,197,94,0.18)",
-        display: "grid",
-        placeItems: "center",
-        pointerEvents: "none",
-      }}
-    >
-      <motion.div
-        initial={{ scale: 0.96, y: 4, opacity: 0 }}
-        animate={{ scale: 1, y: 0, opacity: 1 }}
-        exit={{ scale: 0.98, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 700, damping: 40 }}
-        style={{
-          fontSize: 28,
-          fontWeight: 1100,
-          letterSpacing: -0.6,
-          color: "rgba(34,197,94,0.98)",
-          textShadow: "0 18px 40px rgba(0,0,0,0.18)",
-        }}
-      >
-        GREEN!
-      </motion.div>
-    </motion.div>
-  ) : null}
-</AnimatePresence>
-
-          <div style={{ position: "relative", width: 92, height: 92, display: "grid", placeItems: "center" }}>
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                borderRadius: 999,
+      {phase === "playing" ? (
+        <div style={{ position: "relative", flex: 1, minHeight: "100vh", overflow: "hidden" }}>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
               background:
-  "conic-gradient(from 270deg, " +
-  (challengeOn && isGreen(lastAttempt.overall) ? "rgba(34,197,94,0.95)" : "rgba(33,150,243,0.90)") +
-  " 0%, " +
-  (challengeOn && isGreen(lastAttempt.overall) ? "rgba(34,197,94,0.95)" : "rgba(33,150,243,0.90)") +
-  " " +
-  `${Math.max(0, Math.min(100, lastAttempt.overall))}%` +
-  ", rgba(17,24,39,0.08) 0%)",
+                "radial-gradient(circle at 20% 18%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 22%), radial-gradient(circle at 84% 36%, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0) 16%), linear-gradient(180deg, #89D7F8 0%, #CFEFFD 100%)",
+            }}
+          />
 
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                inset: 6,
-                borderRadius: 999,
-                background: "rgba(255,255,255,0.92)",
-                border: "1px solid rgba(17,24,39,0.08)",
-              }}
-            />
-            <div style={{ position: "relative", fontSize: 30, fontWeight: 1100, letterSpacing: -0.7, color: LIGHT_TEXT }}>
-              {lastAttempt.overall}%
-            </div>
-            {/* threshold marker (85%) */}
-{isPro && challengeOn ? (
-  <div
-    style={{
-      position: "absolute",
-      inset: -2,
-      borderRadius: 999,
-      pointerEvents: "none",
-      transform: `rotate(${270 + (360 * CHALLENGE_GREEN) / 100}deg)`,
-    }}
-  >
-    <div
-      style={{
-        position: "absolute",
-        top: -1,
-        left: "50%",
-        transform: "translateX(-50%)",
-        width: 10,
-        height: 10,
-        borderRadius: 999,
-        background: "rgba(34,197,94,0.95)",
-        boxShadow: "0 0 0 4px rgba(34,197,94,0.18)",
-      }}
-    />
-  </div>
-) : null}
+          <div style={{ position: "absolute", top: 108, left: 54, width: 72, height: 26, borderRadius: 999, background: "rgba(255,255,255,0.58)", filter: "blur(2px)" }} />
+          <div style={{ position: "absolute", top: 222, right: 46, width: 86, height: 28, borderRadius: 999, background: "rgba(255,255,255,0.44)", filter: "blur(2px)" }} />
+          <div style={{ position: "absolute", top: 392, left: 32, width: 96, height: 30, borderRadius: 999, background: "rgba(255,255,255,0.40)", filter: "blur(2px)" }} />
 
-          </div>
+          <button
+            type="button"
+            onClick={onExit}
+            style={{
+              position: "absolute",
+              top: 16,
+              right: 16,
+              zIndex: 6,
+              width: 42,
+              height: 42,
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,0.32)",
+              background: "rgba(32,42,56,0.22)",
+              color: "white",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+            }}
+          >
+            <X size={20} />
+          </button>
 
           <div
             style={{
-              padding: "7px 12px",
-              borderRadius: 999,
-              border: "1px solid rgba(17,24,39,0.10)",
-              background: "rgba(33,150,243,0.08)",
-              fontSize: 13,
-              fontWeight: 950,
-              letterSpacing: -0.15,
-              color: LIGHT_TEXT,
+              position: "absolute",
+              top: 24,
+              left: 0,
+              right: 0,
+              zIndex: 5,
+              display: "grid",
+              justifyItems: "center",
             }}
           >
-            {lastAttempt.label}
+            <div style={{ fontSize: 58, lineHeight: 1, fontWeight: 1000, letterSpacing: -1.2, color: "white", textShadow: "0 8px 18px rgba(0,0,0,0.14)" }}>
+              {displayScore}
+            </div>
+            <div style={{ marginTop: 2, fontSize: 18, fontWeight: 800, color: "rgba(255,255,255,0.88)" }}>meters</div>
           </div>
 
-          <div style={{ fontSize: 12, fontWeight: 800, color: LIGHT_MUTED, letterSpacing: -0.1 }}>Auto-next…</div>
-        </motion.div>
-      ) : null}
-
-      {/* SUMMARY (you already have summaryCard etc.) */}
-      {phase === "summary" ? (
-        <motion.div
-          key="summary"
-          initial={{ opacity: 0, y: 10, scale: 0.985 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -8, scale: 0.985 }}
-          transition={{ type: "spring", stiffness: 700, damping: 45 }}
-          style={{ ...summaryCard, width: "min(640px, 100%)" }}
-        >
-          <div style={summaryTitle}>Session summary</div>
-
-          <div style={summaryHeroWrap}>
-            <div style={ringWrap}>
-              <div
+          <AnimatePresence>
+            {showStreakFlash ? (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ duration: 0.22 }}
                 style={{
                   position: "absolute",
-                  inset: 0,
-                  borderRadius: 999,
-                  background:
-                    "conic-gradient(from 270deg, rgba(33,150,243,0.90) 0%, rgba(33,150,243,0.90) " +
-                    `${Math.max(0, Math.min(100, summaryCount))}%` +
-                    ", rgba(17,24,39,0.08) 0%)",
+                  top: 210,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  zIndex: 5,
+                  fontSize: 52,
+                  fontWeight: 1000,
+                  color: "rgba(255,255,255,0.95)",
+                  textShadow: "0 8px 18px rgba(0,0,0,0.16)",
                 }}
-              />
-              <div style={ringInner} />
-              <div style={{ position: "relative", fontSize: 46, fontWeight: 1150, letterSpacing: -1.0, color: LIGHT_TEXT }}>
-                {summaryCount}%
+              >
+                🔥 {streak}
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          {currentWord ? (
+            <motion.div
+              key={`${currentWord}-${targetIndex}`}
+              initial={false}
+              animate={{ top: obstacleY }}
+              transition={{ type: "tween", duration: 0.08, ease: "linear" }}
+              style={{
+                position: "absolute",
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 3,
+                minWidth: mode === "sentences" ? 250 : 170,
+                maxWidth: "78vw",
+                padding: mode === "sentences" ? "16px 18px" : "14px 18px",
+                borderRadius: 20,
+                background: "rgba(29,39,53,0.22)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(255,255,255,0.34)",
+                boxShadow: "0 18px 38px rgba(0,0,0,0.12)",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: mode === "sentences" ? 24 : 30, lineHeight: 1.1, fontWeight: 1000, letterSpacing: -0.6, color: "white" }}>
+                {currentWord}
               </div>
+            </motion.div>
+          ) : null}
+
+          <Rocket boosting={isRecording || isAnalyzing} />
+
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: 20,
+              transform: "translateX(-50%)",
+              zIndex: 6,
+              minWidth: 170,
+              height: 38,
+              padding: "0 14px",
+              borderRadius: 999,
+              background: "rgba(31,41,55,0.78)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              color: "white",
+              boxShadow: "0 16px 34px rgba(0,0,0,0.18)",
+            }}
+          >
+            <span style={{ width: 10, height: 10, borderRadius: 999, background: "#4ADE80", boxShadow: "0 0 0 4px rgba(74,222,128,0.18)" }} />
+            <span style={{ fontSize: 16, fontWeight: 900, letterSpacing: -0.2 }}>
+              {isAnalyzing ? "Analyzing..." : isRecording ? "Listening..." : 'Tap mic to say the word'}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={toggleRecord}
+            disabled={isAnalyzing}
+            style={{
+              position: "absolute",
+              right: 18,
+              bottom: 86,
+              zIndex: 6,
+              width: 66,
+              height: 66,
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,0.34)",
+              background: isRecording ? "rgba(31,41,55,0.88)" : "rgba(255,255,255,0.94)",
+              display: "grid",
+              placeItems: "center",
+              cursor: isAnalyzing ? "not-allowed" : "pointer",
+              boxShadow: "0 18px 38px rgba(0,0,0,0.16)",
+            }}
+          >
+            {isRecording ? <StopCircle size={28} color="white" /> : <Mic size={28} color="#111827" />}
+          </button>
+
+          {lastOverall !== null ? (
+            <div
+              style={{
+                position: "absolute",
+                left: 18,
+                bottom: 94,
+                zIndex: 6,
+                borderRadius: 16,
+                background: "rgba(255,255,255,0.90)",
+                padding: "10px 12px",
+                minWidth: 104,
+                boxShadow: "0 14px 30px rgba(0,0,0,0.12)",
+              }}
+            >
+              <div style={{ fontSize: 28, lineHeight: 1, fontWeight: 1000, color: lastOverall >= GAME_PASS_THRESHOLD ? "#16A34A" : "#111827" }}>{lastOverall}%</div>
+              {lastHeardText ? (
+                <div style={{ marginTop: 4, fontSize: 12, lineHeight: 1.2, fontWeight: 800, color: "rgba(17,24,39,0.58)", maxWidth: 110 }}>
+                  Heard: {lastHeardText}
+                </div>
+              ) : null}
             </div>
-            <div style={ringLabel}>Session average</div>
-          </div>
-
-          <div style={badgesRow}>
-            <motion.div
-              initial={{ opacity: 0, y: 6, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.05, type: "spring", stiffness: 700, damping: 45 }}
-              style={statBadge("rgba(34,197,94,0.06)")}
-            >
-              <div style={badgeLabel}>Great</div>
-              <div style={badgeValue}>{summary.great}</div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 6, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.10, type: "spring", stiffness: 700, damping: 45 }}
-              style={statBadge("rgba(17,24,39,0.04)")}
-            >
-              <div style={badgeLabel}>OK</div>
-              <div style={badgeValue}>{summary.ok}</div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 6, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.15, type: "spring", stiffness: 700, damping: 45 }}
-              style={statBadge("rgba(239,68,68,0.06)")}
-            >
-              <div style={badgeLabel}>Needs work</div>
-              <div style={badgeValue}>{summary.needs}</div>
-            </motion.div>
-          </div>
-
-          <div style={summaryCtas}>
-            <button type="button" onClick={onRepeatSameDrill} style={{ ...primaryBtn, justifySelf: "center" }}>
-              Repeat
-            </button>
-            <div style={{ display: "grid", placeItems: "center" }}>
-              <button type="button" onClick={onExit} style={{ ...ghostBtn, height: 44, width: "min(240px, 100%)" }}>
-                New drill
-              </button>
-            </div>
-          </div>
-        </motion.div>
+          ) : null}
+        </div>
       ) : null}
-    </div>
-  </motion.div>
-) : null}
 
-              </AnimatePresence>
-            </LayoutGroup>
+      {phase === "gameover" ? (
+        <div
+          style={{
+            flex: 1,
+            minHeight: "100vh",
+            background: "#F7F3EE",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            padding: `34px 24px calc(${TABBAR_OFFSET}px + 24px + ${SAFE_BOTTOM})`,
+          }}
+        >
+          <div style={{ marginTop: 12, fontSize: 28, lineHeight: 1.15, fontWeight: 900, letterSpacing: -0.6, color: "rgba(17,24,39,0.72)" }}>
+            You were killed by
+          </div>
+
+          <div style={{ marginTop: 54, fontSize: deadWord.length > 14 ? 40 : 54, lineHeight: 0.98, fontWeight: 1000, letterSpacing: -1.1, color: "#111827", wordBreak: "break-word" }}>
+            {deadWord || "word"}
+          </div>
+
+          <div style={{ marginTop: 22, maxWidth: 360, fontSize: 18, lineHeight: 1.35, fontWeight: 700, color: "rgba(17,24,39,0.62)" }}>
+            {deathFeedback}
+          </div>
+
+          <div style={{ marginTop: 52, fontSize: 76, lineHeight: 1, fontWeight: 1000, letterSpacing: -1.6, color: "rgba(17,24,39,0.58)", fontVariantNumeric: "tabular-nums" }}>
+            {animatedDeathScore}
+          </div>
+
+          <div style={{ marginTop: 6, fontSize: 24, lineHeight: 1.15, fontWeight: 800, color: "rgba(17,24,39,0.62)" }}>
+            meters above the ground
+          </div>
+
+          <div style={{ marginTop: "auto", width: "100%", maxWidth: 360, display: "grid", gap: 12 }}>
+            <button
+              type="button"
+              onClick={async () => {
+                setSetupStep(2);
+                await onStartGame();
+              }}
+              style={{
+                height: 58,
+                borderRadius: 999,
+                border: "none",
+                background: "linear-gradient(180deg, #2FA8FF 0%, #1E88E5 100%)",
+                color: "white",
+                fontSize: 19,
+                fontWeight: 900,
+                cursor: "pointer",
+                boxShadow: "0 22px 60px rgba(33,150,243,0.28)",
+              }}
+            >
+              Play again
+            </button>
+
+            <button
+              type="button"
+              onClick={onExit}
+              style={{
+                height: 54,
+                borderRadius: 999,
+                border: "1px solid rgba(17,24,39,0.12)",
+                background: "rgba(255,255,255,0.82)",
+                color: LIGHT_TEXT,
+                fontSize: 18,
+                fontWeight: 900,
+                cursor: "pointer",
+              }}
+            >
+              Back
+            </button>
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }
